@@ -76,16 +76,25 @@ export function createServer() {
     try {
       const { conversationId, content } = req.body;
 
-      if (!conversationId || !content) {
-        res.status(400).json({ error: "Missing conversationId or content" });
+      if (!content) {
+        res.status(400).json({ error: "Missing content" });
         return;
       }
 
-      const conversation = conversations.get(conversationId);
-      if (!conversation) {
-        res.status(404).json({ error: "Conversation not found" });
-        return;
+      let convId = conversationId || "demo";
+
+      // Create conversation if doesn't exist
+      if (!conversations.has(convId)) {
+        conversations.set(convId, {
+          id: convId,
+          language: "fr",
+          messages: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
       }
+
+      const conversation = conversations.get(convId);
 
       // Add user message
       const userMessage = {
@@ -169,7 +178,7 @@ Avec ces infos, je vais créer un plan parfait pour vous ! ✨`;
       conversation.messages.push(assistantMessage);
       conversation.updatedAt = new Date();
 
-      console.log(`[CHAT] Message in ${conversationId}: ${content.substring(0, 50)}...`);
+      console.log(`[CHAT] Message in ${convId}: ${content.substring(0, 50)}...`);
 
       res.json({
         messageId: assistantMessage.id,
