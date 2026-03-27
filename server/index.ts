@@ -3,8 +3,6 @@ import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import authRouter from "./routes/auth";
-import chatRouter from "./routes/chat";
-import profileRouter from "./routes/profile";
 import { authMiddleware } from "./middleware/auth";
 
 // Validation: ensure critical env vars are set
@@ -87,10 +85,63 @@ export function createServer() {
   app.use("/api/auth", authRouter);
 
   // Chat routes (chat interface + conversations)
-  app.use("/api/chat", chatRouter);
+  app.post("/api/chat/start", async (req, res) => {
+    try {
+      const { language = 'fr' } = req.body;
+      const conversationId = require('uuid').v4();
 
-  // Profile routes (client memory + preferences)
-  app.use("/api/profile", profileRouter);
+      res.status(201).json({
+        conversationId,
+        title: `Conversation ${new Date().toLocaleDateString('fr-FR')}`,
+        language,
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      console.error('Erreur chat/start:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  app.post("/api/chat/message", async (req, res) => {
+    try {
+      const { conversationId, content } = req.body;
+
+      if (!content) {
+        res.status(400).json({ error: 'Contenu requis' });
+        return;
+      }
+
+      // Réponse simple basée sur mots-clés
+      let response = '';
+      const lower = content.toLowerCase();
+
+      if (lower.includes('paris')) {
+        response = 'Paris ! Magnifique choix ! 🗼\n\nVoici ce que je vous propose :\n\n🏨 Hébergement : 5ème arrondissement (Quartier Latin)\n🍽️ Restaurants : Le Comptoir Général, Frenchie To Go\n🚶 Activités : Notre-Dame, Musée du Louvre, Seine\n🚗 Transport : Métro parisien\n\nQuand envisagez-vous ce voyage ? Combien de jours ?';
+      } else if (lower.includes('bonjour') || lower.includes('salut')) {
+        response = 'Bonjour ! 👋\n\nBienvenue chez Baymora. Je suis votre assistant de voyage premium.\n\nDites-moi :\n- Où voulez-vous aller ?\n- Quand ?\n- Avec qui ?\n- Quel budget ?';
+      } else {
+        response = 'Intéressant ! 🌍\n\nPour mieux comprendre :\n- Avez-vous une destination en tête ?\n- Quand voulez-vous partir ?\n- Voyagez-vous en famille ou seul ?\n- Quel budget avez-vous ?\n\nJe vais créer un voyage parfait pour vous !';
+      }
+
+      res.status(200).json({
+        messageId: require('uuid').v4(),
+        response,
+        conversationId,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      console.error('Erreur chat/message:', error);
+      res.status(500).json({ error: 'Erreur serveur' });
+    }
+  });
+
+  app.get("/api/chat/conversations", async (req, res) => {
+    res.json({ conversations: [], total: 0 });
+  });
+
+  app.get("/api/chat/conversations/:id", async (req, res) => {
+    res.json({ id: req.params.id, messages: [] });
+  });
 
   // TODO: Add more routes here as implemented
   // - /api/plans - Journey plans
