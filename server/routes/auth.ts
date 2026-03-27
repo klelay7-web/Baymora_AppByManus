@@ -215,4 +215,10 @@ export const handleGrantAccess: RequestHandler = async (req: Request, res: Respo
   }
 };
 
+// Register routes
+router.post("/owner-login", handleOwnerLogin);
+router.get("/verify", handleVerifyToken);
+router.post("/logout", handleLogout);
+router.post("/owner/grant-access", handleGrantAccess);
+
 export default router;

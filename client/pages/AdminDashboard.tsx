@@ -25,88 +25,80 @@ export default function AdminDashboard() {
 
       if (!response.ok) {
         const data = await response.json();
-        setError(data.error || "Login failed");
+        setError(data.error || "Identifiants incorrects");
         return;
       }
 
       const data = await response.json();
       localStorage.setItem("authToken", data.accessToken);
-      // Redirect to admin dashboard
       window.location.href = "/admin/dashboard";
-    } catch (err) {
-      setError("An error occurred during login");
+    } catch {
+      setError("Une erreur est survenue. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-primary-50 p-4">
-      <div className="max-w-md mx-auto mt-12">
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 p-4 flex flex-col items-center justify-center">
+      <div className="w-full max-w-md">
         <Link to="/">
-          <Button variant="ghost" size="sm" className="mb-8 gap-2">
+          <Button variant="ghost" size="sm" className="mb-8 gap-2 text-white/60 hover:text-white">
             <ArrowLeft className="h-4 w-4" />
-            Back to Home
+            Retour
           </Button>
         </Link>
 
-        <Card className="border-primary/20">
+        <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
           <CardHeader className="space-y-2">
-            <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-lg mx-auto mb-4">
-              <Lock className="h-6 w-6 text-primary" />
+            <div className="flex items-center justify-center w-12 h-12 bg-secondary/10 rounded-xl mx-auto mb-4 border border-secondary/20">
+              <Lock className="h-5 w-5 text-secondary" />
             </div>
-            <CardTitle className="text-center">Admin Access</CardTitle>
+            <CardTitle className="text-center text-white">Accès Administration</CardTitle>
+            <p className="text-center text-white/40 text-sm">Baymora — Espace privé</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Email</label>
+                <label className="text-sm font-medium text-white/70">Email</label>
                 <Input
                   type="email"
-                  placeholder="owner@baymora.com"
+                  placeholder="votre@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
+                  className="bg-white/8 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Password</label>
+                <label className="text-sm font-medium text-white/70">Mot de passe</label>
                 <Input
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
+                  className="bg-white/8 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>
 
               {error && (
-                <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">
                   {error}
                 </div>
               )}
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-secondary hover:bg-secondary/90 text-white"
                 disabled={isLoading}
               >
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isLoading ? "Connexion..." : "Se connecter"}
               </Button>
             </form>
-
-            <div className="mt-6 p-4 bg-primary/5 rounded-lg text-sm text-muted-foreground">
-              <p className="font-semibold mb-2">Demo Credentials</p>
-              <p>Email: <code className="bg-white px-2 py-1 rounded text-xs">owner@baymora.com</code></p>
-              <p className="mt-2 text-xs">Password: See environment variables</p>
-            </div>
           </CardContent>
         </Card>
-
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          Admin dashboard is being built. This login will be functional in the next phase.
-        </p>
       </div>
     </div>
   );

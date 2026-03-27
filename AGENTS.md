@@ -1,164 +1,78 @@
-# Fusion Starter
+# Baymora — Intelligence de Voyage Premium
 
-A production-ready full-stack React application template with integrated Express server, featuring React Router 6 SPA mode, TypeScript, Vitest, Zod and modern tooling.
+Baymora est une plateforme de conciergerie et planification de voyages propulsée par l'IA, conçue pour une clientèle premium exigeante.
 
-While the starter comes with a express server, only create endpoint when strictly neccesary, for example to encapsulate logic that must leave in the server, such as private keys handling, or certain DB operations, db...
+## Stack Technique
 
-## Tech Stack
+- **Backend** : Express.js v5 + TypeScript
+- **Frontend** : React 18 + TailwindCSS + Radix UI
+- **IA** : OpenAI (principal) + Anthropic Claude (fallback)
+- **Base de données** : PostgreSQL + Redis (Phase 1)
+- **Paiement** : Stripe (Phase 2)
 
-- **PNPM**: Prefer pnpm
-- **Frontend**: React 18 + React Router 6 (spa) + TypeScript + Vite + TailwindCSS 3
-- **Backend**: Express server integrated with Vite dev server
-- **Testing**: Vitest
-- **UI**: Radix UI + TailwindCSS 3 + Lucide React icons
-
-## Project Structure
+## Structure du Projet
 
 ```
-client/                   # React SPA frontend
-├── pages/                # Route components (Index.tsx = home)
-├── components/ui/        # Pre-built UI component library
-├── App.tsx                # App entry point and with SPA routing setup
-└── global.css            # TailwindCSS 3 theming and global styles
+client/                   # SPA React
+├── pages/                # Pages de l'application
+├── components/ui/        # Bibliothèque de composants Radix UI
+├── hooks/                # Hooks personnalisés (useChat, useProfile)
+├── App.tsx               # Routing principal
+└── global.css            # Thème premium Baymora
 
-server/                   # Express API backend
-├── index.ts              # Main server setup (express config + routes)
-└── routes/               # API handlers
+server/                   # API Express
+├── index.ts              # Point d'entrée + montage des routes
+├── routes/               # auth.ts, chat.ts, profile.ts
+├── services/             # auth.ts, ai/memory.ts, ai/intents.ts
+└── middleware/           # auth.ts (JWT)
 
-shared/                   # Types used by both client & server
-└── api.ts                # Example of how to share api interfaces
+shared/                   # Types partagés client/serveur
+└── api.ts                # Schémas Zod + interfaces TypeScript
 ```
 
-## Key Features
+## Routes API
 
-## SPA Routing System
+| Route | Description |
+|-------|-------------|
+| `GET /api/ping` | Health check |
+| `POST /api/auth/owner-login` | Login admin |
+| `GET /api/auth/verify` | Vérification token |
+| `POST /api/auth/logout` | Déconnexion |
+| `POST /api/chat/start` | Démarrer une conversation |
+| `POST /api/chat/message` | Envoyer un message |
+| `GET /api/chat/conversations` | Lister les conversations |
+| `GET /api/profile` | Récupérer le profil client |
+| `PATCH /api/profile/preferences` | Mettre à jour les préférences |
 
-The routing system is powered by React Router 6:
+## Pages Frontend
 
-- `client/pages/Index.tsx` represents the home page.
-- Routes are defined in `client/App.tsx` using the `react-router-dom` import
-- Route files are located in the `client/pages/` directory
+| Route | Page |
+|-------|------|
+| `/` | Homepage premium |
+| `/chat` | Assistant conversationnel |
+| `/admin` | Login administration |
+| `/admin/dashboard` | Tableau de bord admin |
 
-For example, routes can be defined with:
-
-```typescript
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
-<Routes>
-  <Route path="/" element={<Index />} />
-  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-  <Route path="*" element={<NotFound />} />
-</Routes>;
-```
-
-### Styling System
-
-- **Primary**: TailwindCSS 3 utility classes
-- **Theme and design tokens**: Configure in `client/global.css` 
-- **UI components**: Pre-built library in `client/components/ui/`
-- **Utility**: `cn()` function combines `clsx` + `tailwind-merge` for conditional classes
-
-```typescript
-// cn utility usage
-className={cn(
-  "base-classes",
-  { "conditional-class": condition },
-  props.className  // User overrides
-)}
-```
-
-### Express Server Integration
-
-- **Development**: Single port (8080) for both frontend/backend
-- **Hot reload**: Both client and server code
-- **API endpoints**: Prefixed with `/api/`
-
-#### Example API Routes
-- `GET /api/ping` - Simple ping api
-- `GET /api/demo` - Demo endpoint  
-
-### Shared Types
-Import consistent types in both client and server:
-```typescript
-import { DemoResponse } from '@shared/api';
-```
-
-Path aliases:
-- `@shared/*` - Shared folder
-- `@/*` - Client folder
-
-## Development Commands
+## Commandes de Développement
 
 ```bash
-pnpm dev        # Start dev server (client + server)
-pnpm build      # Production build
-pnpm start      # Start production server
-pnpm typecheck  # TypeScript validation
-pnpm test          # Run Vitest tests
+pnpm dev        # Serveur de développement (client + serveur, port 8080)
+pnpm build      # Build de production
+pnpm start      # Démarrer en production
+pnpm typecheck  # Validation TypeScript
+pnpm test       # Tests Vitest
 ```
 
-## Adding Features
+## Alias de Chemins
 
-### Add new colors to the theme
+- `@shared/*` — Dossier shared/
+- `@/*` — Dossier client/
 
-Open `client/global.css` and `tailwind.config.ts` and add new tailwind colors.
+## Roadmap
 
-### New API Route
-1. **Optional**: Create a shared interface in `shared/api.ts`:
-```typescript
-export interface MyRouteResponse {
-  message: string;
-  // Add other response properties here
-}
-```
-
-2. Create a new route handler in `server/routes/my-route.ts`:
-```typescript
-import { RequestHandler } from "express";
-import { MyRouteResponse } from "@shared/api"; // Optional: for type safety
-
-export const handleMyRoute: RequestHandler = (req, res) => {
-  const response: MyRouteResponse = {
-    message: 'Hello from my endpoint!'
-  };
-  res.json(response);
-};
-```
-
-3. Register the route in `server/index.ts`:
-```typescript
-import { handleMyRoute } from "./routes/my-route";
-
-// Add to the createServer function:
-app.get("/api/my-endpoint", handleMyRoute);
-```
-
-4. Use in React components with type safety:
-```typescript
-import { MyRouteResponse } from '@shared/api'; // Optional: for type safety
-
-const response = await fetch('/api/my-endpoint');
-const data: MyRouteResponse = await response.json();
-```
-
-### New Page Route
-1. Create component in `client/pages/MyPage.tsx`
-2. Add route in `client/App.tsx`:
-```typescript
-<Route path="/my-page" element={<MyPage />} />
-```
-
-## Production Deployment
-
-- **Standard**: `pnpm build`
-- **Binary**: Self-contained executables (Linux, macOS, Windows)
-- **Cloud Deployment**: Use either Netlify or Vercel via their MCP integrations for easy deployment. Both providers work well with this starter template.
-
-## Architecture Notes
-
-- Single-port development with Vite + Express integration
-- TypeScript throughout (client, server, shared)
-- Full hot reload for rapid development
-- Production-ready with multiple deployment options
-- Comprehensive UI component library included
-- Type-safe API communication via shared interfaces
+- **Phase 0** ✅ Nettoyage, routing câblé, base saine
+- **Phase 1** — Profil client complet + IA réelle (OpenAI/Claude)
+- **Phase 2** — Map interactive + planification + affiliations
+- **Phase 3** — Algorithme comportemental + mode "Surprends-moi"
+- **Phase 4** — Back-office Baymora + fiches prestataires
+- **Phase 5** — Plateforme ouverte (artistes, villes, événements)
