@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import authRouter from "./routes/auth";
+import chatRouter from "./routes/chat";
+import profileRouter from "./routes/profile";
 import { authMiddleware } from "./middleware/auth";
 
 // Validation: ensure critical env vars are set
@@ -85,11 +87,9 @@ export function createServer() {
   app.use("/api/auth", authRouter);
 
   // Chat routes (chat interface + conversations)
-  const chatRouter = require("./routes/chat").default;
   app.use("/api/chat", chatRouter);
 
   // Profile routes (client memory + preferences)
-  const profileRouter = require("./routes/profile").default;
   app.use("/api/profile", profileRouter);
 
   // TODO: Add more routes here as implemented
