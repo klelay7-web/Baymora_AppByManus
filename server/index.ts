@@ -88,9 +88,12 @@ export function createServer() {
   const chatRouter = require("./routes/chat").default;
   app.use("/api/chat", chatRouter);
 
+  // Profile routes (client memory + preferences)
+  const profileRouter = require("./routes/profile").default;
+  app.use("/api/profile", profileRouter);
+
   // TODO: Add more routes here as implemented
   // - /api/plans - Journey plans
-  // - /api/profile - Client profile
   // - /api/venues - Knowledge base
   // - /api/concierge - Concierge requests
   // - /api/admin - Admin dashboard
