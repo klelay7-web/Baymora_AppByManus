@@ -1,5 +1,5 @@
 import { Router, RequestHandler, Request, Response } from 'express';
-import { LoginRequestSchema, AuthTokenSchema } from '@shared/api';
+import { LoginRequestSchema, AuthTokenSchema } from '../../shared/api';
 import {
   hashPassword,
   verifyPassword,
