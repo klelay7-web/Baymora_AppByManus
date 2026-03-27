@@ -35,6 +35,11 @@ export function createServer() {
 
   app.get("/api/demo", handleDemo);
 
+  // Test route
+  app.get("/api/test", (req, res) => {
+    res.json({ message: "Server is working!" });
+  });
+
   // =====================================================================
   // CHAT API - Simple and clean
   // =====================================================================
