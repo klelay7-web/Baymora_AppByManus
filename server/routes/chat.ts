@@ -1,7 +1,7 @@
 import { Router, RequestHandler } from 'express';
-import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { requireAuth } from '../middleware/auth';
+import { callLLM, type LLMMessage } from '../services/ai/llm';
 
 const router = Router();
 
@@ -106,11 +106,15 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
 
     conversation.messages.push(userMessage);
 
-    // Générer une réponse simple (sera remplacée par Intent Engine + LLM)
-    const assistantResponse = generateSimpleResponse(
-      content,
-      conversation.language
-    );
+    // Construire l'historique pour le LLM
+    const llmMessages: LLMMessage[] = conversation.messages.map(m => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const userId = (req as any).admin?.userId || conversation.userId;
+    const llmResult = await callLLM(llmMessages, userId, conversation.language);
+    const assistantResponse = llmResult.content;
 
     const assistantMessage: Message = {
       id: uuidv4(),
@@ -260,91 +264,6 @@ export const handleDeleteConversation: RequestHandler = async (req, res) => {
     });
   }
 };
-
-/**
- * Générer une réponse simple basée sur les mots-clés
- * (Sera remplacée par Intent Engine + LLM dans Phase 2.5)
- */
-function generateSimpleResponse(message: string, language: 'en' | 'fr'): string {
-  const lower = message.toLowerCase();
-
-  if (language === 'fr') {
-    if (lower.includes('bonjour') || lower.includes('salut')) {
-      return `Bonjour ! 👋 Bienvenue chez Baymora. Je suis votre assistant de voyage premium. Où aimeriez-vous aller ? Dites-moi :
-- La destination que vous rêvez de visiter
-- Les dates de votre voyage
-- Qui voyage avec vous (famille, amis, enfants, animaux ?)
-- Votre budget approximatif
-
-Je vais composer un voyage sur mesure pour vous !`;
-    }
-
-    if (
-      lower.includes('où') ||
-      lower.includes('destination') ||
-      lower.includes('voyage')
-    ) {
-      return `Excellente question ! 🌍 Pour vous proposer les meilleures destinations :
-- Quelle région vous attire ? (Europe, Asie, Amérique, Afrique...)
-- Quel type de voyage ? (plage, montagne, culture, gastronomie, aventure...)
-- Quelle saison préférez-vous ?
-- Quel budget par personne ?
-
-Donnez-moi ces infos et je vais créer plusieurs options pour vous !`;
-    }
-
-    if (lower.includes('merci')) {
-      return `De rien ! 😊 Je suis ici pour rendre votre voyage mémorable. Qu'est-ce que je peux faire d'autre pour vous ?`;
-    }
-
-    return `Intéressant ! 💭 Pour mieux comprendre vos besoins :
-- Pouvez-vous m'en dire plus sur ce qui vous intéresse ?
-- Qui voyage avec vous ?
-- Quand envisagez-vous ce voyage ?
-
-Je suis là pour créer l'expérience parfaite pour vous ! ✨`;
-  } else {
-    // English responses
-    if (
-      lower.includes('hello') ||
-      lower.includes('hi') ||
-      lower.includes('hey')
-    ) {
-      return `Hello! 👋 Welcome to Baymora. I'm your premium travel assistant. Where would you like to go? Tell me:
-- Your dream destination
-- Travel dates
-- Who's traveling (family, friends, kids, pets?)
-- Your approximate budget
-
-I'll compose a bespoke journey for you!`;
-    }
-
-    if (
-      lower.includes('where') ||
-      lower.includes('destination') ||
-      lower.includes('trip')
-    ) {
-      return `Great question! 🌍 To suggest the best destinations:
-- Which region interests you? (Europe, Asia, Americas, Africa...)
-- What type of trip? (beach, mountains, culture, food, adventure...)
-- Which season do you prefer?
-- What's your budget per person?
-
-Give me these details and I'll create several options!`;
-    }
-
-    if (lower.includes('thank')) {
-      return `You're welcome! 😊 I'm here to make your journey unforgettable. What else can I help with?`;
-    }
-
-    return `Interesting! 💭 To better understand your needs:
-- Can you tell me more about your interests?
-- Who will be traveling with you?
-- When are you planning this trip?
-
-I'm here to create the perfect experience for you! ✨`;
-  }
-}
 
 // Enregistrer les routes
 router.post('/start', handleStartChat);
