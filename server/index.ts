@@ -24,8 +24,8 @@ export function createServer() {
   app.use("/api/chat", chatRouter);
   app.use("/api/profile", profileRouter);
 
-  // 404 — uniquement pour les routes /api/*
-  app.use("/api/*", (_req, res) => {
+  // 404 — uniquement pour les routes /api/
+  app.use("/api/*path", (_req, res) => {
     res.status(404).json({ error: "Not found" });
   });
 
