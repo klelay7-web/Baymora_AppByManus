@@ -84,8 +84,11 @@ export function createServer() {
   // Authentication routes
   app.use("/api/auth", authRouter);
 
+  // Chat routes (chat interface + conversations)
+  const chatRouter = require("./routes/chat").default;
+  app.use("/api/chat", chatRouter);
+
   // TODO: Add more routes here as implemented
-  // - /api/chat - Chat interface
   // - /api/plans - Journey plans
   // - /api/profile - Client profile
   // - /api/venues - Knowledge base
