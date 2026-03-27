@@ -1,8 +1,10 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { v4 as uuidv4 } from "uuid";
 import { handleDemo } from "./routes/demo";
+
+// Simple ID generator
+const genId = () => Math.random().toString(36).substr(2, 9);
 
 // Simple in-memory stores (replace with DB later)
 const conversations = new Map<string, any>();
@@ -44,7 +46,7 @@ export function createServer() {
   app.post("/api/chat/start", (req, res) => {
     try {
       const { language = "fr" } = req.body;
-      const conversationId = uuidv4();
+      const conversationId = genId();
 
       const conversation = {
         id: conversationId,
@@ -73,18 +75,23 @@ export function createServer() {
    * Send a message and get a response
    */
   app.post("/api/chat/message", (req, res) => {
+    console.log("🔵 /api/chat/message called with:", req.body);
+
     try {
       const { conversationId, content } = req.body;
 
       if (!content) {
+        console.log("❌ No content");
         res.status(400).json({ error: "Missing content" });
         return;
       }
 
       let convId = conversationId || "demo";
+      console.log("✅ convId:", convId);
 
       // Create conversation if doesn't exist
       if (!conversations.has(convId)) {
+        console.log("📝 Creating new conversation:", convId);
         conversations.set(convId, {
           id: convId,
           language: "fr",
@@ -95,13 +102,14 @@ export function createServer() {
       }
 
       const conversation = conversations.get(convId);
+      console.log("✅ Got conversation:", conversation?.id);
 
       // Add user message
       const userMessage = {
-        id: uuidv4(),
+        id: genId(),
         role: "user",
         content,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
       conversation.messages.push(userMessage);
 
@@ -116,8 +124,8 @@ Voici mes recommandations :
 
 🏨 Hébergement : 5ème arrondissement (Quartier Latin)
    Budget : 150-300€/nuit
-   
-🍽️ Restaurants : 
+
+🍽️ Restaurants :
    - Frenchie To Go (cuisine française, 2-3 étoiles)
    - Le Comptoir Général (ambiance parisienne)
    - Café de Flore (classique)
@@ -170,24 +178,27 @@ Avec ces infos, je vais créer un plan parfait pour vous ! ✨`;
 
       // Add assistant response
       const assistantMessage = {
-        id: uuidv4(),
+        id: genId(),
         role: "assistant",
         content: response,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
       conversation.messages.push(assistantMessage);
       conversation.updatedAt = new Date();
 
       console.log(`[CHAT] Message in ${convId}: ${content.substring(0, 50)}...`);
 
-      res.json({
+      const responseData = {
         messageId: assistantMessage.id,
         response,
         timestamp: assistantMessage.timestamp,
-      });
+      };
+
+      console.log("✅ Sending response:", responseData.response.substring(0, 50));
+      res.json(responseData);
     } catch (error) {
-      console.error("Error in /api/chat/message:", error);
-      res.status(500).json({ error: "Server error" });
+      console.error("❌ Error in /api/chat/message:", error);
+      res.status(500).json({ error: "Server error", details: String(error) });
     }
   });
 
