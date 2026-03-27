@@ -1,167 +1,251 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { v4 as uuidv4 } from "uuid";
 import { handleDemo } from "./routes/demo";
-import authRouter from "./routes/auth";
-import { authMiddleware } from "./middleware/auth";
 
-// Validation: ensure critical env vars are set
-function validateEnvironment() {
-  const required = ['JWT_SECRET', 'NODE_ENV'];
-  const missing = required.filter((key) => !process.env[key]);
-
-  if (missing.length > 0) {
-    console.warn(`⚠️  Missing environment variables: ${missing.join(', ')}`);
-    console.warn('Some features may not work correctly.');
-  }
-
-  const jwtSecret = process.env.JWT_SECRET;
-  if (jwtSecret && jwtSecret.length < 32) {
-    throw new Error(
-      '❌ JWT_SECRET must be at least 32 characters long for security.'
-    );
-  }
-}
+// Simple in-memory stores (replace with DB later)
+const conversations = new Map<string, any>();
+const clientMemory = new Map<string, any>();
 
 export function createServer() {
-  validateEnvironment();
-
   const app = express();
 
   // =====================================================================
-  // SECURITY MIDDLEWARE
+  // MIDDLEWARE
   // =====================================================================
+  app.use(cors());
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-  // CORS - restrict to configured origins
-  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
-  app.use(
-    cors({
-      origin: [corsOrigin, 'http://localhost:3000', 'http://localhost:5173'],
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-    })
-  );
-
-  // Body parsing with size limits
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-  // =====================================================================
-  // REQUEST LOGGING
-  // =====================================================================
+  // Request logging
   app.use((req, res, next) => {
-    const start = Date.now();
-    res.on('finish', () => {
-      const duration = Date.now() - start;
-      console.log(
-        `[${new Date().toISOString()}] ${req.method} ${req.path} ${res.statusCode} ${duration}ms`
-      );
-    });
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
     next();
   });
 
   // =====================================================================
-  // AUTHENTICATION MIDDLEWARE (applies to all routes)
-  // =====================================================================
-  app.use(authMiddleware);
-
-  // =====================================================================
   // HEALTH CHECK
   // =====================================================================
-  app.get("/api/ping", (_req, res) => {
-    const ping = process.env.PING_MESSAGE ?? "pong";
-    res.json({ message: ping, timestamp: new Date().toISOString() });
+  app.get("/api/ping", (req, res) => {
+    res.json({ message: "pong", timestamp: new Date().toISOString() });
   });
 
-  // =====================================================================
-  // API ROUTES
-  // =====================================================================
-
-  // Demo endpoint
   app.get("/api/demo", handleDemo);
 
-  // Authentication routes
-  app.use("/api/auth", authRouter);
+  // =====================================================================
+  // CHAT API - Simple and clean
+  // =====================================================================
 
-  // Chat routes (chat interface + conversations)
-  app.post("/api/chat/start", async (req, res) => {
+  /**
+   * POST /api/chat/start
+   * Start a new conversation
+   */
+  app.post("/api/chat/start", (req, res) => {
     try {
-      const { language = 'fr' } = req.body;
-      const conversationId = require('uuid').v4();
+      const { language = "fr" } = req.body;
+      const conversationId = uuidv4();
+
+      const conversation = {
+        id: conversationId,
+        language,
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      conversations.set(conversationId, conversation);
+      console.log(`[CHAT] Started conversation ${conversationId}`);
 
       res.status(201).json({
         conversationId,
-        title: `Conversation ${new Date().toLocaleDateString('fr-FR')}`,
         language,
-        createdAt: new Date(),
+        createdAt: conversation.createdAt,
       });
     } catch (error) {
-      console.error('Erreur chat/start:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
+      console.error("Error in /api/chat/start:", error);
+      res.status(500).json({ error: "Server error" });
     }
   });
 
-  app.post("/api/chat/message", async (req, res) => {
+  /**
+   * POST /api/chat/message
+   * Send a message and get a response
+   */
+  app.post("/api/chat/message", (req, res) => {
     try {
       const { conversationId, content } = req.body;
 
-      if (!content) {
-        res.status(400).json({ error: 'Contenu requis' });
+      if (!conversationId || !content) {
+        res.status(400).json({ error: "Missing conversationId or content" });
         return;
       }
 
-      // Réponse simple basée sur mots-clés
-      let response = '';
-      const lower = content.toLowerCase();
-
-      if (lower.includes('paris')) {
-        response = 'Paris ! Magnifique choix ! 🗼\n\nVoici ce que je vous propose :\n\n🏨 Hébergement : 5ème arrondissement (Quartier Latin)\n🍽️ Restaurants : Le Comptoir Général, Frenchie To Go\n🚶 Activités : Notre-Dame, Musée du Louvre, Seine\n🚗 Transport : Métro parisien\n\nQuand envisagez-vous ce voyage ? Combien de jours ?';
-      } else if (lower.includes('bonjour') || lower.includes('salut')) {
-        response = 'Bonjour ! 👋\n\nBienvenue chez Baymora. Je suis votre assistant de voyage premium.\n\nDites-moi :\n- Où voulez-vous aller ?\n- Quand ?\n- Avec qui ?\n- Quel budget ?';
-      } else {
-        response = 'Intéressant ! 🌍\n\nPour mieux comprendre :\n- Avez-vous une destination en tête ?\n- Quand voulez-vous partir ?\n- Voyagez-vous en famille ou seul ?\n- Quel budget avez-vous ?\n\nJe vais créer un voyage parfait pour vous !';
+      const conversation = conversations.get(conversationId);
+      if (!conversation) {
+        res.status(404).json({ error: "Conversation not found" });
+        return;
       }
 
-      res.status(200).json({
-        messageId: require('uuid').v4(),
-        response,
-        conversationId,
+      // Add user message
+      const userMessage = {
+        id: uuidv4(),
+        role: "user",
+        content,
         timestamp: new Date(),
+      };
+      conversation.messages.push(userMessage);
+
+      // Generate simple response based on keywords
+      let response = "";
+      const lower = content.toLowerCase();
+
+      if (lower.includes("paris")) {
+        response = `Paris ! Magnifique choix ! 🗼
+
+Voici mes recommandations :
+
+🏨 Hébergement : 5ème arrondissement (Quartier Latin)
+   Budget : 150-300€/nuit
+   
+🍽️ Restaurants : 
+   - Frenchie To Go (cuisine française, 2-3 étoiles)
+   - Le Comptoir Général (ambiance parisienne)
+   - Café de Flore (classique)
+
+🚶 Activités :
+   - Notre-Dame
+   - Musée du Louvre
+   - Promenade le long de la Seine
+   - Montmartre
+
+🚗 Transport : Métro parisien (carnet de 10 = 16,90€)
+
+Combien de jours ? Avec qui ? Budget global ?`;
+      } else if (lower.includes("bonjour") || lower.includes("salut")) {
+        response = `Bonjour ! 👋
+
+Bienvenue chez Baymora, votre assistant de voyage premium.
+
+Pour vous proposer le voyage parfait, dites-moi :
+
+📍 Où voulez-vous aller ? (destination, région, pays)
+📅 Quand ? (dates ou saison)
+👥 Avec qui ? (seul, couple, famille, amis ?)
+💰 Quel budget ? (par personne ou total)
+
+Je vais composer un itinéraire sur mesure ! ✨`;
+      } else if (lower.includes("merci")) {
+        response = `De rien ! 😊 C'est un plaisir de vous aider.
+
+Avez-vous d'autres questions sur ce voyage ? Je peux vous aider sur :
+- Les transports
+- L'hébergement
+- Les restaurants
+- Les activités
+- Le budget
+
+Dites-moi ! 🚀`;
+      } else {
+        response = `Intéressant ! 🌍
+
+Pour mieux vous aider, pouvez-vous me donner plus de détails :
+
+1️⃣ La destination précise ?
+2️⃣ Les dates de voyage ?
+3️⃣ Le nombre de personnes ?
+4️⃣ Votre budget approximatif ?
+
+Avec ces infos, je vais créer un plan parfait pour vous ! ✨`;
+      }
+
+      // Add assistant response
+      const assistantMessage = {
+        id: uuidv4(),
+        role: "assistant",
+        content: response,
+        timestamp: new Date(),
+      };
+      conversation.messages.push(assistantMessage);
+      conversation.updatedAt = new Date();
+
+      console.log(`[CHAT] Message in ${conversationId}: ${content.substring(0, 50)}...`);
+
+      res.json({
+        messageId: assistantMessage.id,
+        response,
+        timestamp: assistantMessage.timestamp,
       });
     } catch (error) {
-      console.error('Erreur chat/message:', error);
-      res.status(500).json({ error: 'Erreur serveur' });
+      console.error("Error in /api/chat/message:", error);
+      res.status(500).json({ error: "Server error" });
     }
   });
 
-  app.get("/api/chat/conversations", async (req, res) => {
-    res.json({ conversations: [], total: 0 });
+  /**
+   * GET /api/chat/conversations/:id
+   * Get a conversation
+   */
+  app.get("/api/chat/conversations/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const conversation = conversations.get(id);
+
+      if (!conversation) {
+        res.status(404).json({ error: "Conversation not found" });
+        return;
+      }
+
+      res.json(conversation);
+    } catch (error) {
+      console.error("Error in /api/chat/conversations/:id:", error);
+      res.status(500).json({ error: "Server error" });
+    }
   });
 
-  app.get("/api/chat/conversations/:id", async (req, res) => {
-    res.json({ id: req.params.id, messages: [] });
+  /**
+   * DELETE /api/chat/conversations/:id
+   * Delete a conversation
+   */
+  app.delete("/api/chat/conversations/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      conversations.delete(id);
+      console.log(`[CHAT] Deleted conversation ${id}`);
+      res.json({ message: "Deleted" });
+    } catch (error) {
+      console.error("Error in DELETE /api/chat/conversations/:id:", error);
+      res.status(500).json({ error: "Server error" });
+    }
   });
 
-  // TODO: Add more routes here as implemented
-  // - /api/plans - Journey plans
-  // - /api/venues - Knowledge base
-  // - /api/concierge - Concierge requests
-  // - /api/admin - Admin dashboard
+  /**
+   * GET /api/chat/conversations
+   * List conversations
+   */
+  app.get("/api/chat/conversations", (req, res) => {
+    try {
+      const convList = Array.from(conversations.values()).map((conv) => ({
+        id: conv.id,
+        language: conv.language,
+        messageCount: conv.messages.length,
+        createdAt: conv.createdAt,
+        updatedAt: conv.updatedAt,
+      }));
+      res.json({ conversations: convList, total: convList.length });
+    } catch (error) {
+      console.error("Error in /api/chat/conversations:", error);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
 
   // =====================================================================
   // ERROR HANDLING
   // =====================================================================
-
-  // 404 handler
-  app.use((_req, res) => {
-    res.status(404).json({
-      error: 'Not Found',
-      code: 'ROUTE_NOT_FOUND',
-    });
+  app.use((req, res) => {
+    res.status(404).json({ error: "Not found", code: "ROUTE_NOT_FOUND" });
   });
 
-  // Global error handler
   app.use(
     (
       err: any,
@@ -169,13 +253,10 @@ export function createServer() {
       res: express.Response,
       _next: express.NextFunction
     ) => {
-      console.error('Unhandled error:', err);
+      console.error("Unhandled error:", err);
       res.status(500).json({
-        error: 'Internal Server Error',
-        code: 'SERVER_ERROR',
-        ...(process.env.NODE_ENV === 'development' && {
-          details: err.message,
-        }),
+        error: "Internal server error",
+        ...(process.env.NODE_ENV === "development" && { details: err.message }),
       });
     }
   );
