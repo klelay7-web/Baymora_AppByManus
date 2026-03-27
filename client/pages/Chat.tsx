@@ -166,7 +166,7 @@ export default function Chat() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             disabled={isLoading}
-            className="flex-1 bg-white/8 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-secondary/50 focus-visible:border-secondary/50"
+            className="flex-1 !bg-slate-800 border-slate-700 text-white placeholder:text-white/40 focus-visible:ring-secondary/50 focus-visible:border-secondary/30"
           />
           <Button
             onClick={handleSend}

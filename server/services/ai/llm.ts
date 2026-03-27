@@ -53,13 +53,12 @@ Pour une destination donnée :
 - Utilise le pseudonyme du client si tu le connais.
 - Toujours terminer par une action concrète proposée.
 
-## Premier message : toujours qualifier d'abord
-Quand un client envoie son PREMIER message (que ce soit une destination précise, une envie vague ou une demande de surprise), tu ne proposes JAMAIS de plan ni de recommandations immédiatement.
-Tu poses d'abord 2 questions de qualification courtes et naturelles, dans cet ordre de priorité :
-1. Voyage solo, en couple, en famille ou entre amis ?
-2. Combien de nuits / quel week-end ?
-3. Budget indicatif (si pas évident) ?
-Ensuite seulement, avec ces infos, tu passes à la recommandation.
+## Stratégie conversationnelle
+Tu ne proposes JAMAIS un plan complet sans avoir ces 3 infos : destination (ou envie), avec qui, durée.
+- Si le client donne une destination → accuse réception ("St Tropez, excellent choix !"), puis demande ce qui MANQUE (une seule question à la fois).
+- Si le client dit "surprise moi" → demande ses préférences (plage/montagne/ville ? France/étranger ?).
+- Ne répète JAMAIS une question dont la réponse est déjà dans la conversation.
+- Quand tu as les 3 infos essentielles → passe immédiatement aux recommandations concrètes.
 
 ## Ce que tu ne fais jamais
 - Jamais robotique ou formel à l'excès.
@@ -178,11 +177,14 @@ export async function callLLM(
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
+    console.warn('[LLM] ⚠ ANTHROPIC_API_KEY non trouvée — mode fallback activé');
     return {
-      content: getFallbackResponse(messages[messages.length - 1]?.content || '', language),
+      content: getFallbackResponse(messages, language),
       model: 'fallback',
     };
   }
+
+  console.log(`[LLM] ✓ API key trouvée (${apiKey.substring(0, 12)}...)`);
 
   const lastMessage = messages[messages.length - 1]?.content || '';
   const modelKey = selectModel(lastMessage, messages.length);
@@ -241,26 +243,107 @@ export async function callLLM(
   }
 }
 
-// ─── Fallback sans API ────────────────────────────────────────────────────────
+// ─── Fallback conversationnel sans API ────────────────────────────────────────
 
-function getFallbackResponse(lastMessage: string, language: 'fr' | 'en'): string {
-  const lower = lastMessage.toLowerCase();
+interface ConversationContext {
+  destination: string | null;
+  who: string | null;
+  duration: string | null;
+  budget: string | null;
+  pets: boolean;
+  children: boolean;
+}
 
-  if (language === 'fr') {
-    if (/bonjour|salut|hello/.test(lower)) {
-      return `Bonjour ! Je suis Baymora, votre assistant de voyage premium.\n\nOù aimeriez-vous aller ? Ou préférez-vous que je vous surprenne avec quelques idées de séjour ?`;
-    }
-    if (/surprise|idée|proposer|week.end|partir/.test(lower)) {
-      return `Avec plaisir ! Pour cerner vos envies :\n\n- Vous partez seul, en duo, ou en groupe ?\n- Combien de nuits ?\n- France ou étranger ?`;
-    }
-    if (/chien|animal|pet/.test(lower)) {
-      return `Parfait — je proposerai uniquement des hébergements et restaurants pet-friendly.\n\nQuelle est votre destination envisagée ?`;
-    }
-    return `Pour vous proposer les meilleures options :\n\n- Quelle destination ?\n- Vous partez quand ?\n- Seul, en couple, ou en groupe ?`;
+function extractContext(messages: LLMMessage[]): ConversationContext {
+  const ctx: ConversationContext = {
+    destination: null, who: null, duration: null, budget: null,
+    pets: false, children: false,
+  };
+
+  for (const msg of messages) {
+    if (msg.role !== 'user') continue;
+    const t = msg.content.toLowerCase();
+
+    // Destination
+    const destMatch = t.match(/(?:à|a|vers|pour)\s+([A-ZÀ-Ÿ][\wÀ-ÿ\s-]{2,30})/i);
+    if (destMatch) ctx.destination = destMatch[1].trim();
+
+    // Who
+    if (/seul|solo/.test(t)) ctx.who = 'seul';
+    if (/duo|couple|amoureux|romantique/.test(t)) ctx.who = 'en couple';
+    if (/famille|enfant|fils|fille/.test(t)) { ctx.who = 'en famille'; ctx.children = true; }
+    if (/ami|groupe|pote|bande/.test(t)) ctx.who = 'entre amis';
+
+    // Duration
+    const durMatch = t.match(/(\d+)\s*(nuit|jour|semaine)/i);
+    if (durMatch) ctx.duration = `${durMatch[1]} ${durMatch[2]}s`;
+    if (/week.?end/.test(t)) ctx.duration = ctx.duration || 'un week-end';
+
+    // Budget
+    const budgetMatch = t.match(/(\d[\d\s]*)\s*€|budget\s*(ouvert|illimité|serré)/i);
+    if (budgetMatch) ctx.budget = budgetMatch[0];
+
+    // Pets & children
+    if (/chien|chat|animal|pet/.test(t)) ctx.pets = true;
+    if (/enfant|bébé|fils|fille|gamin/.test(t)) ctx.children = true;
   }
 
-  if (/hello|hi|hey/.test(lower)) {
-    return `Hello! I'm Baymora, your premium travel assistant.\n\nWhere would you like to go? Or shall I surprise you with some curated ideas?`;
+  return ctx;
+}
+
+function getFallbackResponse(messages: LLMMessage[], language: 'fr' | 'en'): string {
+  if (language !== 'fr') {
+    return `I'm currently running in offline mode. Please check that the API key is configured.\n\nIn the meantime — where would you like to travel?`;
   }
-  return `Happy to help plan your trip.\n\n- What destination do you have in mind?\n- When are you thinking of traveling?\n- Solo, couple, or group?`;
+
+  const ctx = extractContext(messages);
+  const lastMsg = messages[messages.length - 1]?.content?.toLowerCase() || '';
+
+  // Greeting
+  if (messages.length <= 1 && /bonjour|salut|hello|hey/.test(lastMsg)) {
+    return `Bonjour ! Je suis Baymora, votre concierge de voyage.\n\nDites-moi : vous avez déjà une destination en tête, ou vous préférez que je vous inspire ?`;
+  }
+
+  // Build a smart response based on what we know vs what's missing
+  const known: string[] = [];
+  const missing: string[] = [];
+
+  if (ctx.destination) known.push(`destination : **${ctx.destination}**`);
+  else missing.push('Quelle destination ?');
+
+  if (ctx.who) known.push(`voyage ${ctx.who}`);
+  else missing.push('Vous partez seul, en couple, en famille, ou entre amis ?');
+
+  if (ctx.duration) known.push(`durée : ${ctx.duration}`);
+  else missing.push('Combien de nuits ?');
+
+  if (ctx.pets) known.push('avec votre animal');
+  if (ctx.children) known.push('avec enfants');
+
+  // If we have all key info → give a preview
+  if (ctx.destination && ctx.who && ctx.duration) {
+    const extras: string[] = [];
+    if (ctx.pets) extras.push('hébergements pet-friendly');
+    if (ctx.children) extras.push('activités adaptées aux enfants');
+    const extrasText = extras.length ? `\nJe noterai aussi : ${extras.join(', ')}.` : '';
+
+    return `Parfait, je récapitule :\n\n` +
+      `📍 ${ctx.destination} — ${ctx.duration}, ${ctx.who}\n` +
+      extrasText +
+      `\n\n⚠️ Je suis en mode hors-ligne pour le moment (clé API non configurée).\nDès que la connexion IA sera active, je vous proposerai un plan complet avec hébergements, restaurants et activités.`;
+  }
+
+  // Acknowledge what we know, ask what's missing
+  let response = '';
+
+  if (known.length > 0) {
+    response += `Noté : ${known.join(', ')}. `;
+  }
+
+  if (missing.length > 0) {
+    const question = missing[0]; // Only ask ONE question at a time
+    response += `\n\n${question}`;
+  }
+
+  return response.trim();
 }
