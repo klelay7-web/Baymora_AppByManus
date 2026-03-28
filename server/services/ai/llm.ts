@@ -12,6 +12,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getClientMemory } from './memory';
 import { shouldCallPerplexity, searchPerplexity, buildSearchQuery, formatPerplexityContext } from './perplexity';
 import { calculateAirportLogistics, formatLogisticsForClaude, type FlightProfile } from '../maps';
+import { getBeachReport } from '../marine';
 
 // ─── Modèles disponibles ──────────────────────────────────────────────────────
 
@@ -92,6 +93,17 @@ Tu ne proposes JAMAIS un plan complet sans avoir ces 3 infos : destination (ou e
 - Si le client dit "surprise moi" → demande ses préférences (plage/montagne/ville ? France/étranger ?).
 - Ne répète JAMAIS une question dont la réponse est déjà dans la conversation.
 - Quand tu as les 3 infos essentielles → passe immédiatement aux recommandations concrètes.
+
+## Conditions balnéaires — plages et baignade
+
+Quand un client parle de plage, de baignade, ou demande des conditions marines, tu as accès aux données suivantes (injectées en contexte si disponibles) :
+- 🌡️ **Température de l'eau** (°C) en temps réel
+- 🌊 **Hauteur des vagues** et swell
+- 💚 **Qualité officielle de l'eau de baignade** (données EU — excellent / bon / insuffisant)
+- 🏖️ **Pavillon Bleu** (certification plage propre)
+- 📅 **Prévisions 7 jours** des conditions
+
+Utilise ces données pour conseiller : "l'eau est à 24°C, vagues calmes, qualité excellente — conditions parfaites" ou alerter si baignade déconseillée. Toujours citer la source (données officielles UE ou Open-Meteo).
 
 ## Logistique aéroport — intelligence de départ
 
@@ -376,6 +388,22 @@ export async function callLLM(
     }
   }
 
+  // ── Conditions marines (si plage / baignade détectée) ───────────────────────
+  let marineContext: string | null = null;
+  if (/plage|baignade|mer |ocean|vagues|surf|nager|qualité.{0,10}eau/i.test(lastMessage)) {
+    // Extraire le nom de la plage ou destination
+    const beachMatch = lastMessage.match(/(?:plage|beach|à|de|sur)\s+([A-ZÀ-Ÿa-zà-ÿ\s-]{3,30})/i);
+    const beachName = beachMatch?.[1]?.trim() || (userRecord?.preferences?.mentionedDestinations?.[0]);
+    if (beachName) {
+      const countryMatch = lastMessage.match(/\b(FR|ES|IT|GR|PT|HR|TR|MA)\b/i);
+      const report = await getBeachReport(beachName, countryMatch?.[1]?.toUpperCase());
+      if (report) {
+        marineContext = report;
+        console.log(`[LLM] Rapport marin injecté pour: ${beachName}`);
+      }
+    }
+  }
+
   // ── Logistique aéroport (si vol détecté + adresse domicile connue) ──────────
   let airportContext: string | null = null;
   if (userRecord?.preferences?.homeAddress && /vol|flight|décolle|départ|aéroport|airport/i.test(lastMessage)) {
@@ -410,6 +438,7 @@ export async function callLLM(
     // Injecter les données web en tête du system prompt si disponibles
     const contextParts: string[] = [];
     if (webContext) contextParts.push(webContext);
+    if (marineContext) contextParts.push(marineContext);
     if (airportContext) contextParts.push(airportContext);
     if (contextParts.length > 0) {
       systemPrompt = `${contextParts.join('\n\n')}\n\n---\n\n${systemPrompt}`;

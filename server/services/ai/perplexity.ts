@@ -54,6 +54,10 @@ const SEARCH_TRIGGERS = [
   // Activités et culture
   /musée|galerie|exposition|théâtre|opéra|musique|live/i,
   /plage|beach|piscine|pool|montagne|randonnée/i,
+  // Conditions marines et baignade
+  /mer|ocean|baignade|nager|eau|vagues|surf|plongée/i,
+  /qualité de l'eau|jellyfish|méduse|drapeau|pavillon bleu/i,
+  /température de l'eau|conditions mer|surf report/i,
 ];
 
 export function shouldCallPerplexity(lastMessage: string): boolean {
