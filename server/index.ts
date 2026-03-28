@@ -45,7 +45,7 @@ export function createServer() {
   app.use("/api/admin", adminRouter);
 
   // 404
-  app.use("/api/*path", (_req, res) => {
+  app.use("/api/{*path}", (_req, res) => {
     res.status(404).json({ error: "Not found" });
   });
 
