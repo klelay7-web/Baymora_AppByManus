@@ -29,22 +29,31 @@ const SEARCH_TRIGGERS = [
   /prix|tarif|combien|cost|coût|budget|€|\$/i,
   /disponible|disponibilité|libre|ouvert|réservation/i,
   /hôtel|hotel|villa|appartement|airbnb|location/i,
+  // Lifestyle urbain — expériences locales
+  /petit.?dej|brunch|breakfast|déjeuner|dîner|lunch|dinner/i,
+  /où manger|où boire|où sortir|where to eat|things to do/i,
+  /bar|café|restaurant|club|lounge|rooftop|terrasse/i,
+  /ce soir|tonight|ce week-end|this weekend|demain soir/i,
+  /que faire|quoi faire|what to do|sortir|expérience/i,
+  /spa|massage|yoga|bien-être|wellness/i,
+  /shopping|boutique|marché|market/i,
   // Quartier / immobilier
   /quartier|arrondissement|voisinage|neighborhood|secteur/i,
-  /arrondissement|rue|avenue|boulevard|place/i,
   /loyer|achat|immobilier|m²|mètre carré/i,
-  /restaurant|bar|café|bistrot|brasserie/i,
   // Transport et accès
-  /métro|bus|tram|transport|parking|aéroport/i,
+  /métro|bus|tram|transport|parking|aéroport|airport/i,
   // Actualité destination
-  /événement|festival|concert|expo|salon/i,
+  /événement|festival|concert|expo|salon|spectacle/i,
   /météo|climate|température|saison/i,
   /sécurité|danger|conseils|visa|entrée/i,
   // Temps réel
-  /actuellement|en ce moment|cette année|2025|récemment/i,
-  /meilleur|top|recommandé|étoile|michelin/i,
+  /actuellement|en ce moment|cette année|2025|2026|récemment/i,
+  /meilleur|top|recommandé|étoile|michelin|trending/i,
   // Comparatif
   /comparaison|différence|versus|ou bien|lequel/i,
+  // Activités et culture
+  /musée|galerie|exposition|théâtre|opéra|musique|live/i,
+  /plage|beach|piscine|pool|montagne|randonnée/i,
 ];
 
 export function shouldCallPerplexity(lastMessage: string): boolean {

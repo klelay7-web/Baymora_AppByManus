@@ -11,6 +11,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getClientMemory } from './memory';
 import { shouldCallPerplexity, searchPerplexity, buildSearchQuery, formatPerplexityContext } from './perplexity';
+import { calculateAirportLogistics, formatLogisticsForClaude, type FlightProfile } from '../maps';
 
 // ─── Modèles disponibles ──────────────────────────────────────────────────────
 
@@ -23,10 +24,23 @@ type ModelKey = keyof typeof MODELS;
 
 // ─── System Prompts ───────────────────────────────────────────────────────────
 
-const BASE_SYSTEM = `Tu es Baymora, un assistant de conciergerie de voyage ultra-premium. Tu incarnes l'excellence, la discrétion et l'intelligence d'un vrai chef concierge de palace — comme si le Ritz et le Four Seasons avaient créé leur propre IA.
+const BASE_SYSTEM = `Tu es Baymora, l'assistant de conciergerie le plus avancé du monde. Tu incarnes l'excellence, la discrétion et l'intelligence d'un chef concierge de palace — comme si le Ritz, Four Seasons et un agent secret avaient créé leur propre IA.
 
-## Ta mission
-Aider des clients premium (de l'aisé à l'ultra-riche) à préparer et vivre des voyages parfaits. Tu dois leur faire GAGNER DU TEMPS et OPTIMISER chaque moment.
+## Ta mission — ÉLARGIE
+Tu n'es pas seulement un planificateur de voyages. Tu es le compagnon intelligent de gens aisés, disponible à tout moment :
+- **Voyages** : planification complète, logistique, réservations
+- **Vie quotidienne** : "Je suis à NYC ce soir, qu'est-ce que je fais ?" → restaurants, bars, expériences, petits-déjeuners de folie, concerts de dernière minute
+- **Logistique** : calcul précis du départ pour l'aéroport, gestion des connexions, salons
+- **Lifestyle** : adresses confidentielles, événements privés, suggestions spontanées
+- **Contexte local** : si le client mentionne être dans une ville → tu t'adaptes immédiatement à ce contexte
+
+## Mode LIFESTYLE URBAIN (nouveau)
+Quand le client est déjà sur place et cherche des expériences locales :
+- "Je suis à NYC, je veux un brunch exceptionnel" → tu donnes 3 adresses précises, heures d'ouverture, style, ce qui rend chaque endroit unique
+- "Je cherche quelque chose à faire ce soir à Paris" → tu demandes son quartier et son humeur, puis tu proposes concret + réservable
+- "Mon hôtel est à Miami Beach, recommande-moi" → tu te bases sur la localisation pour proposer le meilleur accessible
+- Toujours : adresse précise, à quelle heure y aller, comment réserver, quoi commander/demander
+- Propose toujours des options à différents niveaux : casual premium, haut de gamme, secret/confidentiel
 
 ## Deux modes d'entrée
 1. **"Je sais où aller"** — Le client a une destination. Tu poses des questions intelligentes pour affiner, puis tu fournis un plan complet.
@@ -78,6 +92,20 @@ Tu ne proposes JAMAIS un plan complet sans avoir ces 3 infos : destination (ou e
 - Si le client dit "surprise moi" → demande ses préférences (plage/montagne/ville ? France/étranger ?).
 - Ne répète JAMAIS une question dont la réponse est déjà dans la conversation.
 - Quand tu as les 3 infos essentielles → passe immédiatement aux recommandations concrètes.
+
+## Logistique aéroport — intelligence de départ
+
+Quand un vol est confirmé (date + heure + aéroport), Baymora calcule l'heure de départ optimale du domicile en tenant compte de :
+- **Trajet domicile → aéroport** (trafic temps réel via Google Maps)
+- **Enregistrement** : si bagages en soute (30min) ou non (5min). Comptoir dédié si cercle Élite/Privé (15min)
+- **Sécurité** : Priority Lane si statut VIP / carte premium (10min) vs standard (20-35min selon aéroport)
+- **Salon** : si le client a accès à un salon (Priority Pass, Centurion, statut compagnie) → 30min de buffer plaisir
+- **Embarquement** : 15-20min avant fermeture porte
+- **Marge** : 10-20min selon profil (moins pour VIP habitués, plus pour premier voyage)
+
+Résultat : tu émets UN tag :::GCAL::: "Quitter le domicile" à l'heure calculée, ET un tag :::GCAL::: "Vol [numéro]" à l'heure du vol.
+
+Si le profil logistique est disponible dans les données client (adresse domicile, accès salon, status) → utilise-le. Sinon, demande.
 
 ## Ce que tu ne fais jamais
 - Jamais robotique ou formel à l'excès.
@@ -348,13 +376,44 @@ export async function callLLM(
     }
   }
 
+  // ── Logistique aéroport (si vol détecté + adresse domicile connue) ──────────
+  let airportContext: string | null = null;
+  if (userRecord?.preferences?.homeAddress && /vol|flight|décolle|départ|aéroport|airport/i.test(lastMessage)) {
+    const flightTimeMatch = lastMessage.match(/(\d{1,2}[h:]\d{2})/);
+    const dateMatch = lastMessage.match(/(\d{4}-\d{2}-\d{2})/);
+    if (flightTimeMatch && dateMatch) {
+      try {
+        const [h, m] = flightTimeMatch[1].replace('h', ':').split(':').map(Number);
+        const flightTime = new Date(`${dateMatch[1]}T${String(h).padStart(2,'0')}:${String(m||0).padStart(2,'0')}:00`);
+        const prefs = userRecord.preferences;
+        const profile: FlightProfile = {
+          flightType: /international|long.?courr|usa|asia|monde/i.test(lastMessage) ? 'international' : 'schengen',
+          hasLounge: prefs.hasLounge || userRecord.circle === 'prive' || userRecord.circle === 'fondateur' || userRecord.circle === 'elite',
+          hasTSAPrecheck: prefs.hasPriorityLane || userRecord.circle === 'prive' || userRecord.circle === 'fondateur',
+          checkedLuggage: !/cabine only|carry.?on|sans bagage/i.test(lastMessage),
+          flightTime,
+          homeAddress: prefs.homeAddress,
+          airport: prefs.homeAirport || lastMessage,
+        };
+        const logistics = await calculateAirportLogistics(profile);
+        airportContext = formatLogisticsForClaude(logistics, flightTime);
+        console.log(`[LLM] Logistique aéroport calculée: départ ${logistics.recommendedDepartureMin}min avant vol`);
+      } catch (e) {
+        console.error('[LLM] Erreur calcul logistique:', e);
+      }
+    }
+  }
+
   try {
     const client = new Anthropic({ apiKey });
     let systemPrompt = buildSystemPrompt(userId, modelKey, userRecord);
     // Injecter les données web en tête du system prompt si disponibles
-    if (webContext) {
-      systemPrompt = `${webContext}\n\n---\n\n${systemPrompt}`;
-      console.log(`[LLM] Contexte web injecté (${webContext.length} chars)`);
+    const contextParts: string[] = [];
+    if (webContext) contextParts.push(webContext);
+    if (airportContext) contextParts.push(airportContext);
+    if (contextParts.length > 0) {
+      systemPrompt = `${contextParts.join('\n\n')}\n\n---\n\n${systemPrompt}`;
+      console.log(`[LLM] Contextes injectés: ${contextParts.map(c => c.split('\n')[0]).join(' | ')}`);
     }
 
     const maxTokens = modelKey === 'opus' ? 2048 : 1024;
