@@ -1,82 +1,150 @@
 /**
  * POLLEN SERVICE — Données polliniques & qualité de l'air
  *
- * Sources :
- * - Open-Meteo Air Quality API (gratuit, sans clé) → pollen, AQI, particules fines
- * - Geocoding Google → convertir une ville en coordonnées
+ * Sources (par ordre de priorité) :
+ * 1. Google Air Quality API — résolution 500m x 500m, données officiel Google
+ *    https://developers.google.com/maps/documentation/air-quality
+ * 2. Open-Meteo Air Quality API (fallback gratuit, sans clé)
  *
  * Types de pollen couverts :
- * - Graminées (grass_pollen) — principal allergène printanier
- * - Bouleau (birch_pollen) — forte allergie en Europe du Nord
- * - Aulne (alder_pollen) — février-mars
- * - Ambroisie (ragweed_pollen) — fin été / automne
- * - Olivier (olive_pollen) — Méditerranée
+ * - Graminées (grass) — principal allergène printanier
+ * - Bouleau (tree) — forte allergie en Europe du Nord
+ * - Mauvaises herbes (weed) — ambroisie, armoise
  */
 
-import { geocodeAddress } from '../maps';
+import { geocodeAddress } from './maps';
 
 export interface PollenData {
-  type: 'grass' | 'birch' | 'alder' | 'ragweed' | 'olive';
+  type: 'grass' | 'tree' | 'weed' | 'birch' | 'alder' | 'ragweed' | 'olive';
   labelFr: string;
-  value: number | null;         // grains/m³
+  value: number | null;
   level: 'faible' | 'modéré' | 'élevé' | 'très élevé' | 'inconnu';
   levelEmoji: string;
 }
 
 export interface AirQualityData {
   location: string;
-  aqi: number | null;           // European AQI 0-500
+  aqi: number | null;
   aqiLabel: string;
   aqiEmoji: string;
-  pm25: number | null;          // µg/m³
-  pm10: number | null;          // µg/m³
+  pm25: number | null;
+  pm10: number | null;
   pollen: PollenData[];
   dominantAllergen: string | null;
   advice: string;
+  source: 'google' | 'open-meteo';
   fetchedAt: Date;
 }
 
-// ─── Open-Meteo Air Quality API ───────────────────────────────────────────────
+// ─── Google Air Quality API ───────────────────────────────────────────────────
 
-export async function getAirQuality(locationName: string): Promise<AirQualityData | null> {
+async function getGoogleAirQuality(lat: number, lng: number): Promise<AirQualityData | null> {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return null;
+
   try {
-    // 1. Géocoder la ville
-    const geo = await geocodeAddress(locationName);
-    if (!geo) {
-      console.warn(`[POLLEN] Impossible de géocoder: ${locationName}`);
-      return null;
+    // 1. AQI + pollutants
+    const aqiRes = await fetch(
+      `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location: { latitude: lat, longitude: lng },
+          extraComputations: ['POLLUTANT_CONCENTRATION', 'DOMINANT_POLLUTANT_CONCENTRATION'],
+          languageCode: 'fr',
+        }),
+      }
+    );
+
+    // 2. Pollen
+    const pollenRes = await fetch(
+      `https://pollen.googleapis.com/v1/forecast:lookup?key=${apiKey}&location.latitude=${lat}&location.longitude=${lng}&days=1`,
+    );
+
+    if (!aqiRes.ok && !pollenRes.ok) return null;
+
+    const aqiData = aqiRes.ok ? await aqiRes.json() : null;
+    const pollenData = pollenRes.ok ? await pollenRes.json() : null;
+
+    // Extraire AQI
+    const indexes = aqiData?.indexes || [];
+    const euAqi = indexes.find((i: any) => i.code === 'eea') || indexes[0];
+    const aqiValue = euAqi?.aqiDisplay ? parseInt(euAqi.aqiDisplay) : null;
+
+    // Extraire PM2.5 / PM10
+    const pollutants = aqiData?.pollutants || [];
+    const pm25 = pollutants.find((p: any) => p.code === 'pm25')?.concentration?.value ?? null;
+    const pm10 = pollutants.find((p: any) => p.code === 'pm10')?.concentration?.value ?? null;
+
+    // Extraire pollen
+    const pollenItems: PollenData[] = [];
+    const dailyInfo = pollenData?.dailyInfo?.[0];
+    if (dailyInfo?.pollenTypeInfo) {
+      for (const pType of dailyInfo.pollenTypeInfo) {
+        const indexVal = pType.indexInfo?.value ?? null;
+        const level = assessPollenIndexLevel(indexVal);
+        const type = pType.code?.toLowerCase() === 'grass' ? 'grass'
+          : pType.code?.toLowerCase() === 'tree' ? 'tree'
+          : 'weed';
+        const labelMap: Record<string, string> = {
+          GRASS: 'Graminées',
+          TREE: 'Arbres',
+          WEED: 'Mauvaises herbes',
+        };
+        pollenItems.push({
+          type,
+          labelFr: labelMap[pType.code] || pType.displayName || pType.code,
+          value: indexVal,
+          level,
+          levelEmoji: getPollenEmoji(level),
+        });
+      }
     }
 
-    const { lat, lng } = geo;
+    const dominant = pollenItems
+      .filter(p => p.value !== null && p.value > 0)
+      .sort((a, b) => (b.value || 0) - (a.value || 0))[0];
 
-    // 2. Open-Meteo Air Quality API (gratuit, sans clé)
+    const { label: aqiLabel, emoji: aqiEmoji } = assessAQI(aqiValue);
+
+    console.log(`[POLLEN] Google API: AQI ${aqiValue}, pollen: ${pollenItems.map(p => `${p.labelFr}=${p.level}`).join(', ')}`);
+
+    return {
+      location: `${lat.toFixed(2)}, ${lng.toFixed(2)}`,
+      aqi: aqiValue,
+      aqiLabel,
+      aqiEmoji,
+      pm25: pm25 !== null ? Math.round(pm25 * 10) / 10 : null,
+      pm10: pm10 !== null ? Math.round(pm10 * 10) / 10 : null,
+      pollen: pollenItems,
+      dominantAllergen: dominant?.labelFr || null,
+      advice: buildAdvice(pollenItems, aqiValue),
+      source: 'google',
+      fetchedAt: new Date(),
+    };
+  } catch (error) {
+    console.error('[POLLEN] Erreur Google Air Quality:', error);
+    return null;
+  }
+}
+
+// ─── Open-Meteo Fallback ──────────────────────────────────────────────────────
+
+async function getOpenMeteoAirQuality(lat: number, lng: number): Promise<AirQualityData | null> {
+  try {
     const params = new URLSearchParams({
       latitude: String(lat),
       longitude: String(lng),
-      hourly: [
-        'grass_pollen',
-        'birch_pollen',
-        'alder_pollen',
-        'ragweed_pollen',
-        'olive_pollen',
-        'european_aqi',
-        'pm10',
-        'pm2_5',
-      ].join(','),
+      hourly: 'grass_pollen,birch_pollen,alder_pollen,ragweed_pollen,olive_pollen,european_aqi,pm10,pm2_5',
       forecast_days: '1',
       timezone: 'auto',
     });
 
     const res = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`);
-
-    if (!res.ok) {
-      console.error('[POLLEN] API error:', res.status);
-      return null;
-    }
+    if (!res.ok) return null;
 
     const data = await res.json();
-
-    // Prendre l'index de l'heure actuelle
     const nowIdx = getCurrentHourIndex(data.hourly?.time || []);
 
     const grassVal = data.hourly?.grass_pollen?.[nowIdx] ?? null;
@@ -94,21 +162,16 @@ export async function getAirQuality(locationName: string): Promise<AirQualityDat
       buildPollenData('alder', 'Aulne', alderVal),
       buildPollenData('ragweed', 'Ambroisie', ragweedVal),
       buildPollenData('olive', 'Olivier', oliveVal),
-    ].filter(p => p.value !== null || p.level !== 'inconnu');
+    ].filter(p => p.value !== null);
 
-    // Allergène dominant (niveau le plus élevé)
     const dominant = pollenItems
-      .filter(p => p.value !== null && p.value > 0)
+      .filter(p => p.value !== null && (p.value || 0) > 0)
       .sort((a, b) => (b.value || 0) - (a.value || 0))[0];
 
     const { label: aqiLabel, emoji: aqiEmoji } = assessAQI(aqiVal);
 
-    const advice = buildAdvice(pollenItems, aqiVal);
-
-    console.log(`[POLLEN] ${locationName}: AQI ${aqiVal}, dominant: ${dominant?.labelFr || 'aucun'}`);
-
     return {
-      location: geo.formatted,
+      location: `${lat.toFixed(2)}, ${lng.toFixed(2)}`,
       aqi: aqiVal !== null ? Math.round(aqiVal) : null,
       aqiLabel,
       aqiEmoji,
@@ -116,24 +179,54 @@ export async function getAirQuality(locationName: string): Promise<AirQualityDat
       pm10: pm10Val !== null ? Math.round(pm10Val * 10) / 10 : null,
       pollen: pollenItems,
       dominantAllergen: dominant?.labelFr || null,
-      advice,
+      advice: buildAdvice(pollenItems, aqiVal),
+      source: 'open-meteo',
       fetchedAt: new Date(),
     };
   } catch (error) {
-    console.error('[POLLEN] Erreur:', error);
+    console.error('[POLLEN] Erreur Open-Meteo:', error);
     return null;
   }
+}
+
+// ─── Interface publique ───────────────────────────────────────────────────────
+
+export async function getAirQuality(locationName: string): Promise<AirQualityData | null> {
+  // Géocoder la ville
+  const geo = await geocodeAddress(locationName);
+  if (!geo) {
+    console.warn(`[POLLEN] Impossible de géocoder: ${locationName}`);
+    return null;
+  }
+
+  const { lat, lng } = geo;
+
+  // Essayer Google en premier (résolution 500m, données officielles)
+  const googleResult = await getGoogleAirQuality(lat, lng);
+  if (googleResult) {
+    googleResult.location = geo.formatted;
+    return googleResult;
+  }
+
+  // Fallback Open-Meteo (gratuit)
+  console.log('[POLLEN] Fallback Open-Meteo');
+  const openMeteoResult = await getOpenMeteoAirQuality(lat, lng);
+  if (openMeteoResult) {
+    openMeteoResult.location = geo.formatted;
+    return openMeteoResult;
+  }
+
+  return null;
 }
 
 // ─── Rapport formaté pour Claude ─────────────────────────────────────────────
 
 export function formatPollenReport(data: AirQualityData): string {
-  const lines: string[] = [`## Qualité de l'air & Pollen — ${data.location}`];
+  const sourceLabel = data.source === 'google' ? 'Google Air Quality' : 'Open-Meteo';
+  const lines: string[] = [`## Qualité de l'air & Pollen — ${data.location} *(${sourceLabel})*`];
 
-  // AQI
   lines.push(`**Qualité de l'air :** ${data.aqiEmoji} ${data.aqiLabel}${data.aqi !== null ? ` (AQI ${data.aqi})` : ''}`);
 
-  // Particules fines
   if (data.pm25 !== null || data.pm10 !== null) {
     const parts: string[] = [];
     if (data.pm25 !== null) parts.push(`PM2.5: ${data.pm25} µg/m³`);
@@ -141,15 +234,14 @@ export function formatPollenReport(data: AirQualityData): string {
     lines.push(`🏭 Particules fines : ${parts.join(' · ')}`);
   }
 
-  // Pollen actifs
   const activePollen = data.pollen.filter(p => p.level !== 'inconnu' && p.level !== 'faible');
   if (activePollen.length > 0) {
     lines.push(`\n**Pollen actifs :**`);
     activePollen.forEach(p => {
-      lines.push(`${p.levelEmoji} ${p.labelFr} : ${p.level}${p.value !== null ? ` (${Math.round(p.value)} grains/m³)` : ''}`);
+      lines.push(`${p.levelEmoji} ${p.labelFr} : ${p.level}${p.value !== null ? ` (indice ${Math.round(p.value)})` : ''}`);
     });
   } else {
-    lines.push(`🌿 Pollen : niveaux faibles`);
+    lines.push(`🌿 Pollen : niveaux faibles aujourd'hui`);
   }
 
   if (data.dominantAllergen) {
@@ -163,19 +255,14 @@ export function formatPollenReport(data: AirQualityData): string {
   return lines.join('\n');
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers privés ───────────────────────────────────────────────────────────
 
 function buildPollenData(type: PollenData['type'], labelFr: string, value: number | null): PollenData {
   const level = assessPollenLevel(value);
-  return {
-    type,
-    labelFr,
-    value,
-    level,
-    levelEmoji: getPollenEmoji(level),
-  };
+  return { type, labelFr, value, level, levelEmoji: getPollenEmoji(level) };
 }
 
+// Niveaux Open-Meteo (grains/m³)
 function assessPollenLevel(value: number | null): PollenData['level'] {
   if (value === null) return 'inconnu';
   if (value < 10) return 'faible';
@@ -184,13 +271,18 @@ function assessPollenLevel(value: number | null): PollenData['level'] {
   return 'très élevé';
 }
 
+// Niveaux Google (index 0-5)
+function assessPollenIndexLevel(value: number | null): PollenData['level'] {
+  if (value === null) return 'inconnu';
+  if (value <= 1) return 'faible';
+  if (value <= 2) return 'modéré';
+  if (value <= 3) return 'élevé';
+  return 'très élevé';
+}
+
 function getPollenEmoji(level: PollenData['level']): string {
   const map: Record<PollenData['level'], string> = {
-    faible: '🟢',
-    modéré: '🟡',
-    élevé: '🟠',
-    'très élevé': '🔴',
-    inconnu: '⬜',
+    faible: '🟢', modéré: '🟡', élevé: '🟠', 'très élevé': '🔴', inconnu: '⬜',
   };
   return map[level];
 }
@@ -207,15 +299,14 @@ function assessAQI(aqi: number | null): { label: string; emoji: string } {
 
 function buildAdvice(pollen: PollenData[], aqi: number | null): string {
   const highPollen = pollen.filter(p => p.level === 'élevé' || p.level === 'très élevé');
-
   if (highPollen.length > 0 && aqi !== null && aqi > 60) {
-    return `Journée difficile pour les allergiques : ${highPollen.map(p => p.labelFr.toLowerCase()).join(' et ')} à risque + air pollué. Préférez les activités intérieures, fenêtres fermées.`;
+    return `Journée difficile pour les allergiques : ${highPollen.map(p => p.labelFr.toLowerCase()).join(' et ')} à risque + air pollué. Préférez les activités intérieures.`;
   }
   if (highPollen.length > 0) {
-    return `${highPollen.map(p => p.labelFr).join(', ')} : niveaux élevés. Les allergiques devraient éviter les activités extérieures prolongées.`;
+    return `${highPollen.map(p => p.labelFr).join(', ')} : niveaux élevés. Évitez les activités extérieures prolongées si vous êtes allergique.`;
   }
   if (aqi !== null && aqi > 60) {
-    return `Qualité de l'air dégradée. Les personnes sensibles devraient limiter les efforts en extérieur.`;
+    return `Qualité de l'air dégradée. Limitez les efforts en extérieur.`;
   }
   return `Conditions favorables pour les activités extérieures.`;
 }

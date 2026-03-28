@@ -7,7 +7,7 @@
  * - Geocoding Google → convertir "plage de Pampelonne" en coordonnées
  */
 
-import { geocodeAddress } from '../maps';
+import { geocodeAddress } from './maps';
 
 export interface MarineConditions {
   location: string;
