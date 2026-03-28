@@ -13,6 +13,7 @@ import { getClientMemory } from './memory';
 import { shouldCallPerplexity, searchPerplexity, buildSearchQuery, formatPerplexityContext } from './perplexity';
 import { calculateAirportLogistics, formatLogisticsForClaude, type FlightProfile } from '../maps';
 import { getBeachReport } from '../marine';
+import { getAirQuality, formatPollenReport } from '../pollen';
 
 // ─── Modèles disponibles ──────────────────────────────────────────────────────
 
@@ -118,6 +119,15 @@ Quand un vol est confirmé (date + heure + aéroport), Baymora calcule l'heure d
 Résultat : tu émets UN tag :::GCAL::: "Quitter le domicile" à l'heure calculée, ET un tag :::GCAL::: "Vol [numéro]" à l'heure du vol.
 
 Si le profil logistique est disponible dans les données client (adresse domicile, accès salon, status) → utilise-le. Sinon, demande.
+
+## Pollen & qualité de l'air — données temps réel
+
+Quand un client parle de pollen, d'allergies, ou demande les conditions outdoor (notamment au printemps/été), tu as accès aux données injectées en contexte :
+- 🟢/🟡/🟠/🔴 **Niveaux de pollen** par type (graminées, bouleau, aulne, ambroisie, olivier)
+- 🏭 **PM2.5 / PM10** (particules fines)
+- 💚 **AQI européen** (indice qualité de l'air 0-500)
+
+Utilise ces données pour conseiller les allergiques : heures recommandées pour sortir, activités à privilégier ou éviter, si une destination de voyage sera problématique selon la saison. Toujours citer la source (données Open-Meteo Air Quality).
 
 ## Ce que tu ne fais jamais
 - Jamais robotique ou formel à l'excès.
@@ -404,6 +414,21 @@ export async function callLLM(
     }
   }
 
+  // ── Pollen & qualité de l'air (si pollen / allergie détecté) ───────────────
+  let pollenContext: string | null = null;
+  if (/pollen|allergi|rhume des foins|hayfever|qualité.{0,10}air|particul|pm2|pm10|smog|pollution/i.test(lastMessage)) {
+    // Extraire la ville depuis le message ou la mémoire client
+    const cityMatch = lastMessage.match(/(?:à|en|de|pour|sur)\s+([A-ZÀ-Ÿ][a-zà-ÿ\s-]{2,25})/);
+    const cityName = cityMatch?.[1]?.trim() || userRecord?.preferences?.mentionedDestinations?.[0];
+    if (cityName) {
+      const aqData = await getAirQuality(cityName);
+      if (aqData) {
+        pollenContext = formatPollenReport(aqData);
+        console.log(`[LLM] Rapport pollen injecté pour: ${cityName}`);
+      }
+    }
+  }
+
   // ── Logistique aéroport (si vol détecté + adresse domicile connue) ──────────
   let airportContext: string | null = null;
   if (userRecord?.preferences?.homeAddress && /vol|flight|décolle|départ|aéroport|airport/i.test(lastMessage)) {
@@ -439,6 +464,7 @@ export async function callLLM(
     const contextParts: string[] = [];
     if (webContext) contextParts.push(webContext);
     if (marineContext) contextParts.push(marineContext);
+    if (pollenContext) contextParts.push(pollenContext);
     if (airportContext) contextParts.push(airportContext);
     if (contextParts.length > 0) {
       systemPrompt = `${contextParts.join('\n\n')}\n\n---\n\n${systemPrompt}`;

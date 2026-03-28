@@ -49,6 +49,9 @@ const SEARCH_TRIGGERS = [
   // Temps réel
   /actuellement|en ce moment|cette année|2025|2026|récemment/i,
   /meilleur|top|recommandé|étoile|michelin|trending/i,
+  // Pollen & qualité de l'air
+  /pollen|allergi|rhume des foins|hayfever/i,
+  /qualité.{0,10}air|pollution|smog|particules fines/i,
   // Comparatif
   /comparaison|différence|versus|ou bien|lequel/i,
   // Activités et culture
