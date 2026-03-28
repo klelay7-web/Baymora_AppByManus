@@ -6,7 +6,7 @@
     "dev": "concurrently -n API,WEB -c cyan,green \"tsx watch server/dev-server.ts\" \"vite\"",
     "build": "vite build",
     "postinstall": "prisma generate",
-    "start": "tsx server/node-build.ts",
+    "start": "node --import tsx/esm ./server/node-build.ts",
     "test": "vitest --run",
     "format.fix": "prettier --write .",
     "typecheck": "tsc",
