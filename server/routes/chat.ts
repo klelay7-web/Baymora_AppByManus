@@ -2,6 +2,7 @@ import { Router, RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { requireAuth } from '../middleware/auth';
 import { callLLM, type LLMMessage } from '../services/ai/llm';
+import { getUserById } from './users';
 
 const router = Router();
 
@@ -114,8 +115,9 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
       content: m.content,
     }));
 
-    const userId = (req as any).admin?.userId || conversation.userId;
-    const llmResult = await callLLM(llmMessages, userId, conversation.language);
+    const userId = (req as any).baymoraUser?.id || (req as any).admin?.userId || conversation.userId;
+    const userRecord = userId ? getUserById(userId) : null;
+    const llmResult = await callLLM(llmMessages, userId, conversation.language, userRecord);
     const assistantResponse = llmResult.content;
 
     const assistantMessage: Message = {
@@ -331,6 +333,76 @@ export function extractProfileSignals(messages: Message[]): Record<string, any> 
 
   if (styles.length > 0) signals.travelStyle = styles;
   if (destinations.length > 0) signals.mentionedDestinations = destinations;
+
+  // ── Détection des personnes mentionnées (graphe social)
+  const contacts: Record<string, any> = signals.contacts || {};
+
+  for (const msg of messages) {
+    if (msg.role !== 'user') continue;
+    const raw = msg.content;
+    const t = raw.toLowerCase();
+
+    // Patterns : "ma femme Marie", "mon ami Jean", "avec Clara", "mon collègue Paul"
+    const relationPatterns: Array<{ regex: RegExp; rel: string }> = [
+      { regex: /ma\s+femme\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'femme' },
+      { regex: /mon\s+mari\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'mari' },
+      { regex: /mon\s+(?:petit.?ami|copain)\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'petit-ami' },
+      { regex: /ma\s+(?:petite.?amie|copine)\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'petite-amie' },
+      { regex: /mon\s+partenaire\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'partenaire' },
+      { regex: /ma\s+partenaire\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'partenaire' },
+      { regex: /mon\s+ami\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'ami' },
+      { regex: /mon\s+amie\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'amie' },
+      { regex: /mon\s+(?:fils|garçon)\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'fils' },
+      { regex: /ma\s+(?:fille)\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'fille' },
+      { regex: /mon\s+frère\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'frère' },
+      { regex: /ma\s+sœur\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'sœur' },
+      { regex: /mon\s+collègue\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'collègue' },
+      { regex: /ma\s+collègue\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'collègue' },
+      { regex: /mon\s+associé\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'associé' },
+      { regex: /avec\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)(?:\s+et\s+([A-ZÀ-Ÿ][a-zà-ÿ]+))?/g, rel: 'inconnu' },
+    ];
+
+    for (const { regex, rel } of relationPatterns) {
+      let match;
+      regex.lastIndex = 0;
+      while ((match = regex.exec(raw)) !== null) {
+        const name = match[1];
+        // Ignorer les mots courants qui ne sont pas des prénoms
+        if (/^(moi|toi|lui|elle|nous|vous|eux|mon|ma|mes|le|la|les|un|une|des)$/i.test(name)) continue;
+        if (!contacts[name]) {
+          contacts[name] = { name, relationship: rel, firstMentionedAt: msg.timestamp };
+        } else if (rel !== 'inconnu' && contacts[name].relationship === 'inconnu') {
+          contacts[name].relationship = rel;
+        }
+        // Contexte de la mention
+        contacts[name].lastSeenWith = raw.substring(0, 80);
+      }
+    }
+
+    // Âge mentionné : "Marie a 35 ans", "il a 42 ans", etc.
+    const agePattern = /([A-ZÀ-Ÿ][a-zà-ÿ]+)\s+a\s+(\d{1,2})\s+ans/g;
+    let ageMatch;
+    while ((ageMatch = agePattern.exec(raw)) !== null) {
+      const name = ageMatch[1];
+      if (contacts[name]) contacts[name].age = parseInt(ageMatch[2]);
+    }
+
+    // Anniversaire : "l'anniv de Marie c'est le 15 mars", "anniversaire de Jean le 3 juin"
+    const anniPattern = /anniv(?:ersaire)?\s+de\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)[^\d]*(\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)/gi;
+    const months: Record<string, string> = { janvier:'01',février:'02',mars:'03',avril:'04',mai:'05',juin:'06',juillet:'07',août:'08',septembre:'09',octobre:'10',novembre:'11',décembre:'12' };
+    let anniMatch;
+    while ((anniMatch = anniPattern.exec(raw)) !== null) {
+      const name = anniMatch[1];
+      const day = anniMatch[2].padStart(2, '0');
+      const month = months[anniMatch[3].toLowerCase()];
+      if (month) {
+        if (!contacts[name]) contacts[name] = { name, relationship: 'inconnu' };
+        contacts[name].birthday = `${month}-${day}`;
+      }
+    }
+  }
+
+  if (Object.keys(contacts).length > 0) signals.contacts = contacts;
 
   return signals;
 }

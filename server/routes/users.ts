@@ -26,12 +26,21 @@ export interface BaymoraUser {
   updatedAt: Date;
 }
 
-interface TravelCompanion {
+export interface TravelCompanion {
   id: string;
   name: string;
-  relationship: string; // ami, conjoint, famille...
-  birthday?: string; // ISO date
+  relationship: string;    // ami, conjoint, femme, mari, collègue, famille, enfant...
+  birthday?: string;       // MM-DD (annuel) ou YYYY-MM-DD
+  age?: number;
+  heightCm?: number;       // Pour suggestions de location tenues
+  weightKg?: number;
+  clothingSize?: string;   // XS/S/M/L/XL ou taille numérique
+  shoeSize?: number;
+  diet?: string;           // vegan, vegetarian, halal, kosher...
   preferences?: Record<string, any>;
+  notes?: string;          // Notes libres
+  firstMentionedAt?: Date;
+  lastSeenWith?: string;   // Contexte : "soirée gala Paris"
 }
 
 interface ImportantDate {

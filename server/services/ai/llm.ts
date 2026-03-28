@@ -55,28 +55,21 @@ Pour une destination donnée :
 
 ## Valeurs — ce que Baymora incarne
 
-Baymora est un espace sans jugement. Tu accueilles tous les styles de vie, toutes les sensibilités, avec la même excellence.
+Baymora est un espace sans jugement. Tous les styles de vie, tous les choix, avec la même excellence.
 
-**Tu proposes naturellement, sans qu'on te le demande :**
-- Une option végétarienne/vegan si le contexte s'y prête ou si le client l'a mentionné
-- Une alternative de transport moins polluante (train si < 3h, éco-classe si disponible) — présentée comme option, jamais imposée
-- Les établissements LGBT+ friendly si le client a signalé ce critère, ou discrètement si le contexte le suggère
-- Des hôtels ou expériences éco-responsables si le client est sensible à l'environnement
+**Tu proposes, tu n'imposes jamais :**
+- Si le client a dit "végétarien/vegan" → tous tes restos et menus sont adaptés, sans exception
+- Si le client a mentionné l'écologie → glisse une option plus légère dans ta sélection, sans en faire le sujet
+- Si le contexte suggère un couple de même genre → tu traites ça naturellement, comme n'importe quel couple
+- Si le client veut un établissement LGBT+ friendly → tu le précises dans tes reco
 
 **Tu ne fais jamais :**
-- Supposer les valeurs de quelqu'un en fonction de son budget — riche ≠ irresponsable
-- Confondre "voyage premium" et "gaspillage" — le luxe peut être léger, local, électrique, durable
-- Faire des remarques sur les choix alimentaires, de vie, d'orientation ou de relation
-- Sermonner sur l'écologie si le client n'y est pas sensible
+- Associer budget élevé à irresponsabilité écologique
+- Faire la promotion de l'écologie si ce n'est pas demandé
+- Juger les choix alimentaires, de vie ou d'orientation
+- Supposer quoi que ce soit sur les valeurs de quelqu'un
 
-**Le ton juste :** Un yacht peut être électrique. Un jet peut être compensé. Un palace peut être zéro déchet. Tu présentes ça comme une option élégante et moderne — pas comme un devoir moral.
-
-**Décodage des signaux client :**
-- "végétarien / vegan" → tous tes restos et menus sont adaptés, tu ne proposes jamais autre chose
-- "avec mon partenaire / compagnon / compagne" (même genre apparent) → couple comme un autre, naturellement
-- "écologie / bilan carbone / durable" → tu le mets en avant dans toutes tes reco
-- "peu importe" → tu glisses une option plus légère en fin de liste, sans insister
-- "classique / traditionnel" → tu respectes, pas de militantisme
+**Le ton :** discret, disponible, jamais militant.
 
 ## Stratégie conversationnelle
 Tu ne proposes JAMAIS un plan complet sans avoir ces 3 infos : destination (ou envie), avec qui, durée.
@@ -90,6 +83,16 @@ Tu ne proposes JAMAIS un plan complet sans avoir ces 3 infos : destination (ou e
 - Jamais de réponses génériques type Wikipedia.
 - Jamais plus de 3 questions en une fois.
 - Jamais croiser les données entre clients.
+
+## Graphe social — enrichir l'entourage du client
+
+Quand le client mentionne une personne par son prénom ou sa relation :
+- Utilise son prénom immédiatement dans ta réponse si tu le connais
+- Si tu ne connais pas son prénom, demande-le naturellement ("Votre femme, comment s'appelle-t-elle ?")
+- Si tu manques d'infos utiles pour la planification (taille, régime, anniversaire), pose la question de façon opportuniste et naturelle — jamais en formulaire
+- Exemples : "Marie a des préférences alimentaires particulières ?" / "Jean porte du combien en chaussures ? Je pense à une soirée avec dress code." / "C'est quand l'anniversaire de Lucas ?"
+- Quand une tenue est requise (gala, soirée, mariage, dress code) : mentionne les besoins de chaque personne connue du groupe et propose des solutions (location smocking, robe, boutiques proches, délai)
+- Quand tu planifies un transport : vérifie si tout le groupe est pris en charge ("Jean et vous, vous avez besoin d'un transfert depuis l'hôtel aussi ?")
 
 ## Suggestions rapides (OBLIGATOIRE à chaque réponse)
 À la fin de CHAQUE réponse, tu ajoutes UNE ligne de suggestions cliquables dans ce format EXACT :
@@ -158,38 +161,79 @@ function selectModel(message: string, conversationLength: number): ModelKey {
 
 // ─── Construction du system prompt avec mémoire client ────────────────────────
 
-function buildSystemPrompt(userId: string, modelKey: ModelKey): string {
+function buildSystemPrompt(userId: string, modelKey: ModelKey, userRecord?: any): string {
   const extra = modelKey === 'opus' ? OPUS_EXTRA : SONNET_EXTRA;
   const base = BASE_SYSTEM + extra;
 
-  const memory = getClientMemory(userId);
-  if (!memory || Object.keys(memory.preferences).length === 0) return base;
+  const sections: string[] = [];
 
-  const prefs = memory.preferences;
-  const lines: string[] = [];
+  // ── Profil du client (depuis le userRecord Baymora)
+  if (userRecord) {
+    const p = userRecord.preferences || {};
+    const profileLines: string[] = [];
 
-  if (prefs.travelStyle) lines.push(`Style : ${prefs.travelStyle}`);
-  if (prefs.budget?.max) lines.push(`Budget indicatif : jusqu'à ${prefs.budget.max} ${prefs.budget.currency || 'EUR'}`);
-  if (prefs.pace) lines.push(`Rythme préféré : ${prefs.pace}`);
-  if (prefs.petFriendly) lines.push(`Voyage avec animal de compagnie`);
-  if (prefs.travelsWithChildren) {
-    const ages = prefs.childrenAges?.length ? ` (âges: ${prefs.childrenAges.join(', ')})` : '';
-    lines.push(`Voyage avec enfants${ages}`);
+    if (userRecord.prenom) profileLines.push(`Prénom / appellation : ${userRecord.prenom}`);
+    if (userRecord.pseudo) profileLines.push(`Pseudo : ${userRecord.pseudo}`);
+    if (userRecord.mode === 'fantome') profileLines.push(`Mode : Fantôme (anonymat total souhaité)`);
+    if (p.diet) profileLines.push(`Régime : ${p.diet}`);
+    if (p.ecoConscious) profileLines.push(`Sensible à l'écologie : oui (proposer des alternatives légères)`);
+    if (p.budgetTier) profileLines.push(`Budget : ${p.budgetTier}`);
+    if (p.travelWith) profileLines.push(`Voyage généralement : ${p.travelWith}`);
+    if (p.travelStyle?.length) profileLines.push(`Styles appréciés : ${p.travelStyle.join(', ')}`);
+    if (p.pets) profileLines.push(`Voyage avec animal de compagnie`);
+    if (p.children) profileLines.push(`Voyage avec enfants`);
+    if (p.mentionedDestinations?.length) profileLines.push(`Destinations évoquées : ${p.mentionedDestinations.join(', ')}`);
+
+    if (profileLines.length > 0) {
+      sections.push(`## Ce que tu sais de ce client\n${profileLines.map(l => `- ${l}`).join('\n')}\n\nUtilise son prénom ou pseudo naturellement. Ne récite pas ce profil.`);
+    }
+
+    // ── Entourage connu (graphe social)
+    const contacts = p.contacts || {};
+    const companions = userRecord.travelCompanions || [];
+    const allContacts = [
+      ...companions,
+      ...Object.values(contacts).filter((c: any) => !companions.find((cp: any) => cp.name === c.name)),
+    ];
+
+    if (allContacts.length > 0) {
+      const contactLines = allContacts.map((c: any) => {
+        const parts: string[] = [`**${c.name}**`];
+        if (c.relationship && c.relationship !== 'inconnu') parts.push(c.relationship);
+        if (c.age) parts.push(`${c.age} ans`);
+        if (c.birthday) parts.push(`anniv: ${c.birthday}`);
+        if (c.clothingSize) parts.push(`taille vêtements: ${c.clothingSize}`);
+        if (c.shoeSize) parts.push(`pointure: ${c.shoeSize}`);
+        if (c.diet) parts.push(`régime: ${c.diet}`);
+        if (c.notes) parts.push(c.notes);
+        return `- ${parts.join(' · ')}`;
+      });
+
+      sections.push(`## Entourage connu du client\n${contactLines.join('\n')}\n\nQuand une de ces personnes est concernée par un voyage ou un événement, utilise son prénom et personnalise la réponse (tenue requise → propose location smocking/robe, mentionne si l'établissement est accessible avec un enfant, etc.).`);
+    }
+
+    // ── Dates importantes
+    const dates = userRecord.importantDates || [];
+    if (dates.length > 0) {
+      const dateLines = dates.map((d: any) => `- ${d.label}${d.contactName ? ` (${d.contactName})` : ''} : ${d.date}${d.recurring ? ' (annuel)' : ''}`);
+      sections.push(`## Dates importantes à surveiller\n${dateLines.join('\n')}`);
+    }
+  } else {
+    // Fallback legacy : mémoire client simple
+    const memory = getClientMemory(userId);
+    if (memory && Object.keys(memory.preferences).length > 0) {
+      const p = memory.preferences;
+      const lines: string[] = [];
+      if (p.travelStyle) lines.push(`Style : ${p.travelStyle}`);
+      if (p.petFriendly) lines.push(`Voyage avec animal`);
+      if (p.travelsWithChildren) lines.push(`Voyage avec enfants`);
+      if (lines.length > 0) sections.push(`## Profil connu\n${lines.map(l => `- ${l}`).join('\n')}`);
+    }
   }
-  if (prefs.accessibility?.length) lines.push(`Accessibilité : ${prefs.accessibility.join(', ')}`);
-  if (prefs.favoriteDestinations?.length) lines.push(`Destinations appréciées : ${prefs.favoriteDestinations.join(', ')}`);
-  if (prefs.activities?.length) lines.push(`Activités : ${prefs.activities.join(', ')}`);
-  if (prefs.cuisine?.length) lines.push(`Cuisines : ${prefs.cuisine.join(', ')}`);
-  if (prefs.languages?.length) lines.push(`Langues : ${prefs.languages.join(', ')}`);
 
-  if (lines.length === 0) return base;
+  if (sections.length === 0) return base;
 
-  return `${base}
-
-## Profil connu de ce client
-${lines.map(l => `- ${l}`).join('\n')}
-
-Intègre ces informations naturellement. Ne les récite pas.`;
+  return `${base}\n\n${sections.join('\n\n')}`;
 }
 
 // ─── Interface publique ───────────────────────────────────────────────────────
@@ -210,7 +254,8 @@ export interface LLMResponse {
 export async function callLLM(
   messages: LLMMessage[],
   userId: string = 'guest',
-  language: 'fr' | 'en' = 'fr'
+  language: 'fr' | 'en' = 'fr',
+  userRecord?: any
 ): Promise<LLMResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
@@ -232,7 +277,7 @@ export async function callLLM(
 
   try {
     const client = new Anthropic({ apiKey });
-    const systemPrompt = buildSystemPrompt(userId, modelKey);
+    const systemPrompt = buildSystemPrompt(userId, modelKey, userRecord);
 
     const maxTokens = modelKey === 'opus' ? 2048 : 1024;
 
@@ -258,7 +303,7 @@ export async function callLLM(
       console.log('[LLM] Fallback Opus → Sonnet');
       try {
         const client = new Anthropic({ apiKey });
-        const systemPrompt = buildSystemPrompt(userId, 'sonnet');
+        const systemPrompt = buildSystemPrompt(userId, 'sonnet', userRecord);
         const response = await client.messages.create({
           model: MODELS.sonnet,
           max_tokens: 1024,
