@@ -208,11 +208,11 @@ export default function Chat() {
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-secondary/30 to-secondary/10 border border-secondary/20 flex items-center justify-center mx-auto mb-4">
                 <span className="text-xl font-bold text-secondary">B</span>
               </div>
-              <h2 className="text-white text-2xl font-bold mb-1">
+              <h2 className="text-2xl font-bold mb-1" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 40%, #c8bfa8 70%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 8px rgba(255,245,220,0.4))'}}>
                 {user?.prenom ? `Bonjour ${user.prenom}` : 'Bonjour'}
               </h2>
               {/* La phrase iconique */}
-              <p className="text-secondary/90 text-sm font-medium tracking-wide">
+              <p className="text-sm font-medium tracking-wide" style={{background: 'linear-gradient(135deg, #c8a94a 0%, #f5d87a 35%, #e4c057 65%, #f5d87a 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 10px rgba(212,168,80,0.5))'}}>
                 À 5 échanges de l'expérience de votre vie.
               </p>
               <p className="text-white/40 text-xs mt-2 max-w-xs mx-auto">
@@ -222,7 +222,7 @@ export default function Chat() {
 
             {/* Chips d'inspiration */}
             <div className="w-full max-w-lg">
-              <p className="text-white/30 text-xs uppercase tracking-widest mb-2 text-center">Quelle envie ?</p>
+              <p className="text-xs uppercase tracking-widest mb-2 text-center" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 45%, #c8bfa8 75%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 6px rgba(255,245,220,0.35))'}}>Quelle envie ?</p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {INSPIRATION_CHIPS.map((chip) => (
                   <button
@@ -239,7 +239,7 @@ export default function Chat() {
 
             {/* Chips destination */}
             <div className="w-full max-w-lg">
-              <p className="text-white/30 text-xs uppercase tracking-widest mb-2 text-center">Quelle destination ?</p>
+              <p className="text-xs uppercase tracking-widest mb-2 text-center" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 45%, #c8bfa8 75%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 6px rgba(255,245,220,0.35))'}}>Quelle destination ?</p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {DESTINATION_CHIPS.map((chip) => (
                   <button
@@ -257,7 +257,7 @@ export default function Chat() {
             {/* Confidentialité */}
             <div className="w-full max-w-lg bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-center">
               <p className="text-white/50 text-xs leading-relaxed">
-                🔒 <span className="text-white/70 font-medium">Vos données restent privées.</span><br />
+                🔒 <span className="font-medium" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 40%, #d0c8b8 70%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 6px rgba(255,245,220,0.4))'}}>Vos données restent privées.</span><br />
                 Baymora mémorise vos préférences, vos proches et leurs habitudes pour personnaliser chaque conseil — anniversaires, régimes alimentaires, dress codes...<br />
                 <span className="text-white/35">Rien n'est partagé. Tout s'efface si vous ne créez pas de compte.</span>
               </p>
