@@ -5,23 +5,28 @@ import { Send, ArrowLeft, Loader2, Trash2, User } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT } from '@/hooks/useAuth';
 import ConversionModal from '@/components/ConversionModal';
+import ContactPicker from '@/components/ContactPicker';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 // ─── Quick-reply parser ────────────────────────────────────────────────────────
 // Claude appends :::QR::: A | B | C :::END::: at the end of each message
+// Claude appends :::CONTACTS::: to trigger the contact selector UI
 
-function parseMessage(content: string): { text: string; quickReplies: string[] } {
-  const match = content.match(/:::QR:::([\s\S]*?):::END:::/);
-  if (!match) return { text: content.trim(), quickReplies: [] };
+function parseMessage(content: string): { text: string; quickReplies: string[]; showContacts: boolean } {
+  const showContacts = content.includes(':::CONTACTS:::');
+  const withoutContacts = content.replace(':::CONTACTS:::', '').trim();
+
+  const match = withoutContacts.match(/:::QR:::([\s\S]*?):::END:::/);
+  if (!match) return { text: withoutContacts.trim(), quickReplies: [], showContacts };
 
   const quickReplies = match[1]
     .split('|')
     .map(s => s.trim())
     .filter(Boolean);
 
-  const text = content.replace(/:::QR:::[\s\S]*?:::END:::/, '').trim();
-  return { text, quickReplies };
+  const text = withoutContacts.replace(/:::QR:::[\s\S]*?:::END:::/, '').trim();
+  return { text, quickReplies, showContacts };
 }
 
 // ─── Welcome chips ─────────────────────────────────────────────────────────────
@@ -53,6 +58,7 @@ const DESTINATION_CHIPS = [
 export default function Chat() {
   const [input, setInput] = useState('');
   const [showConversion, setShowConversion] = useState(false);
+  const [showContactPicker, setShowContactPicker] = useState(false);
   const [guestMsgCount, setGuestMsgCount] = useState(() => getGuestMessageCount());
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -65,6 +71,16 @@ export default function Chat() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
     if (!isLoading) inputRef.current?.focus();
+  }, [messages, isLoading]);
+
+  // Auto-show ContactPicker when Claude sends :::CONTACTS::: in last message
+  useEffect(() => {
+    if (!isLoading && messages.length > 0) {
+      const last = messages[messages.length - 1];
+      if (last.role === 'assistant' && last.content.includes(':::CONTACTS:::')) {
+        setShowContactPicker(true);
+      }
+    }
   }, [messages, isLoading]);
 
   const guestRemaining = FREE_MESSAGES_LIMIT - guestMsgCount;
@@ -89,6 +105,24 @@ export default function Chat() {
 
   const handleChip = async (msg: string) => {
     if (isLoading) return;
+    if (!canSend()) return;
+    await sendMessage(msg);
+  };
+
+  const handleContactConfirm = async (selected: { name: string }[], newContact?: { name: string }) => {
+    setShowContactPicker(false);
+    const all = [...selected];
+    if (newContact) all.push(newContact);
+    if (all.length === 0) return;
+
+    const names = all.map(c => c.name);
+    let msg: string;
+    if (names.length === 1) {
+      msg = `Je pars avec ${names[0]}`;
+    } else {
+      const last = names.pop();
+      msg = `Je pars avec ${names.join(', ')} et ${last}`;
+    }
     if (!canSend()) return;
     await sendMessage(msg);
   };
@@ -282,7 +316,7 @@ export default function Chat() {
                 </div>
 
                 {/* Quick-reply chips après le dernier message assistant */}
-                {msg.role === 'assistant' && isLast && parsed && parsed.quickReplies.length > 0 && !isLoading && (
+                {msg.role === 'assistant' && isLast && parsed && parsed.quickReplies.length > 0 && !isLoading && !showContactPicker && (
                   <div className="flex flex-wrap gap-2 mt-2 ml-11">
                     {parsed.quickReplies.map((reply) => (
                       <button
@@ -295,6 +329,14 @@ export default function Chat() {
                       </button>
                     ))}
                   </div>
+                )}
+
+                {/* ContactPicker après le dernier message assistant */}
+                {msg.role === 'assistant' && isLast && showContactPicker && !isLoading && (
+                  <ContactPicker
+                    onConfirm={handleContactConfirm}
+                    onDismiss={() => setShowContactPicker(false)}
+                  />
                 )}
               </div>
             );
