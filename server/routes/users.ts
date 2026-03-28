@@ -1,6 +1,7 @@
 import { Router, RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { hashPassword, verifyPassword } from '../services/auth';
+import { conversationStore } from './chat';
 import jwt from 'jsonwebtoken';
 
 const router = Router();
@@ -84,7 +85,7 @@ export function getUserById(id: string): BaymoraUser | null {
  */
 export const handleRegister: RequestHandler = async (req, res) => {
   try {
-    const { pseudo, prenom, email, password, mode = 'fantome' } = req.body;
+    const { pseudo, prenom, email, password, mode = 'fantome', conversationId } = req.body;
 
     if (!pseudo || pseudo.trim().length < 2) {
       res.status(400).json({ error: 'Un pseudo d\'au moins 2 caractères est requis', code: 'VALIDATION_ERROR' });
@@ -136,6 +137,17 @@ export const handleRegister: RequestHandler = async (req, res) => {
     userStore.set(userId, user);
     pseudoIndex.set(pseudoClean, userId);
     if (email) emailIndex.set(email.trim().toLowerCase(), userId);
+
+    // Absorber le profil pré-rempli depuis la conversation invité
+    if (conversationId) {
+      const conversation = conversationStore.get(conversationId);
+      if (conversation?.pendingProfile && Object.keys(conversation.pendingProfile).length > 0) {
+        user.preferences = { ...user.preferences, ...conversation.pendingProfile };
+        // Relier la conversation à ce nouvel utilisateur
+        conversation.userId = userId;
+        console.log(`[USERS] Profil pré-rempli absorbé pour ${user.pseudo}:`, conversation.pendingProfile);
+      }
+    }
 
     const token = generateUserToken(userId, user.circle);
 

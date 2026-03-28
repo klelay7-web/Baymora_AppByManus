@@ -107,7 +107,11 @@ export default function Chat() {
     <div className="flex flex-col h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
 
       {showConversion && (
-        <ConversionModal onClose={() => setShowConversion(false)} onSuccess={() => setShowConversion(false)} />
+        <ConversionModal
+          onClose={() => setShowConversion(false)}
+          onSuccess={() => setShowConversion(false)}
+          conversationId={conversationId || undefined}
+        />
       )}
 
       {/* Header */}

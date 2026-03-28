@@ -6,9 +6,10 @@ import { useAuth } from '@/hooks/useAuth';
 interface Props {
   onClose?: () => void;
   onSuccess?: () => void;
+  conversationId?: string;
 }
 
-export default function ConversionModal({ onClose, onSuccess }: Props) {
+export default function ConversionModal({ onClose, onSuccess, conversationId }: Props) {
   const navigate = useNavigate();
   const { register } = useAuth();
   const [pseudo, setPseudo] = useState('');
@@ -24,7 +25,7 @@ export default function ConversionModal({ onClose, onSuccess }: Props) {
     setError('');
     setLoading(true);
     try {
-      await register({ pseudo, email: email || undefined, mode });
+      await register({ pseudo, email: email || undefined, mode, conversationId });
       onSuccess?.();
     } catch (err: any) {
       setError(err.message);

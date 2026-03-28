@@ -70,6 +70,7 @@ export function useAuth() {
     email?: string;
     password?: string;
     mode: 'fantome' | 'signature';
+    conversationId?: string; // Pour absorber le profil pré-rempli
   }) => {
     const res = await fetch('/api/users/register', {
       method: 'POST',
