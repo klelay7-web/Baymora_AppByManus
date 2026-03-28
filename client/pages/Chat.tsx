@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2 } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
+import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT } from '@/hooks/useAuth';
+import ConversionModal from '@/components/ConversionModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -15,8 +17,12 @@ const WELCOME_SUGGESTIONS = [
 
 export default function Chat() {
   const [input, setInput] = useState('');
+  const [showConversion, setShowConversion] = useState(false);
+  const [guestMsgCount, setGuestMsgCount] = useState(() => getGuestMessageCount());
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { isAuthenticated, user } = useAuth();
 
   const {
     messages,
@@ -34,18 +40,40 @@ export default function Chat() {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-    // Re-focus input after AI responds
     if (!isLoading) inputRef.current?.focus();
   }, [messages, isLoading]);
 
+  // Nombre de messages restants pour les invités
+  const guestRemaining = FREE_MESSAGES_LIMIT - guestMsgCount;
+  const isGuestLimitReached = !isAuthenticated && guestMsgCount >= FREE_MESSAGES_LIMIT;
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
+
+    // Mur de conversion pour les invités
+    if (!isAuthenticated) {
+      if (guestMsgCount >= FREE_MESSAGES_LIMIT) {
+        setShowConversion(true);
+        return;
+      }
+      const newCount = incrementGuestMessageCount();
+      setGuestMsgCount(newCount);
+    }
+
     const msg = input;
     setInput('');
     await sendMessage(msg);
   };
 
   const handleSuggestion = async (suggestion: string) => {
+    if (!isAuthenticated) {
+      if (guestMsgCount >= FREE_MESSAGES_LIMIT) {
+        setShowConversion(true);
+        return;
+      }
+      const newCount = incrementGuestMessageCount();
+      setGuestMsgCount(newCount);
+    }
     await sendMessage(suggestion);
   };
 
@@ -55,13 +83,26 @@ export default function Chat() {
     await startChat('fr');
   };
 
+  const circleBadge = user
+    ? { decouverte: '○', essentiel: '✦', elite: '✦✦', prive: '✦✦✦', fondateur: '✦✦✦✦' }[user.circle]
+    : null;
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+
+      {/* Conversion Modal */}
+      {showConversion && (
+        <ConversionModal
+          onClose={() => setShowConversion(false)}
+          onSuccess={() => setShowConversion(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-950/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center gap-3">
           <Link to="/">
-            <Button variant="ghost" size="sm" className="text-white/60 hover:text-white gap-1.5 px-2">
+            <Button variant="ghost" size="sm" className="text-white/60 hover:text-white px-2">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
@@ -75,16 +116,67 @@ export default function Chat() {
             </div>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleClear}
-          disabled={isLoading}
-          className="text-white/40 hover:text-white/80"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+
+        <div className="flex items-center gap-2">
+          {/* Badge cercle ou bouton connexion */}
+          {isAuthenticated && user ? (
+            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
+              <span className="text-secondary text-xs">{circleBadge}</span>
+              <span className="text-white/70 text-xs font-medium">{user.prenom || user.pseudo}</span>
+              {user.mode === 'fantome' && <span className="text-white/30 text-xs">👻</span>}
+            </div>
+          ) : (
+            <Link to="/auth?returnTo=/chat">
+              <button className="flex items-center gap-1.5 bg-secondary/15 border border-secondary/30 text-secondary text-xs font-medium px-3 py-1.5 rounded-full hover:bg-secondary/25 transition-all">
+                <User className="h-3 w-3" />
+                Créer mon profil
+              </button>
+            </Link>
+          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClear}
+            disabled={isLoading}
+            className="text-white/40 hover:text-white/80"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
+
+      {/* Bannière messages restants (invités uniquement) */}
+      {!isAuthenticated && guestMsgCount > 0 && !isGuestLimitReached && (
+        <div className="flex-shrink-0 bg-secondary/10 border-b border-secondary/20 px-4 py-2 flex items-center justify-between">
+          <p className="text-secondary/80 text-xs">
+            {guestRemaining === 1
+              ? 'Plus qu\'un message gratuit'
+              : `${guestRemaining} messages gratuits restants`}
+          </p>
+          <button
+            onClick={() => setShowConversion(true)}
+            className="text-secondary text-xs font-medium hover:underline"
+          >
+            Créer un compte →
+          </button>
+        </div>
+      )}
+
+      {/* Bannière limite atteinte */}
+      {isGuestLimitReached && (
+        <div className="flex-shrink-0 bg-slate-800/80 border-b border-white/10 px-4 py-2.5 flex items-center justify-between">
+          <p className="text-white/70 text-xs">
+            Vous avez utilisé vos 5 messages gratuits.
+          </p>
+          <button
+            onClick={() => setShowConversion(true)}
+            className="bg-secondary text-white text-xs font-semibold px-3 py-1 rounded-full hover:bg-secondary/90"
+          >
+            Continuer →
+          </button>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto min-h-0 px-4 py-6 space-y-4">
@@ -94,18 +186,25 @@ export default function Chat() {
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-secondary/30 to-secondary/10 flex items-center justify-center mx-auto mb-4 border border-secondary/20">
                 <span className="text-2xl font-bold text-secondary">B</span>
               </div>
-              <h2 className="text-white text-xl font-semibold mb-2">Comment puis-je vous aider ?</h2>
+              <h2 className="text-white text-xl font-semibold mb-2">
+                {user?.prenom ? `Bonjour ${user.prenom} 👋` : 'Comment puis-je vous aider ?'}
+              </h2>
               <p className="text-white/40 text-sm max-w-xs">
                 Dites-moi où vous voulez aller, ou laissez-moi vous surprendre.
               </p>
+              {!isAuthenticated && (
+                <p className="text-white/25 text-xs mt-2">
+                  {FREE_MESSAGES_LIMIT} messages gratuits · Créez un compte pour continuer
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-1 gap-2 w-full max-w-sm">
               {WELCOME_SUGGESTIONS.map((suggestion) => (
                 <button
                   key={suggestion}
                   onClick={() => handleSuggestion(suggestion)}
-                  disabled={isLoading}
-                  className="text-left px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white/70 text-sm hover:bg-white/10 hover:text-white hover:border-secondary/30 transition-all duration-200 disabled:opacity-40"
+                  disabled={isLoading || isGuestLimitReached}
+                  className="text-left px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white/70 text-sm hover:bg-white/10 hover:text-white hover:border-secondary/30 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {suggestion}
                 </button>
@@ -203,17 +302,18 @@ export default function Chat() {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Dites-moi vos envies..."
+            placeholder={isGuestLimitReached ? 'Créez un compte pour continuer...' : 'Dites-moi vos envies...'}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             disabled={isLoading}
+            onClick={() => isGuestLimitReached && setShowConversion(true)}
             autoFocus
             className="flex-1 h-10 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-secondary/60 focus:ring-1 focus:ring-secondary/40 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <Button
-            onClick={handleSend}
-            disabled={isLoading || !input.trim()}
+            onClick={isGuestLimitReached ? () => setShowConversion(true) : handleSend}
+            disabled={isLoading || (!isGuestLimitReached && !input.trim())}
             size="sm"
             className="bg-secondary hover:bg-secondary/90 text-white px-4"
           >

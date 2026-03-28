@@ -4,6 +4,7 @@ import cors from "cors";
 import authRouter from "./routes/auth";
 import chatRouter from "./routes/chat";
 import profileRouter from "./routes/profile";
+import usersRouter, { userAuthMiddleware } from "./routes/users";
 
 export function createServer() {
   const app = express();
@@ -14,6 +15,9 @@ export function createServer() {
   }));
   app.use(express.json());
 
+  // Middleware auth utilisateur (injecte req.baymoraUser si token valide)
+  app.use(userAuthMiddleware);
+
   // Health check
   app.get("/api/ping", (_req, res) => {
     res.json({ ok: true, service: "Baymora API" });
@@ -23,6 +27,7 @@ export function createServer() {
   app.use("/api/auth", authRouter);
   app.use("/api/chat", chatRouter);
   app.use("/api/profile", profileRouter);
+  app.use("/api/users", usersRouter);
 
   // 404 — uniquement pour les routes /api/
   app.use("/api/*path", (_req, res) => {
