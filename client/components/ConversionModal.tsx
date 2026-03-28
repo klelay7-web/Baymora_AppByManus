@@ -67,18 +67,18 @@ export default function ConversionModal({ onClose, onSuccess, conversationId }: 
               {[
                 {
                   icon: '🧠',
-                  title: 'Mémoire permanente',
-                  desc: 'Baymora retient tout — vos goûts, vos proches, vos destinations préférées. Jamais à répéter.',
+                  title: 'Mémoire intelligente',
+                  desc: 'Vos goûts, ceux de vos proches, vos dates clés. "Marie ne mange pas de viande — carte mixte ou végé ?" Vous n\'avez jamais à répéter.',
                 },
                 {
-                  icon: '👻',
-                  title: 'Anonymat total si vous le souhaitez',
-                  desc: 'Vos données ne sont jamais liées à votre identité réelle. Vous êtes qui vous voulez.',
+                  icon: '🔒',
+                  title: 'Vos données vous appartiennent',
+                  desc: 'Rien n\'est partagé ni vendu. Mode Fantôme disponible : zéro lien avec votre identité réelle. Vos proches restent anonymes aussi.',
                 },
                 {
                   icon: '🗝️',
                   title: 'Accès aux lieux sélects',
-                  desc: 'Baymora a des contacts directs. Des tables qui n\'existent pas en ligne. Des portes qui ne s\'ouvrent pas seul.',
+                  desc: 'Contacts directs, tables non publiées, portes qui ne s\'ouvrent pas seul. Baymora fait la différence.',
                 },
                 {
                   icon: '📅',

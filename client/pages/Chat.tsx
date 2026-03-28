@@ -218,9 +218,16 @@ export default function Chat() {
               </div>
             </div>
 
-            {/* Invite à écrire librement */}
-            <p className="text-white/25 text-xs text-center">
-              Ou écrivez directement ci-dessous — week-end, soirée, gastronomie, US, chill...
+            {/* Confidentialité */}
+            <div className="w-full max-w-lg bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-center">
+              <p className="text-white/50 text-xs leading-relaxed">
+                🔒 <span className="text-white/70 font-medium">Vos données restent privées.</span><br />
+                Baymora mémorise vos préférences, vos proches et leurs habitudes pour personnaliser chaque conseil — anniversaires, régimes alimentaires, dress codes...<br />
+                <span className="text-white/35">Rien n'est partagé. Tout s'efface si vous ne créez pas de compte.</span>
+              </p>
+            </div>
+            <p className="text-white/25 text-xs text-center -mt-2">
+              Ou écrivez directement — week-end, soirée, gastro, US, chill...
               {!isAuthenticated && <><br /><span className="text-secondary/50">{FREE_MESSAGES_LIMIT} messages gratuits · Créez un compte pour continuer</span></>}
             </p>
           </div>
