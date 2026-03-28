@@ -1,11 +1,14 @@
 /**
- * Client Prisma — instance unique partagée dans toute l'app
+ * Client Prisma — compatible ESM (package.json "type":"module")
+ * createRequire permet d'importer un module CJS depuis ESM Node.js
  */
-import { PrismaClient } from '@prisma/client';
+import { createRequire } from 'module';
+const _require = createRequire(import.meta.url);
+const { PrismaClient } = _require('@prisma/client');
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+const globalForPrisma = globalThis as unknown as { prisma: any };
 
-export const prisma =
+export const prisma: any =
   globalForPrisma.prisma ||
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
