@@ -14,6 +14,7 @@ export interface BaymoraUser {
   preferences: Record<string, any>;
   travelCompanions: any[];
   importantDates: any[];
+  createdAt: string;
 }
 
 interface AuthState {

@@ -164,11 +164,13 @@ export default function Chat() {
         </div>
         <div className="flex items-center gap-2">
           {isAuthenticated && user ? (
-            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
-              <span className="text-secondary text-xs">{circleBadge}</span>
-              <span className="text-white/70 text-xs font-medium">{user.prenom || user.pseudo}</span>
-              {user.mode === 'fantome' && <span className="text-white/30 text-xs">👻</span>}
-            </div>
+            <Link to="/dashboard">
+              <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1 hover:bg-white/10 transition-colors">
+                <span className="text-secondary text-xs">{circleBadge}</span>
+                <span className="text-white/70 text-xs font-medium">{user.prenom || user.pseudo}</span>
+                {user.mode === 'fantome' && <span className="text-white/30 text-xs">👻</span>}
+              </div>
+            </Link>
           ) : (
             <Link to="/auth?returnTo=/chat">
               <button className="flex items-center gap-1.5 bg-secondary/15 border border-secondary/30 text-secondary text-xs font-medium px-3 py-1.5 rounded-full hover:bg-secondary/25 transition-all">

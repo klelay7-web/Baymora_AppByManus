@@ -1,0 +1,378 @@
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Trash2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Conversation {
+  id: string;
+  title: string;
+  messageCount: number;
+  lastMessage: string | null;
+  updatedAt: string;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function authHeader() {
+  const token = localStorage.getItem('baymora_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+const CIRCLE_LABEL: Record<string, string> = {
+  decouverte: 'Découverte',
+  essentiel: 'Essentiel',
+  elite: 'Élite',
+  prive: 'Privé',
+  fondateur: 'Fondateur',
+};
+
+const CIRCLE_BADGE: Record<string, string> = {
+  decouverte: '○',
+  essentiel: '✦',
+  elite: '✦✦',
+  prive: '✦✦✦',
+  fondateur: '✦✦✦✦',
+};
+
+const CIRCLE_COLOR: Record<string, string> = {
+  decouverte: 'text-white/40',
+  essentiel: 'text-secondary',
+  elite: 'text-secondary',
+  prive: 'text-amber-300',
+  fondateur: 'text-amber-200',
+};
+
+const PLAN_NEXT: Record<string, { label: string; circle: string; price: string }> = {
+  decouverte: { label: 'Essentiel', circle: 'essentiel', price: '29€/mois' },
+  essentiel: { label: 'Élite', circle: 'elite', price: '99€/mois' },
+  elite: { label: 'Privé', circle: 'prive', price: '299€/mois' },
+  prive: { label: '', circle: '', price: '' },
+  fondateur: { label: '', circle: '', price: '' },
+};
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'À l\'instant';
+  if (m < 60) return `Il y a ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `Il y a ${h}h`;
+  const d = Math.floor(h / 24);
+  return `Il y a ${d}j`;
+}
+
+// ─── Composant ────────────────────────────────────────────────────────────────
+
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loadingConvs, setLoadingConvs] = useState(true);
+
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) navigate('/auth?returnTo=/dashboard');
+  }, [authLoading, isAuthenticated, navigate]);
+
+  // Load recent conversations
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetch('/api/chat/conversations', { headers: authHeader() })
+      .then(r => r.json())
+      .then(d => setConversations((d.conversations || []).slice(0, 6)))
+      .catch(() => {})
+      .finally(() => setLoadingConvs(false));
+  }, [isAuthenticated]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-secondary/40 border-t-secondary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const circle = user.circle || 'decouverte';
+  const msgPercent = Math.min(100, Math.round((user.messagesUsed / user.messagesLimit) * 100));
+  const nextPlan = PLAN_NEXT[circle];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <Link to="/chat">
+            <Button variant="ghost" size="sm" className="text-white/60 hover:text-white px-2">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <p className="text-white font-semibold text-sm leading-none">Mon espace</p>
+            <p className="text-white/30 text-xs mt-0.5">Baymora</p>
+          </div>
+        </div>
+        <button
+          onClick={logout}
+          className="flex items-center gap-1.5 text-white/30 hover:text-white/70 text-xs transition-colors"
+        >
+          <LogOut className="h-3.5 w-3.5" /> Déconnexion
+        </button>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+
+        {/* ── Profil header ── */}
+        <div className="bg-white/4 border border-white/10 rounded-2xl p-5 flex items-start gap-4">
+          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-secondary/30 to-secondary/10 border border-secondary/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-xl font-bold text-secondary">
+              {(user.prenom || user.pseudo)?.[0]?.toUpperCase() || 'B'}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-white font-bold text-lg leading-tight truncate">
+                {user.prenom || user.pseudo}
+              </h1>
+              <span className={`text-xs font-medium ${CIRCLE_COLOR[circle]}`}>
+                {CIRCLE_BADGE[circle]} {CIRCLE_LABEL[circle]}
+              </span>
+              {user.mode === 'fantome' && (
+                <span className="text-white/20 text-xs">👻 Anonyme</span>
+              )}
+            </div>
+            {user.email && (
+              <p className="text-white/30 text-xs mt-0.5 truncate">{user.email}</p>
+            )}
+            <p className="text-white/20 text-xs mt-1">
+              Membre depuis {new Date(user.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}
+            </p>
+          </div>
+          <Link to="/profile" className="text-white/30 hover:text-white/70 transition-colors flex-shrink-0">
+            <Edit3 className="h-4 w-4" />
+          </Link>
+        </div>
+
+        {/* ── Stats row ── */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            {
+              icon: <MessageSquare className="h-4 w-4" />,
+              label: 'Messages',
+              value: `${user.messagesUsed}/${user.messagesLimit}`,
+              sub: `${100 - msgPercent}% restants`,
+              bar: true,
+            },
+            {
+              icon: <Users className="h-4 w-4" />,
+              label: 'Compagnons',
+              value: String(user.travelCompanions?.length || 0),
+              sub: 'enregistrés',
+            },
+            {
+              icon: <Calendar className="h-4 w-4" />,
+              label: 'Dates',
+              value: String(user.importantDates?.length || 0),
+              sub: 'importantes',
+            },
+          ].map(s => (
+            <div key={s.label} className="bg-white/4 border border-white/10 rounded-xl p-3 text-center">
+              <div className="flex justify-center mb-1.5 text-secondary/70">{s.icon}</div>
+              <p className="text-white font-bold text-lg leading-none">{s.value}</p>
+              <p className="text-white/30 text-xs mt-1">{s.label}</p>
+              {s.bar && (
+                <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-secondary rounded-full transition-all"
+                    style={{ width: `${msgPercent}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* ── Plan actuel + upgrade ── */}
+        <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-2xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Crown className="h-4 w-4 text-secondary" />
+                <span className="text-white font-semibold text-sm">Cercle {CIRCLE_LABEL[circle]}</span>
+              </div>
+              {nextPlan.label ? (
+                <p className="text-white/40 text-xs mt-1">
+                  Passez au cercle {nextPlan.label} pour plus de puissance
+                </p>
+              ) : (
+                <p className="text-secondary/70 text-xs mt-1">Vous êtes au sommet ✦</p>
+              )}
+            </div>
+            {nextPlan.label && (
+              <Link to="/chat?upgrade=1">
+                <button className="bg-secondary text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-secondary/90 transition-all flex-shrink-0">
+                  {nextPlan.price} →
+                </button>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* ── Compagnons de voyage ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-white/80 font-semibold text-sm flex items-center gap-2">
+              <Users className="h-4 w-4 text-secondary/70" /> Compagnons de voyage
+            </h2>
+            <Link to="/chat" className="text-secondary/60 text-xs hover:text-secondary transition-colors">
+              + Ajouter via le chat
+            </Link>
+          </div>
+          {user.travelCompanions && user.travelCompanions.length > 0 ? (
+            <div className="space-y-2">
+              {user.travelCompanions.map(c => (
+                <div key={c.id} className="bg-white/4 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-medium text-sm">{c.name}</span>
+                      <span className="text-white/30 text-xs">{c.relationship}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 mt-0.5">
+                      {c.age && <span className="text-white/25 text-xs">{c.age} ans</span>}
+                      {c.birthday && <span className="text-white/25 text-xs">🎂 {c.birthday}</span>}
+                      {c.diet && <span className="text-white/25 text-xs">🍽️ {c.diet}</span>}
+                      {c.clothingSize && <span className="text-white/25 text-xs">👕 {c.clothingSize}</span>}
+                    </div>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-secondary/10 border border-secondary/15 flex items-center justify-center flex-shrink-0">
+                    <span className="text-secondary/70 text-xs font-bold">{c.name[0]}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+              <p className="text-white/25 text-sm">Mentionnez vos proches dans le chat — Baymora les mémorisera.</p>
+              <Link to="/chat">
+                <button className="mt-2 text-secondary/60 text-xs hover:text-secondary transition-colors">
+                  Commencer une conversation →
+                </button>
+              </Link>
+            </div>
+          )}
+        </section>
+
+        {/* ── Dates importantes ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-white/80 font-semibold text-sm flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-secondary/70" /> Dates importantes
+            </h2>
+          </div>
+          {user.importantDates && user.importantDates.length > 0 ? (
+            <div className="space-y-2">
+              {user.importantDates.map(d => (
+                <div key={d.id} className="bg-white/4 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <span className="text-white text-sm">{d.label}</span>
+                    {d.contactName && <span className="text-white/40 text-xs ml-2">— {d.contactName}</span>}
+                    <p className="text-white/30 text-xs mt-0.5">
+                      {d.date} {d.recurring && '· chaque année'}
+                    </p>
+                  </div>
+                  <span className="text-xl">🎂</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+              <p className="text-white/25 text-sm">Anniversaires, événements... Baymora les retient pour vous.</p>
+            </div>
+          )}
+        </section>
+
+        {/* ── Conversations récentes ── */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-white/80 font-semibold text-sm flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-secondary/70" /> Conversations récentes
+            </h2>
+            <Link to="/chat" className="text-secondary/60 text-xs hover:text-secondary transition-colors">
+              Nouvelle →
+            </Link>
+          </div>
+          {loadingConvs ? (
+            <div className="space-y-2">
+              {[1,2,3].map(i => (
+                <div key={i} className="bg-white/3 border border-white/8 rounded-xl h-14 animate-pulse" />
+              ))}
+            </div>
+          ) : conversations.length > 0 ? (
+            <div className="space-y-2">
+              {conversations.map(c => (
+                <Link key={c.id} to={`/chat?conv=${c.id}`}>
+                  <div className="bg-white/4 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between hover:bg-white/6 transition-all group">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-white/80 text-sm font-medium truncate">{c.title}</p>
+                        <span className="text-white/20 text-xs flex-shrink-0">{timeAgo(c.updatedAt)}</span>
+                      </div>
+                      {c.lastMessage && (
+                        <p className="text-white/30 text-xs mt-0.5 truncate">{c.lastMessage}</p>
+                      )}
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-white/20 group-hover:text-secondary/60 transition-colors flex-shrink-0 ml-2" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+              <p className="text-white/25 text-sm">Aucune conversation pour l'instant.</p>
+              <Link to="/chat">
+                <button className="mt-2 text-secondary/60 text-xs hover:text-secondary transition-colors">
+                  Commencer →
+                </button>
+              </Link>
+            </div>
+          )}
+        </section>
+
+        {/* ── Préférences ── */}
+        {user.preferences && Object.keys(user.preferences).length > 0 && (
+          <section>
+            <h2 className="text-white/80 font-semibold text-sm flex items-center gap-2 mb-3">
+              <Sparkles className="h-4 w-4 text-secondary/70" /> Ce que Baymora sait de vous
+            </h2>
+            <div className="bg-white/4 border border-white/10 rounded-xl px-4 py-3">
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(user.preferences as Record<string, any>).map(([key, val]) => {
+                  if (!val || (Array.isArray(val) && val.length === 0)) return null;
+                  const display = Array.isArray(val) ? val.join(', ') : typeof val === 'object' ? JSON.stringify(val) : String(val);
+                  const labels: Record<string, string> = {
+                    travelStyle: 'Style', diet: 'Régime', pets: 'Animal', children: 'Enfants',
+                    budgetTier: 'Budget', travelWith: 'Voyage', ecoConscious: 'Éco',
+                    mentionedDestinations: 'Destinations',
+                  };
+                  return (
+                    <span key={key} className="bg-white/5 border border-white/10 rounded-full px-2.5 py-1 text-xs text-white/50">
+                      <span className="text-white/30">{labels[key] || key}:</span> {display}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Footer ── */}
+        <div className="text-center text-white/15 text-xs pb-4">
+          Baymora — Votre conciergerie de voyage privée
+        </div>
+      </div>
+    </div>
+  );
+}

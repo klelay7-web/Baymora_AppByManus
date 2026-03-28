@@ -6,6 +6,7 @@ import chatRouter from "./routes/chat";
 import profileRouter from "./routes/profile";
 import usersRouter, { userAuthMiddleware } from "./routes/users";
 import stripeRouter from "./routes/stripe";
+import adminRouter from "./routes/admin";
 import { chatRateLimit, authRateLimit } from "./middleware/rateLimit";
 
 export function createServer() {
@@ -40,6 +41,7 @@ export function createServer() {
   app.use("/api/profile", profileRouter);
   app.use("/api/users", usersRouter);
   app.use("/api/stripe", stripeRouter);
+  app.use("/api/admin", adminRouter);
 
   // 404
   app.use("/api/*path", (_req, res) => {
