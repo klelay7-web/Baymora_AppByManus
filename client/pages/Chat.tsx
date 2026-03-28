@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, Calendar, Users, Wallet, Hotel, Utensils, Zap, Plane, StickyNote, ChevronRight } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, Calendar, Users, Wallet, Hotel, Utensils, Zap, Plane, StickyNote, ChevronRight, Star, ExternalLink, Navigation } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT } from '@/hooks/useAuth';
 import ConversionModal from '@/components/ConversionModal';
@@ -38,6 +38,54 @@ export interface CalendarEvent {
   duration?: number;  // minutes
   location?: string;
   notes?: string;
+}
+
+// ─── Carte lieu (Staycation-style) ───────────────────────────────────────────
+
+export interface PlaceItem {
+  name: string;
+  type: 'hotel' | 'restaurant' | 'activity' | 'beach' | 'city' | 'bar' | 'spa' | 'other';
+  city: string;
+  address?: string;
+  priceLevel?: 1 | 2 | 3 | 4;
+  priceFrom?: number;
+  currency?: string;
+  priceUnit?: string;
+  rating?: number;
+  description?: string;
+  tags?: string[];
+  bookingUrl?: string;
+  mapsUrl?: string;
+}
+
+// ─── Vue carte géographique ───────────────────────────────────────────────────
+
+export interface MapView {
+  query: string;
+  zoom?: number;
+}
+
+// ─── Parcours complet ─────────────────────────────────────────────────────────
+
+export interface JourneyStep {
+  type: 'car' | 'train' | 'plane' | 'taxi' | 'metro' | 'uber' | 'boat' | 'walk' | 'helicopter';
+  from: string;
+  to: string;
+  departure?: string;
+  arrival?: string;
+  duration?: string;
+  cost?: string;
+  operator?: string;
+  note?: string;
+}
+
+export interface Journey {
+  from: string;
+  to: string;
+  travelDate?: string;
+  steps: JourneyStep[];
+  totalCost?: string;
+  totalDuration?: string;
 }
 
 function buildGoogleCalendarUrl(event: CalendarEvent): string {
@@ -82,6 +130,9 @@ function parseMessage(content: string): {
   showContacts: boolean;
   calendarEvents: CalendarEvent[];
   planUpdate: TripPlan | null;
+  places: PlaceItem[];
+  mapView: MapView | null;
+  journey: Journey | null;
 } {
   let working = content;
 
@@ -106,6 +157,30 @@ function parseMessage(content: string): {
     return '';
   });
 
+  // Extract :::PLACES:::
+  const places: PlaceItem[] = [];
+  working = working.replace(/:::PLACES:::([\s\S]*?):::END:::/g, (_, json) => {
+    try {
+      const parsed = JSON.parse(json.trim());
+      if (Array.isArray(parsed)) places.push(...parsed);
+    } catch {}
+    return '';
+  });
+
+  // Extract :::MAP:::
+  let mapView: MapView | null = null;
+  working = working.replace(/:::MAP:::([\s\S]*?):::END:::/g, (_, json) => {
+    try { mapView = JSON.parse(json.trim()) as MapView; } catch {}
+    return '';
+  });
+
+  // Extract :::JOURNEY:::
+  let journey: Journey | null = null;
+  working = working.replace(/:::JOURNEY:::([\s\S]*?):::END:::/g, (_, json) => {
+    try { journey = JSON.parse(json.trim()) as Journey; } catch {}
+    return '';
+  });
+
   // Extract :::QR:::
   const qrMatch = working.match(/:::QR:::([\s\S]*?):::END:::/);
   const quickReplies = qrMatch
@@ -113,7 +188,7 @@ function parseMessage(content: string): {
     : [];
   working = working.replace(/:::QR:::[\s\S]*?:::END:::/, '').trim();
 
-  return { text: working, quickReplies, showContacts, calendarEvents, planUpdate };
+  return { text: working, quickReplies, showContacts, calendarEvents, planUpdate, places, mapView, journey };
 }
 
 // ─── Carte Google Calendar ────────────────────────────────────────────────────
@@ -143,6 +218,200 @@ function CalendarCard({ event }: { event: CalendarEvent }) {
   );
 }
 
+// ─── Carte lieu (style Staycation) ───────────────────────────────────────────
+
+const PLACE_TYPE_CONFIG: Record<string, { emoji: string; gradient: string; badge: string }> = {
+  hotel:      { emoji: '🏨', gradient: 'from-amber-950 via-amber-900/80 to-amber-950',   badge: 'Hôtel' },
+  restaurant: { emoji: '🍽️', gradient: 'from-rose-950 via-rose-900/80 to-rose-950',      badge: 'Restaurant' },
+  activity:   { emoji: '⚡', gradient: 'from-emerald-950 via-emerald-900/80 to-emerald-950', badge: 'Activité' },
+  beach:      { emoji: '🏖️', gradient: 'from-sky-950 via-sky-900/80 to-sky-950',          badge: 'Plage' },
+  city:       { emoji: '🌆', gradient: 'from-violet-950 via-violet-900/80 to-violet-950', badge: 'Destination' },
+  bar:        { emoji: '🍸', gradient: 'from-purple-950 via-purple-900/80 to-purple-950', badge: 'Bar & Cocktail' },
+  spa:        { emoji: '🧖', gradient: 'from-teal-950 via-teal-900/80 to-teal-950',       badge: 'Spa & Bien-être' },
+  other:      { emoji: '📍', gradient: 'from-slate-800 via-slate-700/80 to-slate-800',    badge: 'Lieu' },
+};
+
+function PlaceCard({ place }: { place: PlaceItem }) {
+  const config = PLACE_TYPE_CONFIG[place.type] || PLACE_TYPE_CONFIG.other;
+  const priceStr = place.priceLevel ? '€'.repeat(place.priceLevel) : null;
+  const bookingHref = place.bookingUrl
+    ? `/go?url=${encodeURIComponent(place.bookingUrl)}&ref=baymora`
+    : place.mapsUrl;
+
+  return (
+    <div className="flex-shrink-0 w-52 rounded-2xl overflow-hidden border border-white/10 bg-slate-900 hover:border-white/20 transition-all group">
+      {/* Visual header */}
+      <div className={`relative h-28 bg-gradient-to-br ${config.gradient} flex items-center justify-center overflow-hidden`}>
+        <span className="text-5xl opacity-50 group-hover:scale-110 transition-transform duration-500">{config.emoji}</span>
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent" />
+        <div className="absolute top-2 left-2 bg-black/55 backdrop-blur-sm text-white/80 text-[10px] px-2 py-0.5 rounded-full font-medium">
+          {config.badge}
+        </div>
+        {priceStr && (
+          <div className="absolute top-2 right-2 bg-black/55 backdrop-blur-sm text-secondary text-[10px] px-2 py-0.5 rounded-full font-bold">
+            {priceStr}
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="p-3 space-y-1.5">
+        <div>
+          <p className="text-white font-semibold text-sm leading-tight line-clamp-1">{place.name}</p>
+          <p className="text-white/45 text-xs mt-0.5 flex items-center gap-1">
+            <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
+            <span className="truncate">{place.city}{place.address ? `, ${place.address}` : ''}</span>
+          </p>
+        </div>
+
+        {/* Rating */}
+        {place.rating && (
+          <div className="flex items-center gap-1">
+            <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+            <span className="text-white/75 text-xs font-medium">{place.rating}</span>
+          </div>
+        )}
+
+        {/* Description */}
+        {place.description && (
+          <p className="text-white/50 text-xs leading-relaxed line-clamp-2">{place.description}</p>
+        )}
+
+        {/* Price from */}
+        {place.priceFrom && (
+          <p className="text-secondary text-xs font-semibold">
+            À partir de {place.priceFrom}{place.currency || '€'}{place.priceUnit ? `/${place.priceUnit}` : ''}
+          </p>
+        )}
+
+        {/* Tags */}
+        {place.tags && place.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {place.tags.slice(0, 3).map((tag, i) => (
+              <span key={i} className="bg-white/6 text-white/45 text-[10px] px-2 py-0.5 rounded-full">{tag}</span>
+            ))}
+          </div>
+        )}
+
+        {/* CTA */}
+        {bookingHref && (
+          <a
+            href={bookingHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 w-full bg-secondary/12 border border-secondary/30 text-secondary text-xs font-semibold py-1.5 rounded-xl hover:bg-secondary/22 transition-all mt-1"
+          >
+            Voir & réserver <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PlacesCarousel({ places }: { places: PlaceItem[] }) {
+  if (!places.length) return null;
+  return (
+    <div className="mt-2 -mr-4">
+      <div className="flex gap-3 overflow-x-auto pb-2 pr-4" style={{ scrollbarWidth: 'none' }}>
+        {places.map((place, i) => <PlaceCard key={i} place={place} />)}
+      </div>
+    </div>
+  );
+}
+
+// ─── Carte géographique embedded ──────────────────────────────────────────────
+
+function MapEmbed({ mapView }: { mapView: MapView }) {
+  const query = encodeURIComponent(mapView.query);
+  const zoom = mapView.zoom || 13;
+  const src = `https://maps.google.com/maps?q=${query}&z=${zoom}&output=embed&hl=fr`;
+  return (
+    <div className="mt-2 rounded-xl overflow-hidden border border-white/10 h-44 relative">
+      <iframe
+        src={src}
+        width="100%"
+        height="100%"
+        style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg) brightness(0.85) contrast(1.1)' }}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        title={`Carte ${mapView.query}`}
+        className="w-full h-full"
+      />
+      <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white/70 text-[10px] px-2 py-1 rounded-lg flex items-center gap-1">
+        <MapPin className="h-2.5 w-2.5 text-secondary" /> {mapView.query}
+      </div>
+    </div>
+  );
+}
+
+// ─── Parcours complet ─────────────────────────────────────────────────────────
+
+const STEP_ICONS: Record<string, string> = {
+  car: '🚗', train: '🚄', plane: '✈️', taxi: '🚕',
+  metro: '🚇', uber: '🚙', boat: '⛵', walk: '🚶', helicopter: '🚁',
+};
+
+function JourneyView({ journey }: { journey: Journey }) {
+  return (
+    <div className="mt-2 bg-slate-900/60 border border-white/10 rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Navigation className="h-3.5 w-3.5 text-secondary" />
+          <span className="text-white/80 text-xs font-semibold">Votre trajet complet</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {journey.totalDuration && <span className="text-white/45 text-xs">{journey.totalDuration}</span>}
+          {journey.totalCost && <span className="text-secondary text-xs font-bold">{journey.totalCost}</span>}
+        </div>
+      </div>
+
+      {/* Steps */}
+      <div className="p-4 space-y-0">
+        {journey.steps.map((step, i) => (
+          <div key={i} className="relative flex gap-3 pb-4 last:pb-0">
+            {/* Connector line */}
+            {i < journey.steps.length - 1 && (
+              <div className="absolute left-4 top-8 w-px bg-white/10" style={{ height: 'calc(100% - 1rem)' }} />
+            )}
+            {/* Icon */}
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 border border-white/12 flex items-center justify-center text-sm z-10">
+              {STEP_ICONS[step.type] || '📍'}
+            </div>
+            {/* Content */}
+            <div className="flex-1 min-w-0 pt-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-white/85 text-xs font-medium leading-tight">{step.from} → {step.to}</p>
+                  {step.operator && <p className="text-white/40 text-xs mt-0.5">{step.operator}</p>}
+                  {step.note && <p className="text-amber-400/70 text-xs mt-0.5">⚠️ {step.note}</p>}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  {(step.departure || step.arrival) && (
+                    <p className="text-white/50 text-xs whitespace-nowrap">
+                      {step.departure}{step.arrival ? ` → ${step.arrival}` : ''}
+                    </p>
+                  )}
+                  {step.duration && <p className="text-white/35 text-xs">{step.duration}</p>}
+                  {step.cost && <p className="text-secondary text-xs font-semibold">{step.cost}</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-2 bg-white/3 border-t border-white/6 flex items-center gap-2 text-xs text-white/35">
+        <span className="truncate">🏠 {journey.from}</span>
+        <span className="flex-shrink-0 text-secondary">→→→</span>
+        <span className="truncate text-right">📍 {journey.to}</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Welcome chips ─────────────────────────────────────────────────────────────
 
 const INSPIRATION_CHIPS = [
@@ -153,7 +422,7 @@ const INSPIRATION_CHIPS = [
   { label: 'Fête & nightlife', msg: 'Je veux de la fête, du nightlife premium' },
   { label: 'Découverte & culture', msg: 'Voyage culturel, découverte, immersion locale' },
   { label: 'Romantique', msg: 'Séjour romantique pour deux, je veux quelque chose d\'inoubliable' },
-  { label: 'Avec mon chien 🐶', msg: 'Je voyage avec mon chien, tout doit être pet-friendly' },
+  { label: 'Avec mon animal 🐾', msg: 'Je voyage avec mon animal de compagnie (chien, chat, etc.), tout doit être pet-friendly' },
   { label: 'En famille', msg: 'Voyage en famille avec enfants' },
   { label: 'Surprends-moi ✨', msg: 'Surprends-moi totalement, je te fais confiance' },
 ];
@@ -615,6 +884,27 @@ export default function Chat() {
                     {parsed.calendarEvents.map((ev, ei) => (
                       <CalendarCard key={ei} event={ev} />
                     ))}
+                  </div>
+                )}
+
+                {/* Carousel de lieux style Staycation */}
+                {msg.role === 'assistant' && parsed && parsed.places.length > 0 && (
+                  <div className="ml-11 mt-2">
+                    <PlacesCarousel places={parsed.places} />
+                  </div>
+                )}
+
+                {/* Carte géographique */}
+                {msg.role === 'assistant' && parsed && parsed.mapView && (
+                  <div className="ml-11 mt-2">
+                    <MapEmbed mapView={parsed.mapView} />
+                  </div>
+                )}
+
+                {/* Parcours complet */}
+                {msg.role === 'assistant' && parsed && parsed.journey && (
+                  <div className="ml-11 mt-2">
+                    <JourneyView journey={parsed.journey} />
                   </div>
                 )}
 

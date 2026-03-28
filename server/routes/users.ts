@@ -228,7 +228,7 @@ export const handleAddCompanion: RequestHandler = async (req, res) => {
     return;
   }
 
-  const { name, relationship, birthday, diet, age, clothingSize, shoeSize, notes } = req.body;
+  const { name, relationship, birthday, diet, age, clothingSize, shoeSize, notes, preferences: compPrefs } = req.body;
   if (!name?.trim()) {
     res.status(400).json({ error: 'Le nom est requis', code: 'VALIDATION_ERROR' });
     return;
@@ -245,10 +245,63 @@ export const handleAddCompanion: RequestHandler = async (req, res) => {
       clothingSize: clothingSize || null,
       shoeSize: shoeSize || null,
       notes: notes || null,
+      preferences: compPrefs || {},
     },
   });
 
   res.status(201).json({ companion });
+};
+
+export const handleUpdateCompanion: RequestHandler = async (req, res) => {
+  const user = (req as any).baymoraUser as BaymoraUser;
+  if (!user) { res.status(401).json({ error: 'Non authentifié' }); return; }
+
+  const { id } = req.params;
+  const existing = await prisma.travelCompanion.findFirst({ where: { id, userId: user.id } });
+  if (!existing) { res.status(404).json({ error: 'Proche introuvable' }); return; }
+
+  const { name, relationship, birthday, diet, age, clothingSize, shoeSize, notes, preferences: compPrefs } = req.body;
+
+  const updated = await prisma.travelCompanion.update({
+    where: { id },
+    data: {
+      name: name ?? existing.name,
+      relationship: relationship ?? existing.relationship,
+      birthday: birthday !== undefined ? birthday || null : existing.birthday,
+      diet: diet !== undefined ? diet || null : existing.diet,
+      age: age !== undefined ? age || null : existing.age,
+      clothingSize: clothingSize !== undefined ? clothingSize || null : existing.clothingSize,
+      shoeSize: shoeSize !== undefined ? shoeSize || null : existing.shoeSize,
+      notes: notes !== undefined ? notes || null : existing.notes,
+      preferences: compPrefs ? { ...(existing.preferences as object), ...compPrefs } : existing.preferences,
+    },
+  });
+
+  res.json({ companion: updated });
+};
+
+export const handleDeleteCompanion: RequestHandler = async (req, res) => {
+  const user = (req as any).baymoraUser as BaymoraUser;
+  if (!user) { res.status(401).json({ error: 'Non authentifié' }); return; }
+
+  const { id } = req.params;
+  const existing = await prisma.travelCompanion.findFirst({ where: { id, userId: user.id } });
+  if (!existing) { res.status(404).json({ error: 'Proche introuvable' }); return; }
+
+  await prisma.travelCompanion.delete({ where: { id } });
+  res.json({ ok: true });
+};
+
+export const handleDeleteDate: RequestHandler = async (req, res) => {
+  const user = (req as any).baymoraUser as BaymoraUser;
+  if (!user) { res.status(401).json({ error: 'Non authentifié' }); return; }
+
+  const { id } = req.params;
+  const existing = await prisma.importantDate.findFirst({ where: { id, userId: user.id } });
+  if (!existing) { res.status(404).json({ error: 'Date introuvable' }); return; }
+
+  await prisma.importantDate.delete({ where: { id } });
+  res.json({ ok: true });
 };
 
 export const handleAddDate: RequestHandler = async (req, res) => {
@@ -310,6 +363,9 @@ router.get('/me', handleGetMe);
 router.patch('/me', handleUpdateMe);
 router.get('/me/upcoming', handleUpcoming);
 router.post('/me/companions', handleAddCompanion);
+router.patch('/me/companions/:id', handleUpdateCompanion);
+router.delete('/me/companions/:id', handleDeleteCompanion);
 router.post('/me/dates', handleAddDate);
+router.delete('/me/dates/:id', handleDeleteDate);
 
 export default router;
