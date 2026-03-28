@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Trash2 } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 
@@ -12,6 +12,14 @@ interface Conversation {
   messageCount: number;
   lastMessage: string | null;
   updatedAt: string;
+}
+
+interface UpcomingAlert {
+  label: string;
+  contactName?: string;
+  daysLeft: number;
+  alertWindow: number;
+  googleCalendarUrl: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -71,13 +79,14 @@ export default function Dashboard() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loadingConvs, setLoadingConvs] = useState(true);
+  const [upcoming, setUpcoming] = useState<UpcomingAlert[]>([]);
 
   // Redirect if not logged in
   useEffect(() => {
     if (!authLoading && !isAuthenticated) navigate('/auth?returnTo=/dashboard');
   }, [authLoading, isAuthenticated, navigate]);
 
-  // Load recent conversations
+  // Load recent conversations + upcoming dates
   useEffect(() => {
     if (!isAuthenticated) return;
     fetch('/api/chat/conversations', { headers: authHeader() })
@@ -85,6 +94,10 @@ export default function Dashboard() {
       .then(d => setConversations((d.conversations || []).slice(0, 6)))
       .catch(() => {})
       .finally(() => setLoadingConvs(false));
+    fetch('/api/users/me/upcoming', { headers: authHeader() })
+      .then(r => r.json())
+      .then(d => setUpcoming(d.upcoming || []))
+      .catch(() => {});
   }, [isAuthenticated]);
 
   if (authLoading || !user) {
@@ -194,6 +207,53 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+
+        {/* ── Alertes à venir ── */}
+        {upcoming.length > 0 && (
+          <section>
+            <h2 className="text-white/80 font-semibold text-sm flex items-center gap-2 mb-3">
+              <Bell className="h-4 w-4 text-secondary/70" /> À venir
+            </h2>
+            <div className="space-y-2">
+              {upcoming.map((a, i) => {
+                const urgency = a.daysLeft === 0 ? 'bg-red-500/10 border-red-500/25'
+                  : a.daysLeft <= 1 ? 'bg-amber-500/10 border-amber-500/25'
+                  : a.daysLeft <= 7 ? 'bg-secondary/10 border-secondary/25'
+                  : 'bg-white/4 border-white/10';
+                const when = a.daysLeft === 0 ? "Aujourd'hui !"
+                  : a.daysLeft === 1 ? 'Demain'
+                  : a.daysLeft <= 7 ? `Dans ${a.daysLeft} jours`
+                  : `Dans ${a.daysLeft} jours`;
+                const whenColor = a.daysLeft === 0 ? 'text-red-400'
+                  : a.daysLeft <= 1 ? 'text-amber-300'
+                  : a.daysLeft <= 7 ? 'text-secondary'
+                  : 'text-white/40';
+                return (
+                  <div key={i} className={`border rounded-xl px-4 py-3 flex items-center justify-between ${urgency}`}>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/80 text-sm">🎂 {a.label}</span>
+                        <span className={`text-xs font-semibold ${whenColor}`}>{when}</span>
+                      </div>
+                      {a.alertWindow === 30 && (
+                        <p className="text-white/25 text-xs mt-0.5">Rappel 1 mois avant</p>
+                      )}
+                    </div>
+                    <a
+                      href={a.googleCalendarUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 bg-white/8 border border-white/15 text-white/60 text-xs px-2.5 py-1.5 rounded-lg hover:bg-white/15 hover:text-white transition-all flex-shrink-0 ml-3"
+                      title="Ajouter à Google Calendar"
+                    >
+                      <Calendar className="h-3 w-3" /> Agenda
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* ── Plan actuel + upgrade ── */}
         <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-2xl p-4">

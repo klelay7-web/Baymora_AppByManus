@@ -3,6 +3,7 @@ import { hashPassword, verifyPassword } from '../services/auth';
 import { prisma } from '../db';
 import jwt from 'jsonwebtoken';
 import type { BaymoraUser, TravelCompanion, ImportantDate } from '../types';
+import { getUpcomingForUser } from '../services/birthdayCron';
 
 export type { BaymoraUser, TravelCompanion, ImportantDate };
 
@@ -285,10 +286,23 @@ export const userAuthMiddleware: RequestHandler = async (req, _res, next) => {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
+// GET /api/users/me/upcoming — prochaines dates dans les 30 jours
+const handleUpcoming: RequestHandler = async (req, res) => {
+  const user = (req as any).baymoraUser as BaymoraUser;
+  if (!user) { res.status(401).json({ error: 'Non authentifié' }); return; }
+  try {
+    const upcoming = await getUpcomingForUser(user.id);
+    res.json({ upcoming });
+  } catch {
+    res.status(500).json({ error: 'Erreur' });
+  }
+};
+
 router.post('/register', handleRegister);
 router.post('/login', handleLogin);
 router.get('/me', handleGetMe);
 router.patch('/me', handleUpdateMe);
+router.get('/me/upcoming', handleUpcoming);
 router.post('/me/companions', handleAddCompanion);
 router.post('/me/dates', handleAddDate);
 

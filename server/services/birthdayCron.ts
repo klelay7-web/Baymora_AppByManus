@@ -1,130 +1,202 @@
 /**
  * Cron job : détection des anniversaires et dates importantes
- * Tourne toutes les 24h, vérifie si des dates tombent dans les 7 jours
- * Log les alertes (à brancher sur email/notification Phase 2)
+ * Fenêtres d'alerte : J-30 (1 mois avant) et J-7 (1 semaine avant)
+ * Génère des liens Google Calendar pour chaque événement
  */
 
 import { prisma } from '../db';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-function dayOfYear(date: Date): number {
-  const start = new Date(date.getFullYear(), 0, 0);
-  const diff = date.getTime() - start.getTime();
-  return Math.floor(diff / 86400000);
+export interface UpcomingAlert {
+  userId: string;
+  userEmail?: string | null;
+  label: string;
+  contactName?: string;
+  daysLeft: number;
+  alertWindow: 30 | 7 | 0 | 1;
+  nextDate: string; // YYYYMMDD
+  googleCalendarUrl: string;
 }
 
-function parseDateDDMM(str: string): { day: number; month: number } | null {
-  // Formats supportés: DD/MM, DD/MM/YYYY, YYYY-MM-DD
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+export function parseDateDDMM(str: string): { day: number; month: number } | null {
+  if (!str) return null;
   const parts = str.split(/[-/]/);
   if (parts.length >= 2) {
     const a = parseInt(parts[0]);
     const b = parseInt(parts[1]);
     if (!isNaN(a) && !isNaN(b)) {
       if (str.includes('-') && parts[0].length === 4) {
-        // YYYY-MM-DD
-        return { day: parseInt(parts[2]), month: b };
+        return { day: parseInt(parts[2]), month: b }; // YYYY-MM-DD
       }
-      return { day: a, month: b };
+      return { day: a, month: b }; // DD/MM or DD/MM/YYYY
     }
   }
   return null;
 }
 
-function daysUntilNextOccurrence(day: number, month: number): number {
+export function nextOccurrence(day: number, month: number): Date {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const target = new Date(today.getFullYear(), month - 1, day);
-  if (target < today) {
-    target.setFullYear(today.getFullYear() + 1);
-  }
-  const diff = target.getTime() - today.getTime();
-  return Math.floor(diff / 86400000);
+  if (target <= today) target.setFullYear(today.getFullYear() + 1);
+  return target;
 }
 
-// ─── Core ─────────────────────────────────────────────────────────────────────
+export function daysUntil(target: Date): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
+function toGCalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}${m}${day}`;
+}
+
+export function buildGoogleCalendarUrl(params: {
+  title: string;
+  date: Date;
+  description?: string;
+}): string {
+  const dateStr = toGCalDate(params.date);
+  // All-day event: dates = YYYYMMDD/YYYYMMDD (next day for exclusive end)
+  const nextDay = new Date(params.date);
+  nextDay.setDate(nextDay.getDate() + 1);
+  const endStr = toGCalDate(nextDay);
+
+  const p = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: params.title,
+    dates: `${dateStr}/${endStr}`,
+    details: params.description || `Rappel Baymora — ${params.title}`,
+    ctz: 'Europe/Paris',
+  });
+  return `https://calendar.google.com/calendar/render?${p.toString()}`;
+}
+
+// ─── Upcoming dates pour un utilisateur donné ─────────────────────────────────
+
+export async function getUpcomingForUser(userId: string): Promise<UpcomingAlert[]> {
+  const alerts: UpcomingAlert[] = [];
+
+  const [dates, companions, user] = await Promise.all([
+    prisma.importantDate.findMany({ where: { userId, recurring: true } }),
+    prisma.travelCompanion.findMany({ where: { userId, birthday: { not: null } } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { email: true } }),
+  ]);
+
+  // Dates importantes
+  for (const d of dates) {
+    const parsed = parseDateDDMM(d.date);
+    if (!parsed) continue;
+    const next = nextOccurrence(parsed.day, parsed.month);
+    const days = daysUntil(next);
+    if (days <= 30) {
+      alerts.push({
+        userId,
+        userEmail: user?.email,
+        label: d.label,
+        contactName: d.contactName ?? undefined,
+        daysLeft: days,
+        alertWindow: days <= 1 ? (days === 0 ? 0 : 1) : days <= 7 ? 7 : 30,
+        nextDate: toGCalDate(next),
+        googleCalendarUrl: buildGoogleCalendarUrl({
+          title: d.label + (d.contactName ? ` — ${d.contactName}` : ''),
+          date: next,
+          description: `${d.label}${d.contactName ? ` (${d.contactName})` : ''}. Rappel généré par Baymora.`,
+        }),
+      });
+    }
+  }
+
+  // Anniversaires compagnons
+  for (const c of companions) {
+    if (!c.birthday) continue;
+    const parsed = parseDateDDMM(c.birthday);
+    if (!parsed) continue;
+    const next = nextOccurrence(parsed.day, parsed.month);
+    const days = daysUntil(next);
+    if (days <= 30) {
+      const title = `Anniversaire de ${c.name}`;
+      alerts.push({
+        userId,
+        userEmail: user?.email,
+        label: title,
+        contactName: c.name,
+        daysLeft: days,
+        alertWindow: days <= 1 ? (days === 0 ? 0 : 1) : days <= 7 ? 7 : 30,
+        nextDate: toGCalDate(next),
+        googleCalendarUrl: buildGoogleCalendarUrl({
+          title,
+          date: next,
+          description: `Anniversaire de ${c.name}. N'oubliez pas de prévoir quelque chose de spécial ! Rappel généré par Baymora.`,
+        }),
+      });
+    }
+  }
+
+  return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+// ─── Core cron ────────────────────────────────────────────────────────────────
 
 export async function checkUpcomingDates(): Promise<void> {
   try {
     console.log('[CRON] Vérification des dates importantes...');
 
-    const alerts: {
-      userId: string;
-      userPseudo: string;
-      label: string;
-      contactName?: string;
-      daysLeft: number;
-    }[] = [];
-
-    // 1. Dates importantes (anniversaires, événements)
-    const allDates = await prisma.importantDate.findMany({
-      where: { recurring: true },
-      include: { user: { select: { id: true, pseudo: true, prenom: true, email: true } } },
+    // Charger tous les utilisateurs avec dates ou compagnons avec birthday
+    const usersWithDates = await prisma.user.findMany({
+      where: {
+        OR: [
+          { dates: { some: { recurring: true } } },
+          { companions: { some: { birthday: { not: null } } } },
+        ],
+      },
+      select: { id: true, pseudo: true, prenom: true, email: true },
     });
 
-    for (const d of allDates) {
-      const parsed = parseDateDDMM(d.date);
-      if (!parsed) continue;
-      const days = daysUntilNextOccurrence(parsed.day, parsed.month);
-      if (days <= 7) {
-        alerts.push({
-          userId: d.userId,
-          userPseudo: d.user.prenom || d.user.pseudo,
-          label: d.label,
-          contactName: d.contactName ?? undefined,
-          daysLeft: days,
-        });
+    let totalAlerts = 0;
+
+    for (const user of usersWithDates) {
+      const upcoming = await getUpcomingForUser(user.id);
+      // Filtrer seulement les alertes J-30 et J-7 (pas les intermédiaires)
+      const toAlert = upcoming.filter(a => a.daysLeft === 30 || a.daysLeft === 7 || a.daysLeft === 1 || a.daysLeft === 0);
+
+      for (const alert of toAlert) {
+        totalAlerts++;
+        const when = alert.daysLeft === 0 ? "aujourd'hui !"
+          : alert.daysLeft === 1 ? 'demain'
+          : `dans ${alert.daysLeft} jour${alert.daysLeft > 1 ? 's' : ''}`;
+
+        console.log(`[CRON] [${user.prenom || user.pseudo}] ${alert.label} — ${when}`);
+        console.log(`       Google Calendar: ${alert.googleCalendarUrl}`);
+
+        // TODO Phase 2: envoi email via Resend
+        // if (user.email) await sendBirthdayEmail(user.email, alert);
       }
     }
 
-    // 2. Anniversaires des compagnons de voyage
-    const companions = await prisma.travelCompanion.findMany({
-      where: { birthday: { not: null } },
-      include: { user: { select: { id: true, pseudo: true, prenom: true, email: true } } },
-    });
-
-    for (const c of companions) {
-      if (!c.birthday) continue;
-      const parsed = parseDateDDMM(c.birthday);
-      if (!parsed) continue;
-      const days = daysUntilNextOccurrence(parsed.day, parsed.month);
-      if (days <= 7) {
-        alerts.push({
-          userId: c.userId,
-          userPseudo: c.user.prenom || c.user.pseudo,
-          label: `Anniversaire de ${c.name}`,
-          contactName: c.name,
-          daysLeft: days,
-        });
-      }
-    }
-
-    // Log des alertes (à remplacer par email/push en Phase 2)
-    if (alerts.length === 0) {
-      console.log('[CRON] Aucune date dans les 7 prochains jours.');
+    if (totalAlerts === 0) {
+      console.log('[CRON] Aucune alerte J-30 ou J-7 aujourd\'hui.');
     } else {
-      console.log(`[CRON] ${alerts.length} alerte(s) trouvée(s):`);
-      for (const a of alerts) {
-        const when = a.daysLeft === 0 ? "aujourd'hui !" : a.daysLeft === 1 ? 'demain' : `dans ${a.daysLeft} jours`;
-        console.log(`  → [${a.userPseudo}] ${a.label}${a.contactName ? ` (${a.contactName})` : ''} — ${when}`);
-        // TODO Phase 2: envoyer un email à l'utilisateur via Resend/SendGrid
-        // await sendBirthdayAlert(a);
-      }
+      console.log(`[CRON] ${totalAlerts} alerte(s) envoyée(s).`);
     }
   } catch (error) {
-    console.error('[CRON] Erreur vérification dates:', error);
+    console.error('[CRON] Erreur:', error);
   }
 }
 
-// ─── Démarrage du cron ────────────────────────────────────────────────────────
+// ─── Démarrage ────────────────────────────────────────────────────────────────
 
 export function startBirthdayCron(): void {
-  const INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
-
-  // Premier check au démarrage (après 5s pour laisser la DB se connecter)
-  setTimeout(checkUpcomingDates, 5000);
-
-  // Puis toutes les 24h
-  setInterval(checkUpcomingDates, INTERVAL_MS);
-
-  console.log('[CRON] Birthday cron démarré (interval: 24h)');
+  // Premier check au boot (délai 10s pour laisser la DB se connecter)
+  setTimeout(checkUpcomingDates, 10000);
+  // Toutes les 24h
+  setInterval(checkUpcomingDates, 24 * 60 * 60 * 1000);
+  console.log('[CRON] Birthday cron démarré — alertes J-30 et J-7');
 }
