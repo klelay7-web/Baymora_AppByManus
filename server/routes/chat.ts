@@ -1,42 +1,30 @@
 import { Router, RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { requireAuth } from '../middleware/auth';
 import { callLLM, type LLMMessage } from '../services/ai/llm';
 import { getUserById } from './users';
+import { conversationStore, userConversations } from '../stores';
+import type { Message, Conversation } from '../types';
 
 const router = Router();
 
-// Types pour les conversations en mémoire (remplacer par DB en Phase 2.5)
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
+// Re-export for consumers (users.ts previously imported this)
+export { conversationStore };
 
-interface Conversation {
-  id: string;
-  userId: string;
-  title: string;
-  language: 'en' | 'fr';
-  messages: Message[];
-  pendingProfile: Record<string, any>; // Signaux extraits avant inscription
-  createdAt: Date;
-  updatedAt: Date;
-}
+// ─── Constantes de sécurité ───────────────────────────────────────────────────
 
-// Store en mémoire (remplacer par PostgreSQL + Prisma)
-export const conversationStore = new Map<string, Conversation>();
-const userConversations = new Map<string, string[]>();
+const MAX_MESSAGE_LENGTH = 2000;  // Caractères max par message
+const MAX_MESSAGES_PER_CONVERSATION = 200;
+
+// ─── Handlers ─────────────────────────────────────────────────────────────────
 
 /**
  * POST /api/chat/start
- * Démarrer une nouvelle conversation
  */
 export const handleStartChat: RequestHandler = async (req, res) => {
   try {
     const { language = 'fr', title } = req.body;
-    const userId = (req as any).admin?.userId || 'guest-' + uuidv4();
+    const baymoraUser = (req as any).baymoraUser;
+    const userId = baymoraUser?.id || 'guest-' + uuidv4();
 
     const conversationId = uuidv4();
     const conversation: Conversation = {
@@ -67,76 +55,99 @@ export const handleStartChat: RequestHandler = async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur startChat:', error);
-    res.status(500).json({
-      error: 'Erreur lors de la création de la conversation',
-      code: 'CHAT_ERROR',
-    });
+    res.status(500).json({ error: 'Erreur lors de la création de la conversation', code: 'CHAT_ERROR' });
   }
 };
 
 /**
  * POST /api/chat/message
- * Envoyer un message et obtenir une réponse
  */
 export const handleSendMessage: RequestHandler = async (req, res) => {
   try {
     const { conversationId, content } = req.body;
 
+    // ── Validation entrée
     if (!conversationId || !content) {
+      res.status(400).json({ error: 'conversationId et content requis', code: 'VALIDATION_ERROR' });
+      return;
+    }
+
+    if (typeof content !== 'string') {
+      res.status(400).json({ error: 'content doit être une chaîne', code: 'VALIDATION_ERROR' });
+      return;
+    }
+
+    const trimmed = content.trim();
+    if (trimmed.length === 0) {
+      res.status(400).json({ error: 'Le message ne peut pas être vide', code: 'VALIDATION_ERROR' });
+      return;
+    }
+
+    if (trimmed.length > MAX_MESSAGE_LENGTH) {
       res.status(400).json({
-        error: 'conversationId et content requis',
-        code: 'VALIDATION_ERROR',
+        error: `Message trop long (max ${MAX_MESSAGE_LENGTH} caractères)`,
+        code: 'MESSAGE_TOO_LONG',
       });
       return;
     }
 
     const conversation = conversationStore.get(conversationId);
     if (!conversation) {
-      res.status(404).json({
-        error: 'Conversation non trouvée',
-        code: 'NOT_FOUND',
+      res.status(404).json({ error: 'Conversation non trouvée', code: 'NOT_FOUND' });
+      return;
+    }
+
+    // ── Vérifier que la conversation appartient à l'utilisateur (ou est guest)
+    const baymoraUser = (req as any).baymoraUser;
+    const requestUserId = baymoraUser?.id;
+    if (requestUserId && conversation.userId !== requestUserId && !conversation.userId.startsWith('guest-')) {
+      res.status(403).json({ error: 'Accès non autorisé', code: 'FORBIDDEN' });
+      return;
+    }
+
+    // ── Limite de messages par conversation (anti-abus)
+    if (conversation.messages.length >= MAX_MESSAGES_PER_CONVERSATION) {
+      res.status(429).json({
+        error: 'Limite de messages atteinte pour cette conversation. Démarrez une nouvelle conversation.',
+        code: 'CONVERSATION_LIMIT',
       });
       return;
     }
 
-    // Ajouter le message de l'utilisateur
+    // ── Ajouter le message utilisateur
     const userMessage: Message = {
       id: uuidv4(),
       role: 'user',
-      content: content.trim(),
+      content: trimmed,
       timestamp: new Date(),
     };
-
     conversation.messages.push(userMessage);
 
-    // Construire l'historique pour le LLM
+    // ── Préparer l'historique LLM
     const llmMessages: LLMMessage[] = conversation.messages.map(m => ({
       role: m.role,
       content: m.content,
     }));
 
-    const userId = (req as any).baymoraUser?.id || (req as any).admin?.userId || conversation.userId;
+    const userId = baymoraUser?.id || conversation.userId;
     const userRecord = userId ? getUserById(userId) : null;
     const llmResult = await callLLM(llmMessages, userId, conversation.language, userRecord);
-    const assistantResponse = llmResult.content;
 
     const assistantMessage: Message = {
       id: uuidv4(),
       role: 'assistant',
-      content: assistantResponse,
+      content: llmResult.content,
       timestamp: new Date(),
     };
 
     conversation.messages.push(assistantMessage);
     conversation.updatedAt = new Date();
 
-    // Extraction silencieuse des signaux de profil depuis toute la conversation
+    // ── Extraction silencieuse des signaux de profil
     const signals = extractProfileSignals(conversation.messages);
     conversation.pendingProfile = { ...conversation.pendingProfile, ...signals };
 
-    console.log(
-      `[CHAT] Message reçu dans ${conversationId}: ${content.substring(0, 50)}...`
-    );
+    console.log(`[CHAT] Message dans ${conversationId}: "${trimmed.substring(0, 50)}..."`);
 
     res.status(200).json({
       messageId: assistantMessage.id,
@@ -146,20 +157,17 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur sendMessage:', error);
-    res.status(500).json({
-      error: 'Erreur lors de l\'envoi du message',
-      code: 'CHAT_ERROR',
-    });
+    res.status(500).json({ error: 'Erreur lors de l\'envoi du message', code: 'CHAT_ERROR' });
   }
 };
 
 /**
  * GET /api/chat/conversations
- * Lister les conversations de l'utilisateur
  */
 export const handleListConversations: RequestHandler = async (req, res) => {
   try {
-    const userId = (req as any).admin?.userId || 'guest-default';
+    const baymoraUser = (req as any).baymoraUser;
+    const userId = baymoraUser?.id || 'guest-default';
 
     const conversationIds = userConversations.get(userId) || [];
     const conversations = conversationIds
@@ -171,41 +179,38 @@ export const handleListConversations: RequestHandler = async (req, res) => {
       title: conv.title,
       language: conv.language,
       messageCount: conv.messages.length,
-      lastMessage:
-        conv.messages.length > 0
-          ? conv.messages[conv.messages.length - 1].content.substring(0, 100)
-          : null,
+      lastMessage: conv.messages.length > 0
+        ? conv.messages[conv.messages.length - 1].content.substring(0, 100)
+        : null,
       createdAt: conv.createdAt,
       updatedAt: conv.updatedAt,
     }));
 
-    res.status(200).json({
-      conversations: summary,
-      total: summary.length,
-    });
+    res.status(200).json({ conversations: summary, total: summary.length });
   } catch (error) {
     console.error('Erreur listConversations:', error);
-    res.status(500).json({
-      error: 'Erreur lors de la récupération des conversations',
-      code: 'CHAT_ERROR',
-    });
+    res.status(500).json({ error: 'Erreur lors de la récupération des conversations', code: 'CHAT_ERROR' });
   }
 };
 
 /**
  * GET /api/chat/conversations/:id
- * Récupérer une conversation complète
+ * FIX: Ownership check ajouté (était absent)
  */
 export const handleGetConversation: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
+    const baymoraUser = (req as any).baymoraUser;
     const conversation = conversationStore.get(id);
 
     if (!conversation) {
-      res.status(404).json({
-        error: 'Conversation non trouvée',
-        code: 'NOT_FOUND',
-      });
+      res.status(404).json({ error: 'Conversation non trouvée', code: 'NOT_FOUND' });
+      return;
+    }
+
+    // Vérifier la propriété : authentifié doit être le propriétaire
+    if (baymoraUser && conversation.userId !== baymoraUser.id && !conversation.userId.startsWith('guest-')) {
+      res.status(403).json({ error: 'Accès non autorisé', code: 'FORBIDDEN' });
       return;
     }
 
@@ -219,57 +224,39 @@ export const handleGetConversation: RequestHandler = async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur getConversation:', error);
-    res.status(500).json({
-      error: 'Erreur lors de la récupération de la conversation',
-      code: 'CHAT_ERROR',
-    });
+    res.status(500).json({ error: 'Erreur lors de la récupération de la conversation', code: 'CHAT_ERROR' });
   }
 };
 
 /**
  * DELETE /api/chat/conversations/:id
- * Supprimer une conversation
  */
 export const handleDeleteConversation: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).admin?.userId || 'guest-default';
+    const baymoraUser = (req as any).baymoraUser;
+    const userId = baymoraUser?.id || 'guest-default';
 
     const conversation = conversationStore.get(id);
     if (!conversation) {
-      res.status(404).json({
-        error: 'Conversation non trouvée',
-        code: 'NOT_FOUND',
-      });
+      res.status(404).json({ error: 'Conversation non trouvée', code: 'NOT_FOUND' });
       return;
     }
 
-    // Vérifier que c'est la conversation de l'utilisateur
     if (conversation.userId !== userId) {
-      res.status(403).json({
-        error: 'Vous ne pouvez pas supprimer cette conversation',
-        code: 'FORBIDDEN',
-      });
+      res.status(403).json({ error: 'Vous ne pouvez pas supprimer cette conversation', code: 'FORBIDDEN' });
       return;
     }
 
     conversationStore.delete(id);
-
     const userConvs = userConversations.get(userId) || [];
-    userConversations.set(
-      userId,
-      userConvs.filter((cid) => cid !== id)
-    );
+    userConversations.set(userId, userConvs.filter((cid) => cid !== id));
 
     console.log(`[CHAT] Conversation supprimée: ${id}`);
-
     res.status(200).json({ message: 'Conversation supprimée' });
   } catch (error) {
     console.error('Erreur deleteConversation:', error);
-    res.status(500).json({
-      error: 'Erreur lors de la suppression',
-      code: 'CHAT_ERROR',
-    });
+    res.status(500).json({ error: 'Erreur lors de la suppression', code: 'CHAT_ERROR' });
   }
 };
 
@@ -291,9 +278,9 @@ export function extractProfileSignals(messages: Message[]): Record<string, any> 
     if (/sans gluten|celiac|cœliaque/.test(t)) signals.glutenFree = true;
     if (/allergi|intoléran/.test(t)) signals.dietaryRestrictions = true;
 
-    // ── Animaux de compagnie
-    if (/chien|toutou|dog/.test(t)) signals.pets = true;
-    if (/chat\b/.test(t)) signals.pets = true;
+    // ── Animaux — regex plus précise (évite "chat" générique)
+    if (/\b(mon chien|ma chienne|mon toutou|with my dog|avec mon chien)\b/.test(t)) signals.pets = true;
+    if (/\b(mon chat|ma chatte|avec mon chat)\b/.test(t)) signals.pets = true;
 
     // ── Enfants
     if (/enfant|bébé|fils|fille|gamin|kid/.test(t)) signals.children = true;
@@ -307,7 +294,7 @@ export function extractProfileSignals(messages: Message[]): Record<string, any> 
     else if (/économ|budget serré|pas trop cher/.test(t)) signals.budgetTier = 'economy';
 
     // ── Compagnons
-    if (/seul\b|solo/.test(t)) signals.travelWith = 'solo';
+    if (/\bseul\b|\bsolo\b/.test(t)) signals.travelWith = 'solo';
     if (/en couple|avec (ma |mon )?(femme|mari|compagnon|compagne|partenaire|petit.?ami|grande?.?ami)/.test(t)) signals.travelWith = 'couple';
     if (/avec (mes |nos )?enfants|en famille/.test(t)) signals.travelWith = 'family';
     if (/entre amis|avec (mes )?(amis|potes|copains|copines)/.test(t)) signals.travelWith = 'friends';
@@ -322,7 +309,7 @@ export function extractProfileSignals(messages: Message[]): Record<string, any> 
     if (/romantiqu|amour|anniversaire de couple/.test(t) && !styles.includes('romantic')) styles.push('romantic');
 
     // ── Destinations mentionnées
-    const destMatches = raw.match(/(?:à|à|vers|pour|en|au)\s+([A-ZÀ-Ÿ][a-zà-ÿA-ZÀ-Ÿ\s-]{2,20})/g);
+    const destMatches = raw.match(/(?:à|vers|pour|en|au)\s+([A-ZÀ-Ÿ][a-zà-ÿA-ZÀ-Ÿ\s-]{2,20})/g);
     if (destMatches) {
       for (const d of destMatches) {
         const clean = d.replace(/^(?:à|vers|pour|en|au)\s+/i, '').trim();
@@ -340,9 +327,7 @@ export function extractProfileSignals(messages: Message[]): Record<string, any> 
   for (const msg of messages) {
     if (msg.role !== 'user') continue;
     const raw = msg.content;
-    const t = raw.toLowerCase();
 
-    // Patterns : "ma femme Marie", "mon ami Jean", "avec Clara", "mon collègue Paul"
     const relationPatterns: Array<{ regex: RegExp; rel: string }> = [
       { regex: /ma\s+femme\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'femme' },
       { regex: /mon\s+mari\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'mari' },
@@ -353,7 +338,7 @@ export function extractProfileSignals(messages: Message[]): Record<string, any> 
       { regex: /mon\s+ami\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'ami' },
       { regex: /mon\s+amie\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'amie' },
       { regex: /mon\s+(?:fils|garçon)\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'fils' },
-      { regex: /ma\s+(?:fille)\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'fille' },
+      { regex: /ma\s+fille\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'fille' },
       { regex: /mon\s+frère\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'frère' },
       { regex: /ma\s+sœur\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'sœur' },
       { regex: /mon\s+collègue\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)/g, rel: 'collègue' },
@@ -367,29 +352,34 @@ export function extractProfileSignals(messages: Message[]): Record<string, any> 
       regex.lastIndex = 0;
       while ((match = regex.exec(raw)) !== null) {
         const name = match[1];
-        // Ignorer les mots courants qui ne sont pas des prénoms
-        if (/^(moi|toi|lui|elle|nous|vous|eux|mon|ma|mes|le|la|les|un|une|des)$/i.test(name)) continue;
+        const STOP_WORDS = /^(moi|toi|lui|elle|nous|vous|eux|mon|ma|mes|le|la|les|un|une|des|ce|cet|cette|plaisir|plaisirs|joie|soin|soins)$/i;
+        if (STOP_WORDS.test(name)) continue;
+        if (name.length < 2 || name.length > 20) continue;
+
         if (!contacts[name]) {
           contacts[name] = { name, relationship: rel, firstMentionedAt: msg.timestamp };
         } else if (rel !== 'inconnu' && contacts[name].relationship === 'inconnu') {
           contacts[name].relationship = rel;
         }
-        // Contexte de la mention
         contacts[name].lastSeenWith = raw.substring(0, 80);
       }
     }
 
-    // Âge mentionné : "Marie a 35 ans", "il a 42 ans", etc.
+    // Âge mentionné : "Marie a 35 ans"
     const agePattern = /([A-ZÀ-Ÿ][a-zà-ÿ]+)\s+a\s+(\d{1,2})\s+ans/g;
     let ageMatch;
     while ((ageMatch = agePattern.exec(raw)) !== null) {
       const name = ageMatch[1];
-      if (contacts[name]) contacts[name].age = parseInt(ageMatch[2]);
+      const age = parseInt(ageMatch[2]);
+      if (age >= 1 && age <= 120 && contacts[name]) contacts[name].age = age;
     }
 
-    // Anniversaire : "l'anniv de Marie c'est le 15 mars", "anniversaire de Jean le 3 juin"
+    // Anniversaire : "l'anniv de Marie c'est le 15 mars"
     const anniPattern = /anniv(?:ersaire)?\s+de\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)[^\d]*(\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)/gi;
-    const months: Record<string, string> = { janvier:'01',février:'02',mars:'03',avril:'04',mai:'05',juin:'06',juillet:'07',août:'08',septembre:'09',octobre:'10',novembre:'11',décembre:'12' };
+    const months: Record<string, string> = {
+      janvier:'01', février:'02', mars:'03', avril:'04', mai:'05', juin:'06',
+      juillet:'07', août:'08', septembre:'09', octobre:'10', novembre:'11', décembre:'12'
+    };
     let anniMatch;
     while ((anniMatch = anniPattern.exec(raw)) !== null) {
       const name = anniMatch[1];
@@ -407,7 +397,8 @@ export function extractProfileSignals(messages: Message[]): Record<string, any> 
   return signals;
 }
 
-// Enregistrer les routes
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
 router.post('/start', handleStartChat);
 router.post('/message', handleSendMessage);
 router.get('/conversations', handleListConversations);

@@ -1,62 +1,14 @@
 import { Router, RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { hashPassword, verifyPassword } from '../services/auth';
-import { conversationStore } from './chat';
+import { conversationStore, userStore, emailIndex, pseudoIndex } from '../stores';
 import jwt from 'jsonwebtoken';
+import type { BaymoraUser, TravelCompanion, ImportantDate } from '../types';
+
+// Re-export types for consumers
+export type { BaymoraUser, TravelCompanion, ImportantDate };
 
 const router = Router();
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface BaymoraUser {
-  id: string;
-  pseudo: string;
-  prenom?: string;
-  email?: string;
-  mode: 'fantome' | 'signature';
-  circle: 'decouverte' | 'essentiel' | 'elite' | 'prive' | 'fondateur';
-  messagesUsed: number;
-  messagesLimit: number;
-  passwordHash?: string;
-  googleId?: string;
-  preferences: Record<string, any>;
-  travelCompanions: TravelCompanion[];
-  importantDates: ImportantDate[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface TravelCompanion {
-  id: string;
-  name: string;
-  relationship: string;    // ami, conjoint, femme, mari, collègue, famille, enfant...
-  birthday?: string;       // MM-DD (annuel) ou YYYY-MM-DD
-  age?: number;
-  heightCm?: number;       // Pour suggestions de location tenues
-  weightKg?: number;
-  clothingSize?: string;   // XS/S/M/L/XL ou taille numérique
-  shoeSize?: number;
-  diet?: string;           // vegan, vegetarian, halal, kosher...
-  preferences?: Record<string, any>;
-  notes?: string;          // Notes libres
-  firstMentionedAt?: Date;
-  lastSeenWith?: string;   // Contexte : "soirée gala Paris"
-}
-
-interface ImportantDate {
-  id: string;
-  label: string;   // "Anniversaire Clara", "Noël"
-  date: string;    // MM-DD (yearly) or YYYY-MM-DD (fixed)
-  recurring: boolean;
-  contactName?: string;
-  notes?: string;
-}
-
-// ─── Store en mémoire (→ PostgreSQL Phase 2) ─────────────────────────────────
-
-const userStore = new Map<string, BaymoraUser>();
-const emailIndex = new Map<string, string>(); // email → userId
-const pseudoIndex = new Map<string, string>(); // pseudo → userId
 
 // ─── Token utilisateur ────────────────────────────────────────────────────────
 
@@ -90,7 +42,6 @@ export function getUserById(id: string): BaymoraUser | null {
 
 /**
  * POST /api/users/register
- * Créer un compte Baymora (pseudo obligatoire, email optionnel en mode fantôme)
  */
 export const handleRegister: RequestHandler = async (req, res) => {
   try {
@@ -101,14 +52,12 @@ export const handleRegister: RequestHandler = async (req, res) => {
       return;
     }
 
-    // Vérifier unicité du pseudo
     const pseudoClean = pseudo.trim().toLowerCase();
     if (pseudoIndex.has(pseudoClean)) {
       res.status(409).json({ error: 'Ce pseudo est déjà pris', code: 'PSEUDO_TAKEN' });
       return;
     }
 
-    // Vérifier unicité de l'email si fourni
     if (email) {
       const emailClean = email.trim().toLowerCase();
       if (emailIndex.has(emailClean)) {
@@ -117,7 +66,6 @@ export const handleRegister: RequestHandler = async (req, res) => {
       }
     }
 
-    // Mode Signature = email obligatoire
     if (mode === 'signature' && !email) {
       res.status(400).json({ error: 'L\'email est requis en mode Signature', code: 'VALIDATION_ERROR' });
       return;
@@ -134,7 +82,7 @@ export const handleRegister: RequestHandler = async (req, res) => {
       mode,
       circle: 'decouverte',
       messagesUsed: 0,
-      messagesLimit: 20, // 20 messages/mois en compte gratuit
+      messagesLimit: 20,
       passwordHash,
       preferences: {},
       travelCompanions: [],
@@ -152,20 +100,15 @@ export const handleRegister: RequestHandler = async (req, res) => {
       const conversation = conversationStore.get(conversationId);
       if (conversation?.pendingProfile && Object.keys(conversation.pendingProfile).length > 0) {
         user.preferences = { ...user.preferences, ...conversation.pendingProfile };
-        // Relier la conversation à ce nouvel utilisateur
         conversation.userId = userId;
         console.log(`[USERS] Profil pré-rempli absorbé pour ${user.pseudo}:`, conversation.pendingProfile);
       }
     }
 
     const token = generateUserToken(userId, user.circle);
-
     console.log(`[USERS] Nouveau compte: ${user.pseudo} (${user.mode}) — ID: ${userId}`);
 
-    res.status(201).json({
-      token,
-      user: safeUser(user),
-    });
+    res.status(201).json({ token, user: safeUser(user) });
   } catch (error) {
     console.error('Erreur register:', error);
     res.status(500).json({ error: 'Erreur lors de la création du compte', code: 'SERVER_ERROR' });
@@ -174,7 +117,6 @@ export const handleRegister: RequestHandler = async (req, res) => {
 
 /**
  * POST /api/users/login
- * Connexion par email + password
  */
 export const handleLogin: RequestHandler = async (req, res) => {
   try {
@@ -204,7 +146,6 @@ export const handleLogin: RequestHandler = async (req, res) => {
     }
 
     const token = generateUserToken(user.id, user.circle);
-
     res.json({ token, user: safeUser(user) });
   } catch (error) {
     console.error('Erreur login:', error);
@@ -214,7 +155,6 @@ export const handleLogin: RequestHandler = async (req, res) => {
 
 /**
  * GET /api/users/me
- * Récupérer le profil de l'utilisateur connecté
  */
 export const handleGetMe: RequestHandler = (req, res) => {
   const user = (req as any).baymoraUser as BaymoraUser;
@@ -227,7 +167,6 @@ export const handleGetMe: RequestHandler = (req, res) => {
 
 /**
  * PATCH /api/users/me
- * Mettre à jour le profil (préférences, compagnons, dates importantes)
  */
 export const handleUpdateMe: RequestHandler = (req, res) => {
   const user = (req as any).baymoraUser as BaymoraUser;
@@ -249,7 +188,6 @@ export const handleUpdateMe: RequestHandler = (req, res) => {
 
 /**
  * POST /api/users/me/companions
- * Ajouter un compagnon de voyage
  */
 export const handleAddCompanion: RequestHandler = (req, res) => {
   const user = (req as any).baymoraUser as BaymoraUser;
@@ -258,18 +196,23 @@ export const handleAddCompanion: RequestHandler = (req, res) => {
     return;
   }
 
-  const { name, relationship, birthday, preferences } = req.body;
-  if (!name) {
+  const { name, relationship, birthday, diet, age, clothingSize, shoeSize, notes } = req.body;
+  if (!name || !name.trim()) {
     res.status(400).json({ error: 'Le nom est requis', code: 'VALIDATION_ERROR' });
     return;
   }
 
   const companion: TravelCompanion = {
     id: uuidv4(),
-    name,
+    name: name.trim(),
     relationship: relationship || 'ami',
     birthday,
-    preferences,
+    diet,
+    age,
+    clothingSize,
+    shoeSize,
+    notes,
+    firstMentionedAt: new Date(),
   };
 
   user.travelCompanions.push(companion);
@@ -280,7 +223,6 @@ export const handleAddCompanion: RequestHandler = (req, res) => {
 
 /**
  * POST /api/users/me/dates
- * Ajouter une date importante
  */
 export const handleAddDate: RequestHandler = (req, res) => {
   const user = (req as any).baymoraUser as BaymoraUser;
@@ -310,14 +252,14 @@ export const handleAddDate: RequestHandler = (req, res) => {
   res.status(201).json({ date: importantDate });
 };
 
-// ─── Helper : données publiques (sans passwordHash) ───────────────────────────
+// ─── Helper ───────────────────────────────────────────────────────────────────
 
 function safeUser(user: BaymoraUser) {
   const { passwordHash, ...safe } = user;
   return safe;
 }
 
-// ─── Middleware auth utilisateur ──────────────────────────────────────────────
+// ─── Middleware ───────────────────────────────────────────────────────────────
 
 export const userAuthMiddleware: RequestHandler = (req, _res, next) => {
   const authHeader = req.headers.authorization;

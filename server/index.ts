@@ -5,6 +5,8 @@ import authRouter from "./routes/auth";
 import chatRouter from "./routes/chat";
 import profileRouter from "./routes/profile";
 import usersRouter, { userAuthMiddleware } from "./routes/users";
+import stripeRouter from "./routes/stripe";
+import { chatRateLimit, authRateLimit } from "./middleware/rateLimit";
 
 export function createServer() {
   const app = express();
@@ -13,9 +15,12 @@ export function createServer() {
     origin: process.env.CORS_ORIGIN || "http://localhost:8080",
     credentials: true,
   }));
+
+  // Webhook Stripe doit recevoir le body brut (avant express.json)
+  app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
   app.use(express.json());
 
-  // Middleware auth utilisateur (injecte req.baymoraUser si token valide)
+  // Middleware auth utilisateur global (injecte req.baymoraUser si token valide)
   app.use(userAuthMiddleware);
 
   // Health check
@@ -23,13 +28,20 @@ export function createServer() {
     res.json({ ok: true, service: "Baymora API" });
   });
 
+  // Routes avec rate limiting ciblé
+  app.use("/api/auth", authRateLimit, authRouter);
+  app.use("/api/users/login", authRateLimit);
+  app.use("/api/users/register", authRateLimit);
+  app.use("/api/chat/message", chatRateLimit);
+
   // Routes
   app.use("/api/auth", authRouter);
   app.use("/api/chat", chatRouter);
   app.use("/api/profile", profileRouter);
   app.use("/api/users", usersRouter);
+  app.use("/api/stripe", stripeRouter);
 
-  // 404 — uniquement pour les routes /api/
+  // 404
   app.use("/api/*path", (_req, res) => {
     res.status(404).json({ error: "Not found" });
   });

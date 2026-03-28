@@ -20,7 +20,7 @@ export type IntentType =
 
 export interface ExtractedEntity {
   type: string;
-  value: string | number | string[];
+  value: string | number | boolean | string[];
   confidence: number;
   source?: string; // Where it was extracted from
 }

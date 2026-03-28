@@ -63,7 +63,7 @@ export default function Chat() {
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { messages, isLoading, error, conversationId, startChat, sendMessage, deleteConversation } = useChat();
 
   useEffect(() => { startChat('fr'); }, []);
@@ -84,9 +84,11 @@ export default function Chat() {
   }, [messages, isLoading]);
 
   const guestRemaining = FREE_MESSAGES_LIMIT - guestMsgCount;
-  const isGuestLimitReached = !isAuthenticated && guestMsgCount >= FREE_MESSAGES_LIMIT;
+  // Ne pas bloquer pendant le chargement auth initial — évite le bug compteur
+  const isGuestLimitReached = !authLoading && !isAuthenticated && guestMsgCount >= FREE_MESSAGES_LIMIT;
 
   const canSend = () => {
+    if (authLoading) return false; // Attendre la résolution auth avant de compter
     if (isGuestLimitReached) { setShowConversion(true); return false; }
     if (!isAuthenticated) {
       const newCount = incrementGuestMessageCount();

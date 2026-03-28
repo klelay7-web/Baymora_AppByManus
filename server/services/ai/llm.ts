@@ -345,7 +345,7 @@ export async function callLLM(
         });
         const content = response.content[0].type === 'text'
           ? response.content[0].text
-          : getFallbackResponse(lastMessage, language);
+          : getFallbackResponse(messages, language);
         return { content, model: 'sonnet' };
       } catch {
         // Les deux ont échoué
@@ -353,7 +353,7 @@ export async function callLLM(
     }
 
     return {
-      content: getFallbackResponse(lastMessage, language),
+      content: getFallbackResponse(messages, language),
       model: 'fallback',
     };
   }
