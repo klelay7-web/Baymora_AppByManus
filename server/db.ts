@@ -1,24 +1,22 @@
 /**
  * Client Prisma — instance unique partagée dans toute l'app
- * Prisma v7 + @prisma/adapter-pg pour PostgreSQL direct
+ * Prisma v7 + @prisma/adapter-pg pour PostgreSQL (Supabase)
  */
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-// Compatibilité CJS/ESM avec Vite
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { PrismaClient } = require('@prisma/client');
-const { PrismaPg } = require('@prisma/adapter-pg');
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-const globalForPrisma = globalThis as unknown as { prisma: any };
-
-function createPrismaClient() {
+function createPrismaClient(): PrismaClient {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    console.warn('[DB] DATABASE_URL non configurée — mode dégradé');
-    return new PrismaClient({ log: ['error'] });
+    throw new Error('[DB] DATABASE_URL non configurée dans .env');
   }
   const adapter = new PrismaPg({ connectionString: databaseUrl });
-  return new PrismaClient({ adapter, log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'] });
+  return new PrismaClient({
+    adapter,
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  } as any);
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
