@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently -n API,WEB -c cyan,green \"tsx watch server/dev-server.ts\" \"vite\"",
     "build": "vite build && pnpm build:server",
-    "build:server": "esbuild server/node-build.ts --bundle --platform=node --target=node22 --outfile=dist/server/production.mjs --format=esm --packages=external",
+    "build:server": "esbuild ./server/node-build.ts --bundle --platform=node --target=node22 --outfile=dist/server/production.mjs --format=esm --packages=external",
     "postinstall": "prisma generate",
     "start": "node dist/server/production.mjs",
     "test": "vitest --run",
