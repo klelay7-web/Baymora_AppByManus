@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '../db';
+import { sendBirthdayAlertEmail } from './email';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -176,8 +177,9 @@ export async function checkUpcomingDates(): Promise<void> {
         console.log(`[CRON] [${user.prenom || user.pseudo}] ${alert.label} — ${when}`);
         console.log(`       Google Calendar: ${alert.googleCalendarUrl}`);
 
-        // TODO Phase 2: envoi email via Resend
-        // if (user.email) await sendBirthdayEmail(user.email, alert);
+        if (user.email) {
+          await sendBirthdayAlertEmail(user.email, user.prenom, alert);
+        }
       }
     }
 

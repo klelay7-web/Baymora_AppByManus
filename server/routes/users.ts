@@ -4,6 +4,7 @@ import { prisma } from '../db';
 import jwt from 'jsonwebtoken';
 import type { BaymoraUser, TravelCompanion, ImportantDate } from '../types';
 import { getUpcomingForUser } from '../services/birthdayCron';
+import { sendWelcomeEmail } from '../services/email';
 
 export type { BaymoraUser, TravelCompanion, ImportantDate };
 
@@ -140,6 +141,11 @@ export const handleRegister: RequestHandler = async (req, res) => {
 
     const token = generateUserToken(user.id, user.circle);
     console.log(`[USERS] Nouveau compte: ${user.pseudo} (${mode})`);
+
+    // Email de bienvenue (async, ne bloque pas la réponse)
+    if (email) {
+      sendWelcomeEmail(email, user.prenom ?? undefined).catch(() => {});
+    }
 
     res.status(201).json({ token, user: safeUser(dbUserToBaymora(user)) });
   } catch (error: any) {

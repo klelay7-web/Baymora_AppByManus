@@ -16,7 +16,7 @@ const T = {
       sub: "Dites-nous ce que vous voulez. Baymora crée le voyage. Comme si vous aviez un concierge haut de gamme disponible à toute heure.",
       cta: "Commencer — c'est gratuit",
       ctaSub: "Voir les cercles",
-      fine: "5 messages gratuits · Aucune carte requise · Anonymat possible",
+      fine: "10 messages gratuits · Aucune carte requise · Anonymat possible",
     },
     how: {
       title: "Aussi simple que d'envoyer un message",
@@ -48,7 +48,7 @@ const T = {
       tags: ["Pseudonyme possible", "Données en Europe", "Suppression totale", "Aucun tracking"],
     },
     finalCta: {
-      title: "À 5 échanges de\nl'expérience de votre vie.",
+      title: "À 10 échanges de\nl'expérience de votre vie.",
       sub: "Commencez maintenant. Aucune carte requise.",
       btn: "Parler à Baymora",
     },
@@ -72,7 +72,7 @@ const T = {
       sub: "Tell us what you want. Baymora creates the journey. Like having a premium concierge available around the clock.",
       cta: "Get started — it's free",
       ctaSub: "See the Circles",
-      fine: "5 free messages · No card required · Anonymity possible",
+      fine: "10 free messages · No card required · Anonymity possible",
     },
     how: {
       title: "As simple as sending a message",
@@ -126,7 +126,7 @@ type Lang = "fr" | "en";
 
 const PLANS = [
   { circle: "Découverte", badge: "○", price: "Gratuit / Free", color: "border-white/12", highlight: false,
-    features: { fr: ["5 messages gratuits", "Suggestions de voyage", "Aucun compte requis"], en: ["5 free messages", "Travel suggestions", "No account needed"] } },
+    features: { fr: ["10 messages gratuits", "Suggestions de voyage", "Aucun compte requis"], en: ["10 free messages", "Travel suggestions", "No account needed"] } },
   { circle: "Essentiel", badge: "✦", price: "29€/mois", color: "border-secondary/40", highlight: false,
     features: { fr: ["Messages illimités", "Mémoire de vos proches", "Dates & anniversaires"], en: ["Unlimited messages", "Companion memory", "Dates & birthdays"] } },
   { circle: "Élite", badge: "✦✦", price: "99€/mois", color: "border-amber-400/35", highlight: true,
