@@ -1,11 +1,9 @@
 import { Router, RequestHandler } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { hashPassword, verifyPassword } from '../services/auth';
-import { conversationStore, userStore, emailIndex, pseudoIndex } from '../stores';
+import { prisma } from '../db';
 import jwt from 'jsonwebtoken';
 import type { BaymoraUser, TravelCompanion, ImportantDate } from '../types';
 
-// Re-export types for consumers
 export type { BaymoraUser, TravelCompanion, ImportantDate };
 
 const router = Router();
@@ -22,27 +20,77 @@ export function generateUserToken(userId: string, circle: string): string {
   );
 }
 
-export function getUserFromToken(token: string): BaymoraUser | null {
+export function getUserFromToken(token: string): Promise<BaymoraUser | null> {
   const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret) return null;
+  if (!jwtSecret) return Promise.resolve(null);
   try {
     const decoded = jwt.verify(token, jwtSecret, { algorithms: ['HS256'] }) as any;
-    if (decoded.role !== 'user') return null;
-    return userStore.get(decoded.userId) || null;
+    if (decoded.role !== 'user') return Promise.resolve(null);
+    return getUserById(decoded.userId);
+  } catch {
+    return Promise.resolve(null);
+  }
+}
+
+export async function getUserById(id: string): Promise<BaymoraUser | null> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: { companions: true, dates: true },
+    });
+    if (!user) return null;
+    return dbUserToBaymora(user);
   } catch {
     return null;
   }
 }
 
-export function getUserById(id: string): BaymoraUser | null {
-  return userStore.get(id) || null;
+// ─── Conversion DB → BaymoraUser ─────────────────────────────────────────────
+
+function dbUserToBaymora(user: any): BaymoraUser {
+  return {
+    id: user.id,
+    pseudo: user.pseudo,
+    prenom: user.prenom ?? undefined,
+    email: user.email ?? undefined,
+    mode: user.mode as 'fantome' | 'signature',
+    circle: user.circle as BaymoraUser['circle'],
+    messagesUsed: user.messagesUsed,
+    messagesLimit: user.messagesLimit,
+    passwordHash: user.passwordHash ?? undefined,
+    googleId: user.googleId ?? undefined,
+    preferences: (user.preferences as Record<string, any>) || {},
+    travelCompanions: (user.companions || []).map((c: any): TravelCompanion => ({
+      id: c.id,
+      name: c.name,
+      relationship: c.relationship,
+      birthday: c.birthday ?? undefined,
+      age: c.age ?? undefined,
+      heightCm: c.heightCm ?? undefined,
+      weightKg: c.weightKg ?? undefined,
+      clothingSize: c.clothingSize ?? undefined,
+      shoeSize: c.shoeSize ?? undefined,
+      diet: c.diet ?? undefined,
+      notes: c.notes ?? undefined,
+      preferences: (c.preferences as Record<string, any>) || {},
+      firstMentionedAt: c.firstMentionedAt,
+      lastSeenWith: c.lastSeenWith ?? undefined,
+    })),
+    importantDates: (user.dates || []).map((d: any): ImportantDate => ({
+      id: d.id,
+      label: d.label,
+      date: d.date,
+      recurring: d.recurring,
+      contactName: d.contactName ?? undefined,
+      notes: d.notes ?? undefined,
+    })),
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
 }
 
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 
-/**
- * POST /api/users/register
- */
 export const handleRegister: RequestHandler = async (req, res) => {
   try {
     const { pseudo, prenom, email, password, mode = 'fantome', conversationId } = req.body;
@@ -52,85 +100,68 @@ export const handleRegister: RequestHandler = async (req, res) => {
       return;
     }
 
-    const pseudoClean = pseudo.trim().toLowerCase();
-    if (pseudoIndex.has(pseudoClean)) {
-      res.status(409).json({ error: 'Ce pseudo est déjà pris', code: 'PSEUDO_TAKEN' });
-      return;
-    }
-
-    if (email) {
-      const emailClean = email.trim().toLowerCase();
-      if (emailIndex.has(emailClean)) {
-        res.status(409).json({ error: 'Cet email est déjà utilisé', code: 'EMAIL_TAKEN' });
-        return;
-      }
-    }
-
     if (mode === 'signature' && !email) {
       res.status(400).json({ error: 'L\'email est requis en mode Signature', code: 'VALIDATION_ERROR' });
       return;
     }
 
-    const userId = uuidv4();
     const passwordHash = password ? await hashPassword(password) : undefined;
 
-    const user: BaymoraUser = {
-      id: userId,
-      pseudo: pseudo.trim(),
-      prenom: prenom?.trim(),
-      email: email?.trim().toLowerCase(),
-      mode,
-      circle: 'decouverte',
-      messagesUsed: 0,
-      messagesLimit: 20,
-      passwordHash,
-      preferences: {},
-      travelCompanions: [],
-      importantDates: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    userStore.set(userId, user);
-    pseudoIndex.set(pseudoClean, userId);
-    if (email) emailIndex.set(email.trim().toLowerCase(), userId);
+    const user = await prisma.user.create({
+      data: {
+        pseudo: pseudo.trim(),
+        prenom: prenom?.trim() || null,
+        email: email?.trim().toLowerCase() || null,
+        mode,
+        passwordHash: passwordHash || null,
+        preferences: {},
+      },
+      include: { companions: true, dates: true },
+    });
 
     // Absorber le profil pré-rempli depuis la conversation invité
     if (conversationId) {
-      const conversation = conversationStore.get(conversationId);
-      if (conversation?.pendingProfile && Object.keys(conversation.pendingProfile).length > 0) {
-        user.preferences = { ...user.preferences, ...conversation.pendingProfile };
-        conversation.userId = userId;
-        console.log(`[USERS] Profil pré-rempli absorbé pour ${user.pseudo}:`, conversation.pendingProfile);
+      const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
+      if (conversation?.pendingProfile && Object.keys(conversation.pendingProfile as object).length > 0) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            preferences: { ...(user.preferences as object), ...(conversation.pendingProfile as object) },
+          },
+        });
+        await prisma.conversation.update({
+          where: { id: conversationId },
+          data: { userId: user.id },
+        });
+        console.log(`[USERS] Profil absorbé pour ${user.pseudo}`);
       }
     }
 
-    const token = generateUserToken(userId, user.circle);
-    console.log(`[USERS] Nouveau compte: ${user.pseudo} (${user.mode}) — ID: ${userId}`);
+    const token = generateUserToken(user.id, user.circle);
+    console.log(`[USERS] Nouveau compte: ${user.pseudo} (${mode})`);
 
-    res.status(201).json({ token, user: safeUser(user) });
-  } catch (error) {
+    res.status(201).json({ token, user: safeUser(dbUserToBaymora(user)) });
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      const field = error.meta?.target?.includes('email') ? 'email' : 'pseudo';
+      res.status(409).json({ error: `Ce ${field} est déjà utilisé`, code: `${field.toUpperCase()}_TAKEN` });
+      return;
+    }
     console.error('Erreur register:', error);
     res.status(500).json({ error: 'Erreur lors de la création du compte', code: 'SERVER_ERROR' });
   }
 };
 
-/**
- * POST /api/users/login
- */
 export const handleLogin: RequestHandler = async (req, res) => {
   try {
     const { email, password, pseudo } = req.body;
 
-    let user: BaymoraUser | undefined;
-
-    if (email) {
-      const userId = emailIndex.get(email.trim().toLowerCase());
-      user = userId ? userStore.get(userId) : undefined;
-    } else if (pseudo) {
-      const userId = pseudoIndex.get(pseudo.trim().toLowerCase());
-      user = userId ? userStore.get(userId) : undefined;
-    }
+    const user = await prisma.user.findFirst({
+      where: email
+        ? { email: email.trim().toLowerCase() }
+        : { pseudo: pseudo?.trim() },
+      include: { companions: true, dates: true },
+    });
 
     if (!user) {
       res.status(401).json({ error: 'Identifiants incorrects', code: 'INVALID_CREDENTIALS' });
@@ -146,16 +177,13 @@ export const handleLogin: RequestHandler = async (req, res) => {
     }
 
     const token = generateUserToken(user.id, user.circle);
-    res.json({ token, user: safeUser(user) });
+    res.json({ token, user: safeUser(dbUserToBaymora(user)) });
   } catch (error) {
     console.error('Erreur login:', error);
     res.status(500).json({ error: 'Erreur connexion', code: 'SERVER_ERROR' });
   }
 };
 
-/**
- * GET /api/users/me
- */
 export const handleGetMe: RequestHandler = (req, res) => {
   const user = (req as any).baymoraUser as BaymoraUser;
   if (!user) {
@@ -165,31 +193,28 @@ export const handleGetMe: RequestHandler = (req, res) => {
   res.json({ user: safeUser(user) });
 };
 
-/**
- * PATCH /api/users/me
- */
-export const handleUpdateMe: RequestHandler = (req, res) => {
+export const handleUpdateMe: RequestHandler = async (req, res) => {
   const user = (req as any).baymoraUser as BaymoraUser;
   if (!user) {
     res.status(401).json({ error: 'Non authentifié', code: 'NOT_AUTHENTICATED' });
     return;
   }
 
-  const { prenom, preferences, travelCompanions, importantDates } = req.body;
+  const { prenom, preferences } = req.body;
 
-  if (prenom !== undefined) user.prenom = prenom;
-  if (preferences) user.preferences = { ...user.preferences, ...preferences };
-  if (travelCompanions) user.travelCompanions = travelCompanions;
-  if (importantDates) user.importantDates = importantDates;
-  user.updatedAt = new Date();
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      prenom: prenom ?? user.prenom,
+      preferences: preferences ? { ...(user.preferences as object), ...preferences } : user.preferences,
+    },
+    include: { companions: true, dates: true },
+  });
 
-  res.json({ user: safeUser(user) });
+  res.json({ user: safeUser(dbUserToBaymora(updated)) });
 };
 
-/**
- * POST /api/users/me/companions
- */
-export const handleAddCompanion: RequestHandler = (req, res) => {
+export const handleAddCompanion: RequestHandler = async (req, res) => {
   const user = (req as any).baymoraUser as BaymoraUser;
   if (!user) {
     res.status(401).json({ error: 'Non authentifié', code: 'NOT_AUTHENTICATED' });
@@ -197,34 +222,29 @@ export const handleAddCompanion: RequestHandler = (req, res) => {
   }
 
   const { name, relationship, birthday, diet, age, clothingSize, shoeSize, notes } = req.body;
-  if (!name || !name.trim()) {
+  if (!name?.trim()) {
     res.status(400).json({ error: 'Le nom est requis', code: 'VALIDATION_ERROR' });
     return;
   }
 
-  const companion: TravelCompanion = {
-    id: uuidv4(),
-    name: name.trim(),
-    relationship: relationship || 'ami',
-    birthday,
-    diet,
-    age,
-    clothingSize,
-    shoeSize,
-    notes,
-    firstMentionedAt: new Date(),
-  };
-
-  user.travelCompanions.push(companion);
-  user.updatedAt = new Date();
+  const companion = await prisma.travelCompanion.create({
+    data: {
+      userId: user.id,
+      name: name.trim(),
+      relationship: relationship || 'ami',
+      birthday: birthday || null,
+      diet: diet || null,
+      age: age || null,
+      clothingSize: clothingSize || null,
+      shoeSize: shoeSize || null,
+      notes: notes || null,
+    },
+  });
 
   res.status(201).json({ companion });
 };
 
-/**
- * POST /api/users/me/dates
- */
-export const handleAddDate: RequestHandler = (req, res) => {
+export const handleAddDate: RequestHandler = async (req, res) => {
   const user = (req as any).baymoraUser as BaymoraUser;
   if (!user) {
     res.status(401).json({ error: 'Non authentifié', code: 'NOT_AUTHENTICATED' });
@@ -237,17 +257,9 @@ export const handleAddDate: RequestHandler = (req, res) => {
     return;
   }
 
-  const importantDate: ImportantDate = {
-    id: uuidv4(),
-    label,
-    date,
-    recurring,
-    contactName,
-    notes,
-  };
-
-  user.importantDates.push(importantDate);
-  user.updatedAt = new Date();
+  const importantDate = await prisma.importantDate.create({
+    data: { userId: user.id, label, date, recurring, contactName: contactName || null, notes: notes || null },
+  });
 
   res.status(201).json({ date: importantDate });
 };
@@ -261,11 +273,11 @@ function safeUser(user: BaymoraUser) {
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
-export const userAuthMiddleware: RequestHandler = (req, _res, next) => {
+export const userAuthMiddleware: RequestHandler = async (req, _res, next) => {
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    const user = getUserFromToken(token);
+    const user = await getUserFromToken(token);
     (req as any).baymoraUser = user;
   }
   next();

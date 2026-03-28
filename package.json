@@ -10,16 +10,20 @@
     "start": "node dist/server/node-build.mjs",
     "test": "vitest --run",
     "format.fix": "prettier --write .",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@prisma/client": "^7.6.0",
     "bcryptjs": "^2.4.3",
     "bull": "^4.12.2",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
     "openai": "^4.52.7",
+    "prisma": "^7.6.0",
     "react-markdown": "^10.1.0",
     "redis": "^4.6.13",
     "remark-gfm": "^4.0.1",
