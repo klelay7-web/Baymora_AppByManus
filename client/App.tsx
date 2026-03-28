@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
+import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminDashboardContent from "./pages/AdminDashboardContent";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/partner" element={<PartnerDashboard />} />

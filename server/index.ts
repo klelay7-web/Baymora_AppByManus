@@ -7,6 +7,7 @@ import profileRouter from "./routes/profile";
 import usersRouter, { userAuthMiddleware } from "./routes/users";
 import stripeRouter from "./routes/stripe";
 import adminRouter from "./routes/admin";
+import googleAuthRouter from "./routes/googleAuth";
 import { chatRateLimit, authRateLimit } from "./middleware/rateLimit";
 import { startBirthdayCron } from "./services/birthdayCron";
 
@@ -38,6 +39,7 @@ export function createServer() {
 
   // Routes
   app.use("/api/auth", authRouter);
+  app.use("/api/auth/google", googleAuthRouter);
   app.use("/api/chat", chatRouter);
   app.use("/api/profile", profileRouter);
   app.use("/api/users", usersRouter);
