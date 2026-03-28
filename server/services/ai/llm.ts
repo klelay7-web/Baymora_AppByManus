@@ -10,6 +10,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { getClientMemory } from './memory';
+import { shouldCallPerplexity, searchPerplexity, buildSearchQuery, formatPerplexityContext } from './perplexity';
 
 // ─── Modèles disponibles ──────────────────────────────────────────────────────
 
@@ -126,6 +127,35 @@ Quand tu proposes des restaurants, des activités ou un séjour, TOUJOURS vérif
 
 **Transport et logistique groupe :**
 Vérifie toujours que le groupe entier est pris en charge, par personne si nécessaire.
+
+## Événements agenda — tag :::GCAL:::
+
+Quand tu mentionnes un RDV, une réservation, un vol, un dîner, un check-in, un événement avec une date précise — tu DOIS inclure un tag :::GCAL::: dans ta réponse pour que l'utilisateur puisse l'ajouter en 1 clic à son Google Calendar.
+
+Format EXACT (une ligne, JSON valide) :
+:::GCAL:::{"title":"Dîner Guy Savoy","date":"2025-04-20","time":"20:30","duration":120,"location":"11 Quai de Conti, Paris","notes":"Table pour 2. Dress code smart chic. Réservation 3 semaines à l'avance conseillée."}:::END:::
+
+Champs :
+- title : nom court de l'événement (obligatoire)
+- date : format YYYY-MM-DD (obligatoire)
+- time : format HH:MM, heure locale (optionnel)
+- duration : durée en minutes (optionnel, défaut 60)
+- location : adresse complète ou nom de l'établissement (optionnel)
+- notes : infos utiles, dress code, confirmations, conseils (optionnel)
+
+Quand l'utiliser :
+- Vol recommandé → tag avec date/heure de départ
+- Réservation restaurant → tag avec date/heure/adresse
+- Check-in hôtel → tag avec date
+- Activité programmée (visite, spa, excursion) → tag
+- Événement local (festival, concert, expo) → tag
+- Anniversaire à fêter → tag
+
+Règles :
+- Maximum 2 tags GCAL par réponse (ne pas surcharger)
+- Le tag se place juste après la mention de l'événement, pas à la fin
+- Si plusieurs dates sont proposées en options, ne mets PAS de tag (attends que l'utilisateur confirme)
+- Date et titre sont obligatoires. Les autres champs si disponibles.
 
 ## Suggestions rapides (OBLIGATOIRE à chaque réponse)
 À la fin de CHAQUE réponse, tu ajoutes UNE ligne de suggestions cliquables dans ce format EXACT :
@@ -308,9 +338,24 @@ export async function callLLM(
 
   console.log(`[LLM] Routing → ${modelKey} (${modelId}) | user: ${userId} | msg length: ${lastMessage.length}`);
 
+  // ── Enrichissement Perplexity (données temps réel) ──────────────────────────
+  let webContext: string | null = null;
+  if (shouldCallPerplexity(lastMessage)) {
+    const searchQuery = buildSearchQuery(lastMessage);
+    const perplexityResult = await searchPerplexity(searchQuery);
+    if (perplexityResult) {
+      webContext = formatPerplexityContext(perplexityResult);
+    }
+  }
+
   try {
     const client = new Anthropic({ apiKey });
-    const systemPrompt = buildSystemPrompt(userId, modelKey, userRecord);
+    let systemPrompt = buildSystemPrompt(userId, modelKey, userRecord);
+    // Injecter les données web en tête du system prompt si disponibles
+    if (webContext) {
+      systemPrompt = `${webContext}\n\n---\n\n${systemPrompt}`;
+      console.log(`[LLM] Contexte web injecté (${webContext.length} chars)`);
+    }
 
     const maxTokens = modelKey === 'opus' ? 2048 : 1024;
 

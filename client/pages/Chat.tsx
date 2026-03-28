@@ -9,24 +9,114 @@ import ContactPicker from '@/components/ContactPicker';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-// ─── Quick-reply parser ────────────────────────────────────────────────────────
-// Claude appends :::QR::: A | B | C :::END::: at the end of each message
-// Claude appends :::CONTACTS::: to trigger the contact selector UI
+// ─── Parseur de message complet ───────────────────────────────────────────────
+// Tags supportés :
+//   :::QR::: A | B | C :::END:::          → suggestions rapides
+//   :::CONTACTS:::                          → sélecteur de contacts
+//   :::GCAL:::{"title":...}:::END:::        → bouton Google Calendar
 
-function parseMessage(content: string): { text: string; quickReplies: string[]; showContacts: boolean } {
-  const showContacts = content.includes(':::CONTACTS:::');
-  const withoutContacts = content.replace(':::CONTACTS:::', '').trim();
+export interface CalendarEvent {
+  title: string;
+  date: string;       // YYYY-MM-DD
+  time?: string;      // HH:MM
+  duration?: number;  // minutes
+  location?: string;
+  notes?: string;
+}
 
-  const match = withoutContacts.match(/:::QR:::([\s\S]*?):::END:::/);
-  if (!match) return { text: withoutContacts.trim(), quickReplies: [], showContacts };
+function buildGoogleCalendarUrl(event: CalendarEvent): string {
+  const dateStr = event.date.replace(/-/g, '');
+  let startStr: string;
+  let endStr: string;
 
-  const quickReplies = match[1]
-    .split('|')
-    .map(s => s.trim())
-    .filter(Boolean);
+  if (event.time) {
+    const [h, m] = event.time.split(':').map(Number);
+    const durationMin = event.duration || 60;
+    const startDate = new Date(`${event.date}T${event.time}:00`);
+    const endDate = new Date(startDate.getTime() + durationMin * 60000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+    startStr = fmt(startDate);
+    endStr = fmt(endDate);
+  } else {
+    // All-day event
+    const next = new Date(event.date);
+    next.setDate(next.getDate() + 1);
+    const nextStr = next.toISOString().split('T')[0].replace(/-/g, '');
+    startStr = dateStr;
+    endStr = nextStr;
+  }
 
-  const text = withoutContacts.replace(/:::QR:::[\s\S]*?:::END:::/, '').trim();
-  return { text, quickReplies, showContacts };
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.title,
+    dates: `${startStr}/${endStr}`,
+    ctz: 'Europe/Paris',
+  });
+  if (event.location) params.set('location', event.location);
+  if (event.notes) params.set('details', event.notes);
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function parseMessage(content: string): {
+  text: string;
+  quickReplies: string[];
+  showContacts: boolean;
+  calendarEvents: CalendarEvent[];
+} {
+  let working = content;
+
+  // Extract :::CONTACTS:::
+  const showContacts = working.includes(':::CONTACTS:::');
+  working = working.replace(':::CONTACTS:::', '').trim();
+
+  // Extract :::GCAL::: events
+  const calendarEvents: CalendarEvent[] = [];
+  working = working.replace(/:::GCAL:::([\s\S]*?):::END:::/g, (_, json) => {
+    try {
+      const ev = JSON.parse(json.trim()) as CalendarEvent;
+      if (ev.title && ev.date) calendarEvents.push(ev);
+    } catch {}
+    return ''; // Remove tag from displayed text
+  });
+
+  // Extract :::QR:::
+  const qrMatch = working.match(/:::QR:::([\s\S]*?):::END:::/);
+  const quickReplies = qrMatch
+    ? qrMatch[1].split('|').map(s => s.trim()).filter(Boolean)
+    : [];
+  working = working.replace(/:::QR:::[\s\S]*?:::END:::/, '').trim();
+
+  return { text: working, quickReplies, showContacts, calendarEvents };
+}
+
+// ─── Carte Google Calendar ────────────────────────────────────────────────────
+
+function CalendarCard({ event }: { event: CalendarEvent }) {
+  const url = buildGoogleCalendarUrl(event);
+  const dateLabel = event.date
+    ? new Date(event.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+    : '';
+  return (
+    <div className="mt-2 bg-secondary/8 border border-secondary/25 rounded-xl px-3 py-2.5 flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-white/80 text-xs font-semibold truncate">📅 {event.title}</p>
+        <p className="text-white/35 text-xs mt-0.5">
+          {dateLabel}{event.time ? ` à ${event.time}` : ''}{event.location ? ` · ${event.location}` : ''}
+        </p>
+      </div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex-shrink-0 bg-secondary text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-secondary/90 transition-all whitespace-nowrap"
+      >
+        + Agenda
+      </a>
+    </div>
+  );
 }
 
 // ─── Welcome chips ─────────────────────────────────────────────────────────────
@@ -318,6 +408,15 @@ export default function Chat() {
                     )}
                   </div>
                 </div>
+
+                {/* Cartes Google Calendar (tous les messages assistant) */}
+                {msg.role === 'assistant' && parsed && parsed.calendarEvents.length > 0 && (
+                  <div className="ml-11 space-y-1.5 mt-1">
+                    {parsed.calendarEvents.map((ev, ei) => (
+                      <CalendarCard key={ei} event={ev} />
+                    ))}
+                  </div>
+                )}
 
                 {/* Quick-reply chips après le dernier message assistant */}
                 {msg.role === 'assistant' && isLast && parsed && parsed.quickReplies.length > 0 && !isLoading && !showContactPicker && (
