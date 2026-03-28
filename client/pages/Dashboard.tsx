@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell, Home, Plane, CheckCircle2, Circle, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 
@@ -73,6 +73,153 @@ function timeAgo(dateStr: string): string {
 }
 
 // ─── Composant ────────────────────────────────────────────────────────────────
+
+// ─── Section logistique ───────────────────────────────────────────────────────
+
+interface LogisticsForm {
+  homeAddress: string;
+  homeAirport: string;
+  hasLounge: boolean;
+  hasPriorityLane: boolean;
+}
+
+function LogisticsSection({ user }: { user: any }) {
+  const prefs = user.preferences || {};
+  const [form, setForm] = useState<LogisticsForm>({
+    homeAddress: prefs.homeAddress || '',
+    homeAirport: prefs.homeAirport || '',
+    hasLounge: prefs.hasLounge || false,
+    hasPriorityLane: prefs.hasPriorityLane || false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [editing, setEditing] = useState(!prefs.homeAddress);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('baymora_token');
+      await fetch('/api/users/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ preferences: form }),
+      });
+      setSaved(true);
+      setEditing(false);
+      setTimeout(() => setSaved(false), 3000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-white/80 font-semibold text-sm flex items-center gap-2">
+          <Plane className="h-4 w-4 text-secondary/70" /> Logistique départ
+        </h2>
+        {!editing && (
+          <button
+            onClick={() => setEditing(true)}
+            className="text-secondary/60 text-xs hover:text-secondary transition-colors flex items-center gap-1"
+          >
+            <Edit3 className="h-3 w-3" /> Modifier
+          </button>
+        )}
+      </div>
+
+      <div className="bg-white/4 border border-white/10 rounded-2xl p-4 space-y-3">
+        {/* Adresse domicile */}
+        <div>
+          <label className="flex items-center gap-1.5 text-white/40 text-xs mb-1.5">
+            <Home className="h-3 w-3" /> Adresse domicile
+          </label>
+          {editing ? (
+            <input
+              type="text"
+              value={form.homeAddress}
+              onChange={e => setForm(f => ({ ...f, homeAddress: e.target.value }))}
+              placeholder="12 rue de la Paix, Paris 75001"
+              className="w-full bg-white/6 border border-white/12 rounded-xl px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-secondary/40 transition-colors"
+            />
+          ) : (
+            <p className="text-white/70 text-sm px-1">
+              {form.homeAddress || <span className="text-white/20 italic">Non renseignée</span>}
+            </p>
+          )}
+        </div>
+
+        {/* Aéroport favori */}
+        <div>
+          <label className="flex items-center gap-1.5 text-white/40 text-xs mb-1.5">
+            <Plane className="h-3 w-3" /> Aéroport de départ favori
+          </label>
+          {editing ? (
+            <input
+              type="text"
+              value={form.homeAirport}
+              onChange={e => setForm(f => ({ ...f, homeAirport: e.target.value }))}
+              placeholder="CDG, ORY, NCE, LYS..."
+              className="w-full bg-white/6 border border-white/12 rounded-xl px-3 py-2 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-secondary/40 transition-colors"
+            />
+          ) : (
+            <p className="text-white/70 text-sm px-1">
+              {form.homeAirport || <span className="text-white/20 italic">Non renseigné</span>}
+            </p>
+          )}
+        </div>
+
+        {/* Toggles */}
+        <div className="flex flex-col gap-2 pt-1">
+          {[
+            { key: 'hasLounge' as const, label: 'Accès salon (Priority Pass, Amex Centurion, statut compagnie)', emoji: '🛋️' },
+            { key: 'hasPriorityLane' as const, label: 'Priority Lane / TSA PreCheck / contrôle accéléré', emoji: '⚡' },
+          ].map(({ key, label, emoji }) => (
+            <button
+              key={key}
+              onClick={() => editing && setForm(f => ({ ...f, [key]: !f[key] }))}
+              className={`flex items-center gap-3 text-left transition-all ${editing ? 'cursor-pointer' : 'cursor-default'}`}
+            >
+              {form[key]
+                ? <CheckCircle2 className="h-4 w-4 text-secondary flex-shrink-0" />
+                : <Circle className="h-4 w-4 text-white/20 flex-shrink-0" />
+              }
+              <span className="text-xs">
+                <span className="mr-1">{emoji}</span>
+                <span className={form[key] ? 'text-white/70' : 'text-white/30'}>{label}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Bouton sauvegarder */}
+        {editing && (
+          <button
+            onClick={save}
+            disabled={saving}
+            className="w-full mt-1 flex items-center justify-center gap-2 bg-secondary/15 border border-secondary/25 text-secondary text-sm font-medium py-2 rounded-xl hover:bg-secondary/25 transition-all disabled:opacity-50"
+          >
+            {saving ? (
+              <div className="w-4 h-4 border-2 border-secondary/40 border-t-secondary rounded-full animate-spin" />
+            ) : saved ? (
+              <><CheckCircle2 className="h-4 w-4" /> Sauvegardé</>
+            ) : (
+              <><Save className="h-4 w-4" /> Sauvegarder</>
+            )}
+          </button>
+        )}
+
+        {!editing && (form.homeAddress || form.homeAirport) && (
+          <p className="text-white/20 text-xs text-center pt-1">
+            Baymora calcule votre heure de départ optimale avec ces données ✓
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ─── Page principale ──────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -254,6 +401,9 @@ export default function Dashboard() {
             </div>
           </section>
         )}
+
+        {/* ── Logistique départ ── */}
+        <LogisticsSection user={user} />
 
         {/* ── Plan actuel + upgrade ── */}
         <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-2xl p-4">
