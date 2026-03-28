@@ -8,6 +8,7 @@ import usersRouter, { userAuthMiddleware } from "./routes/users";
 import stripeRouter from "./routes/stripe";
 import adminRouter from "./routes/admin";
 import { chatRateLimit, authRateLimit } from "./middleware/rateLimit";
+import { startBirthdayCron } from "./services/birthdayCron";
 
 export function createServer() {
   const app = express();

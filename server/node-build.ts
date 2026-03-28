@@ -1,5 +1,6 @@
 import path from "node:path";
 import { createServer } from "./index";
+import { startBirthdayCron } from "./services/birthdayCron";
 import * as express from "express";
 
 const app = createServer();
@@ -23,7 +24,8 @@ app.get("*", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`🚀 Fusion Starter server running on port ${port}`);
+  startBirthdayCron();
+  console.log(`🚀 Baymora server running on port ${port}`);
   console.log(`📱 Frontend: http://localhost:${port}`);
   console.log(`🔧 API: http://localhost:${port}/api`);
 });
