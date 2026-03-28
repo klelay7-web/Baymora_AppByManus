@@ -26,7 +26,7 @@ interface AuthState {
 
 const TOKEN_KEY = 'baymora_token';
 const GUEST_MSG_KEY = 'baymora_guest_msgs';
-export const FREE_MESSAGES_LIMIT = 5;
+export const FREE_MESSAGES_LIMIT = 10;
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, Check, User, MapPin, Wallet, Users, PawPrint, Gl
 
 interface ProfileData {
   pseudonym: string;
-  travelStyle: string;
+  travelStyle: string[];
   budgetRange: string;
   groupType: string;
   hasPet: boolean;
@@ -89,7 +89,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<ProfileData>({
     pseudonym: '',
-    travelStyle: '',
+    travelStyle: [],
     budgetRange: '',
     groupType: '',
     hasPet: false,
@@ -106,7 +106,7 @@ export default function Profile() {
 
   const canNext = () => {
     if (step === 0) return true; // pseudonyme optionnel
-    if (step === 1) return !!profile.travelStyle;
+    if (step === 1) return profile.travelStyle.length > 0;
     if (step === 2) return !!profile.budgetRange;
     if (step === 3) return !!profile.groupType;
     if (step === 4) return true; // préférences optionnelles
@@ -118,7 +118,7 @@ export default function Profile() {
     try {
       const preferences: Record<string, any> = {};
 
-      if (profile.travelStyle) preferences.travelStyle = profile.travelStyle;
+      if (profile.travelStyle.length) preferences.travelStyle = profile.travelStyle;
       if (profile.pace) preferences.pace = profile.pace;
       if (profile.hasPet) preferences.petFriendly = true;
       if (profile.hasChildren) {
@@ -219,9 +219,9 @@ export default function Profile() {
                   <Sparkles className="h-5 w-5 text-secondary" />
                 </div>
                 <h1 className="text-2xl font-bold text-white">Votre style</h1>
-                <p className="text-white/40 text-sm">Comment vous voyagez en général ?</p>
+                <p className="text-white/40 text-sm">Comment vous voyagez ? Plusieurs choix possibles.</p>
               </div>
-              <SingleChoice
+              <MultiChoice
                 selected={profile.travelStyle}
                 onChange={v => update('travelStyle', v)}
                 options={[
@@ -388,7 +388,7 @@ export default function Profile() {
                 <p className="text-white/40 text-sm">Baymora connaît maintenant vos préférences. Plus vous utiliserez l'assistant, plus ses recommandations seront précises.</p>
               </div>
               <div className="p-4 bg-white/4 border border-white/8 rounded-xl space-y-2">
-                {profile.travelStyle && <p className="text-white/70 text-sm">✓ Style : <span className="text-white">{profile.travelStyle}</span></p>}
+                {profile.travelStyle.length > 0 && <p className="text-white/70 text-sm">✓ Style : <span className="text-white">{profile.travelStyle.join(', ')}</span></p>}
                 {profile.budgetRange && <p className="text-white/70 text-sm">✓ Budget : <span className="text-white">{profile.budgetRange}</span></p>}
                 {profile.groupType && <p className="text-white/70 text-sm">✓ Groupe : <span className="text-white">{profile.groupType}</span></p>}
                 {profile.hasPet && <p className="text-white/70 text-sm">✓ <span className="text-white">Avec animal de compagnie</span></p>}

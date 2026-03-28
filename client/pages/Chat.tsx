@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2, User } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, Calendar, Users, Wallet, Hotel, Utensils, Zap, Plane, StickyNote, ChevronRight } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT } from '@/hooks/useAuth';
 import ConversionModal from '@/components/ConversionModal';
@@ -14,6 +14,22 @@ import remarkGfm from 'remark-gfm';
 //   :::QR::: A | B | C :::END:::          → suggestions rapides
 //   :::CONTACTS:::                          → sélecteur de contacts
 //   :::GCAL:::{"title":...}:::END:::        → bouton Google Calendar
+
+// ─── Plan de voyage ───────────────────────────────────────────────────────────
+
+export interface TripPlan {
+  destination?: string;
+  dates?: string;
+  duration?: string;
+  travelers?: number;
+  travelerNames?: string[];
+  budget?: string;
+  hotels?: Array<{ name: string; note?: string; stars?: number }>;
+  flights?: Array<{ from: string; to: string; date?: string; time?: string }>;
+  activities?: Array<{ name: string; day?: string }>;
+  restaurants?: Array<{ name: string; stars?: number; note?: string }>;
+  notes?: string[];
+}
 
 export interface CalendarEvent {
   title: string;
@@ -65,6 +81,7 @@ function parseMessage(content: string): {
   quickReplies: string[];
   showContacts: boolean;
   calendarEvents: CalendarEvent[];
+  planUpdate: TripPlan | null;
 } {
   let working = content;
 
@@ -79,7 +96,14 @@ function parseMessage(content: string): {
       const ev = JSON.parse(json.trim()) as CalendarEvent;
       if (ev.title && ev.date) calendarEvents.push(ev);
     } catch {}
-    return ''; // Remove tag from displayed text
+    return '';
+  });
+
+  // Extract :::PLAN:::
+  let planUpdate: TripPlan | null = null;
+  working = working.replace(/:::PLAN:::([\s\S]*?):::END:::/g, (_, json) => {
+    try { planUpdate = JSON.parse(json.trim()) as TripPlan; } catch {}
+    return '';
   });
 
   // Extract :::QR:::
@@ -89,7 +113,7 @@ function parseMessage(content: string): {
     : [];
   working = working.replace(/:::QR:::[\s\S]*?:::END:::/, '').trim();
 
-  return { text: working, quickReplies, showContacts, calendarEvents };
+  return { text: working, quickReplies, showContacts, calendarEvents, planUpdate };
 }
 
 // ─── Carte Google Calendar ────────────────────────────────────────────────────
@@ -143,6 +167,160 @@ const DESTINATION_CHIPS = [
   { label: 'Moyen-Orient', msg: 'Je veux découvrir le Moyen-Orient, Dubaï, etc.' },
 ];
 
+// ─── Panneau Plan de voyage ───────────────────────────────────────────────────
+
+function TripPlanPanel({ plan, onClose }: { plan: TripPlan; onClose?: () => void }) {
+  const hasContent = plan.destination || plan.hotels?.length || plan.flights?.length ||
+    plan.activities?.length || plan.restaurants?.length || plan.notes?.length;
+
+  if (!hasContent) return null;
+
+  return (
+    <div className="flex flex-col h-full bg-slate-950 overflow-y-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+          <span className="text-white/70 text-xs font-semibold uppercase tracking-wider">Plan de voyage</span>
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="text-white/30 hover:text-white text-xs">✕</button>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+
+        {/* Destination + infos clés */}
+        {(plan.destination || plan.dates || plan.duration || plan.travelers) && (
+          <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-2xl p-4 space-y-2">
+            {plan.destination && (
+              <div className="flex items-start gap-2">
+                <MapPin className="h-3.5 w-3.5 text-secondary mt-0.5 flex-shrink-0" />
+                <span className="text-white font-semibold text-sm">{plan.destination}</span>
+              </div>
+            )}
+            {plan.dates && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3.5 w-3.5 text-secondary/70 flex-shrink-0" />
+                <span className="text-white/70 text-xs">{plan.dates}{plan.duration ? ` · ${plan.duration}` : ''}</span>
+              </div>
+            )}
+            {(plan.travelers || plan.travelerNames?.length) && (
+              <div className="flex items-center gap-2">
+                <Users className="h-3.5 w-3.5 text-secondary/70 flex-shrink-0" />
+                <span className="text-white/70 text-xs">
+                  {plan.travelerNames?.length ? plan.travelerNames.join(', ') : `${plan.travelers} voyageur${(plan.travelers || 0) > 1 ? 's' : ''}`}
+                </span>
+              </div>
+            )}
+            {plan.budget && (
+              <div className="flex items-center gap-2">
+                <Wallet className="h-3.5 w-3.5 text-secondary/70 flex-shrink-0" />
+                <span className="text-white/70 text-xs">{plan.budget}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Vols */}
+        {plan.flights && plan.flights.length > 0 && (
+          <div>
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Plane className="h-3 w-3" /> Vols
+            </p>
+            <div className="space-y-1.5">
+              {plan.flights.map((f, i) => (
+                <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/80 text-xs font-medium">{f.from}</span>
+                    <ChevronRight className="h-3 w-3 text-secondary/60" />
+                    <span className="text-white/80 text-xs font-medium">{f.to}</span>
+                  </div>
+                  {(f.date || f.time) && (
+                    <span className="text-white/40 text-xs">{f.date}{f.time ? ` ${f.time}` : ''}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Hébergements */}
+        {plan.hotels && plan.hotels.length > 0 && (
+          <div>
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Hotel className="h-3 w-3" /> Hébergements
+            </p>
+            <div className="space-y-1.5">
+              {plan.hotels.map((h, i) => (
+                <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
+                  <p className="text-white/85 text-xs font-medium">{h.name}</p>
+                  {h.note && <p className="text-white/40 text-xs mt-0.5">{h.note}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Activités */}
+        {plan.activities && plan.activities.length > 0 && (
+          <div>
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Zap className="h-3 w-3" /> Activités
+            </p>
+            <div className="space-y-1.5">
+              {plan.activities.map((a, i) => (
+                <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 flex items-start justify-between gap-2">
+                  <p className="text-white/80 text-xs">{a.name}</p>
+                  {a.day && <span className="text-secondary/60 text-xs whitespace-nowrap">{a.day}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Restaurants */}
+        {plan.restaurants && plan.restaurants.length > 0 && (
+          <div>
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Utensils className="h-3 w-3" /> Restaurants
+            </p>
+            <div className="space-y-1.5">
+              {plan.restaurants.map((r, i) => (
+                <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-white/85 text-xs font-medium">{r.name}</p>
+                    {r.stars && <span className="text-secondary text-xs">{'★'.repeat(r.stars)}</span>}
+                  </div>
+                  {r.note && <p className="text-white/40 text-xs mt-0.5">{r.note}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        {plan.notes && plan.notes.length > 0 && (
+          <div>
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <StickyNote className="h-3 w-3" /> Notes
+            </p>
+            <div className="space-y-1.5">
+              {plan.notes.map((n, i) => (
+                <div key={i} className="bg-amber-500/5 border border-amber-500/15 rounded-xl px-3 py-2">
+                  <p className="text-white/60 text-xs">{n}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="text-white/15 text-xs text-center pb-2">Se met à jour en temps réel</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Composant ─────────────────────────────────────────────────────────────────
 
 export default function Chat() {
@@ -150,6 +328,8 @@ export default function Chat() {
   const [showConversion, setShowConversion] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [guestMsgCount, setGuestMsgCount] = useState(() => getGuestMessageCount());
+  const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
+  const [showPlanMobile, setShowPlanMobile] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -163,12 +343,17 @@ export default function Chat() {
     if (!isLoading) inputRef.current?.focus();
   }, [messages, isLoading]);
 
-  // Auto-show ContactPicker when Claude sends :::CONTACTS::: in last message
+  // Auto-show ContactPicker + accumulate trip plan from messages
   useEffect(() => {
     if (!isLoading && messages.length > 0) {
       const last = messages[messages.length - 1];
-      if (last.role === 'assistant' && last.content.includes(':::CONTACTS:::')) {
-        setShowContactPicker(true);
+      if (last.role === 'assistant') {
+        if (last.content.includes(':::CONTACTS:::')) setShowContactPicker(true);
+        // Accumulate plan updates
+        const parsed = parseMessage(last.content);
+        if (parsed.planUpdate) {
+          setTripPlan(prev => ({ ...prev, ...parsed.planUpdate }));
+        }
       }
     }
   }, [messages, isLoading]);
@@ -222,6 +407,7 @@ export default function Chat() {
   const handleClear = async () => {
     if (!conversationId) return;
     await deleteConversation(conversationId);
+    setTripPlan(null);
     await startChat('fr');
   };
 
@@ -229,8 +415,10 @@ export default function Chat() {
     ? ({ decouverte: '○', essentiel: '✦', elite: '✦✦', prive: '✦✦✦', fondateur: '✦✦✦✦' } as Record<string, string>)[user.circle]
     : null;
 
+  const hasPlan = tripPlan && (tripPlan.destination || tripPlan.hotels?.length || tripPlan.flights?.length || tripPlan.activities?.length || tripPlan.restaurants?.length);
+
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+    <div className="flex h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
 
       {showConversion && (
         <ConversionModal
@@ -239,6 +427,18 @@ export default function Chat() {
           conversationId={conversationId || undefined}
         />
       )}
+
+      {/* Mobile plan overlay */}
+      {showPlanMobile && hasPlan && (
+        <div className="fixed inset-0 z-40 bg-slate-950 lg:hidden">
+          <div className="h-full">
+            <TripPlanPanel plan={tripPlan!} onClose={() => setShowPlanMobile(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Left: Chat ── */}
+      <div className={`flex flex-col flex-1 min-w-0 ${hasPlan ? 'lg:max-w-[60%]' : ''}`}>
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-950/80 backdrop-blur-sm flex-shrink-0">
@@ -283,7 +483,7 @@ export default function Chat() {
       )}
       {isGuestLimitReached && (
         <div className="flex-shrink-0 bg-slate-800/80 border-b border-white/10 px-4 py-2.5 flex items-center justify-between">
-          <p className="text-white/70 text-xs">Vous avez utilisé vos 5 messages gratuits.</p>
+          <p className="text-white/70 text-xs">Vous avez utilisé vos {FREE_MESSAGES_LIMIT} échanges gratuits.</p>
           <button onClick={() => setShowConversion(true)} className="bg-secondary text-white text-xs font-semibold px-3 py-1 rounded-full hover:bg-secondary/90">Continuer →</button>
         </div>
       )}
@@ -305,7 +505,7 @@ export default function Chat() {
               </h2>
               {/* La phrase iconique */}
               <p className="text-sm font-medium tracking-wide" style={{background: 'linear-gradient(135deg, #c8a94a 0%, #f5d87a 35%, #e4c057 65%, #f5d87a 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 10px rgba(212,168,80,0.5))'}}>
-                À 5 échanges de l'expérience de votre vie.
+                L'expérience de votre vie commence ici.
               </p>
               <p className="text-white/40 text-xs mt-2 max-w-xs mx-auto">
                 Dites-nous n'importe quoi — même si ce n'est pas clair. Baymora s'occupe du reste.
@@ -356,7 +556,7 @@ export default function Chat() {
             </div>
             <p className="text-white/25 text-xs text-center -mt-2">
               Ou écrivez directement — week-end, soirée, gastro, US, chill...
-              {!isAuthenticated && <><br /><span className="text-secondary/50">{FREE_MESSAGES_LIMIT} messages gratuits · Créez un compte pour continuer</span></>}
+              {!isAuthenticated && <><br /><span className="text-secondary/50">{FREE_MESSAGES_LIMIT} échanges gratuits · Créez un compte pour continuer</span></>}
             </p>
           </div>
         )}
@@ -480,6 +680,17 @@ export default function Chat() {
             autoFocus
             className="flex-1 h-10 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-secondary/60 focus:ring-1 focus:ring-secondary/40 disabled:opacity-50 disabled:cursor-not-allowed"
           />
+          {hasPlan && (
+            <Button
+              onClick={() => setShowPlanMobile(true)}
+              size="sm"
+              variant="ghost"
+              className="lg:hidden text-secondary border border-secondary/30 px-3"
+              title="Voir le plan"
+            >
+              <MapPin className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             onClick={isGuestLimitReached ? () => setShowConversion(true) : handleSend}
             disabled={isLoading || (!isGuestLimitReached && !input.trim())}
@@ -491,6 +702,16 @@ export default function Chat() {
         </div>
         <p className="text-center text-white/20 text-xs mt-2">Baymora — Votre conciergerie de voyage privée</p>
       </div>
+
+      </div>{/* end left chat column */}
+
+      {/* ── Right: Trip Plan Panel (desktop only) ── */}
+      {hasPlan && (
+        <div className="hidden lg:flex w-96 xl:w-[420px] flex-shrink-0 border-l border-white/10 flex-col">
+          <TripPlanPanel plan={tripPlan!} />
+        </div>
+      )}
+
     </div>
   );
 }

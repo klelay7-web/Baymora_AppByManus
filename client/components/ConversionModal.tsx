@@ -12,6 +12,7 @@ interface Props {
 export default function ConversionModal({ onClose, onSuccess, conversationId }: Props) {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const [prenom, setPrenom] = useState('');
   const [pseudo, setPseudo] = useState('');
   const [email, setEmail] = useState('');
   const [mode, setMode] = useState<'fantome' | 'signature'>('fantome');
@@ -21,11 +22,11 @@ export default function ConversionModal({ onClose, onSuccess, conversationId }: 
 
   const handleQuickSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pseudo.trim()) { setError('Un pseudo est requis'); return; }
+    if (!prenom.trim()) { setError('Votre prénom est requis'); return; }
     setError('');
     setLoading(true);
     try {
-      await register({ pseudo, email: email || undefined, mode, conversationId });
+      await register({ prenom: prenom || undefined, pseudo: pseudo || prenom, email: email || undefined, mode, conversationId });
       onSuccess?.();
     } catch (err: any) {
       setError(err.message);
@@ -123,6 +124,15 @@ export default function ConversionModal({ onClose, onSuccess, conversationId }: 
 
             <form onSubmit={handleQuickSignup} className="space-y-3">
 
+              <input
+                type="text"
+                value={prenom}
+                onChange={e => setPrenom(e.target.value)}
+                placeholder="Votre prénom *"
+                autoFocus
+                className="w-full h-10 rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-secondary/60"
+              />
+
               {/* Mode */}
               <div className="grid grid-cols-2 gap-2">
                 {(['fantome', 'signature'] as const).map((m) => (
@@ -148,8 +158,7 @@ export default function ConversionModal({ onClose, onSuccess, conversationId }: 
                 type="text"
                 value={pseudo}
                 onChange={e => setPseudo(e.target.value)}
-                placeholder="Votre pseudo *"
-                autoFocus
+                placeholder="Pseudo (optionnel)"
                 className="w-full h-10 rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-secondary/60"
               />
 
