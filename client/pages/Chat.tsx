@@ -595,6 +595,8 @@ function TripPlanPanel({ plan, onClose }: { plan: TripPlan; onClose?: () => void
 export default function Chat() {
   const [input, setInput] = useState('');
   const [showConversion, setShowConversion] = useState(false);
+  const [showSoftConversion, setShowSoftConversion] = useState(false);
+  const [softModalDismissed, setSoftModalDismissed] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [guestMsgCount, setGuestMsgCount] = useState(() => getGuestMessageCount());
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
@@ -631,12 +633,20 @@ export default function Chat() {
   // Ne pas bloquer pendant le chargement auth initial — évite le bug compteur
   const isGuestLimitReached = !authLoading && !isAuthenticated && guestMsgCount >= FREE_MESSAGES_LIMIT;
 
+  const SOFT_HINT_AT = 6;
+  const SOFT_MODAL_AT = 7;
+
   const canSend = () => {
     if (authLoading) return false; // Attendre la résolution auth avant de compter
     if (isGuestLimitReached) { setShowConversion(true); return false; }
     if (!isAuthenticated) {
       const newCount = incrementGuestMessageCount();
       setGuestMsgCount(newCount);
+      // Soft modal au message 7 : bloque une fois, laisse passer après dismiss
+      if (newCount >= SOFT_MODAL_AT && newCount < FREE_MESSAGES_LIMIT && !softModalDismissed) {
+        setShowSoftConversion(true);
+        return false;
+      }
     }
     return true;
   };
@@ -689,10 +699,18 @@ export default function Chat() {
   return (
     <div className="flex h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
 
-      {showConversion && (
+      {showConversion && !showSoftConversion && (
         <ConversionModal
           onClose={() => setShowConversion(false)}
           onSuccess={() => setShowConversion(false)}
+          conversationId={conversationId || undefined}
+        />
+      )}
+
+      {showSoftConversion && !isAuthenticated && (
+        <ConversionModal
+          onClose={() => { setShowSoftConversion(false); setSoftModalDismissed(true); }}
+          onSuccess={() => { setShowSoftConversion(false); setShowConversion(false); }}
           conversationId={conversationId || undefined}
         />
       )}
@@ -930,6 +948,19 @@ export default function Chat() {
                     onConfirm={handleContactConfirm}
                     onDismiss={() => setShowContactPicker(false)}
                   />
+                )}
+
+                {/* Soft hint pill après le 6e message user (invités seulement) */}
+                {!isAuthenticated && msg.role === 'user' &&
+                  messages.filter(m => m.role === 'user').indexOf(msg) === SOFT_HINT_AT - 1 && (
+                  <div className="flex justify-center my-3 animate-fade-in">
+                    <button
+                      onClick={() => setShowSoftConversion(true)}
+                      className="flex items-center gap-2 bg-secondary/8 border border-secondary/20 text-secondary/70 text-xs px-4 py-2 rounded-full hover:bg-secondary/18 hover:text-secondary transition-all"
+                    >
+                      ✦ Créez votre profil pour que je mémorise tout ça →
+                    </button>
+                  </div>
                 )}
               </div>
             );

@@ -14,6 +14,8 @@ import { shouldCallPerplexity, searchPerplexity, buildSearchQuery, formatPerplex
 import { calculateAirportLogistics, formatLogisticsForClaude, type FlightProfile } from '../maps';
 import { getBeachReport } from '../marine';
 import { getAirQuality, formatPollenReport } from '../pollen';
+import { detectProfile, buildPersonaPrompt } from './profileDetector';
+import type { LLMMessage as PersonaLLMMessage } from './personas';
 
 // ─── Modèles disponibles ──────────────────────────────────────────────────────
 
@@ -464,10 +466,10 @@ function buildSystemPrompt(userId: string, modelKey: ModelKey, userRecord?: any)
 
 // ─── Interface publique ───────────────────────────────────────────────────────
 
-export interface LLMMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
+// Re-export depuis personas.ts pour backward compatibility (évite l'import circulaire)
+export type { LLMMessage } from './personas';
+// Alias local pour usage interne
+type LLMMessage = PersonaLLMMessage;
 
 export interface LLMResponse {
   content: string;
@@ -481,7 +483,8 @@ export async function callLLM(
   messages: LLMMessage[],
   userId: string = 'guest',
   language: 'fr' | 'en' = 'fr',
-  userRecord?: any
+  userRecord?: any,
+  messageCount?: number
 ): Promise<LLMResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
@@ -570,6 +573,18 @@ export async function callLLM(
     }
   }
 
+  // ── Détection persona (analyse des messages user uniquement) ──────────────
+  const detectedProfile = detectProfile(messages);
+  const personaContext = buildPersonaPrompt(detectedProfile);
+  console.log(`[LLM] Persona détecté: ${detectedProfile.profileLabel} | tier: ${detectedProfile.tier} | confidence: ${Math.round(detectedProfile.tierConfidence * 100)}% | express: ${detectedProfile.expressMode}`);
+
+  // ── Conversion naturelle (invités, messages 7-8 uniquement) ──────────────
+  const guestMsgN = messageCount ?? messages.filter(m => m.role === 'user').length;
+  let conversionHint = '';
+  if (!userRecord && guestMsgN >= 7 && guestMsgN <= 8) {
+    conversionHint = `\n\n## Conversion naturelle\nMessage ${guestMsgN}/10. Glisse naturellement UNE FOIS dans ta réponse (pas en début, pas à la fin — au milieu, entre deux suggestions) : "Je commence à bien vous connaître — créez votre profil Baymora pour que je puisse aller beaucoup plus loin pour vous." Ne répète pas cette phrase si elle est déjà dans la conversation.`;
+  }
+
   try {
     const client = new Anthropic({ apiKey });
     let systemPrompt = buildSystemPrompt(userId, modelKey, userRecord);
@@ -583,6 +598,8 @@ export async function callLLM(
       systemPrompt = `${contextParts.join('\n\n')}\n\n---\n\n${systemPrompt}`;
       console.log(`[LLM] Contextes injectés: ${contextParts.map(c => c.split('\n')[0]).join(' | ')}`);
     }
+    // Persona + conversion hint appendés en fin de system prompt
+    systemPrompt = `${systemPrompt}\n\n${personaContext}${conversionHint}`;
 
     const maxTokens = modelKey === 'opus' ? 2048 : 1024;
 

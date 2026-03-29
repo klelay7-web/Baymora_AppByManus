@@ -131,7 +131,8 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
       ];
 
       const userRecord = await getUserById(baymoraUser.id);
-      const llmResult = await callLLM(llmMessages, baymoraUser.id, conversation.language as 'fr' | 'en', userRecord);
+      const msgCount = llmMessages.filter(m => m.role === 'user').length;
+      const llmResult = await callLLM(llmMessages, baymoraUser.id, conversation.language as 'fr' | 'en', userRecord, msgCount);
 
       // Sauvegarder réponse assistant
       const assistantMsg = await prisma.message.create({
@@ -176,7 +177,8 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
       conv.messages.push(userMsg);
 
       const llmMessages: LLMMessage[] = conv.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
-      const llmResult = await callLLM(llmMessages, conv.userId, conv.language as 'fr' | 'en', null);
+      const guestMsgCount = llmMessages.filter(m => m.role === 'user').length;
+      const llmResult = await callLLM(llmMessages, conv.userId, conv.language as 'fr' | 'en', null, guestMsgCount);
 
       const assistantMsg: Message = { id: uuidv4(), role: 'assistant', content: llmResult.content, timestamp: new Date() };
       conv.messages.push(assistantMsg);
