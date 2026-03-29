@@ -21,6 +21,7 @@ import ClubPage from "./pages/ClubPage";
 import JoinPage from "./pages/JoinPage";
 import BoutiquePage from "./pages/BoutiquePage";
 import TripsPage from "./pages/TripsPage";
+import ConciergePage from "./pages/ConciergePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/boutique" element={<BoutiquePage />} />
           <Route path="/join/:code" element={<JoinPage />} />
           <Route path="/voyages" element={<TripsPage />} />
+          <Route path="/conciergerie" element={<ConciergePage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -1206,6 +1206,20 @@ export default function Dashboard() {
         {/* ── Mes Voyages ── */}
         <TripsWidget />
 
+        {/* ── Conciergerie CTA ── */}
+        <Link to="/conciergerie" className="block">
+          <div className="bg-gradient-to-br from-secondary/6 to-transparent border border-secondary/15 rounded-2xl px-5 py-4 flex items-center justify-between hover:border-secondary/30 transition-all group">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">👑</span>
+                <span className="text-white font-semibold text-sm">Conciergerie Baymora</span>
+              </div>
+              <p className="text-white/35 text-xs">Voyage sur mesure, réservation exclusive, occasion spéciale…</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-secondary/40 group-hover:text-secondary transition-colors flex-shrink-0 ml-3" />
+          </div>
+        </Link>
+
         {/* ── Notifications ── */}
         <NotificationWidget />
 

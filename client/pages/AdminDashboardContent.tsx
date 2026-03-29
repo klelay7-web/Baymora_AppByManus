@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogOut, Users, MessageSquare, TrendingUp, Search, Crown, RefreshCw, Handshake, CheckCircle, Clock, XCircle, Plus, Pencil, Trash2, Smartphone } from "lucide-react";
+import { LogOut, Users, MessageSquare, TrendingUp, Search, Crown, RefreshCw, Handshake, CheckCircle, Clock, XCircle, Plus, Pencil, Trash2, Smartphone, Send } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,7 +87,7 @@ const CIRCLES = ["decouverte", "essentiel", "elite", "prive", "fondateur"];
 export default function AdminDashboardContent() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'partners' | 'club' | 'notifications'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'partners' | 'club' | 'notifications' | 'concierge'>('users');
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
@@ -129,6 +129,15 @@ export default function AdminDashboardContent() {
   const [directMsg, setDirectMsg] = useState('');
   const [directChannel, setDirectChannel] = useState<'sms' | 'whatsapp'>('whatsapp');
   const [directLoading, setDirectLoading] = useState(false);
+
+  // Concierge state
+  const [conciergeRequests, setConciergeRequests] = useState<any[]>([]);
+  const [conciergeStats, setConciergeStats] = useState<any>(null);
+  const [loadingConcierge, setLoadingConcierge] = useState(false);
+  const [selectedConcierge, setSelectedConcierge] = useState<any | null>(null);
+  const [conciergeReply, setConciergeReply] = useState('');
+  const [replyLoading, setReplyLoading] = useState(false);
+  const [conciergeFilter, setConciergeFilter] = useState('');
 
   // ── Auth check
   useEffect(() => {
@@ -295,7 +304,72 @@ export default function AdminDashboardContent() {
     setDirectLoading(false);
   };
 
-  useEffect(() => { if (authorized) { loadStats(); loadUsers(); loadPartners(); loadClub(); loadNotifStats(); } }, [authorized]);
+  const loadConcierge = () => {
+    setLoadingConcierge(true);
+    const params = conciergeFilter ? `?status=${conciergeFilter}` : '';
+    Promise.all([
+      fetch(`/api/concierge/admin/list${params}`, { headers: authHeader() }).then(r => r.json()),
+      fetch('/api/concierge/admin/stats', { headers: authHeader() }).then(r => r.json()),
+    ])
+      .then(([list, stats]) => {
+        setConciergeRequests(list.requests || []);
+        setConciergeStats(stats);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingConcierge(false));
+  };
+
+  const handleConciergeReply = async (requestId: string) => {
+    if (!conciergeReply.trim()) return;
+    setReplyLoading(true);
+    const res = await fetch(`/api/concierge/admin/${requestId}/messages`, {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: conciergeReply.trim() }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setConciergeRequests(prev => prev.map(r =>
+        r.id === requestId ? { ...r, messages: [...(r.messages || []), data.message], status: 'in_progress' } : r
+      ));
+      if (selectedConcierge?.id === requestId) {
+        setSelectedConcierge((prev: any) => prev ? {
+          ...prev,
+          messages: [...(prev.messages || []), data.message],
+          status: 'in_progress',
+        } : prev);
+      }
+      setConciergeReply('');
+    }
+    setReplyLoading(false);
+  };
+
+  const handleConciergeStatus = async (requestId: string, status: string) => {
+    const res = await fetch(`/api/concierge/admin/${requestId}`, {
+      method: 'PATCH',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok) {
+      setConciergeRequests(prev => prev.map(r => r.id === requestId ? { ...r, status } : r));
+      if (selectedConcierge?.id === requestId) setSelectedConcierge((prev: any) => prev ? { ...prev, status } : prev);
+    }
+  };
+
+  const handleConciergePriority = async (requestId: string, priority: string) => {
+    const res = await fetch(`/api/concierge/admin/${requestId}`, {
+      method: 'PATCH',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priority }),
+    });
+    if (res.ok) {
+      setConciergeRequests(prev => prev.map(r => r.id === requestId ? { ...r, priority } : r));
+      if (selectedConcierge?.id === requestId) setSelectedConcierge((prev: any) => prev ? { ...prev, priority } : prev);
+    }
+  };
+
+  useEffect(() => { if (authorized) { loadStats(); loadUsers(); loadPartners(); loadClub(); loadNotifStats(); loadConcierge(); } }, [authorized]);
+  useEffect(() => { if (authorized && activeTab === 'concierge') loadConcierge(); }, [conciergeFilter]);
   useEffect(() => { if (authorized) loadUsers(); }, [search, filterCircle]);
 
   const handleCircleChange = async (userId: string, circle: string) => {
@@ -359,10 +433,19 @@ export default function AdminDashboardContent() {
             >
               <Smartphone className="h-3.5 w-3.5" /> Notifications
             </button>
+            <button
+              onClick={() => setActiveTab('concierge')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'concierge' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'}`}
+            >
+              👑 Conciergerie
+              {conciergeStats?.pending > 0 && (
+                <span className="bg-secondary text-black text-[10px] font-bold rounded-full px-1.5">{conciergeStats.pending}</span>
+              )}
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => { loadStats(); loadUsers(); loadPartners(); loadClub(); loadNotifStats(); }} className="text-white/30 hover:text-white/70 transition-colors">
+          <button onClick={() => { loadStats(); loadUsers(); loadPartners(); loadClub(); loadNotifStats(); loadConcierge(); }} className="text-white/30 hover:text-white/70 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white/40 hover:text-white gap-2">
@@ -1047,6 +1130,214 @@ export default function AdminDashboardContent() {
             >
               {directLoading ? 'Envoi...' : '→ Envoyer'}
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════ TAB CONCIERGERIE ═══════════ */}
+      {activeTab === 'concierge' && (
+        <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-white font-bold text-lg">Conciergerie</h2>
+              <p className="text-white/30 text-xs mt-0.5">Demandes clients — fil de discussion</p>
+            </div>
+            <button onClick={loadConcierge} className="text-white/30 hover:text-white/70 transition-colors">
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Stats */}
+          {conciergeStats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Total demandes',  value: conciergeStats.total,       emoji: '📋' },
+                { label: 'En attente',      value: conciergeStats.pending,     emoji: '⏳' },
+                { label: 'En cours',        value: conciergeStats.in_progress, emoji: '⚡' },
+                { label: 'Traitées',        value: conciergeStats.completed,   emoji: '✅' },
+              ].map(s => (
+                <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-5">
+                  <div className="text-2xl mb-1">{s.emoji}</div>
+                  <p className="text-3xl font-bold text-white">{s.value ?? 0}</p>
+                  <p className="text-white/30 text-xs mt-1">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Filtre statut */}
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { value: '',            label: 'Toutes' },
+              { value: 'pending',     label: '⏳ En attente' },
+              { value: 'in_progress', label: '⚡ En cours' },
+              { value: 'completed',   label: '✅ Traitées' },
+              { value: 'cancelled',   label: '✗ Annulées' },
+            ].map(f => (
+              <button key={f.value} onClick={() => setConciergeFilter(f.value)}
+                className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                  conciergeFilter === f.value
+                    ? 'bg-secondary/20 border-secondary/40 text-secondary'
+                    : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
+                }`}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Liste + panel détail */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            {/* Liste demandes */}
+            <div className="space-y-3">
+              {loadingConcierge ? (
+                [1,2,3].map(i => <div key={i} className="bg-white/5 border border-white/10 rounded-xl h-20 animate-pulse" />)
+              ) : conciergeRequests.length === 0 ? (
+                <div className="bg-white/4 border border-white/8 rounded-xl p-6 text-center text-white/30 text-sm">
+                  Aucune demande
+                </div>
+              ) : conciergeRequests.map((r: any) => {
+                const STATUS_COLOR: Record<string, string> = {
+                  pending: 'text-amber-400',
+                  in_progress: 'text-sky-400',
+                  completed: 'text-emerald-400',
+                  cancelled: 'text-white/30',
+                };
+                const PRIORITY_COLOR: Record<string, string> = {
+                  normal: 'text-white/30',
+                  high: 'text-orange-400',
+                  urgent: 'text-red-400',
+                };
+                const unread = (r.messages || []).filter((m: any) => !m.fromAdmin).length;
+                return (
+                  <button key={r.id} onClick={() => setSelectedConcierge(r)}
+                    className={`w-full text-left p-4 rounded-xl border transition-all ${
+                      selectedConcierge?.id === r.id
+                        ? 'bg-secondary/8 border-secondary/30'
+                        : 'bg-white/4 border-white/10 hover:bg-white/6'
+                    }`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-white text-sm font-medium truncate">{r.title}</p>
+                          <span className={`text-xs font-semibold ${STATUS_COLOR[r.status] || 'text-white/40'}`}>
+                            {r.status === 'pending' ? '⏳' : r.status === 'in_progress' ? '⚡' : r.status === 'completed' ? '✅' : '✗'}
+                          </span>
+                          {r.priority !== 'normal' && (
+                            <span className={`text-xs font-semibold ${PRIORITY_COLOR[r.priority] || ''}`}>
+                              {r.priority === 'urgent' ? '🚨 Urgent' : '⬆ Prioritaire'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-white/40 text-xs mt-0.5">
+                          {r.user?.prenom || r.user?.pseudo}
+                          {r.user?.email ? ` · ${r.user.email}` : ''}
+                          {r.user?.circle ? ` · ${r.user.circle}` : ''}
+                        </p>
+                        <p className="text-white/25 text-xs mt-1 line-clamp-1">{r.message}</p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        {unread > 0 && <span className="bg-secondary/20 text-secondary text-xs px-1.5 py-0.5 rounded-full font-medium">{unread}</span>}
+                        <p className="text-white/20 text-xs mt-1">
+                          {new Date(r.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Panel détail */}
+            {selectedConcierge ? (
+              <div className="bg-white/5 border border-white/10 rounded-xl flex flex-col" style={{ maxHeight: '70vh' }}>
+
+                {/* En-tête */}
+                <div className="px-4 py-3 border-b border-white/8 flex-shrink-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-white font-semibold text-sm">{selectedConcierge.title}</p>
+                      <p className="text-white/40 text-xs mt-0.5">
+                        {selectedConcierge.user?.prenom || selectedConcierge.user?.pseudo}
+                        {selectedConcierge.user?.clubPoints !== undefined && ` · 💎 ${selectedConcierge.user.clubPoints} pts`}
+                      </p>
+                    </div>
+                    <button onClick={() => setSelectedConcierge(null)} className="text-white/30 hover:text-white flex-shrink-0">✕</button>
+                  </div>
+                  {/* Contrôles statut + priorité */}
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    <select value={selectedConcierge.status}
+                      onChange={e => handleConciergeStatus(selectedConcierge.id, e.target.value)}
+                      className="text-xs bg-white/8 border border-white/15 rounded-lg px-2 h-7 text-white">
+                      <option value="pending">⏳ En attente</option>
+                      <option value="in_progress">⚡ En cours</option>
+                      <option value="completed">✅ Traité</option>
+                      <option value="cancelled">✗ Annulé</option>
+                    </select>
+                    <select value={selectedConcierge.priority}
+                      onChange={e => handleConciergePriority(selectedConcierge.id, e.target.value)}
+                      className="text-xs bg-white/8 border border-white/15 rounded-lg px-2 h-7 text-white">
+                      <option value="normal">Priorité normale</option>
+                      <option value="high">⬆ Prioritaire</option>
+                      <option value="urgent">🚨 Urgent</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                  {/* Message initial */}
+                  <div className="bg-white/4 border border-white/8 rounded-xl px-3 py-2.5">
+                    <p className="text-white/50 text-xs mb-1">Message initial</p>
+                    <p className="text-white/80 text-sm whitespace-pre-wrap">{selectedConcierge.message}</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedConcierge.destination && <span className="text-white/30 text-xs">📍 {selectedConcierge.destination}</span>}
+                      {selectedConcierge.dates && <span className="text-white/30 text-xs">📅 {selectedConcierge.dates}</span>}
+                      {selectedConcierge.travelers && <span className="text-white/30 text-xs">👥 {selectedConcierge.travelers}</span>}
+                      {selectedConcierge.budget && <span className="text-white/30 text-xs">💰 {selectedConcierge.budget}</span>}
+                    </div>
+                  </div>
+
+                  {(selectedConcierge.messages || []).map((msg: any) => (
+                    <div key={msg.id} className={`flex gap-2 ${msg.fromAdmin ? 'flex-row-reverse' : ''}`}>
+                      <div className={`flex-1 px-3 py-2 rounded-xl text-sm ${
+                        msg.fromAdmin
+                          ? 'bg-secondary/10 border border-secondary/20 text-white/85 text-right'
+                          : 'bg-white/5 border border-white/10 text-white/70'
+                      }`}>
+                        <p className="text-xs mb-1 opacity-50">{msg.fromAdmin ? '👑 Admin' : '👤 Client'}</p>
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Zone réponse */}
+                <div className="px-4 py-3 border-t border-white/8 flex-shrink-0">
+                  <div className="flex gap-2">
+                    <textarea
+                      value={conciergeReply}
+                      onChange={e => setConciergeReply(e.target.value)}
+                      placeholder="Répondre au client..."
+                      rows={2}
+                      className="flex-1 bg-white/6 border border-white/10 rounded-xl px-3 py-2 text-white text-xs placeholder:text-white/20 resize-none focus:outline-none focus:border-secondary/40"
+                    />
+                    <button
+                      onClick={() => handleConciergeReply(selectedConcierge.id)}
+                      disabled={replyLoading || !conciergeReply.trim()}
+                      className="self-end w-9 h-9 bg-secondary hover:bg-secondary/90 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-40 transition-all"
+                    >
+                      <Send className="h-3.5 w-3.5 text-black" />
+                    </button>
+                  </div>
+                  <p className="text-white/20 text-xs mt-1">Le client reçoit un email + SMS/WhatsApp automatiquement</p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white/4 border border-white/8 rounded-xl flex items-center justify-center text-white/20 text-sm" style={{ minHeight: '200px' }}>
+                Sélectionner une demande
+              </div>
+            )}
           </div>
         </div>
       )}
