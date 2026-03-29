@@ -106,3 +106,72 @@ model Message {
 
   @@map("messages")
 }
+
+// ─── Partenaires Baymora ──────────────────────────────────────────────────────
+
+model Partner {
+  id               String   @id @default(uuid())
+  slug             String   @unique
+  name             String
+  type             String                        // hotel|spa|restaurant|transport|activity|villa
+  status           String   @default("pending")  // pending|testing|approved|rejected
+  city             String
+  address          String?
+  country          String   @default("FR")
+  description      String?
+  vibe             String?                       // "Chic, discret, romantique"
+
+  // Média
+  photos           Json     @default("[]")       // string[] — URLs
+  videoUrl         String?
+  virtualTourUrl   String?
+  mapQuery         String?                       // ex: "Hôtel Byblos, Saint-Tropez"
+
+  // Tags & niveau
+  tags             Json     @default("[]")       // ["Piscine", "Spa", "Vue mer"]
+  priceLevel       Int      @default(3)          // 1-4
+
+  // Affiliation
+  affiliateCode    String   @unique @default("")
+  commissionRate   Float    @default(15)
+  testCostAmount   Float    @default(0)
+  totalCommissions Float    @default(0)
+
+  // Contact
+  contactName      String?
+  contactEmail     String?
+  contactPhone     String?
+  website          String?
+
+  // Application message
+  applyMessage     String?
+
+  // Metadata
+  approvedAt       DateTime?
+  approvedBy       String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  offers           PartnerOffer[]
+
+  @@map("partners")
+}
+
+model PartnerOffer {
+  id            String   @id @default(uuid())
+  partnerId     String
+  type          String                       // stay_1night|stay_2nights|stay_3nights|day_pass|spa|massage|activity|custom
+  title         String
+  description   String?
+  normalPrice   Float?
+  baymoraPrice  Float?
+  currency      String   @default("EUR")
+  bookingUrl    String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  partner       Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@map("partner_offers")
+}

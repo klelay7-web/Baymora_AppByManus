@@ -121,6 +121,10 @@ export interface PlaceItem {
   tags?: string[];
   bookingUrl?: string;
   mapsUrl?: string;
+  // Partenaire Baymora
+  baymoraPartner?: boolean;
+  affiliateCode?: string;
+  baymoraPrice?: string;
 }
 
 // ─── Vue carte géographique ───────────────────────────────────────────────────
@@ -299,12 +303,14 @@ const PLACE_TYPE_CONFIG: Record<string, { emoji: string; gradient: string; badge
 function PlaceCard({ place }: { place: PlaceItem }) {
   const config = PLACE_TYPE_CONFIG[place.type] || PLACE_TYPE_CONFIG.other;
   const priceStr = place.priceLevel ? '€'.repeat(place.priceLevel) : null;
-  const bookingHref = place.bookingUrl
+  const bookingHref = place.baymoraPartner && place.affiliateCode
+    ? `/api/partners/track/${place.affiliateCode}${place.bookingUrl ? `?redirect=${encodeURIComponent(place.bookingUrl)}` : ''}`
+    : place.bookingUrl
     ? `/go?url=${encodeURIComponent(place.bookingUrl)}&ref=baymora`
     : place.mapsUrl;
 
   return (
-    <div className="flex-shrink-0 w-52 rounded-2xl overflow-hidden border border-white/10 bg-slate-900 hover:border-white/20 transition-all group">
+    <div className={`flex-shrink-0 w-52 rounded-2xl overflow-hidden border transition-all group ${place.baymoraPartner ? 'border-secondary/40 bg-slate-900 hover:border-secondary/70' : 'border-white/10 bg-slate-900 hover:border-white/20'}`}>
       {/* Visual header */}
       <div className={`relative h-28 bg-gradient-to-br ${config.gradient} flex items-center justify-center overflow-hidden`}>
         <span className="text-5xl opacity-50 group-hover:scale-110 transition-transform duration-500">{config.emoji}</span>
@@ -312,11 +318,15 @@ function PlaceCard({ place }: { place: PlaceItem }) {
         <div className="absolute top-2 left-2 bg-black/55 backdrop-blur-sm text-white/80 text-[10px] px-2 py-0.5 rounded-full font-medium">
           {config.badge}
         </div>
-        {priceStr && (
+        {place.baymoraPartner ? (
+          <div className="absolute top-2 right-2 flex items-center gap-1 bg-secondary/25 backdrop-blur-sm border border-secondary/50 text-secondary text-[10px] px-2 py-0.5 rounded-full font-bold">
+            🤝 Partenaire
+          </div>
+        ) : priceStr ? (
           <div className="absolute top-2 right-2 bg-black/55 backdrop-blur-sm text-secondary text-[10px] px-2 py-0.5 rounded-full font-bold">
             {priceStr}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Content */}
@@ -342,8 +352,15 @@ function PlaceCard({ place }: { place: PlaceItem }) {
           <p className="text-white/50 text-xs leading-relaxed line-clamp-2">{place.description}</p>
         )}
 
+        {/* Tarif exclusif Baymora */}
+        {place.baymoraPartner && place.baymoraPrice && (
+          <p className="text-secondary text-xs font-bold">
+            🏷️ Tarif exclusif : {place.baymoraPrice}
+          </p>
+        )}
+
         {/* Price from */}
-        {place.priceFrom && (
+        {!place.baymoraPrice && place.priceFrom && (
           <p className="text-secondary text-xs font-semibold">
             À partir de {place.priceFrom}{place.currency || '€'}{place.priceUnit ? `/${place.priceUnit}` : ''}
           </p>
@@ -364,9 +381,9 @@ function PlaceCard({ place }: { place: PlaceItem }) {
             href={bookingHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 w-full bg-secondary/12 border border-secondary/30 text-secondary text-xs font-semibold py-1.5 rounded-xl hover:bg-secondary/22 transition-all mt-1"
+            className={`flex items-center justify-center gap-1.5 w-full text-xs font-semibold py-1.5 rounded-xl transition-all mt-1 ${place.baymoraPartner ? 'bg-secondary/20 border border-secondary/50 text-secondary hover:bg-secondary/35' : 'bg-secondary/12 border border-secondary/30 text-secondary hover:bg-secondary/22'}`}
           >
-            Voir & réserver <ExternalLink className="h-3 w-3" />
+            {place.baymoraPartner ? '🤝 Réserver via Baymora' : 'Voir & réserver'} <ExternalLink className="h-3 w-3" />
           </a>
         )}
       </div>

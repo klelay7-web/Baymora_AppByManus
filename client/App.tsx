@@ -15,6 +15,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminDashboardContent from "./pages/AdminDashboardContent";
 import Dashboard from "./pages/Dashboard";
 import PartnerDashboard from "./pages/PartnerDashboard";
+import PartnerApply from "./pages/PartnerApply";
+import PartnerFiche from "./pages/PartnerFiche";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +37,8 @@ const App = () => (
           <Route path="/partner" element={<PartnerDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboardContent />} />
+          <Route path="/devenir-partenaire" element={<PartnerApply />} />
+          <Route path="/partenaires/:slug" element={<PartnerFiche />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

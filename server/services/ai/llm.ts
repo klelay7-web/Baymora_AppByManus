@@ -16,6 +16,7 @@ import { getBeachReport } from '../marine';
 import { getAirQuality, formatPollenReport } from '../pollen';
 import { detectProfile, buildPersonaPrompt } from './profileDetector';
 import type { LLMMessage as PersonaLLMMessage } from './personas';
+import { getCachedApprovedPartners } from '../../routes/partners';
 
 // ─── Modèles disponibles ──────────────────────────────────────────────────────
 
@@ -496,6 +497,42 @@ function buildSystemPrompt(userId: string, modelKey: ModelKey, userRecord?: any)
   return `${base}\n\n${sections.join('\n\n')}`;
 }
 
+// ─── Contexte partenaires Baymora ─────────────────────────────────────────────
+
+function buildPartnerContext(partners: any[]): string {
+  if (partners.length === 0) return '';
+
+  const lines: string[] = [
+    '## Partenaires Baymora approuvés — recommandation prioritaire',
+    '',
+    'Ces établissements ont été testés et validés personnellement par Baymora. Quand tu recommandes une destination ou un service qui correspond à un de ces partenaires, TOUJOURS le mentionner EN PREMIER avec le badge 🤝 et le tarif exclusif membres.',
+    '',
+  ];
+
+  for (const p of partners) {
+    lines.push(`**🤝 ${p.name}** (${p.city}) — ${p.type}`);
+    if (p.vibe) lines.push(`  Ambiance : ${p.vibe}`);
+    if (p.tags && Array.isArray(p.tags) && p.tags.length > 0) {
+      lines.push(`  Tags : ${(p.tags as string[]).join(', ')}`);
+    }
+    const activeOffers = (p.offers ?? []).filter((o: any) => o.isActive);
+    if (activeOffers.length > 0) {
+      lines.push('  Offres exclusives Baymora :');
+      for (const o of activeOffers) {
+        const priceNote = o.baymoraPrice
+          ? ` · ${o.baymoraPrice}€ (tarif membre)`
+          : o.normalPrice ? ` · ${o.normalPrice}€` : '';
+        lines.push(`    - ${o.title}${priceNote}`);
+      }
+    }
+    lines.push(`  Lien affilié : https://baymora.com/go/${p.affiliateCode}`);
+    lines.push('');
+  }
+
+  lines.push('Quand tu mentionnes un partenaire Baymora dans :::PLACES:::, ajoute : `"baymoraPartner": true, "affiliateCode": "BAY-XXX-YYYY"` pour afficher le badge partenaire sur la carte.');
+  return lines.join('\n');
+}
+
 // ─── Interface publique ───────────────────────────────────────────────────────
 
 // Re-export depuis personas.ts pour backward compatibility (évite l'import circulaire)
@@ -617,6 +654,18 @@ export async function callLLM(
     conversionHint = `\n\n## Conversion naturelle\nMessage ${guestMsgN}/10. Glisse naturellement UNE FOIS dans ta réponse (pas en début, pas à la fin — au milieu, entre deux suggestions) : "Je commence à bien vous connaître — créez votre profil Baymora pour que je puisse aller beaucoup plus loin pour vous." Ne répète pas cette phrase si elle est déjà dans la conversation.`;
   }
 
+  // ── Partenaires approuvés (cache 5min) ─────────────────────────────────────
+  let partnerContext = '';
+  try {
+    const approvedPartners = await getCachedApprovedPartners();
+    if (approvedPartners.length > 0) {
+      partnerContext = buildPartnerContext(approvedPartners);
+      console.log(`[LLM] ${approvedPartners.length} partenaire(s) injecté(s) dans le prompt`);
+    }
+  } catch (e) {
+    console.error('[LLM] Erreur chargement partenaires:', e);
+  }
+
   try {
     const client = new Anthropic({ apiKey });
     let systemPrompt = buildSystemPrompt(userId, modelKey, userRecord);
@@ -630,8 +679,8 @@ export async function callLLM(
       systemPrompt = `${contextParts.join('\n\n')}\n\n---\n\n${systemPrompt}`;
       console.log(`[LLM] Contextes injectés: ${contextParts.map(c => c.split('\n')[0]).join(' | ')}`);
     }
-    // Persona + conversion hint appendés en fin de system prompt
-    systemPrompt = `${systemPrompt}\n\n${personaContext}${conversionHint}`;
+    // Persona + partenaires + conversion hint appendés en fin de system prompt
+    systemPrompt = `${systemPrompt}\n\n${personaContext}${partnerContext ? '\n\n' + partnerContext : ''}${conversionHint}`;
 
     const maxTokens = modelKey === 'opus' ? 2048 : 1024;
 
