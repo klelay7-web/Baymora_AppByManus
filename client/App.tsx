@@ -20,6 +20,7 @@ import PartnerFiche from "./pages/PartnerFiche";
 import ClubPage from "./pages/ClubPage";
 import JoinPage from "./pages/JoinPage";
 import BoutiquePage from "./pages/BoutiquePage";
+import TripsPage from "./pages/TripsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/club" element={<ClubPage />} />
           <Route path="/boutique" element={<BoutiquePage />} />
           <Route path="/join/:code" element={<JoinPage />} />
+          <Route path="/voyages" element={<TripsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

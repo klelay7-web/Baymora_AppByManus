@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell, Home, Plane, CheckCircle2, Circle, Save, Smartphone } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell, Home, Plane, CheckCircle2, Circle, Save, Smartphone, Bookmark } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -724,6 +724,88 @@ function DatesSection({ user, onUpdate }: { user: any; onUpdate: () => void }) {
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 
+// ─── Trips Widget ─────────────────────────────────────────────────────────────
+
+const STATUS_EMOJI: Record<string, string> = { planning: '🗓️', confirmed: '✅', past: '📁' };
+const STATUS_LABEL: Record<string, string> = { planning: 'En préparation', confirmed: 'Confirmé', past: 'Passé' };
+
+function destinationEmoji(dest?: string | null): string {
+  if (!dest) return '✈️';
+  const d = dest.toLowerCase();
+  if (d.includes('japon') || d.includes('kyoto') || d.includes('tokyo')) return '🏯';
+  if (d.includes('bali') || d.includes('indonés')) return '🌴';
+  if (d.includes('paris') || d.includes('france')) return '🗼';
+  if (d.includes('dubai')) return '🏙️';
+  if (d.includes('maldives') || d.includes('île')) return '🏝️';
+  if (d.includes('maroc') || d.includes('marrakech')) return '🕌';
+  if (d.includes('italie') || d.includes('rome')) return '🏛️';
+  return '✈️';
+}
+
+function TripsWidget() {
+  const [trips, setTrips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem('baymora_token');
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  useEffect(() => {
+    fetch('/api/trips?limit=3', { headers })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setTrips(d.trips || []); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="bg-white/4 border border-white/10 rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+        <div className="flex items-center gap-2">
+          <Bookmark className="h-4 w-4 text-secondary/70" />
+          <span className="text-white/80 font-semibold text-sm">Mes Voyages</span>
+          {trips.length > 0 && (
+            <span className="bg-secondary/20 text-secondary text-xs px-2 py-0.5 rounded-full font-medium">
+              {trips.length}
+            </span>
+          )}
+        </div>
+        <Link to="/voyages" className="text-secondary/60 hover:text-secondary text-xs transition-colors">
+          Voir tout →
+        </Link>
+      </div>
+
+      <div className="px-4 py-3">
+        {loading ? (
+          <div className="space-y-2">
+            {[1, 2].map(i => <div key={i} className="h-10 bg-white/4 rounded-xl animate-pulse" />)}
+          </div>
+        ) : trips.length > 0 ? (
+          <div className="space-y-2">
+            {trips.map(trip => (
+              <Link key={trip.id} to="/voyages">
+                <div className="flex items-center gap-3 py-1.5 hover:opacity-80 transition-opacity group">
+                  <span className="text-xl flex-shrink-0">{destinationEmoji(trip.destination)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/80 text-sm truncate group-hover:text-secondary transition-colors">{trip.title}</p>
+                    {trip.dates && <p className="text-white/30 text-xs">{trip.dates}</p>}
+                  </div>
+                  <span className="text-xs flex-shrink-0">{STATUS_EMOJI[trip.status] || '✈️'}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="py-3 text-center">
+            <p className="text-white/25 text-sm">Aucun voyage sauvegardé</p>
+            <Link to="/chat" className="text-secondary/50 text-xs hover:text-secondary transition-colors mt-1 block">
+              Planifier avec Baymora →
+            </Link>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Notifications Widget ─────────────────────────────────────────────────────
 
 interface NotifPrefs {
@@ -1120,6 +1202,9 @@ export default function Dashboard() {
 
         {/* ── Baymora Club ── */}
         <ClubWidget userId={user.id} />
+
+        {/* ── Mes Voyages ── */}
+        <TripsWidget />
 
         {/* ── Notifications ── */}
         <NotificationWidget />

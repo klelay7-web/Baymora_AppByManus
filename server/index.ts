@@ -10,6 +10,7 @@ import adminRouter from "./routes/admin";
 import partnersRouter from "./routes/partners";
 import clubRouter from "./routes/club";
 import notificationsRouter from "./routes/notifications";
+import tripsRouter from "./routes/trips";
 import googleAuthRouter from "./routes/googleAuth";
 import { chatRateLimit, authRateLimit } from "./middleware/rateLimit";
 import { startBirthdayCron } from "./services/birthdayCron";
@@ -51,6 +52,7 @@ export function createServer() {
   app.use("/api/partners", partnersRouter);
   app.use("/api/club", clubRouter);
   app.use("/api/notifications", notificationsRouter);
+  app.use("/api/trips", tripsRouter);
 
   // 404
   app.use("/api/{*path}", (_req, res) => {

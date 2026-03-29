@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, Calendar, Users, Wallet, Hotel, Utensils, Zap, Plane, StickyNote, ChevronRight, Star, ExternalLink, Navigation, Car, Mail, Download, Printer, ExternalLink as LinkIcon } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, Calendar, Users, Wallet, Hotel, Utensils, Zap, Plane, StickyNote, ChevronRight, Star, ExternalLink, Navigation, Car, Mail, Download, Printer, ExternalLink as LinkIcon, Bookmark } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT } from '@/hooks/useAuth';
 import ConversionModal from '@/components/ConversionModal';
@@ -554,7 +554,28 @@ function TripPlanPanel({ plan, allPlaces, onClose }: { plan: TripPlan; allPlaces
   const [reservationMode, setReservationMode] = useState<ReservationMode>('self');
   const [exportLoading, setExportLoading] = useState(false);
   const [exportMsg, setExportMsg] = useState('');
+  const [savedTripId, setSavedTripId] = useState<string | null>(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleSaveTrip = async () => {
+    if (!user) return; // bouton non rendu sans auth
+    setSaveLoading(true);
+    try {
+      const token = localStorage.getItem('baymora_token');
+      const res = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ plan }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSavedTripId(data.trip.id);
+      }
+    } catch {}
+    setSaveLoading(false);
+  };
 
   const hasContent = plan.destination || plan.hotels?.length || plan.flights?.length ||
     plan.activities?.length || plan.restaurants?.length || plan.notes?.length || plan.transport;
@@ -966,6 +987,23 @@ ${plan.notes?.length ? `<h2>📋 Notes</h2>${plan.notes.map(n => `<div class="it
               <Download className="h-3 w-3" /> JSON
             </button>
           </div>
+          {user && (
+            <div className="space-y-1.5">
+              <button
+                onClick={handleSaveTrip}
+                disabled={saveLoading || !!savedTripId}
+                className="w-full flex items-center justify-center gap-2 text-xs py-2.5 bg-secondary/10 border border-secondary/30 text-secondary hover:bg-secondary/20 rounded-lg transition-all disabled:opacity-60 font-medium"
+              >
+                <Bookmark className="h-3.5 w-3.5" />
+                {savedTripId ? '✓ Voyage sauvegardé (+25 Crystals)' : saveLoading ? 'Sauvegarde...' : 'Sauvegarder ce voyage'}
+              </button>
+              {savedTripId && (
+                <Link to="/voyages" className="block text-center text-secondary/60 text-xs hover:text-secondary transition-colors">
+                  Voir dans Mes Voyages →
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
       </div>
