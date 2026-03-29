@@ -43,6 +43,10 @@ export interface BaymoraUser {
   preferences: Record<string, any>;
   travelCompanions: TravelCompanion[];
   importantDates: ImportantDate[];
+  // Baymora Club
+  clubPoints: number;
+  clubVerified: boolean;
+  invitedById?: string;
   createdAt: Date;
   updatedAt: Date;
 }

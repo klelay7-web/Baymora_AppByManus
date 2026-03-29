@@ -111,6 +111,74 @@ interface LogisticsForm {
   hasPriorityLane: boolean;
 }
 
+// ─── Club Widget ──────────────────────────────────────────────────────────────
+
+const CLUB_TIERS = [
+  { name: 'Crystal',  min: 0,    emoji: '💎', textClass: 'text-sky-400'    },
+  { name: 'Gold',     min: 500,  emoji: '🌟', textClass: 'text-amber-400'  },
+  { name: 'Platinum', min: 2000, emoji: '✨', textClass: 'text-violet-400' },
+  { name: 'Diamond',  min: 5000, emoji: '👑', textClass: 'text-white'      },
+];
+function getClubTier(pts: number) {
+  return [...CLUB_TIERS].reverse().find(t => pts >= t.min) ?? CLUB_TIERS[0];
+}
+
+function ClubWidget({ userId }: { userId: string }) {
+  const { authHeader } = useAuth();
+  const [data, setData] = useState<{ points: number; tier: any; nextTier: any; progressPercent: number; inviteCode: any; clubVerified: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/club/me', { headers: authHeader })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setData(d); })
+      .catch(() => {});
+  }, []);
+
+  const tier = data ? getClubTier(data.points) : null;
+  const nextTier = data?.nextTier;
+
+  return (
+    <div className="bg-gradient-to-br from-secondary/8 to-transparent border border-secondary/20 rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{tier?.emoji ?? '💎'}</span>
+          <span className="text-white font-semibold text-sm">Baymora Club</span>
+          {data?.clubVerified && (
+            <span className="text-emerald-400 text-xs">✓ Vérifié</span>
+          )}
+        </div>
+        <Link to="/club" className="text-secondary/60 hover:text-secondary text-xs transition-colors">
+          Voir tout →
+        </Link>
+      </div>
+      {data ? (
+        <>
+          <p className="text-white/80 text-sm mb-2">
+            <span className={`font-bold text-lg ${tier?.textClass}`}>{data.points.toLocaleString('fr-FR')}</span>
+            <span className="text-white/30 ml-1">Crystals</span>
+            {tier && <span className={`ml-2 text-xs ${tier.textClass}`}>· {tier.emoji} {tier.name}</span>}
+          </p>
+          {nextTier && (
+            <div className="bg-white/6 rounded-full h-1.5 mb-1">
+              <div
+                className="h-full rounded-full bg-secondary/70 transition-all"
+                style={{ width: `${data.progressPercent}%` }}
+              />
+            </div>
+          )}
+          {data.inviteCode && (
+            <p className="text-white/25 text-xs mt-1">
+              {data.inviteCode.usedCount} ami{data.inviteCode.usedCount !== 1 ? 's' : ''} invité{data.inviteCode.usedCount !== 1 ? 's' : ''} · Code : <span className="font-mono">{data.inviteCode.code}</span>
+            </p>
+          )}
+        </>
+      ) : (
+        <div className="h-6 bg-white/5 rounded animate-pulse" />
+      )}
+    </div>
+  );
+}
+
 function LogisticsSection({ user }: { user: any }) {
   const prefs = user.preferences || {};
   const [form, setForm] = useState<LogisticsForm>({
@@ -864,6 +932,9 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        {/* ── Baymora Club ── */}
+        <ClubWidget userId={user.id} />
 
         {/* ── Mes proches ── */}
         <ProchesSection user={user} onUpdate={() => window.location.reload()} />

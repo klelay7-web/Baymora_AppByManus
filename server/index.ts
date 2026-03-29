@@ -8,6 +8,7 @@ import usersRouter, { userAuthMiddleware } from "./routes/users";
 import stripeRouter from "./routes/stripe";
 import adminRouter from "./routes/admin";
 import partnersRouter from "./routes/partners";
+import clubRouter from "./routes/club";
 import googleAuthRouter from "./routes/googleAuth";
 import { chatRateLimit, authRateLimit } from "./middleware/rateLimit";
 import { startBirthdayCron } from "./services/birthdayCron";
@@ -47,6 +48,7 @@ export function createServer() {
   app.use("/api/stripe", stripeRouter);
   app.use("/api/admin", adminRouter);
   app.use("/api/partners", partnersRouter);
+  app.use("/api/club", clubRouter);
 
   // 404
   app.use("/api/{*path}", (_req, res) => {

@@ -23,12 +23,18 @@ model User {
   passwordHash   String?
   googleId       String?  @unique
   preferences    Json     @default("{}")
+  // Baymora Club
+  clubPoints     Int      @default(0)
+  clubVerified   Boolean  @default(false)
+  invitedById    String?                      // userId de qui les a invités
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   companions     TravelCompanion[]
   dates          ImportantDate[]
   conversations  Conversation[]
+  inviteCode     InviteCode?
+  pointHistory   PointTransaction[]
 
   @@map("users")
 }
@@ -105,6 +111,35 @@ model Message {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@map("messages")
+}
+
+// ─── Baymora Club ─────────────────────────────────────────────────────────────
+
+model InviteCode {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  code       String   @unique
+  usedCount  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("invite_codes")
+}
+
+model PointTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String   // registration|invitation_sent|invitation_received|profile|message_milestone|partner_booking|admin_grant
+  points      Int      // positif = gagné, négatif = dépensé
+  description String
+  refId       String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("point_transactions")
 }
 
 // ─── Partenaires Baymora ──────────────────────────────────────────────────────

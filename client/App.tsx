@@ -17,6 +17,8 @@ import Dashboard from "./pages/Dashboard";
 import PartnerDashboard from "./pages/PartnerDashboard";
 import PartnerApply from "./pages/PartnerApply";
 import PartnerFiche from "./pages/PartnerFiche";
+import ClubPage from "./pages/ClubPage";
+import JoinPage from "./pages/JoinPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +41,8 @@ const App = () => (
           <Route path="/admin/dashboard" element={<AdminDashboardContent />} />
           <Route path="/devenir-partenaire" element={<PartnerApply />} />
           <Route path="/partenaires/:slug" element={<PartnerFiche />} />
+          <Route path="/club" element={<ClubPage />} />
+          <Route path="/join/:code" element={<JoinPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -7,9 +7,10 @@ interface Props {
   onClose?: () => void;
   onSuccess?: () => void;
   conversationId?: string;
+  inviteCode?: string;
 }
 
-export default function ConversionModal({ onClose, onSuccess, conversationId }: Props) {
+export default function ConversionModal({ onClose, onSuccess, conversationId, inviteCode }: Props) {
   const navigate = useNavigate();
   const { register } = useAuth();
   const [prenom, setPrenom] = useState('');
@@ -26,7 +27,7 @@ export default function ConversionModal({ onClose, onSuccess, conversationId }: 
     setError('');
     setLoading(true);
     try {
-      await register({ prenom: prenom || undefined, pseudo: pseudo || prenom, email: email || undefined, mode, conversationId });
+      await register({ prenom: prenom || undefined, pseudo: pseudo || prenom, email: email || undefined, mode, conversationId, inviteCode });
       onSuccess?.();
     } catch (err: any) {
       setError(err.message);

@@ -17,6 +17,7 @@ import { getAirQuality, formatPollenReport } from '../pollen';
 import { detectProfile, buildPersonaPrompt } from './profileDetector';
 import type { LLMMessage as PersonaLLMMessage } from './personas';
 import { getCachedApprovedPartners } from '../../routes/partners';
+import { getClubTier } from '../../routes/club';
 
 // ─── Modèles disponibles ──────────────────────────────────────────────────────
 
@@ -436,6 +437,12 @@ function buildSystemPrompt(userId: string, modelKey: ModelKey, userRecord?: any)
     if (userRecord.prenom) profileLines.push(`Prénom / appellation : ${userRecord.prenom}`);
     if (userRecord.pseudo) profileLines.push(`Pseudo : ${userRecord.pseudo}`);
     if (userRecord.mode === 'fantome') profileLines.push(`Mode : Fantôme (anonymat total souhaité)`);
+    // Club rank
+    if (userRecord.clubPoints !== undefined) {
+      const clubTier = getClubTier(userRecord.clubPoints);
+      profileLines.push(`Rang Baymora Club : ${clubTier.emoji} ${clubTier.name} (${userRecord.clubPoints} Crystals)${userRecord.clubVerified ? ' · ✓ Membre vérifié' : ''}`);
+      if (clubTier.name === 'Diamond') profileLines.push(`Statut : Service prioritaire Diamond — traiter avec la plus haute attention`);
+    }
     if (p.diet) profileLines.push(`Régime : ${p.diet}`);
     if (p.ecoConscious) profileLines.push(`Sensible à l'écologie : oui (proposer des alternatives légères)`);
     if (p.budgetTier) profileLines.push(`Budget : ${p.budgetTier}`);

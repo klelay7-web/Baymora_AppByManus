@@ -87,7 +87,7 @@ const CIRCLES = ["decouverte", "essentiel", "elite", "prive", "fondateur"];
 export default function AdminDashboardContent() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'partners'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'partners' | 'club'>('users');
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
@@ -109,6 +109,14 @@ export default function AdminDashboardContent() {
   const [savingPartner, setSavingPartner] = useState(false);
   const [newOffer, setNewOffer] = useState({ type: '', title: '', normalPrice: '', baymoraPrice: '', bookingUrl: '' });
   const [addingOffer, setAddingOffer] = useState(false);
+
+  // Club state
+  const [clubStats, setClubStats] = useState<any>(null);
+  const [loadingClub, setLoadingClub] = useState(false);
+  const [grantUserId, setGrantUserId] = useState('');
+  const [grantPoints, setGrantPoints] = useState('');
+  const [grantDesc, setGrantDesc] = useState('');
+  const [grantLoading, setGrantLoading] = useState(false);
 
   // ── Auth check
   useEffect(() => {
@@ -211,7 +219,29 @@ export default function AdminDashboardContent() {
     loadPartners();
   };
 
-  useEffect(() => { if (authorized) { loadStats(); loadUsers(); loadPartners(); } }, [authorized]);
+  const loadClub = () => {
+    setLoadingClub(true);
+    fetch('/api/club/admin/stats', { headers: authHeader() })
+      .then(r => r.json())
+      .then(d => setClubStats(d))
+      .catch(() => {})
+      .finally(() => setLoadingClub(false));
+  };
+
+  const handleGrant = async () => {
+    if (!grantUserId || !grantPoints || !grantDesc) return;
+    setGrantLoading(true);
+    await fetch('/api/club/admin/grant', {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: grantUserId, points: grantPoints, description: grantDesc }),
+    });
+    setGrantLoading(false);
+    setGrantUserId(''); setGrantPoints(''); setGrantDesc('');
+    loadClub();
+  };
+
+  useEffect(() => { if (authorized) { loadStats(); loadUsers(); loadPartners(); loadClub(); } }, [authorized]);
   useEffect(() => { if (authorized) loadUsers(); }, [search, filterCircle]);
 
   const handleCircleChange = async (userId: string, circle: string) => {
@@ -263,10 +293,16 @@ export default function AdminDashboardContent() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('club')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'club' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'}`}
+            >
+              💎 Club
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => { loadStats(); loadUsers(); loadPartners(); }} className="text-white/30 hover:text-white/70 transition-colors">
+          <button onClick={() => { loadStats(); loadUsers(); loadPartners(); loadClub(); }} className="text-white/30 hover:text-white/70 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white/40 hover:text-white gap-2">
@@ -726,6 +762,111 @@ export default function AdminDashboardContent() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Onglet Club ── */}
+      {activeTab === 'club' && (
+        <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+          <div>
+            <h2 className="text-white font-bold text-lg">Baymora Club</h2>
+            <p className="text-white/30 text-xs mt-0.5">Points, invitations, niveaux</p>
+          </div>
+
+          {/* Stats */}
+          {loadingClub ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1,2,3,4].map(i => <div key={i} className="bg-white/5 border border-white/10 rounded-xl h-20 animate-pulse" />)}
+            </div>
+          ) : clubStats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Membres',            value: clubStats.totalMembers,            emoji: '👥' },
+                { label: 'Membres vérifiés',   value: clubStats.totalVerified,           emoji: '✅' },
+                { label: 'Points distribués',  value: clubStats.totalPointsDistributed?.toLocaleString('fr-FR'), emoji: '💎' },
+                { label: 'Invitations utilisées', value: clubStats.totalInvitationsUsed, emoji: '🤝' },
+              ].map(s => (
+                <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-5">
+                  <div className="text-2xl mb-1">{s.emoji}</div>
+                  <p className="text-3xl font-bold text-white">{s.value}</p>
+                  <p className="text-white/30 text-xs mt-1">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Leaderboard admin */}
+          {clubStats?.topUsers?.length > 0 && (
+            <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+              <div className="px-5 py-3 border-b border-white/8">
+                <h3 className="text-white/60 text-sm font-semibold">Top membres (non anonymisé)</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/8">
+                      {['Rang', 'Membre', 'Cercle', 'Points', 'Niveau', 'Vérifié'].map(h => (
+                        <th key={h} className="px-4 py-2 text-left text-white/30 text-xs font-medium">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {clubStats.topUsers.map((u: any, i: number) => {
+                      const TIERS = [{name:'Crystal',min:0,emoji:'💎'},{name:'Gold',min:500,emoji:'🌟'},{name:'Platinum',min:2000,emoji:'✨'},{name:'Diamond',min:5000,emoji:'👑'}];
+                      const tier = [...TIERS].reverse().find((t: any) => u.clubPoints >= t.min) ?? TIERS[0];
+                      return (
+                        <tr key={u.id}>
+                          <td className="px-4 py-3 text-white/30 text-sm">#{i + 1}</td>
+                          <td className="px-4 py-3">
+                            <p className="text-white text-sm font-medium">{u.prenom || u.pseudo}</p>
+                            <p className="text-white/30 text-xs">{u.email || `@${u.pseudo}`}</p>
+                          </td>
+                          <td className="px-4 py-3 text-white/50 text-xs">{u.circle}</td>
+                          <td className="px-4 py-3 text-secondary font-bold text-sm">{u.clubPoints}</td>
+                          <td className="px-4 py-3 text-xs">{tier.emoji} {tier.name}</td>
+                          <td className="px-4 py-3 text-xs">{u.clubVerified ? '✅' : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Grant points */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+            <h3 className="text-white/60 text-sm font-semibold mb-4">Accorder des points manuellement</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Input
+                value={grantUserId}
+                onChange={e => setGrantUserId(e.target.value)}
+                placeholder="User ID"
+                className="bg-white/6 border-white/10 text-white text-xs placeholder:text-white/20"
+              />
+              <Input
+                value={grantPoints}
+                onChange={e => setGrantPoints(e.target.value)}
+                placeholder="Points (ex: 100)"
+                type="number"
+                className="bg-white/6 border-white/10 text-white text-xs placeholder:text-white/20"
+              />
+              <Input
+                value={grantDesc}
+                onChange={e => setGrantDesc(e.target.value)}
+                placeholder="Description"
+                className="bg-white/6 border-white/10 text-white text-xs placeholder:text-white/20"
+              />
+            </div>
+            <Button
+              onClick={handleGrant}
+              disabled={grantLoading || !grantUserId || !grantPoints || !grantDesc}
+              size="sm"
+              className="mt-3 bg-secondary/20 border border-secondary/40 text-secondary hover:bg-secondary/35 text-xs"
+            >
+              {grantLoading ? 'Envoi...' : '+ Accorder les points'}
+            </Button>
+          </div>
         </div>
       )}
     </div>

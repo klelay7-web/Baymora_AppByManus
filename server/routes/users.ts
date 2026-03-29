@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import type { BaymoraUser, TravelCompanion, ImportantDate } from '../types';
 import { getUpcomingForUser } from '../services/birthdayCron';
 import { sendWelcomeEmail } from '../services/email';
+import { addPoints, generateInviteCode } from './club';
 
 export type { BaymoraUser, TravelCompanion, ImportantDate };
 
@@ -62,6 +63,9 @@ function dbUserToBaymora(user: any): BaymoraUser {
     passwordHash: user.passwordHash ?? undefined,
     googleId: user.googleId ?? undefined,
     preferences: (user.preferences as Record<string, any>) || {},
+    clubPoints: user.clubPoints ?? 0,
+    clubVerified: user.clubVerified ?? false,
+    invitedById: user.invitedById ?? undefined,
     travelCompanions: (user.companions || []).map((c: any): TravelCompanion => ({
       id: c.id,
       name: c.name,
@@ -95,7 +99,7 @@ function dbUserToBaymora(user: any): BaymoraUser {
 
 export const handleRegister: RequestHandler = async (req, res) => {
   try {
-    const { pseudo, prenom, email, password, mode = 'fantome', conversationId } = req.body;
+    const { pseudo, prenom, email, password, mode = 'fantome', conversationId, inviteCode } = req.body;
 
     if (!pseudo || pseudo.trim().length < 2) {
       res.status(400).json({ error: 'Un pseudo d\'au moins 2 caractères est requis', code: 'VALIDATION_ERROR' });
@@ -105,6 +109,16 @@ export const handleRegister: RequestHandler = async (req, res) => {
     if (mode === 'signature' && !email) {
       res.status(400).json({ error: 'L\'email est requis en mode Signature', code: 'VALIDATION_ERROR' });
       return;
+    }
+
+    // Vérifier le code d'invitation (si fourni)
+    let inviter: { id: string; pseudo: string } | null = null;
+    if (inviteCode) {
+      const invite = await prisma.inviteCode.findFirst({
+        where: { code: inviteCode.trim().toUpperCase(), isActive: true },
+        include: { user: { select: { id: true, pseudo: true } } },
+      });
+      if (invite) inviter = invite.user;
     }
 
     const passwordHash = password ? await hashPassword(password) : undefined;
@@ -117,9 +131,32 @@ export const handleRegister: RequestHandler = async (req, res) => {
         mode,
         passwordHash: passwordHash || null,
         preferences: {},
+        invitedById: inviter?.id ?? null,
       },
       include: { companions: true, dates: true },
     });
+
+    // Créer le code d'invitation de ce nouvel utilisateur
+    let code = generateInviteCode(user.pseudo);
+    while (await prisma.inviteCode.findUnique({ where: { code } })) {
+      code = generateInviteCode(user.pseudo);
+    }
+    await prisma.inviteCode.create({ data: { userId: user.id, code } });
+
+    // Points Club : inscription
+    await addPoints(user.id, 'registration', 50, 'Bienvenue au Baymora Club !');
+
+    // Si parrainé : bonus pour le nouvel inscrit + bonus pour l'inviteur
+    if (inviter) {
+      await addPoints(user.id, 'invitation_received', 100, `Invité par ${inviter.pseudo}`);
+      await addPoints(inviter.id, 'invitation_sent', 150, `${user.pseudo} a rejoint via votre invitation`);
+      // Incrémenter usedCount du code
+      await prisma.inviteCode.updateMany({
+        where: { userId: inviter.id },
+        data: { usedCount: { increment: 1 } },
+      });
+      console.log(`[CLUB] Parrainage: ${user.pseudo} invité par ${inviter.pseudo}`);
+    }
 
     // Absorber le profil pré-rempli depuis la conversation invité
     if (conversationId) {
