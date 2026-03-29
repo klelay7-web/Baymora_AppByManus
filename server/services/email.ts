@@ -11,7 +11,7 @@ const FROM_EMAIL = 'Baymora <contact@baymora.com>';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+export async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   if (!RESEND_API_KEY) {
     console.log(`[EMAIL] RESEND_API_KEY non configurée — email simulé pour: ${to}`);
     console.log(`[EMAIL] Sujet: ${subject}`);

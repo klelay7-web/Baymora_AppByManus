@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, Calendar, Users, Wallet, Hotel, Utensils, Zap, Plane, StickyNote, ChevronRight, Star, ExternalLink, Navigation } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, Calendar, Users, Wallet, Hotel, Utensils, Zap, Plane, StickyNote, ChevronRight, Star, ExternalLink, Navigation, Car, Mail, Download, Printer, ExternalLink as LinkIcon } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT } from '@/hooks/useAuth';
 import ConversionModal from '@/components/ConversionModal';
@@ -17,6 +17,34 @@ import remarkGfm from 'remark-gfm';
 
 // ─── Plan de voyage ───────────────────────────────────────────────────────────
 
+export interface TripPlanItem {
+  name: string;
+  note?: string;
+  stars?: number;
+  bookingUrl?: string;
+  price?: string;
+  status?: 'suggestion' | 'selected';
+}
+
+export interface TripPlanFlight {
+  from: string;
+  to: string;
+  date?: string;
+  time?: string;
+  operator?: string;
+  price?: string;
+  status?: 'suggestion' | 'selected';
+}
+
+export interface TripPlanTransport {
+  toAirport?: { needed: boolean; mode?: string; departureTime?: string; price?: string };
+  onSite?: { needed: boolean; mode?: string; note?: string };
+  return?: { needed: boolean; mode?: string; note?: string };
+  eatAtAirport?: boolean;
+  flightDeparture?: string;
+  returnFlightDeparture?: string;
+}
+
 export interface TripPlan {
   destination?: string;
   dates?: string;
@@ -24,11 +52,48 @@ export interface TripPlan {
   travelers?: number;
   travelerNames?: string[];
   budget?: string;
-  hotels?: Array<{ name: string; note?: string; stars?: number }>;
-  flights?: Array<{ from: string; to: string; date?: string; time?: string }>;
-  activities?: Array<{ name: string; day?: string }>;
-  restaurants?: Array<{ name: string; stars?: number; note?: string }>;
+  hotels?: TripPlanItem[];
+  flights?: TripPlanFlight[];
+  activities?: TripPlanItem[];
+  restaurants?: TripPlanItem[];
   notes?: string[];
+  transport?: TripPlanTransport;
+  logistiqueComplete?: boolean;
+}
+
+// Deep merge for trip plan (preserves existing items, updates by name)
+function mergeByName<T extends { name: string }>(prev?: T[], next?: T[]): T[] | undefined {
+  if (!next?.length) return prev;
+  if (!prev?.length) return next;
+  const map = new Map(prev.map(i => [i.name, i]));
+  for (const item of next) map.set(item.name, { ...map.get(item.name), ...item });
+  return Array.from(map.values());
+}
+
+function mergeTripPlan(prev: TripPlan | null, update: TripPlan): TripPlan {
+  const base = prev ?? {};
+  return {
+    ...base,
+    ...update,
+    hotels: mergeByName(base.hotels, update.hotels),
+    flights: update.flights ?? base.flights,
+    activities: mergeByName(base.activities, update.activities),
+    restaurants: mergeByName(base.restaurants, update.restaurants),
+    notes: update.notes ?? base.notes,
+    transport: {
+      ...base.transport,
+      ...update.transport,
+      toAirport: update.transport?.toAirport
+        ? { ...base.transport?.toAirport, ...update.transport.toAirport }
+        : base.transport?.toAirport,
+      onSite: update.transport?.onSite
+        ? { ...base.transport?.onSite, ...update.transport.onSite }
+        : base.transport?.onSite,
+      return: update.transport?.return
+        ? { ...base.transport?.return, ...update.transport.return }
+        : base.transport?.return,
+    },
+  };
 }
 
 export interface CalendarEvent {
@@ -436,47 +501,166 @@ const DESTINATION_CHIPS = [
   { label: 'Moyen-Orient', msg: 'Je veux découvrir le Moyen-Orient, Dubaï, etc.' },
 ];
 
-// ─── Panneau Plan de voyage ───────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function TripPlanPanel({ plan, onClose }: { plan: TripPlan; onClose?: () => void }) {
+const TYPE_EMOJI: Record<string, string> = {
+  hotel: '🏨', restaurant: '🍽️', activity: '⚡', beach: '🏖️',
+  city: '🏙️', bar: '🍸', spa: '💆', other: '📍',
+};
+
+const TRANSPORT_MODE_LABELS: Record<string, string> = {
+  vtc: 'VTC', chauffeur: 'Chauffeur privé', metro: 'Transport en commun',
+  self: 'Personnel', location: 'Location voiture', vtc_demand: 'VTC à la demande',
+  walk: 'À pied', same: 'Identique à l\'aller', taxi: 'Taxi',
+};
+
+type ReservationMode = 'self' | 'assistant' | 'baymora';
+
+function formatPlanAsText(plan: TripPlan): string {
+  const lines: string[] = [`BAYMORA — Plan de voyage\n${plan.destination || 'Voyage'}`, ''];
+  if (plan.dates) lines.push(`📅 ${plan.dates}${plan.duration ? ` · ${plan.duration}` : ''}`);
+  if (plan.travelers) lines.push(`👥 ${plan.travelers} voyageur${plan.travelers > 1 ? 's' : ''}${plan.travelerNames?.length ? ` : ${plan.travelerNames.join(', ')}` : ''}`);
+  if (plan.budget) lines.push(`💰 ${plan.budget}`);
+  lines.push('');
+  if (plan.flights?.length) { lines.push('✈️ VOLS'); plan.flights.forEach(f => lines.push(`  ${f.from} → ${f.to}${f.date ? ` · ${f.date}` : ''}${f.time ? ` ${f.time}` : ''}${f.operator ? ` · ${f.operator}` : ''}${f.price ? ` · ${f.price}` : ''}`)); lines.push(''); }
+  if (plan.transport) { lines.push('🚗 LOGISTIQUE'); if (plan.transport.toAirport) lines.push(`  Aller aéroport : ${TRANSPORT_MODE_LABELS[plan.transport.toAirport.mode || ''] || plan.transport.toAirport.mode || ''}${plan.transport.toAirport.departureTime ? ` · Départ ${plan.transport.toAirport.departureTime}` : ''}${plan.transport.toAirport.price ? ` · ${plan.transport.toAirport.price}` : ''}`); if (plan.transport.eatAtAirport !== undefined) lines.push(`  Repas aéroport : ${plan.transport.eatAtAirport ? 'Oui' : 'Non'}`); if (plan.transport.onSite) lines.push(`  Sur place : ${TRANSPORT_MODE_LABELS[plan.transport.onSite.mode || ''] || plan.transport.onSite.mode || ''}`); if (plan.transport.return) lines.push(`  Retour : ${TRANSPORT_MODE_LABELS[plan.transport.return.mode || ''] || plan.transport.return.mode || ''}`); lines.push(''); }
+  if (plan.hotels?.length) { lines.push('🏨 HÉBERGEMENTS'); plan.hotels.forEach(h => lines.push(`  ${h.name}${h.note ? ` · ${h.note}` : ''}${h.price ? ` · ${h.price}` : ''}${h.bookingUrl ? `\n  Réserver : ${h.bookingUrl}` : ''}`)); lines.push(''); }
+  if (plan.restaurants?.length) { lines.push('🍽️ RESTAURANTS'); plan.restaurants.forEach(r => lines.push(`  ${r.name}${r.stars ? ` ${'★'.repeat(r.stars)}` : ''}${r.note ? ` · ${r.note}` : ''}${r.price ? ` · ${r.price}` : ''}${r.bookingUrl ? `\n  Réserver : ${r.bookingUrl}` : ''}`)); lines.push(''); }
+  if (plan.activities?.length) { lines.push('⚡ ACTIVITÉS'); plan.activities.forEach(a => lines.push(`  ${a.name}${(a as any).day ? ` · ${(a as any).day}` : ''}${a.price ? ` · ${a.price}` : ''}${a.bookingUrl ? `\n  Réserver : ${a.bookingUrl}` : ''}`)); lines.push(''); }
+  if (plan.notes?.length) { lines.push('📋 NOTES'); plan.notes.forEach(n => lines.push(`  • ${n}`)); }
+  return lines.join('\n');
+}
+
+// ─── Panneau Plan de voyage — redesigné ──────────────────────────────────────
+
+function TripPlanPanel({ plan, allPlaces, onClose }: { plan: TripPlan; allPlaces: PlaceItem[]; onClose?: () => void }) {
+  const [reservationMode, setReservationMode] = useState<ReservationMode>('self');
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportMsg, setExportMsg] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const hasContent = plan.destination || plan.hotels?.length || plan.flights?.length ||
-    plan.activities?.length || plan.restaurants?.length || plan.notes?.length;
+    plan.activities?.length || plan.restaurants?.length || plan.notes?.length || plan.transport;
 
   if (!hasContent) return null;
 
+  // Sections visible dans la nav
+  const navSections = [
+    { id: 'plan-map',        emoji: '🗺️', label: 'Carte',       visible: !!plan.destination },
+    { id: 'plan-transport',  emoji: '🚗', label: 'Transport',   visible: !!(plan.flights?.length || plan.transport) },
+    { id: 'plan-hotels',     emoji: '🏨', label: 'Séjour',      visible: !!(plan.hotels?.length) },
+    { id: 'plan-restaurants',emoji: '🍽️', label: 'Table',       visible: !!(plan.restaurants?.length) },
+    { id: 'plan-activities', emoji: '⚡', label: 'Activités',   visible: !!(plan.activities?.length) },
+    { id: 'plan-notes',      emoji: '📋', label: 'Notes',       visible: !!(plan.notes?.length) },
+  ].filter(s => s.visible);
+
+  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Grouper les places par type
+  const placesByType = allPlaces.reduce<Record<string, PlaceItem[]>>((acc, p) => {
+    acc[p.type] = acc[p.type] ? [...acc[p.type], p] : [p];
+    return acc;
+  }, {});
+
+  const handleEmailExport = async () => {
+    const email = prompt('Votre adresse email pour recevoir le plan :');
+    if (!email) return;
+    setExportLoading(true);
+    setExportMsg('');
+    try {
+      const res = await fetch('/api/chat/export-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, plan }),
+      });
+      setExportMsg(res.ok ? '✓ Email envoyé !' : '✗ Erreur envoi');
+    } catch { setExportMsg('✗ Erreur réseau'); }
+    setExportLoading(false);
+    setTimeout(() => setExportMsg(''), 4000);
+  };
+
+  const handlePrint = () => {
+    const html = `<!DOCTYPE html><html><head><title>Plan Baymora — ${plan.destination || 'Voyage'}</title>
+<style>body{font-family:Arial,sans-serif;padding:32px;color:#111;max-width:600px;margin:0 auto}
+h1{font-size:22px;color:#c8a94a;margin-bottom:4px}h2{font-size:13px;color:#666;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #eee;padding-bottom:4px;margin-top:20px}
+.item{margin:6px 0;padding:8px 12px;border:1px solid #eee;border-radius:6px;font-size:13px}
+.badge{background:#f0e6c8;color:#8a6a00;border-radius:99px;padding:1px 8px;font-size:11px;margin-left:8px}
+a{color:#c8a94a}p{margin:2px 0;font-size:13px;color:#444}footer{margin-top:32px;font-size:11px;color:#999}
+</style></head><body>
+<h1>${plan.destination || 'Votre voyage'}</h1>
+${plan.dates ? `<p>📅 ${plan.dates}${plan.duration ? ` · ${plan.duration}` : ''}</p>` : ''}
+${plan.travelers ? `<p>👥 ${plan.travelers} voyageur${plan.travelers > 1 ? 's' : ''}${plan.travelerNames?.length ? ` : ${plan.travelerNames.join(', ')}` : ''}</p>` : ''}
+${plan.budget ? `<p>💰 ${plan.budget}</p>` : ''}
+${plan.flights?.length ? `<h2>✈️ Vols</h2>${plan.flights.map(f => `<div class="item">${f.from} → ${f.to}${f.date ? ` · ${f.date}` : ''}${f.time ? ` ${f.time}` : ''}${f.operator ? ` · ${f.operator}` : ''}${f.price ? `<span class="badge">${f.price}</span>` : ''}</div>`).join('')}` : ''}
+${plan.transport ? `<h2>🚗 Logistique</h2>${plan.transport.toAirport ? `<div class="item">Aller aéroport : ${TRANSPORT_MODE_LABELS[plan.transport.toAirport.mode || ''] || plan.transport.toAirport.mode || ''}${plan.transport.toAirport.departureTime ? ` · Départ ${plan.transport.toAirport.departureTime}` : ''}${plan.transport.toAirport.price ? `<span class="badge">${plan.transport.toAirport.price}</span>` : ''}</div>` : ''}${plan.transport.eatAtAirport !== undefined ? `<div class="item">Repas aéroport : ${plan.transport.eatAtAirport ? 'Oui' : 'Non'}</div>` : ''}${plan.transport.onSite ? `<div class="item">Sur place : ${TRANSPORT_MODE_LABELS[plan.transport.onSite.mode || ''] || plan.transport.onSite.mode || ''}</div>` : ''}${plan.transport.return ? `<div class="item">Retour : ${TRANSPORT_MODE_LABELS[plan.transport.return.mode || ''] || plan.transport.return.mode || ''}</div>` : ''}` : ''}
+${plan.hotels?.length ? `<h2>🏨 Hébergements</h2>${plan.hotels.map(h => `<div class="item"><b>${h.name}</b>${h.note ? ` · ${h.note}` : ''}${h.price ? `<span class="badge">${h.price}</span>` : ''}${h.bookingUrl ? ` · <a href="${h.bookingUrl}">Réserver</a>` : ''}</div>`).join('')}` : ''}
+${plan.restaurants?.length ? `<h2>🍽️ Restaurants</h2>${plan.restaurants.map(r => `<div class="item"><b>${r.name}</b>${r.stars ? ` ${'★'.repeat(r.stars)}` : ''}${r.note ? ` · ${r.note}` : ''}${r.price ? `<span class="badge">${r.price}</span>` : ''}${r.bookingUrl ? ` · <a href="${r.bookingUrl}">Réserver</a>` : ''}</div>`).join('')}` : ''}
+${plan.activities?.length ? `<h2>⚡ Activités</h2>${plan.activities.map(a => `<div class="item">${a.name}${(a as any).day ? ` · ${(a as any).day}` : ''}${a.price ? `<span class="badge">${a.price}</span>` : ''}${a.bookingUrl ? ` · <a href="${a.bookingUrl}">Réserver</a>` : ''}</div>`).join('')}` : ''}
+${plan.notes?.length ? `<h2>📋 Notes</h2>${plan.notes.map(n => `<div class="item">${n}</div>`).join('')}` : ''}
+<footer>Plan généré par Baymora · baymora.com</footer>
+</body></html>`;
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); w.print(); }
+  };
+
+  const handleDownloadJSON = () => {
+    const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `baymora-plan-${(plan.destination || 'voyage').toLowerCase().replace(/\s+/g, '-')}.json`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  const handleCopyForAssistant = () => {
+    navigator.clipboard.writeText(formatPlanAsText(plan));
+    setExportMsg('✓ Copié ! Envoyez-le à : contact@baymora.com');
+    setTimeout(() => setExportMsg(''), 5000);
+  };
+
   return (
-    <div className="flex flex-col h-full bg-slate-950 overflow-y-auto">
+    <div className="flex flex-col h-full bg-slate-950">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-          <span className="text-white/70 text-xs font-semibold uppercase tracking-wider">Plan de voyage</span>
+          <span className="text-white/70 text-xs font-semibold uppercase tracking-wider">Compte-rendu</span>
         </div>
-        {onClose && (
-          <button onClick={onClose} className="text-white/30 hover:text-white text-xs">✕</button>
-        )}
+        {onClose && <button onClick={onClose} className="text-white/30 hover:text-white text-xs px-1">✕</button>}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      {/* Mini navigation sticky */}
+      {navSections.length > 1 && (
+        <div className="flex gap-1 px-3 py-2 border-b border-white/6 overflow-x-auto scrollbar-hide flex-shrink-0">
+          {navSections.map(s => (
+            <button key={s.id} onClick={() => scrollTo(s.id)}
+              className="flex items-center gap-1 text-white/50 hover:text-secondary text-xs px-2.5 py-1 rounded-full bg-white/4 hover:bg-secondary/10 transition-all whitespace-nowrap flex-shrink-0">
+              <span>{s.emoji}</span>
+              <span className="hidden sm:inline">{s.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
-        {/* Destination + infos clés */}
-        {(plan.destination || plan.dates || plan.duration || plan.travelers) && (
-          <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-2xl p-4 space-y-2">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+
+        {/* ── Infos destination ── */}
+        {(plan.destination || plan.dates || plan.budget) && (
+          <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-b border-secondary/10 px-4 py-3 space-y-1.5">
             {plan.destination && (
-              <div className="flex items-start gap-2">
-                <MapPin className="h-3.5 w-3.5 text-secondary mt-0.5 flex-shrink-0" />
+              <div className="flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5 text-secondary flex-shrink-0" />
                 <span className="text-white font-semibold text-sm">{plan.destination}</span>
               </div>
             )}
             {plan.dates && (
               <div className="flex items-center gap-2">
-                <Calendar className="h-3.5 w-3.5 text-secondary/70 flex-shrink-0" />
+                <Calendar className="h-3.5 w-3.5 text-secondary/60 flex-shrink-0" />
                 <span className="text-white/70 text-xs">{plan.dates}{plan.duration ? ` · ${plan.duration}` : ''}</span>
               </div>
             )}
             {(plan.travelers || plan.travelerNames?.length) && (
               <div className="flex items-center gap-2">
-                <Users className="h-3.5 w-3.5 text-secondary/70 flex-shrink-0" />
+                <Users className="h-3.5 w-3.5 text-secondary/60 flex-shrink-0" />
                 <span className="text-white/70 text-xs">
                   {plan.travelerNames?.length ? plan.travelerNames.join(', ') : `${plan.travelers} voyageur${(plan.travelers || 0) > 1 ? 's' : ''}`}
                 </span>
@@ -484,107 +668,289 @@ function TripPlanPanel({ plan, onClose }: { plan: TripPlan; onClose?: () => void
             )}
             {plan.budget && (
               <div className="flex items-center gap-2">
-                <Wallet className="h-3.5 w-3.5 text-secondary/70 flex-shrink-0" />
+                <Wallet className="h-3.5 w-3.5 text-secondary/60 flex-shrink-0" />
                 <span className="text-white/70 text-xs">{plan.budget}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Vols */}
-        {plan.flights && plan.flights.length > 0 && (
-          <div>
-            <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Plane className="h-3 w-3" /> Vols
-            </p>
-            <div className="space-y-1.5">
-              {plan.flights.map((f, i) => (
-                <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white/80 text-xs font-medium">{f.from}</span>
-                    <ChevronRight className="h-3 w-3 text-secondary/60" />
-                    <span className="text-white/80 text-xs font-medium">{f.to}</span>
+        <div className="px-4 py-3 space-y-5 pb-4">
+
+          {/* ── Section Carte ── */}
+          {plan.destination && (
+            <div id="plan-map">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <MapPin className="h-3 w-3" /> Carte
+              </p>
+              <div className="rounded-xl overflow-hidden border border-white/8">
+                <iframe
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(plan.destination)}&output=embed`}
+                  className="w-full h-40"
+                  style={{ filter: 'invert(90%) hue-rotate(180deg) brightness(0.85) contrast(1.1)', border: 'none' }}
+                  loading="lazy"
+                  title="Carte destination"
+                />
+              </div>
+              {/* Place chips regroupées par catégorie */}
+              {Object.entries(placesByType).map(([type, places]) => (
+                <div key={type} className="mt-2">
+                  <p className="text-white/25 text-xs mb-1">{TYPE_EMOJI[type] || '📍'} {type}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {places.map((p, i) => (
+                      <a key={i}
+                        href={`https://www.google.com/maps/search/?q=${encodeURIComponent(p.name + ' ' + p.city)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs bg-white/5 border border-white/10 text-white/60 hover:text-secondary hover:border-secondary/30 px-2.5 py-1 rounded-full transition-all flex items-center gap-1">
+                        {p.name}
+                        <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+                      </a>
+                    ))}
                   </div>
-                  {(f.date || f.time) && (
-                    <span className="text-white/40 text-xs">{f.date}{f.time ? ` ${f.time}` : ''}</span>
-                  )}
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Hébergements */}
-        {plan.hotels && plan.hotels.length > 0 && (
-          <div>
-            <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Hotel className="h-3 w-3" /> Hébergements
-            </p>
-            <div className="space-y-1.5">
-              {plan.hotels.map((h, i) => (
-                <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
-                  <p className="text-white/85 text-xs font-medium">{h.name}</p>
-                  {h.note && <p className="text-white/40 text-xs mt-0.5">{h.note}</p>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Activités */}
-        {plan.activities && plan.activities.length > 0 && (
-          <div>
-            <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Zap className="h-3 w-3" /> Activités
-            </p>
-            <div className="space-y-1.5">
-              {plan.activities.map((a, i) => (
-                <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 flex items-start justify-between gap-2">
-                  <p className="text-white/80 text-xs">{a.name}</p>
-                  {a.day && <span className="text-secondary/60 text-xs whitespace-nowrap">{a.day}</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Restaurants */}
-        {plan.restaurants && plan.restaurants.length > 0 && (
-          <div>
-            <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Utensils className="h-3 w-3" /> Restaurants
-            </p>
-            <div className="space-y-1.5">
-              {plan.restaurants.map((r, i) => (
-                <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-white/85 text-xs font-medium">{r.name}</p>
-                    {r.stars && <span className="text-secondary text-xs">{'★'.repeat(r.stars)}</span>}
+          {/* ── Section Transport ── */}
+          {(plan.flights?.length || plan.transport) && (
+            <div id="plan-transport">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Plane className="h-3 w-3" /> Transport
+              </p>
+              <div className="space-y-1.5">
+                {plan.flights?.map((f, i) => (
+                  <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/80 text-xs font-medium">{f.from}</span>
+                        <ChevronRight className="h-3 w-3 text-secondary/60" />
+                        <span className="text-white/80 text-xs font-medium">{f.to}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(f.date || f.time) && <span className="text-white/40 text-xs">{f.date}{f.time ? ` ${f.time}` : ''}</span>}
+                        {f.status === 'selected' && <span className="text-xs bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full">✓</span>}
+                      </div>
+                    </div>
+                    {f.operator && <p className="text-white/35 text-xs mt-1">{f.operator}</p>}
+                    {f.price && <p className="text-secondary/60 text-xs mt-0.5">{f.price}</p>}
                   </div>
-                  {r.note && <p className="text-white/40 text-xs mt-0.5">{r.note}</p>}
-                </div>
-              ))}
+                ))}
+                {plan.transport?.toAirport && (
+                  <div className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Car className="h-3 w-3 text-secondary/60" />
+                      <span className="text-white/60 text-xs font-medium">Aller aéroport</span>
+                    </div>
+                    <p className="text-white/80 text-xs">{TRANSPORT_MODE_LABELS[plan.transport.toAirport.mode || ''] || plan.transport.toAirport.mode || 'À définir'}</p>
+                    {plan.transport.toAirport.departureTime && <p className="text-secondary/60 text-xs mt-0.5">Départ : {plan.transport.toAirport.departureTime}</p>}
+                    {plan.transport.toAirport.price && <p className="text-white/40 text-xs mt-0.5">{plan.transport.toAirport.price}</p>}
+                  </div>
+                )}
+                {plan.transport?.eatAtAirport !== undefined && (
+                  <div className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                    <Utensils className="h-3 w-3 text-secondary/60" />
+                    <span className="text-white/60 text-xs">Repas aéroport :</span>
+                    <span className="text-white/80 text-xs">{plan.transport.eatAtAirport ? 'Oui — voir recommandations lounge' : 'Non'}</span>
+                  </div>
+                )}
+                {plan.transport?.onSite && (
+                  <div className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Car className="h-3 w-3 text-secondary/60" />
+                      <span className="text-white/60 text-xs font-medium">Sur place</span>
+                    </div>
+                    <p className="text-white/80 text-xs">{TRANSPORT_MODE_LABELS[plan.transport.onSite.mode || ''] || plan.transport.onSite.mode || 'À définir'}</p>
+                    {plan.transport.onSite.note && <p className="text-white/40 text-xs mt-0.5">{plan.transport.onSite.note}</p>}
+                  </div>
+                )}
+                {plan.transport?.return && (
+                  <div className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Navigation className="h-3 w-3 text-secondary/60" />
+                      <span className="text-white/60 text-xs font-medium">Retour</span>
+                    </div>
+                    <p className="text-white/80 text-xs">{TRANSPORT_MODE_LABELS[plan.transport.return.mode || ''] || plan.transport.return.mode || 'À définir'}</p>
+                    {plan.transport.return.note && <p className="text-white/40 text-xs mt-0.5">{plan.transport.return.note}</p>}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Notes */}
-        {plan.notes && plan.notes.length > 0 && (
-          <div>
-            <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <StickyNote className="h-3 w-3" /> Notes
-            </p>
-            <div className="space-y-1.5">
-              {plan.notes.map((n, i) => (
-                <div key={i} className="bg-amber-500/5 border border-amber-500/15 rounded-xl px-3 py-2">
-                  <p className="text-white/60 text-xs">{n}</p>
-                </div>
-              ))}
+          {/* ── Hébergements ── */}
+          {plan.hotels && plan.hotels.length > 0 && (
+            <div id="plan-hotels">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Hotel className="h-3 w-3" /> Hébergements
+              </p>
+              <div className="space-y-1.5">
+                {plan.hotels.map((h, i) => (
+                  <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white/85 text-xs font-medium truncate">{h.name}</p>
+                        {h.note && <p className="text-white/40 text-xs mt-0.5">{h.note}</p>}
+                        {h.price && <p className="text-secondary/60 text-xs mt-0.5">{h.price}</p>}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {h.status === 'selected'
+                          ? <span className="text-xs bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full whitespace-nowrap">✓ Choisi</span>
+                          : <span className="text-xs bg-white/6 text-white/30 px-2 py-0.5 rounded-full whitespace-nowrap">Suggestion</span>}
+                        {reservationMode === 'self' && h.bookingUrl && (
+                          <a href={h.bookingUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-secondary/60 hover:text-secondary"><ExternalLink className="h-3 w-3" /></a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <p className="text-white/15 text-xs text-center pb-2">Se met à jour en temps réel</p>
+          {/* ── Restaurants ── */}
+          {plan.restaurants && plan.restaurants.length > 0 && (
+            <div id="plan-restaurants">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Utensils className="h-3 w-3" /> Restaurants
+              </p>
+              <div className="space-y-1.5">
+                {plan.restaurants.map((r, i) => (
+                  <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-white/85 text-xs font-medium truncate">{r.name}</p>
+                          {r.stars && <span className="text-secondary text-xs flex-shrink-0">{'★'.repeat(Math.min(r.stars, 3))}</span>}
+                        </div>
+                        {r.note && <p className="text-white/40 text-xs mt-0.5">{r.note}</p>}
+                        {r.price && <p className="text-secondary/60 text-xs mt-0.5">{r.price}</p>}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {r.status === 'selected'
+                          ? <span className="text-xs bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full whitespace-nowrap">✓ Choisi</span>
+                          : <span className="text-xs bg-white/6 text-white/30 px-2 py-0.5 rounded-full whitespace-nowrap">Suggestion</span>}
+                        {reservationMode === 'self' && r.bookingUrl && (
+                          <a href={r.bookingUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-secondary/60 hover:text-secondary"><ExternalLink className="h-3 w-3" /></a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Activités ── */}
+          {plan.activities && plan.activities.length > 0 && (
+            <div id="plan-activities">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Zap className="h-3 w-3" /> Activités
+              </p>
+              <div className="space-y-1.5">
+                {plan.activities.map((a, i) => (
+                  <div key={i} className="bg-white/5 border border-white/8 rounded-xl px-3 py-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white/80 text-xs truncate">{a.name}</p>
+                        {(a as any).day && <p className="text-secondary/60 text-xs mt-0.5">{(a as any).day}</p>}
+                        {a.price && <p className="text-secondary/60 text-xs mt-0.5">{a.price}</p>}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {a.status === 'selected'
+                          ? <span className="text-xs bg-green-500/15 text-green-400 px-2 py-0.5 rounded-full whitespace-nowrap">✓ Choisi</span>
+                          : <span className="text-xs bg-white/6 text-white/30 px-2 py-0.5 rounded-full whitespace-nowrap">Suggestion</span>}
+                        {reservationMode === 'self' && a.bookingUrl && (
+                          <a href={a.bookingUrl} target="_blank" rel="noopener noreferrer"
+                            className="text-secondary/60 hover:text-secondary"><ExternalLink className="h-3 w-3" /></a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Notes ── */}
+          {plan.notes && plan.notes.length > 0 && (
+            <div id="plan-notes">
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <StickyNote className="h-3 w-3" /> Notes
+              </p>
+              <div className="space-y-1.5">
+                {plan.notes.map((n, i) => (
+                  <div key={i} className="bg-amber-500/5 border border-amber-500/15 rounded-xl px-3 py-2">
+                    <p className="text-white/60 text-xs">{n}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+
+        {/* ── Mode de réservation ── */}
+        <div className="border-t border-white/8 px-4 py-3">
+          <p className="text-white/30 text-xs uppercase tracking-wider mb-2">Mode de réservation</p>
+          <div className="flex gap-1.5">
+            {([
+              { mode: 'self' as const, emoji: '👤', label: 'Moi-même' },
+              { mode: 'assistant' as const, emoji: '💬', label: 'Assistant' },
+              { mode: 'baymora' as const, emoji: '👑', label: 'Baymora' },
+            ]).map(({ mode, emoji, label }) => (
+              <button key={mode} onClick={() => setReservationMode(mode)}
+                className={`flex-1 text-xs py-1.5 rounded-lg transition-all ${reservationMode === mode
+                  ? 'bg-secondary/20 border border-secondary/40 text-secondary'
+                  : 'bg-white/4 border border-white/8 text-white/40 hover:text-white/70'}`}>
+                {emoji} {label}
+              </button>
+            ))}
+          </div>
+          {reservationMode === 'assistant' && (
+            <div className="mt-2 p-2.5 bg-white/4 rounded-lg">
+              <p className="text-white/50 text-xs mb-1.5">Copiez le plan pour l'envoyer à notre équipe :</p>
+              <button onClick={handleCopyForAssistant}
+                className="w-full text-xs py-1.5 bg-secondary/15 border border-secondary/30 text-secondary rounded-lg hover:bg-secondary/25 transition-all">
+                Copier le récapitulatif
+              </button>
+              <p className="text-white/25 text-xs mt-1 text-center">contact@baymora.com</p>
+            </div>
+          )}
+          {reservationMode === 'baymora' && (
+            <div className="mt-2 p-2.5 bg-secondary/5 border border-secondary/15 rounded-lg">
+              <p className="text-secondary/80 text-xs font-medium">👑 Service conciergerie Baymora</p>
+              <p className="text-white/40 text-xs mt-1">Notre équipe gère toutes vos réservations. Disponible pour les membres Elite, Privé et Fondateur.</p>
+            </div>
+          )}
+        </div>
+
+        {/* ── Export ── */}
+        <div className="border-t border-white/8 px-4 py-3 pb-5">
+          <p className="text-white/30 text-xs uppercase tracking-wider mb-2">Exporter</p>
+          {exportMsg && (
+            <div className={`text-xs px-3 py-2 rounded-lg mb-2 ${exportMsg.startsWith('✓') ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+              {exportMsg}
+            </div>
+          )}
+          <div className="flex gap-1.5">
+            <button onClick={handleEmailExport} disabled={exportLoading}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 bg-white/4 border border-white/8 text-white/50 hover:text-secondary hover:border-secondary/30 rounded-lg transition-all disabled:opacity-50">
+              <Mail className="h-3 w-3" /> Email
+            </button>
+            <button onClick={handlePrint}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 bg-white/4 border border-white/8 text-white/50 hover:text-secondary hover:border-secondary/30 rounded-lg transition-all">
+              <Printer className="h-3 w-3" /> PDF
+            </button>
+            <button onClick={handleDownloadJSON}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 bg-white/4 border border-white/8 text-white/50 hover:text-secondary hover:border-secondary/30 rounded-lg transition-all">
+              <Download className="h-3 w-3" /> JSON
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );
@@ -600,6 +966,7 @@ export default function Chat() {
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [guestMsgCount, setGuestMsgCount] = useState(() => getGuestMessageCount());
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
+  const [allPlaces, setAllPlaces] = useState<PlaceItem[]>([]);
   const [showPlanMobile, setShowPlanMobile] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -614,16 +981,22 @@ export default function Chat() {
     if (!isLoading) inputRef.current?.focus();
   }, [messages, isLoading]);
 
-  // Auto-show ContactPicker + accumulate trip plan from messages
+  // Auto-show ContactPicker + accumulate trip plan + places from messages
   useEffect(() => {
     if (!isLoading && messages.length > 0) {
       const last = messages[messages.length - 1];
       if (last.role === 'assistant') {
         if (last.content.includes(':::CONTACTS:::')) setShowContactPicker(true);
-        // Accumulate plan updates
         const parsed = parseMessage(last.content);
         if (parsed.planUpdate) {
-          setTripPlan(prev => ({ ...prev, ...parsed.planUpdate }));
+          setTripPlan(prev => mergeTripPlan(prev, parsed.planUpdate!));
+        }
+        if (parsed.places.length > 0) {
+          setAllPlaces(prev => {
+            const existing = new Set(prev.map(p => p.name));
+            const newOnes = parsed.places.filter(p => !existing.has(p.name));
+            return newOnes.length > 0 ? [...prev, ...newOnes] : prev;
+          });
         }
       }
     }
@@ -687,6 +1060,7 @@ export default function Chat() {
     if (!conversationId) return;
     await deleteConversation(conversationId);
     setTripPlan(null);
+    setAllPlaces([]);
     await startChat('fr');
   };
 
@@ -719,7 +1093,7 @@ export default function Chat() {
       {showPlanMobile && hasPlan && (
         <div className="fixed inset-0 z-40 bg-slate-950 lg:hidden">
           <div className="h-full">
-            <TripPlanPanel plan={tripPlan!} onClose={() => setShowPlanMobile(false)} />
+            <TripPlanPanel plan={tripPlan!} allPlaces={allPlaces} onClose={() => setShowPlanMobile(false)} />
           </div>
         </div>
       )}
@@ -1029,7 +1403,7 @@ export default function Chat() {
       {/* ── Right: Trip Plan Panel (desktop only) ── */}
       {hasPlan && (
         <div className="hidden lg:flex w-96 xl:w-[420px] flex-shrink-0 border-l border-white/10 flex-col">
-          <TripPlanPanel plan={tripPlan!} />
+          <TripPlanPanel plan={tripPlan!} allPlaces={allPlaces} />
         </div>
       )}
 

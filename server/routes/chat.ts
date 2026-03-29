@@ -4,6 +4,7 @@ import { callLLM, type LLMMessage } from '../services/ai/llm';
 import { getUserById } from './users';
 import { prisma } from '../db';
 import type { Message } from '../types';
+import { sendEmail } from '../services/email';
 
 const router = Router();
 
@@ -401,10 +402,72 @@ export function extractProfileSignals(messages: Message[]): Record<string, any> 
   return signals;
 }
 
+// ─── Export plan ─────────────────────────────────────────────────────────────
+
+function buildPlanEmailHtml(plan: any): string {
+  const TRANSPORT_LABELS: Record<string, string> = {
+    vtc: 'VTC', chauffeur: 'Chauffeur privé', metro: 'Transport en commun',
+    self: 'Personnel', location: 'Location voiture', walk: 'À pied', same: 'Identique à l\'aller',
+  };
+  const tl = (mode?: string) => (mode ? TRANSPORT_LABELS[mode] || mode : 'À définir');
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>body{background:#080c14;color:#e5e7eb;font-family:-apple-system,sans-serif;padding:32px;max-width:600px;margin:0 auto}
+h1{color:#c8a94a;font-size:22px;margin-bottom:4px}
+h2{color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:6px;margin-top:24px}
+.item{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 14px;margin:6px 0;font-size:13px}
+.item b{color:#f3f4f6}.item p{color:#9ca3af;margin:3px 0 0;font-size:12px}
+.badge{background:rgba(200,169,74,.15);color:#c8a94a;border-radius:99px;padding:2px 8px;font-size:11px;margin-left:8px}
+.selected{border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.04)}
+a{color:#c8a94a;text-decoration:none}footer{margin-top:40px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);color:#4b5563;font-size:11px;text-align:center}
+</style></head><body>
+<h1>🌍 ${plan.destination || 'Votre voyage'}</h1>
+${plan.dates ? `<p style="color:#9ca3af;font-size:13px">📅 ${plan.dates}${plan.duration ? ` · ${plan.duration}` : ''}</p>` : ''}
+${plan.travelers ? `<p style="color:#9ca3af;font-size:13px">👥 ${plan.travelers} voyageur${plan.travelers > 1 ? 's' : ''}${plan.travelerNames?.length ? ` : ${plan.travelerNames.join(', ')}` : ''}</p>` : ''}
+${plan.budget ? `<p style="font-size:13px"><span class="badge">${plan.budget}</span></p>` : ''}
+
+${plan.flights?.length ? `<h2>✈️ Vols</h2>${plan.flights.map((f: any) => `<div class="item ${f.status === 'selected' ? 'selected' : ''}"><b>${f.from} → ${f.to}</b>${f.date ? ` · ${f.date}` : ''}${f.time ? ` ${f.time}` : ''}${f.operator ? `<span class="badge">${f.operator}</span>` : ''}${f.price ? `<span class="badge">${f.price}</span>` : ''}</div>`).join('')}` : ''}
+
+${plan.transport ? `<h2>🚗 Logistique</h2>
+${plan.transport.toAirport ? `<div class="item"><b>Aller aéroport</b><span class="badge">${tl(plan.transport.toAirport.mode)}</span>${plan.transport.toAirport.departureTime ? `<p>Départ : ${plan.transport.toAirport.departureTime}</p>` : ''}${plan.transport.toAirport.price ? `<p>${plan.transport.toAirport.price}</p>` : ''}</div>` : ''}
+${plan.transport.eatAtAirport !== undefined ? `<div class="item"><b>Repas aéroport</b> : ${plan.transport.eatAtAirport ? 'Oui' : 'Non'}</div>` : ''}
+${plan.transport.onSite ? `<div class="item"><b>Sur place</b><span class="badge">${tl(plan.transport.onSite.mode)}</span></div>` : ''}
+${plan.transport.return ? `<div class="item"><b>Retour</b><span class="badge">${tl(plan.transport.return.mode)}</span></div>` : ''}` : ''}
+
+${plan.hotels?.length ? `<h2>🏨 Hébergements</h2>${plan.hotels.map((h: any) => `<div class="item ${h.status === 'selected' ? 'selected' : ''}"><b>${h.name}</b>${h.price ? `<span class="badge">${h.price}</span>` : ''}${h.note ? `<p>${h.note}</p>` : ''}${h.bookingUrl ? `<p><a href="${h.bookingUrl}">Réserver →</a></p>` : ''}</div>`).join('')}` : ''}
+
+${plan.restaurants?.length ? `<h2>🍽️ Restaurants</h2>${plan.restaurants.map((r: any) => `<div class="item ${r.status === 'selected' ? 'selected' : ''}"><b>${r.name}</b>${r.stars ? ` ${'★'.repeat(Math.min(r.stars, 3))}` : ''}${r.price ? `<span class="badge">${r.price}</span>` : ''}${r.note ? `<p>${r.note}</p>` : ''}${r.bookingUrl ? `<p><a href="${r.bookingUrl}">Réserver →</a></p>` : ''}</div>`).join('')}` : ''}
+
+${plan.activities?.length ? `<h2>⚡ Activités</h2>${plan.activities.map((a: any) => `<div class="item ${a.status === 'selected' ? 'selected' : ''}"><b>${a.name}</b>${a.day ? `<span class="badge">${a.day}</span>` : ''}${a.price ? `<span class="badge">${a.price}</span>` : ''}${a.bookingUrl ? `<p><a href="${a.bookingUrl}">Réserver →</a></p>` : ''}</div>`).join('')}` : ''}
+
+${plan.notes?.length ? `<h2>📋 Notes</h2>${plan.notes.map((n: string) => `<div class="item">${n}</div>`).join('')}` : ''}
+
+<footer>Plan généré par <a href="https://baymora.com">Baymora</a> · La conciergerie de voyage premium</footer>
+</body></html>`;
+}
+
+export const handleExportPlan: RequestHandler = async (req, res) => {
+  try {
+    const { email, plan } = req.body;
+    if (!email || !plan) {
+      res.status(400).json({ error: 'email et plan requis' });
+      return;
+    }
+    const destination = plan.destination || 'Voyage';
+    const html = buildPlanEmailHtml(plan);
+    const ok = await sendEmail(email, `Votre plan Baymora — ${destination}`, html);
+    res.json({ success: ok });
+  } catch (error) {
+    console.error('Erreur export plan:', error);
+    res.status(500).json({ error: 'Erreur export', code: 'EXPORT_ERROR' });
+  }
+};
+
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 router.post('/start', handleStartChat);
 router.post('/message', handleSendMessage);
+router.post('/export-plan', handleExportPlan);
 router.get('/conversations', handleListConversations);
 router.get('/conversations/:id', handleGetConversation);
 router.delete('/conversations/:id', handleDeleteConversation);
