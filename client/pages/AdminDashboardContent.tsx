@@ -107,7 +107,7 @@ export default function AdminDashboardContent() {
   const [editPhotos, setEditPhotos] = useState('');
   const [editTags, setEditTags] = useState('');
   const [savingPartner, setSavingPartner] = useState(false);
-  const [newOffer, setNewOffer] = useState({ type: '', title: '', normalPrice: '', baymoraPrice: '', bookingUrl: '' });
+  const [newOffer, setNewOffer] = useState({ type: '', title: '', normalPrice: '', baymoraPrice: '', bookingUrl: '', minTier: 'crystal' });
   const [addingOffer, setAddingOffer] = useState(false);
 
   // Club state
@@ -207,7 +207,7 @@ export default function AdminDashboardContent() {
       }),
     });
     setAddingOffer(false);
-    setNewOffer({ type: '', title: '', normalPrice: '', baymoraPrice: '', bookingUrl: '' });
+    setNewOffer({ type: '', title: '', normalPrice: '', baymoraPrice: '', bookingUrl: '', minTier: 'crystal' });
     loadPartners();
   };
 
@@ -704,6 +704,16 @@ export default function AdminDashboardContent() {
                             placeholder="URL réservation"
                             className="bg-white/6 border-white/10 text-white text-xs placeholder:text-white/20 col-span-1"
                           />
+                          <select
+                            value={newOffer.minTier}
+                            onChange={e => setNewOffer(p => ({ ...p, minTier: e.target.value }))}
+                            className="bg-white/6 border border-white/10 rounded-xl px-2 py-1.5 text-white text-xs focus:outline-none focus:border-secondary/40 col-span-1"
+                          >
+                            <option value="crystal" className="bg-slate-900">💎 Crystal (tous)</option>
+                            <option value="gold" className="bg-slate-900">🌟 Gold (500+ pts)</option>
+                            <option value="platinum" className="bg-slate-900">✨ Platinum (2000+ pts)</option>
+                            <option value="diamond" className="bg-slate-900">👑 Diamond (5000+ pts)</option>
+                          </select>
                           <Button
                             onClick={() => handleAddOffer(partner.id)}
                             disabled={addingOffer || !newOffer.type || !newOffer.title}

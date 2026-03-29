@@ -203,6 +203,7 @@ model PartnerOffer {
   baymoraPrice  Float?
   currency      String   @default("EUR")
   bookingUrl    String?
+  minTier       String   @default("crystal") // crystal|gold|platinum|diamond
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
 

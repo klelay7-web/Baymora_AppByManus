@@ -11,11 +11,20 @@ const router = Router();
 // ─── Niveaux Club ─────────────────────────────────────────────────────────────
 
 export const CLUB_TIERS = [
-  { name: 'Crystal',  min: 0,    emoji: '💎', color: 'sky'    },
-  { name: 'Gold',     min: 500,  emoji: '🌟', color: 'amber'  },
-  { name: 'Platinum', min: 2000, emoji: '✨', color: 'violet' },
-  { name: 'Diamond',  min: 5000, emoji: '👑', color: 'white'  },
+  { name: 'Crystal',  slug: 'crystal',  min: 0,    emoji: '💎', color: 'sky'    },
+  { name: 'Gold',     slug: 'gold',     min: 500,  emoji: '🌟', color: 'amber'  },
+  { name: 'Platinum', slug: 'platinum', min: 2000, emoji: '✨', color: 'violet' },
+  { name: 'Diamond',  slug: 'diamond',  min: 5000, emoji: '👑', color: 'white'  },
 ];
+
+// Ordre des tiers pour la comparaison
+export const TIER_ORDER: Record<string, number> = {
+  crystal: 0, gold: 1, platinum: 2, diamond: 3,
+};
+
+export function userCanAccessTier(userTierSlug: string, requiredTierSlug: string): boolean {
+  return (TIER_ORDER[userTierSlug] ?? 0) >= (TIER_ORDER[requiredTierSlug] ?? 0);
+}
 
 export const POINT_RULES = {
   registration:           50,

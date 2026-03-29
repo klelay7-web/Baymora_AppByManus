@@ -187,6 +187,40 @@ router.get('/track/:affiliateCode', async (req, res) => {
   }
 });
 
+// GET /api/partners/boutique — toutes les offres actives pour la boutique
+router.get('/boutique', async (_req, res) => {
+  try {
+    const partners = await prisma.partner.findMany({
+      where: { status: 'approved' },
+      include: {
+        offers: { where: { isActive: true }, orderBy: { minTier: 'asc' } },
+      },
+      orderBy: { approvedAt: 'desc' },
+    });
+    // Aplatir en offres avec infos partenaire
+    const offers = partners.flatMap(p =>
+      p.offers.map(o => ({
+        ...o,
+        partner: {
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          type: p.type,
+          city: p.city,
+          affiliateCode: p.affiliateCode,
+          photos: p.photos,
+          vibe: p.vibe,
+          tags: p.tags,
+        },
+      }))
+    );
+    res.json({ offers });
+  } catch (err) {
+    console.error('[PARTNERS] Erreur boutique:', err);
+    res.status(500).json({ error: 'Erreur boutique' });
+  }
+});
+
 // GET /api/partners/:slug — fiche complète d'un partenaire approuvé
 router.get('/:slug', async (req, res) => {
   try {
@@ -309,13 +343,14 @@ router.patch('/admin/:id', requireOwner, async (req, res) => {
 router.post('/admin/:id/offers', requireOwner, async (req, res) => {
   try {
     const { id } = req.params;
-    const { type, title, description, normalPrice, baymoraPrice, currency, bookingUrl } = req.body;
+    const { type, title, description, normalPrice, baymoraPrice, currency, bookingUrl, minTier } = req.body;
 
     if (!type || !title) {
       res.status(400).json({ error: 'type et title obligatoires' });
       return;
     }
 
+    const validTiers = ['crystal', 'gold', 'platinum', 'diamond'];
     const offer = await prisma.partnerOffer.create({
       data: {
         partnerId: id,
@@ -326,6 +361,7 @@ router.post('/admin/:id/offers', requireOwner, async (req, res) => {
         baymoraPrice: baymoraPrice ? parseFloat(baymoraPrice) : null,
         currency: currency || 'EUR',
         bookingUrl: bookingUrl || null,
+        minTier: validTiers.includes(minTier) ? minTier : 'crystal',
       },
     });
 
@@ -341,7 +377,7 @@ router.post('/admin/:id/offers', requireOwner, async (req, res) => {
 router.patch('/admin/:id/offers/:offerId', requireOwner, async (req, res) => {
   try {
     const { offerId } = req.params;
-    const { type, title, description, normalPrice, baymoraPrice, currency, bookingUrl, isActive } = req.body;
+    const { type, title, description, normalPrice, baymoraPrice, currency, bookingUrl, isActive, minTier } = req.body;
 
     const updateData: any = {};
     if (type !== undefined) updateData.type = type;
@@ -352,6 +388,10 @@ router.patch('/admin/:id/offers/:offerId', requireOwner, async (req, res) => {
     if (currency !== undefined) updateData.currency = currency;
     if (bookingUrl !== undefined) updateData.bookingUrl = bookingUrl;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (minTier !== undefined) {
+      const validTiers = ['crystal', 'gold', 'platinum', 'diamond'];
+      updateData.minTier = validTiers.includes(minTier) ? minTier : 'crystal';
+    }
 
     const offer = await prisma.partnerOffer.update({ where: { id: offerId }, data: updateData });
     invalidatePartnersCache();

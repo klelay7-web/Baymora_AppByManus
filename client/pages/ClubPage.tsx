@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Copy, Check, ExternalLink, Shield, Trophy } from 'lucide-react';
+import { ArrowLeft, Copy, Check, Shield, Trophy, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -365,6 +365,51 @@ export default function ClubPage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Boutique — accès par niveau */}
+        <div className="bg-white/4 border border-white/8 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4 text-secondary" />
+              <h2 className="text-white font-semibold">Boutique Club</h2>
+            </div>
+            <Link to="/boutique" className="text-secondary/60 hover:text-secondary text-xs transition-colors">
+              Voir les offres →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {[
+              { slug: 'crystal',  emoji: '💎', name: 'Crystal',  min: 0,    perk: 'Tarifs membres Baymora',            textClass: 'text-sky-400'    },
+              { slug: 'gold',     emoji: '🌟', name: 'Gold',     min: 500,  perk: 'Offres Gold exclusives',             textClass: 'text-amber-400'  },
+              { slug: 'platinum', emoji: '✨', name: 'Platinum', min: 2000, perk: 'Offres Platinum confidentielles',    textClass: 'text-violet-400' },
+              { slug: 'diamond',  emoji: '👑', name: 'Diamond',  min: 5000, perk: 'Toutes les offres + service dédié', textClass: 'text-white'      },
+            ].map(t => {
+              const tierOrder: Record<string, number> = { crystal: 0, gold: 1, platinum: 2, diamond: 3 };
+              const userTierSlug = tier?.name.toLowerCase() ?? 'crystal';
+              const unlocked = (tierOrder[userTierSlug] ?? 0) >= tierOrder[t.slug];
+              return (
+                <div key={t.slug} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${unlocked ? 'bg-white/5' : 'bg-white/2 opacity-50'}`}>
+                  <span className="text-base">{t.emoji}</span>
+                  <div className="flex-1">
+                    <span className={`text-sm font-semibold ${unlocked ? t.textClass : 'text-white/30'}`}>{t.name}</span>
+                    {t.min > 0 && <span className="text-white/20 text-xs ml-2">· {t.min.toLocaleString('fr-FR')} Crystals</span>}
+                    <p className={`text-xs mt-0.5 ${unlocked ? 'text-white/50' : 'text-white/20'}`}>{t.perk}</p>
+                  </div>
+                  {unlocked
+                    ? <span className="text-emerald-400 text-xs font-medium">✓ Actif</span>
+                    : <span className="text-white/20 text-xs">{(t.min - (clubMe?.points ?? 0)).toLocaleString('fr-FR')} pts</span>
+                  }
+                </div>
+              );
+            })}
+          </div>
+          <Link to="/boutique" className="block mt-4">
+            <div className="flex items-center justify-center gap-2 bg-secondary/10 border border-secondary/25 hover:bg-secondary/20 transition-all rounded-xl py-2.5 text-secondary text-sm font-medium">
+              <ShoppingBag className="h-4 w-4" />
+              Accéder à la boutique
+            </div>
+          </Link>
         </div>
 
         {/* Comment gagner des points */}
