@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell, Home, Plane, CheckCircle2, Circle, Save } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell, Home, Plane, CheckCircle2, Circle, Save, Smartphone } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -723,6 +724,190 @@ function DatesSection({ user, onUpdate }: { user: any; onUpdate: () => void }) {
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 
+// ─── Notifications Widget ─────────────────────────────────────────────────────
+
+interface NotifPrefs {
+  phone: string | null;
+  notifSms: boolean;
+  notifWhatsApp: boolean;
+  notifFlights: boolean;
+  notifCheckin: boolean;
+  notifBirthdays: boolean;
+  notifOffers: boolean;
+}
+
+function NotificationWidget() {
+  const [prefs, setPrefs] = useState<NotifPrefs | null>(null);
+  const [phone, setPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [testStatus, setTestStatus] = useState('');
+  const [expanded, setExpanded] = useState(false);
+
+  const token = localStorage.getItem('baymora_token');
+  const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
+  useEffect(() => {
+    fetch('/api/notifications/prefs', { headers })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          setPrefs(d);
+          setPhone(d.phone || '');
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/notifications/prefs', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ ...prefs, phone: phone || null }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPrefs(data.prefs);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function sendTest(channel: 'sms' | 'whatsapp') {
+    setTestStatus('Envoi...');
+    try {
+      const res = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ channel }),
+      });
+      const data = await res.json();
+      setTestStatus(res.ok ? '✓ ' + data.message : '✗ ' + (data.error || 'Erreur'));
+    } catch {
+      setTestStatus('✗ Erreur réseau');
+    }
+    setTimeout(() => setTestStatus(''), 5000);
+  }
+
+  function toggle(key: keyof NotifPrefs) {
+    if (!prefs) return;
+    setPrefs({ ...prefs, [key]: !prefs[key as keyof NotifPrefs] });
+  }
+
+  return (
+    <div className="bg-white/4 border border-white/10 rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/4 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Smartphone className="h-4 w-4 text-secondary/70" />
+          <span className="text-white/80 font-semibold text-sm">Notifications SMS / WhatsApp</span>
+          {prefs?.phone && (prefs.notifSms || prefs.notifWhatsApp) && (
+            <span className="w-2 h-2 bg-emerald-400 rounded-full" />
+          )}
+        </div>
+        <span className="text-white/30 text-xs">{expanded ? '▲' : '▼'}</span>
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 space-y-4 border-t border-white/8 pt-4">
+
+          {/* Numéro de téléphone */}
+          <div className="space-y-1.5">
+            <label className="text-white/50 text-xs">Numéro de téléphone <span className="text-white/25">(format international)</span></label>
+            <Input
+              type="tel"
+              placeholder="+33612345678"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              className="bg-white/8 border-white/10 text-white placeholder:text-white/20 text-sm h-9"
+            />
+          </div>
+
+          {/* Canaux */}
+          <div className="space-y-2">
+            <p className="text-white/40 text-xs uppercase tracking-wider">Canaux</p>
+            {[
+              { key: 'notifSms' as keyof NotifPrefs,       label: 'SMS',       icon: '📱' },
+              { key: 'notifWhatsApp' as keyof NotifPrefs,  label: 'WhatsApp',  icon: '💬' },
+            ].map(({ key, label, icon }) => (
+              <div key={key} className="flex items-center justify-between">
+                <span className="text-white/70 text-sm">{icon} {label}</span>
+                <button
+                  onClick={() => toggle(key)}
+                  className={`w-10 h-5.5 rounded-full transition-colors duration-200 relative ${prefs?.[key] ? 'bg-secondary' : 'bg-white/15'}`}
+                >
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200 ${prefs?.[key] ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Types de notifications */}
+          <div className="space-y-2">
+            <p className="text-white/40 text-xs uppercase tracking-wider">Alertes</p>
+            {[
+              { key: 'notifFlights' as keyof NotifPrefs,    label: 'Rappels vols (J-1)',         icon: '✈️' },
+              { key: 'notifCheckin' as keyof NotifPrefs,    label: 'Rappels check-in hôtel',     icon: '🏨' },
+              { key: 'notifBirthdays' as keyof NotifPrefs,  label: 'Anniversaires le jour J',    icon: '🎂' },
+              { key: 'notifOffers' as keyof NotifPrefs,     label: 'Offres partenaires exclusives', icon: '✨' },
+            ].map(({ key, label, icon }) => (
+              <div key={key} className="flex items-center justify-between">
+                <span className="text-white/60 text-sm">{icon} {label}</span>
+                <button
+                  onClick={() => toggle(key)}
+                  className={`w-10 h-5.5 rounded-full transition-colors duration-200 relative ${prefs?.[key] ? 'bg-secondary/70' : 'bg-white/15'}`}
+                >
+                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200 ${prefs?.[key] ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              size="sm"
+              onClick={save}
+              disabled={saving}
+              className="bg-secondary hover:bg-secondary/90 text-white text-xs h-8"
+            >
+              {saving ? 'Enregistrement...' : saved ? '✓ Sauvegardé' : <><Save className="h-3 w-3 mr-1" /> Sauvegarder</>}
+            </Button>
+            {prefs?.phone && prefs.notifSms && (
+              <button
+                onClick={() => sendTest('sms')}
+                className="px-3 h-8 bg-white/8 border border-white/15 rounded-lg text-white/60 hover:text-white text-xs transition-all"
+              >
+                Test SMS
+              </button>
+            )}
+            {prefs?.phone && prefs.notifWhatsApp && (
+              <button
+                onClick={() => sendTest('whatsapp')}
+                className="px-3 h-8 bg-white/8 border border-white/15 rounded-lg text-white/60 hover:text-white text-xs transition-all"
+              >
+                Test WhatsApp
+              </button>
+            )}
+          </div>
+          {testStatus && (
+            <p className={`text-xs ${testStatus.startsWith('✓') ? 'text-emerald-400' : 'text-red-400'}`}>
+              {testStatus}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
@@ -935,6 +1120,9 @@ export default function Dashboard() {
 
         {/* ── Baymora Club ── */}
         <ClubWidget userId={user.id} />
+
+        {/* ── Notifications ── */}
+        <NotificationWidget />
 
         {/* ── Mes proches ── */}
         <ProchesSection user={user} onUpdate={() => window.location.reload()} />

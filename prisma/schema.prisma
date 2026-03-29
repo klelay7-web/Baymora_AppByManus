@@ -27,6 +27,14 @@ model User {
   clubPoints     Int      @default(0)
   clubVerified   Boolean  @default(false)
   invitedById    String?                      // userId de qui les a invités
+  // Notifications
+  phone          String?                      // ex: +33612345678
+  notifSms       Boolean  @default(false)     // SMS actif
+  notifWhatsApp  Boolean  @default(false)     // WhatsApp actif
+  notifFlights   Boolean  @default(true)      // rappels vols J-1
+  notifCheckin   Boolean  @default(true)      // rappels check-in hôtel
+  notifBirthdays Boolean  @default(true)      // alertes anniversaires
+  notifOffers    Boolean  @default(true)      // offres partenaires
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LogOut, Users, MessageSquare, TrendingUp, Search, Crown, RefreshCw, Handshake, CheckCircle, Clock, XCircle, Plus, Pencil, Trash2 } from "lucide-react";
+import { LogOut, Users, MessageSquare, TrendingUp, Search, Crown, RefreshCw, Handshake, CheckCircle, Clock, XCircle, Plus, Pencil, Trash2, Smartphone } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,7 +87,7 @@ const CIRCLES = ["decouverte", "essentiel", "elite", "prive", "fondateur"];
 export default function AdminDashboardContent() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'partners' | 'club'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'partners' | 'club' | 'notifications'>('users');
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
@@ -117,6 +117,18 @@ export default function AdminDashboardContent() {
   const [grantPoints, setGrantPoints] = useState('');
   const [grantDesc, setGrantDesc] = useState('');
   const [grantLoading, setGrantLoading] = useState(false);
+
+  // Notifications state
+  const [notifStats, setNotifStats] = useState<any>(null);
+  const [broadcastMsg, setBroadcastMsg] = useState('');
+  const [broadcastChannel, setBroadcastChannel] = useState<'sms' | 'whatsapp'>('whatsapp');
+  const [broadcastTier, setBroadcastTier] = useState('');
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState('');
+  const [directUserId, setDirectUserId] = useState('');
+  const [directMsg, setDirectMsg] = useState('');
+  const [directChannel, setDirectChannel] = useState<'sms' | 'whatsapp'>('whatsapp');
+  const [directLoading, setDirectLoading] = useState(false);
 
   // ── Auth check
   useEffect(() => {
@@ -241,7 +253,49 @@ export default function AdminDashboardContent() {
     loadClub();
   };
 
-  useEffect(() => { if (authorized) { loadStats(); loadUsers(); loadPartners(); loadClub(); } }, [authorized]);
+  const loadNotifStats = () => {
+    fetch('/api/notifications/admin/stats', { headers: authHeader() })
+      .then(r => r.json())
+      .then(d => setNotifStats(d))
+      .catch(() => {});
+  };
+
+  const handleBroadcast = async () => {
+    if (!broadcastMsg) return;
+    setBroadcastLoading(true);
+    setBroadcastResult('');
+    try {
+      const res = await fetch('/api/notifications/admin/broadcast', {
+        method: 'POST',
+        headers: { ...authHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: broadcastMsg, channel: broadcastChannel, tierMin: broadcastTier || undefined }),
+      });
+      const data = await res.json();
+      setBroadcastResult(res.ok ? `✓ Envoyé à ${data.sent} membres (${data.failed} erreurs)` : `✗ ${data.error}`);
+    } catch {
+      setBroadcastResult('✗ Erreur réseau');
+    }
+    setBroadcastLoading(false);
+  };
+
+  const handleDirectSend = async () => {
+    if (!directUserId || !directMsg) return;
+    setDirectLoading(true);
+    try {
+      const res = await fetch('/api/notifications/admin/send', {
+        method: 'POST',
+        headers: { ...authHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: directUserId, message: directMsg, channel: directChannel }),
+      });
+      const data = await res.json();
+      setBroadcastResult(res.ok ? '✓ Message envoyé' : `✗ ${data.error}`);
+    } catch {
+      setBroadcastResult('✗ Erreur réseau');
+    }
+    setDirectLoading(false);
+  };
+
+  useEffect(() => { if (authorized) { loadStats(); loadUsers(); loadPartners(); loadClub(); loadNotifStats(); } }, [authorized]);
   useEffect(() => { if (authorized) loadUsers(); }, [search, filterCircle]);
 
   const handleCircleChange = async (userId: string, circle: string) => {
@@ -299,10 +353,16 @@ export default function AdminDashboardContent() {
             >
               💎 Club
             </button>
+            <button
+              onClick={() => setActiveTab('notifications')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'notifications' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'}`}
+            >
+              <Smartphone className="h-3.5 w-3.5" /> Notifications
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => { loadStats(); loadUsers(); loadPartners(); loadClub(); }} className="text-white/30 hover:text-white/70 transition-colors">
+          <button onClick={() => { loadStats(); loadUsers(); loadPartners(); loadClub(); loadNotifStats(); }} className="text-white/30 hover:text-white/70 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white/40 hover:text-white gap-2">
@@ -875,6 +935,117 @@ export default function AdminDashboardContent() {
               className="mt-3 bg-secondary/20 border border-secondary/40 text-secondary hover:bg-secondary/35 text-xs"
             >
               {grantLoading ? 'Envoi...' : '+ Accorder les points'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════ TAB NOTIFICATIONS ═══════════ */}
+      {activeTab === 'notifications' && (
+        <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+          <div>
+            <h2 className="text-white font-bold text-lg">Notifications SMS / WhatsApp</h2>
+            <p className="text-white/30 text-xs mt-0.5">Gérer les envois et suivre les préférences</p>
+          </div>
+
+          {/* Stats */}
+          {notifStats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Total membres',      value: notifStats.totalMembers,      emoji: '👥' },
+                { label: 'Avec téléphone',     value: notifStats.withPhone,         emoji: '📱' },
+                { label: 'SMS activé',         value: notifStats.smsEnabled,        emoji: '✉️' },
+                { label: 'WhatsApp activé',    value: notifStats.whatsAppEnabled,   emoji: '💬' },
+              ].map(s => (
+                <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-5">
+                  <div className="text-2xl mb-1">{s.emoji}</div>
+                  <p className="text-3xl font-bold text-white">{s.value ?? '—'}</p>
+                  <p className="text-white/30 text-xs mt-1">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Broadcast */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
+            <h3 className="text-white/60 text-sm font-semibold">Envoi groupé (broadcast)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <select
+                value={broadcastChannel}
+                onChange={e => setBroadcastChannel(e.target.value as 'sms' | 'whatsapp')}
+                className="bg-white/6 border border-white/10 rounded-lg px-3 h-9 text-white text-xs"
+              >
+                <option value="whatsapp">WhatsApp</option>
+                <option value="sms">SMS</option>
+              </select>
+              <select
+                value={broadcastTier}
+                onChange={e => setBroadcastTier(e.target.value)}
+                className="bg-white/6 border border-white/10 rounded-lg px-3 h-9 text-white text-xs"
+              >
+                <option value="">Tous les membres</option>
+                <option value="gold">Gold et supérieur (500+ pts)</option>
+                <option value="platinum">Platinum et supérieur (2000+ pts)</option>
+                <option value="diamond">Diamond uniquement (5000+ pts)</option>
+              </select>
+            </div>
+            <textarea
+              value={broadcastMsg}
+              onChange={e => setBroadcastMsg(e.target.value)}
+              placeholder="Message à envoyer..."
+              rows={4}
+              className="w-full bg-white/6 border border-white/10 rounded-lg px-3 py-2 text-white text-xs placeholder:text-white/20 resize-none focus:outline-none focus:border-secondary/40"
+            />
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button
+                onClick={handleBroadcast}
+                disabled={broadcastLoading || !broadcastMsg}
+                size="sm"
+                className="bg-secondary/20 border border-secondary/40 text-secondary hover:bg-secondary/35 text-xs"
+              >
+                {broadcastLoading ? 'Envoi...' : '📤 Envoyer le broadcast'}
+              </Button>
+              {broadcastResult && (
+                <span className={`text-xs ${broadcastResult.startsWith('✓') ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {broadcastResult}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Direct send */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
+            <h3 className="text-white/60 text-sm font-semibold">Envoi direct à un membre</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                value={directUserId}
+                onChange={e => setDirectUserId(e.target.value)}
+                placeholder="User ID"
+                className="bg-white/6 border-white/10 text-white text-xs placeholder:text-white/20"
+              />
+              <select
+                value={directChannel}
+                onChange={e => setDirectChannel(e.target.value as 'sms' | 'whatsapp')}
+                className="bg-white/6 border border-white/10 rounded-lg px-3 h-9 text-white text-xs"
+              >
+                <option value="whatsapp">WhatsApp</option>
+                <option value="sms">SMS</option>
+              </select>
+            </div>
+            <textarea
+              value={directMsg}
+              onChange={e => setDirectMsg(e.target.value)}
+              placeholder="Message personnalisé..."
+              rows={3}
+              className="w-full bg-white/6 border border-white/10 rounded-lg px-3 py-2 text-white text-xs placeholder:text-white/20 resize-none focus:outline-none focus:border-secondary/40"
+            />
+            <Button
+              onClick={handleDirectSend}
+              disabled={directLoading || !directUserId || !directMsg}
+              size="sm"
+              className="bg-white/8 border border-white/15 text-white/70 hover:text-white text-xs"
+            >
+              {directLoading ? 'Envoi...' : '→ Envoyer'}
             </Button>
           </div>
         </div>

@@ -6,6 +6,7 @@
 
 import { prisma } from '../db';
 import { sendBirthdayAlertEmail } from './email';
+import { sendNotification, NotifTemplates } from './sms';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -158,7 +159,10 @@ export async function checkUpcomingDates(): Promise<void> {
           { companions: { some: { birthday: { not: null } } } },
         ],
       },
-      select: { id: true, pseudo: true, prenom: true, email: true },
+      select: {
+        id: true, pseudo: true, prenom: true, email: true,
+        phone: true, notifSms: true, notifWhatsApp: true, notifBirthdays: true,
+      },
     });
 
     let totalAlerts = 0;
@@ -179,6 +183,15 @@ export async function checkUpcomingDates(): Promise<void> {
 
         if (user.email) {
           await sendBirthdayAlertEmail(user.email, user.prenom, alert);
+        }
+
+        // Notification SMS/WhatsApp si activé et que c'est un anniversaire J-0
+        if (user.phone && user.notifBirthdays && alert.daysLeft === 0 && alert.contactName) {
+          const name = user.prenom ?? user.pseudo;
+          await sendNotification(
+            { phone: user.phone, notifSms: user.notifSms, notifWhatsApp: user.notifWhatsApp },
+            NotifTemplates.birthdayAlert(name, alert.contactName, alert.label),
+          );
         }
       }
     }
