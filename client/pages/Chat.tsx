@@ -1046,7 +1046,7 @@ export default function Chat() {
   const hasPlan = tripPlan && (tripPlan.destination || tripPlan.hotels?.length || tripPlan.flights?.length || tripPlan.activities?.length || tripPlan.restaurants?.length);
 
   return (
-    <div className="flex h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
+    <div className="flex h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden max-w-full">
 
       {/* Porte dorée — quand les crédits sont épuisés */}
       {isCreditsExhausted && (
@@ -1149,48 +1149,53 @@ export default function Chat() {
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-4 py-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 px-4 py-6" style={{ scrollbarWidth: 'none' }}>
 
-        {/* ── Welcome screen (simplifié — zéro friction) ── */}
+        {/* ── Welcome screen — éducatif (montre toutes les possibilités) ── */}
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center min-h-full gap-5 animate-fade-in py-8">
+          <div className="flex flex-col items-center justify-center min-h-full gap-4 animate-fade-in py-6">
 
             {/* Logo + tagline */}
             <div className="text-center">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary/30 to-secondary/10 border border-secondary/20 flex items-center justify-center mx-auto mb-3">
-                <span className="text-lg font-bold text-secondary">B</span>
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-secondary/30 to-secondary/10 border border-secondary/20 flex items-center justify-center mx-auto mb-2">
+                <span className="text-base font-bold text-secondary">B</span>
               </div>
-              <h2 className="text-2xl font-bold mb-1" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 40%, #c8bfa8 70%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
-                {user?.prenom ? `${user.prenom}, où on va ?` : 'Où on va ?'}
+              <h2 className="text-xl font-bold" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 40%, #c8bfa8 70%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+                {user?.prenom ? `${user.prenom}, qu'est-ce qu'on fait ?` : "Qu'est-ce qu'on fait ?"}
               </h2>
-              <p className="text-white/35 text-xs mt-1">
-                Écrivez ou cliquez — Baymora s'occupe du reste.
-              </p>
             </div>
 
-            {/* 5 chips seulement — les plus populaires */}
-            <div className="flex flex-wrap gap-2 justify-center max-w-md">
+            {/* Grille de modes — éduque le client sur toutes les possibilités */}
+            <div className="w-full max-w-lg grid grid-cols-2 sm:grid-cols-3 gap-2">
               {[
-                { label: 'Week-end', msg: 'Je cherche un week-end, propose-moi' },
-                { label: 'Gastronomie', msg: 'Je veux un voyage axé gastronomie et bons restaurants' },
-                { label: 'Plage & soleil', msg: 'Plage et îles, quelque chose d\'exceptionnel' },
-                { label: 'Romantique', msg: 'Séjour romantique pour deux, je veux quelque chose d\'inoubliable' },
-                { label: 'Surprends-moi ✨', msg: 'Surprends-moi totalement, je te fais confiance' },
+                { emoji: '🎯', label: 'Je sais où aller', msg: 'J\'ai une destination en tête, aide-moi à organiser' },
+                { emoji: '✨', label: 'Surprends-moi', msg: 'Surprends-moi totalement, je te fais confiance' },
+                { emoji: '🔍', label: 'Je cherche / compare', msg: 'Je cherche une destination, aide-moi à choisir entre plusieurs options' },
+                { emoji: '🎲', label: 'J\'improvise', msg: 'Je veux improviser, pas de programme, juste des bons plans au feeling' },
+                { emoji: '📋', label: 'Tout organiser', msg: 'Je veux un programme complet jour par jour, avec tout prévu' },
+                { emoji: '💑', label: 'Romantique', msg: 'Séjour romantique pour deux, quelque chose d\'inoubliable' },
+                { emoji: '🌆', label: 'Bons plans ici', msg: 'Je suis en ville, donne-moi les meilleurs plans autour de moi ce soir' },
+                { emoji: '💼', label: 'Business', msg: 'Je cherche un hôtel et des restaurants pour un voyage d\'affaires' },
+                { emoji: '🍽️', label: 'Gastronomie', msg: 'Je veux un voyage axé gastronomie et bons restaurants' },
+                { emoji: '🏖️', label: 'Plage & soleil', msg: 'Plage, mer turquoise, soleil — quelque chose d\'exceptionnel' },
+                { emoji: '💻', label: 'Remote / Nomad', msg: 'Je bosse en remote, où partir avec bon wifi et bonne vie ?' },
+                { emoji: '👨‍👩‍👧‍👦', label: 'En famille', msg: 'Voyage en famille avec enfants, tout doit être adapté' },
               ].map((chip) => (
                 <button
                   key={chip.label}
                   onClick={() => handleChip(chip.msg)}
                   disabled={isLoading || isCreditsExhausted}
-                  className="px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white/70 text-sm hover:bg-secondary/15 hover:border-secondary/40 hover:text-white transition-all disabled:opacity-40"
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-white/10 bg-white/3 text-left hover:bg-secondary/10 hover:border-secondary/30 transition-all disabled:opacity-40 group"
                 >
-                  {chip.label}
+                  <span className="text-lg flex-shrink-0 group-hover:scale-110 transition-transform">{chip.emoji}</span>
+                  <span className="text-white/60 text-xs font-medium group-hover:text-white/90 leading-tight">{chip.label}</span>
                 </button>
               ))}
             </div>
 
-            {/* Micro-footer discret */}
-            <p className="text-white/20 text-xs text-center mt-2">
-              🔒 Gratuit · Vos données restent privées
+            {/* Micro-footer */}
+            <p className="text-white/15 text-[11px] text-center">
+              ou écrivez directement · 🔒 Gratuit · Données privées
             </p>
           </div>
         )}
