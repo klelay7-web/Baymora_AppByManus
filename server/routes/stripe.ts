@@ -1,7 +1,7 @@
 /**
- * STRIPE — Abonnements, packs de crédits & déblocages unitaires
+ * STRIPE — Abonnements, packs de crédits & déblocages ponctuels
  *
- * Forfaits mensuels :
+ * Forfaits mensuels (avec rollover — crédits non utilisés s'additionnent) :
  *   voyageur    →  9.90 €/mois  (100 crédits)
  *   explorateur → 29.00 €/mois  (350 crédits)
  *   prive       → 79.00 €/mois  (1200 crédits)
@@ -13,14 +13,16 @@
  *   pack_500  → 34.90 € (500 crédits + accès Gold 1 mois)
  *   pack_1000 → 59.90 € (1000 crédits + accès Platinum 1 mois)
  *
- * Déblocage unitaire (guest, sans inscription) :
- *   unlock_single → 1.90 € (5 crédits supplémentaires)
+ * Déblocages ponctuels (guest ou abonné, prix volontairement élevés pour pousser vers l'abo) :
+ *   unlock_5  →  9.90 € (5 crédits)   ← même prix que Voyageur pour 100 crédits/mois !
+ *   unlock_10 → 15.90 € (10 crédits)
+ *   unlock_20 → 19.90 € (20 crédits)
  */
 
 import { Router, RequestHandler } from 'express';
 import Stripe from 'stripe';
-import { PLANS, CREDIT_PACKS, UNLOCK_SINGLE_PRICE_CENTS, type BaymoraCircle } from '../types';
-import { upgradeUserPlan, addCreditsToUser, grantGuestUnlock } from '../services/credits';
+import { PLANS, CREDIT_PACKS, UNLOCK_TIERS, type BaymoraCircle } from '../types';
+import { upgradeUserPlan, addCreditsToUser, grantGuestUnlock, grantUserUnlock } from '../services/credits';
 import { prisma } from '../db';
 
 const router = Router();
@@ -130,13 +132,31 @@ const handleBuyCredits: RequestHandler = async (req, res) => {
   }
 };
 
-// ─── POST /api/stripe/unlock — Déblocage unitaire guest (1.90 €) ────────────
+// ─── POST /api/stripe/unlock — Déblocage ponctuel (3 paliers) ───────────────
+//
+// Prix volontairement élevés pour rendre l'abonnement évident :
+//   5 crédits = 9.90€   ← même prix que Voyageur (100 crédits/mois) !
+//   10 crédits = 15.90€
+//   20 crédits = 19.90€
+//
+// Le client voit : "Je paie 9.90€ pour 5 crédits, ou 9.90€/mois pour 100 ?"
+// → Conversion naturelle vers l'abonnement.
 
 const handleUnlock: RequestHandler = async (req, res) => {
   try {
-    const { fingerprint, conversationId } = req.body;
-    if (!fingerprint) {
-      res.status(400).json({ error: 'fingerprint requis', code: 'VALIDATION_ERROR' });
+    const { fingerprint, unlockId, conversationId } = req.body;
+    const baymoraUser = (req as any).baymoraUser;
+
+    // Valider le palier
+    const tier = UNLOCK_TIERS.find(t => t.id === unlockId);
+    if (!tier) {
+      res.status(400).json({ error: 'Palier invalide', code: 'INVALID_UNLOCK' });
+      return;
+    }
+
+    // Guest ou user authentifié : les deux peuvent débloquer
+    if (!fingerprint && !baymoraUser?.id) {
+      res.status(400).json({ error: 'fingerprint ou connexion requis', code: 'VALIDATION_ERROR' });
       return;
     }
 
@@ -149,16 +169,19 @@ const handleUnlock: RequestHandler = async (req, res) => {
         price_data: {
           currency: 'eur',
           product_data: {
-            name: 'Baymora — Débloquer votre résultat',
-            description: '5 crédits de conversation premium',
+            name: `Baymora — ${tier.credits} crédits`,
+            description: `Débloquez ${tier.credits} crédits de conversation premium`,
           },
-          unit_amount: UNLOCK_SINGLE_PRICE_CENTS,
+          unit_amount: tier.priceEurCents,
         },
         quantity: 1,
       }],
       metadata: {
-        type: 'unlock_single',
-        fingerprint,
+        type: 'unlock',
+        unlockId: tier.id,
+        credits: String(tier.credits),
+        fingerprint: fingerprint || '',
+        userId: baymoraUser?.id || '',
         conversationId: conversationId || '',
       },
       success_url: process.env.STRIPE_SUCCESS_URL || `http://localhost:8080/chat?unlocked=1&cid=${conversationId || ''}`,
@@ -249,22 +272,32 @@ const handleWebhook: RequestHandler = async (req, res) => {
         }
       }
 
-      // ── Déblocage unitaire guest ────────────────────────────────────────
-      if (paymentType === 'unlock_single' && meta.fingerprint) {
-        await grantGuestUnlock(meta.fingerprint);
+      // ── Déblocage ponctuel (3 paliers) ─────────────────────────────────
+      if (paymentType === 'unlock' && meta.unlockId) {
+        const tier = UNLOCK_TIERS.find(t => t.id === meta.unlockId);
+        const credits = tier?.credits ?? parseInt(meta.credits || '5', 10);
+
+        if (meta.userId) {
+          // User authentifié : ajouter à son compte
+          await grantUserUnlock(meta.userId, credits, meta.unlockId, tier?.priceEurCents ?? 0);
+        } else if (meta.fingerprint) {
+          // Guest : ajouter à sa session
+          await grantGuestUnlock(meta.fingerprint, credits);
+        }
 
         // Enregistrer l'achat
         await prisma.creditPurchase.create({
           data: {
-            type: 'unlock_single',
-            credits: 5,
-            amountEur: UNLOCK_SINGLE_PRICE_CENTS,
+            userId: meta.userId || undefined,
+            type: meta.unlockId,
+            credits,
+            amountEur: tier?.priceEurCents ?? 0,
             stripeSessionId: session.id,
             status: 'completed',
           },
         });
 
-        console.log(`[STRIPE] Déblocage unitaire pour guest ${meta.fingerprint.substring(0, 8)}...`);
+        console.log(`[STRIPE] Déblocage ${meta.unlockId} (+${credits} crédits) pour ${meta.userId || `guest ${meta.fingerprint?.substring(0, 8)}...`}`);
       }
     }
 
@@ -322,7 +355,14 @@ const handlePlans: RequestHandler = (_req, res) => {
   res.json({
     plans: publicPlans,
     creditPacks: publicPacks,
-    unlockSinglePriceEur: UNLOCK_SINGLE_PRICE_CENTS / 100,
+    unlockTiers: UNLOCK_TIERS.map(t => ({
+      id: t.id,
+      credits: t.credits,
+      priceEur: t.priceEurCents / 100,
+      label: t.label,
+    })),
+    rollover: true,
+    rolloverMaxMultiplier: 3,
   });
 };
 

@@ -163,8 +163,29 @@ export const CREDIT_PACKS: CreditPack[] = [
   { id: 'pack_1000', name: 'Ultra',      credits: 1000, priceEurCents: 5990, pricePerCredit: 0.060, bonusLabel: 'Accès Boutique Platinum 1 mois' },
 ];
 
-/** Prix d'un déblocage unitaire pour guest (sans inscription) */
-export const UNLOCK_SINGLE_PRICE_CENTS = 190; // 1.90 €
+/**
+ * Déblocages ponctuels (guest ou abonné à court de crédits)
+ * Prix volontairement élevés pour rendre l'abonnement évident :
+ *   5 crédits = 9.90€  vs  Voyageur = 9.90€/mois pour 100 crédits
+ */
+export interface UnlockTier {
+  id: string;
+  credits: number;
+  priceEurCents: number;
+  label: string;
+}
+
+export const UNLOCK_TIERS: UnlockTier[] = [
+  { id: 'unlock_5',  credits: 5,  priceEurCents: 990,  label: '5 crédits — 9,90 €' },
+  { id: 'unlock_10', credits: 10, priceEurCents: 1590, label: '10 crédits — 15,90 €' },
+  { id: 'unlock_20', credits: 20, priceEurCents: 1990, label: '20 crédits — 19,90 €' },
+];
+
+/**
+ * Rollover : les crédits non utilisés s'additionnent au mois suivant.
+ * Plafond d'accumulation = 3x le quota mensuel (évite accumulation infinie).
+ */
+export const ROLLOVER_MAX_MULTIPLIER = 3;
 
 /** Coût en crédits par type d'action */
 export const CREDIT_COSTS = {

@@ -4,13 +4,13 @@
  * Gestion centralisée des crédits :
  * - Vérification de solde (user + guest)
  * - Décompte après chaque action
- * - Reset mensuel automatique
- * - Déblocage unitaire (guest sans inscription)
+ * - Rollover mensuel (crédits non utilisés s'additionnent, cap 3x)
+ * - Déblocages ponctuels (3 paliers : 9.90€ / 15.90€ / 19.90€)
  * - Packs de crédits supplémentaires
  */
 
 import { prisma } from '../db';
-import { PLANS, CREDIT_COSTS, CREDIT_PACKS, type BaymoraCircle } from '../types';
+import { PLANS, CREDIT_COSTS, CREDIT_PACKS, UNLOCK_TIERS, ROLLOVER_MAX_MULTIPLIER, type BaymoraCircle } from '../types';
 import crypto from 'crypto';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -26,8 +26,10 @@ export interface CreditCheck {
   upgradeOptions?: {
     nextPlan?: BaymoraCircle;
     nextPlanPrice?: number;
-    unlockSinglePrice?: number;  // prix déblocage unitaire (guests)
+    unlockTiers?: typeof UNLOCK_TIERS;   // 3 paliers de déblocage
     creditPacks?: typeof CREDIT_PACKS;
+    /** Message incitant à l'abonnement */
+    subscriptionHint?: string;
   };
 }
 
@@ -81,11 +83,16 @@ export async function checkUserCredits(userId: string): Promise<CreditCheck> {
     const circle = freshUser.circle as BaymoraCircle;
     const nextPlan = getNextPlan(circle);
     result.upgradeOptions = {
+      unlockTiers: UNLOCK_TIERS,
       creditPacks: CREDIT_PACKS,
     };
     if (nextPlan) {
       result.upgradeOptions.nextPlan = nextPlan;
       result.upgradeOptions.nextPlanPrice = PLANS[nextPlan].priceEurCents;
+      // Hint : montrer que l'abonnement est bien plus avantageux que le déblocage
+      const plan = PLANS[nextPlan];
+      result.upgradeOptions.subscriptionHint =
+        `${plan.creditsLimit} crédits/mois pour ${(plan.priceEurCents / 100).toFixed(2).replace('.', ',')} €/mois — et vos crédits non utilisés s'accumulent !`;
     }
   }
 
@@ -160,8 +167,11 @@ export async function checkGuestCredits(fingerprint: string): Promise<CreditChec
     used: session.creditsUsed,
     reason: allowed ? undefined : 'credits_exhausted',
     upgradeOptions: allowed ? undefined : {
-      unlockSinglePrice: 190,  // 1.90€
+      unlockTiers: UNLOCK_TIERS,
       creditPacks: CREDIT_PACKS,
+      nextPlan: 'voyageur',
+      nextPlanPrice: PLANS.voyageur.priceEurCents,
+      subscriptionHint: `100 crédits/mois pour 9,90 €/mois — vos crédits non utilisés s'accumulent d'un mois sur l'autre !`,
     },
   };
 }
@@ -242,16 +252,34 @@ export async function addCreditsToUser(userId: string, credits: number, purchase
   console.log(`[CREDITS] +${credits} crédits ajoutés à ${userId} (${purchaseType})`);
 }
 
-// ─── Déblocage unitaire guest ────────────────────────────────────────────────
+// ─── Déblocage ponctuel (3 paliers) ─────────────────────────────────────────
 
-export async function grantGuestUnlock(fingerprint: string): Promise<void> {
-  // Donne 5 crédits supplémentaires au guest (assez pour 1-2 échanges Opus)
+export async function grantGuestUnlock(fingerprint: string, credits: number): Promise<void> {
   await prisma.guestSession.update({
     where: { fingerprint },
-    data: { creditsLimit: { increment: 5 } },
+    data: { creditsLimit: { increment: credits } },
   });
 
-  console.log(`[CREDITS] Guest ${fingerprint.substring(0, 8)}...: +5 crédits (déblocage unitaire 1.90€)`);
+  console.log(`[CREDITS] Guest ${fingerprint.substring(0, 8)}...: +${credits} crédits (déblocage ponctuel)`);
+}
+
+export async function grantUserUnlock(userId: string, credits: number, unlockId: string, amountEur: number): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { creditsLimit: { increment: credits } },
+  });
+
+  await prisma.creditPurchase.create({
+    data: {
+      userId,
+      type: unlockId,
+      credits,
+      amountEur,
+      status: 'completed',
+    },
+  });
+
+  console.log(`[CREDITS] User ${userId}: +${credits} crédits (déblocage ${unlockId})`);
 }
 
 // ─── Calcul du coût d'une action ─────────────────────────────────────────────
@@ -279,39 +307,89 @@ export async function upgradeUserPlan(userId: string, newCircle: BaymoraCircle):
   const plan = PLANS[newCircle];
   if (!plan) throw new Error(`Plan inconnu: ${newCircle}`);
 
+  // Récupérer les crédits restants pour les conserver (rollover)
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { creditsLimit: true, creditsUsed: true },
+  });
+  const carryOver = currentUser ? Math.max(0, currentUser.creditsLimit - currentUser.creditsUsed) : 0;
+
+  // Nouveau plafond = quota du plan + crédits restants (cap à 3x le quota)
+  const maxAccumulated = plan.creditsLimit * ROLLOVER_MAX_MULTIPLIER;
+  const newLimit = Math.min(plan.creditsLimit + carryOver, maxAccumulated);
+
   await prisma.user.update({
     where: { id: userId },
     data: {
       circle: newCircle,
-      creditsLimit: plan.creditsLimit,
-      perplexityLimit: plan.perplexityLimit,
-      messagesLimit: plan.creditsLimit, // legacy sync
-      // Reset compteurs au moment de l'upgrade
+      creditsLimit: newLimit,
       creditsUsed: 0,
       perplexityUsed: 0,
+      perplexityLimit: plan.perplexityLimit,
+      messagesLimit: plan.creditsLimit, // legacy sync
       creditsResetAt: getNextResetDate(),
     },
   });
 
-  console.log(`[CREDITS] User ${userId} upgradé vers ${newCircle} (${plan.creditsLimit} crédits/mois)`);
+  console.log(`[CREDITS] User ${userId} upgradé vers ${newCircle} (${newLimit} crédits, dont ${carryOver} reportés)`);
 }
 
-// ─── Reset mensuel ───────────────────────────────────────────────────────────
+// ─── Rollover mensuel ───────────────────────────────────────────────────────
+//
+// Les crédits non utilisés s'additionnent au mois suivant.
+// Cap d'accumulation = 3x le quota mensuel du plan.
+//
+// Exemple Voyageur (100/mois) :
+//   Mois 1 : utilise 30 → reste 70 → mois 2 = 100 + 70 = 170
+//   Mois 2 : utilise 0  → reste 170 → mois 3 = 100 + 170 = 270
+//   Mois 3 : utilise 0  → reste 270 → mois 4 = 100 + 270 = 300 (cap 3x100)
+//
+// → Parfait pour les petits budgets : pas de perte, accumulation quand en sommeil.
 
 async function maybeResetUserCredits(userId: string, resetAt: Date): Promise<boolean> {
   if (resetAt > new Date()) return false;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { creditsUsed: true, creditsLimit: true, circle: true },
+  });
+  if (!user) return false;
+
+  const circle = user.circle as BaymoraCircle;
+  const plan = PLANS[circle];
+  if (!plan || plan.priceEurCents === 0) {
+    // Découverte (gratuit) : pas de rollover, reset simple
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        creditsUsed: 0,
+        creditsLimit: plan?.creditsLimit ?? 15,
+        perplexityUsed: 0,
+        messagesUsed: 0,
+        creditsResetAt: getNextResetDate(),
+      },
+    });
+    console.log(`[CREDITS] Reset mensuel (découverte) pour user ${userId}`);
+    return true;
+  }
+
+  // Rollover : crédits restants + nouveau quota mensuel, cap à 3x
+  const remaining = Math.max(0, user.creditsLimit - user.creditsUsed);
+  const maxAccumulated = plan.creditsLimit * ROLLOVER_MAX_MULTIPLIER;
+  const newLimit = Math.min(plan.creditsLimit + remaining, maxAccumulated);
 
   await prisma.user.update({
     where: { id: userId },
     data: {
       creditsUsed: 0,
+      creditsLimit: newLimit,
       perplexityUsed: 0,
       messagesUsed: 0,
       creditsResetAt: getNextResetDate(),
     },
   });
 
-  console.log(`[CREDITS] Reset mensuel pour user ${userId}`);
+  console.log(`[CREDITS] Rollover mensuel pour ${userId}: ${remaining} reportés + ${plan.creditsLimit} nouveaux = ${newLimit} (cap: ${maxAccumulated})`);
   return true;
 }
 
