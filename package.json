@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -n API,WEB -c cyan,green \"tsx watch server/dev-server.ts\" \"vite\"",
-    "build": "prisma db push && vite build && pnpm build:server",
+    "build": "prisma db push --accept-data-loss && vite build && pnpm build:server",
     "build:server": "node build-server.mjs",
     "postinstall": "prisma generate",
     "start": "node dist/server/production.mjs",
