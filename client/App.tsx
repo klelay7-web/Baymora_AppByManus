@@ -29,6 +29,7 @@ const JoinPage = lazy(() => import("./pages/JoinPage"));
 const BoutiquePage = lazy(() => import("./pages/BoutiquePage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const ConciergePage = lazy(() => import("./pages/ConciergePage"));
+const PrestataireDashboard = lazy(() => import("./pages/PrestataireDashboard"));
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/join/:code" element={<JoinPage />} />
             <Route path="/voyages" element={<TripsPage />} />
             <Route path="/conciergerie" element={<ConciergePage />} />
+            <Route path="/prestataire" element={<PrestataireDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
