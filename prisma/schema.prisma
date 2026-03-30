@@ -66,6 +66,12 @@ model User {
   tripShares         TripShare[]
   prestataire        Prestataire?
 
+  @@index([email])
+  @@index([circle])
+  @@index([creditsResetAt])
+  @@index([cancelledAt])
+  @@index([stripeCustomerId])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -126,6 +132,7 @@ model Conversation {
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages       Message[]
 
+  @@index([userId, createdAt])
   @@map("conversations")
 }
 
@@ -140,6 +147,7 @@ model Message {
 
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
+  @@index([conversationId, createdAt])
   @@map("messages")
 }
 
@@ -169,6 +177,7 @@ model PointTransaction {
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
   @@map("point_transactions")
 }
 
@@ -199,6 +208,8 @@ model Trip {
   forks        Trip[]   @relation("TripFork")
   shares       TripShare[]
 
+  @@index([userId, status])
+  @@index([forkedFromId])
   @@map("trips")
 }
 
@@ -219,6 +230,8 @@ model TripShare {
   trip             Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
   sharer           User     @relation(fields: [sharerId], references: [id], onDelete: Cascade)
 
+  @@index([sharerId, createdAt])
+  @@index([tripId])
   @@map("trip_shares")
 }
 
@@ -287,6 +300,7 @@ model GuestSession {
   createdAt      DateTime @default(now())
   expiresAt      DateTime                     // expire après 7 jours
 
+  @@index([expiresAt])
   @@map("guest_sessions")
 }
 
@@ -404,6 +418,9 @@ model Gift {
   sender         User     @relation("GiftSender", fields: [senderId], references: [id], onDelete: Cascade)
   recipient      User?    @relation("GiftRecipient", fields: [recipientId], references: [id], onDelete: SetNull)
 
+  @@index([senderId, createdAt])
+  @@index([recipientEmail])
+  @@index([status, expiresAt])
   @@map("gifts")
 }
 
@@ -423,6 +440,9 @@ model AffiliateClick {
 
   partner       Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
+  @@index([partnerId, createdAt])
+  @@index([userId])
+  @@index([convertedAt])
   @@map("affiliate_clicks")
 }
 
@@ -479,5 +499,7 @@ model PartnerVisit {
   prestataire       Prestataire @relation(fields: [prestataireId], references: [id], onDelete: Cascade)
   partner           Partner?    @relation(fields: [partnerId], references: [id], onDelete: SetNull)
 
+  @@index([prestataireId, createdAt])
+  @@index([partnerId])
   @@map("partner_visits")
 }

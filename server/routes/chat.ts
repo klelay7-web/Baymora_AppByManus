@@ -11,6 +11,7 @@ import {
   deductUserCredits, deductGuestCredits,
   calculateCreditCost, buildGuestFingerprint,
   checkUserPerplexity, checkGuestPerplexity,
+  checkGuestIPLimit,
 } from '../services/credits';
 
 const router = Router();
@@ -111,6 +112,15 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
     const guestFingerprint = !baymoraUser?.id
       ? buildGuestFingerprint(req.ip || 'unknown', req.headers['user-agent'] || 'unknown')
       : null;
+
+    // ── Anti-abus : max 3 sessions guest par IP par jour ────────────────────
+    if (guestFingerprint && !checkGuestIPLimit(req.ip || 'unknown')) {
+      res.status(429).json({
+        error: 'Trop de sessions depuis cette adresse. Créez un compte pour continuer.',
+        code: 'GUEST_IP_LIMIT',
+      });
+      return;
+    }
 
     // ── Vérification crédits AVANT l'appel IA ───────────────────────────────
     const creditCheck = baymoraUser?.id

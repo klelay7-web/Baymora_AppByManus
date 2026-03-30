@@ -39,10 +39,41 @@ export interface CreditDeduction {
   totalCost: number;
 }
 
-// ─── Guest fingerprinting ────────────────────────────────────────────────────
+// ─── Guest fingerprinting + anti-abus ────────────────────────────────────────
 
 export function buildGuestFingerprint(ip: string, userAgent: string): string {
   return crypto.createHash('sha256').update(`${ip}::${userAgent}`).digest('hex').substring(0, 64);
+}
+
+/**
+ * Rate limit guest sessions par IP : max 3 sessions par jour.
+ * Empêche de contourner le fingerprint en changeant de navigateur.
+ */
+const guestIPCounter = new Map<string, { count: number; resetAt: number }>();
+
+// Nettoyage toutes les 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of guestIPCounter.entries()) {
+    if (entry.resetAt < now) guestIPCounter.delete(key);
+  }
+}, 10 * 60 * 1000);
+
+export function checkGuestIPLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = guestIPCounter.get(ip);
+
+  if (!entry || entry.resetAt < now) {
+    guestIPCounter.set(ip, { count: 1, resetAt: now + 24 * 60 * 60 * 1000 }); // 24h
+    return true;
+  }
+
+  if (entry.count >= 3) {
+    return false; // Bloqué : trop de sessions guest depuis cette IP
+  }
+
+  entry.count++;
+  return true;
 }
 
 // ─── Vérification crédits (user authentifié) ─────────────────────────────────
@@ -192,43 +223,75 @@ export async function checkGuestPerplexity(fingerprint: string): Promise<CreditC
   };
 }
 
-// ─── Décompte après action ───────────────────────────────────────────────────
+// ─── Décompte après action (ATOMIQUE — protégé contre les race conditions) ──
 
-export async function deductUserCredits(userId: string, deduction: CreditDeduction): Promise<void> {
+export async function deductUserCredits(userId: string, deduction: CreditDeduction): Promise<boolean> {
   const creditCost = deduction.totalCost;
 
-  const updates: Record<string, any> = {
-    creditsUsed: { increment: creditCost },
-    messagesUsed: { increment: 1 }, // legacy
-  };
+  // Transaction atomique : vérifier + déduire en une seule opération
+  try {
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { creditsUsed: true, creditsLimit: true },
+      });
 
-  if (deduction.usedPerplexity) {
-    updates.perplexityUsed = { increment: 1 };
+      if (!user || (user.creditsUsed + creditCost > user.creditsLimit)) {
+        throw new Error('INSUFFICIENT_CREDITS');
+      }
+
+      const updates: Record<string, any> = {
+        creditsUsed: { increment: creditCost },
+        messagesUsed: { increment: 1 },
+      };
+      if (deduction.usedPerplexity) {
+        updates.perplexityUsed = { increment: 1 };
+      }
+
+      await tx.user.update({ where: { id: userId }, data: updates });
+    });
+
+    console.log(`[CREDITS] User ${userId}: -${creditCost} crédits (${deduction.model}${deduction.usedPerplexity ? ' +perplexity' : ''})`);
+    return true;
+  } catch (err: any) {
+    if (err.message === 'INSUFFICIENT_CREDITS') {
+      console.warn(`[CREDITS] User ${userId}: rejeté (race condition évitée)`);
+      return false;
+    }
+    throw err;
   }
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: updates,
-  });
-
-  console.log(`[CREDITS] User ${userId}: -${creditCost} crédits (${deduction.model}${deduction.usedPerplexity ? ' +perplexity' : ''})`);
 }
 
-export async function deductGuestCredits(fingerprint: string, deduction: CreditDeduction): Promise<void> {
-  const updates: Record<string, any> = {
-    creditsUsed: { increment: deduction.totalCost },
-  };
+export async function deductGuestCredits(fingerprint: string, deduction: CreditDeduction): Promise<boolean> {
+  try {
+    await prisma.$transaction(async (tx) => {
+      const session = await tx.guestSession.findUnique({
+        where: { fingerprint },
+        select: { creditsUsed: true, creditsLimit: true },
+      });
 
-  if (deduction.usedPerplexity) {
-    updates.perplexityUsed = { increment: 1 };
+      if (!session || (session.creditsUsed + deduction.totalCost > session.creditsLimit)) {
+        throw new Error('INSUFFICIENT_CREDITS');
+      }
+
+      const updates: Record<string, any> = {
+        creditsUsed: { increment: deduction.totalCost },
+      };
+      if (deduction.usedPerplexity) {
+        updates.perplexityUsed = { increment: 1 };
+      }
+
+      await tx.guestSession.update({ where: { fingerprint }, data: updates });
+    });
+
+    console.log(`[CREDITS] Guest ${fingerprint.substring(0, 8)}...: -${deduction.totalCost} crédits`);
+    return true;
+  } catch (err: any) {
+    if (err.message === 'INSUFFICIENT_CREDITS') {
+      return false;
+    }
+    throw err;
   }
-
-  await prisma.guestSession.update({
-    where: { fingerprint },
-    data: updates,
-  });
-
-  console.log(`[CREDITS] Guest ${fingerprint.substring(0, 8)}...: -${deduction.totalCost} crédits`);
 }
 
 // ─── Ajout de crédits (achat pack) ──────────────────────────────────────────

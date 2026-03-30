@@ -214,4 +214,27 @@ export function startBirthdayCron(): void {
   // Toutes les 24h
   setInterval(checkUpcomingDates, 24 * 60 * 60 * 1000);
   console.log('[CRON] Birthday cron démarré — alertes J-30 et J-7');
+
+  // ── Crons rétention & nettoyage (toutes les 24h, décalés) ──────────────
+  const { purgeExpiredAccounts, checkRetentionEmails, cleanupExpiredGuestSessions } = require('./retention');
+
+  // Purge comptes résiliés >90 jours (toutes les 24h, décalé de 1h)
+  setTimeout(async () => {
+    await purgeExpiredAccounts();
+    setInterval(purgeExpiredAccounts, 24 * 60 * 60 * 1000);
+  }, 60 * 60 * 1000);
+
+  // Emails de relance J+7, J+30, J+60 (toutes les 24h, décalé de 2h)
+  setTimeout(async () => {
+    await checkRetentionEmails();
+    setInterval(checkRetentionEmails, 24 * 60 * 60 * 1000);
+  }, 2 * 60 * 60 * 1000);
+
+  // Nettoyage sessions guest expirées (toutes les 6h)
+  setTimeout(async () => {
+    await cleanupExpiredGuestSessions();
+    setInterval(cleanupExpiredGuestSessions, 6 * 60 * 60 * 1000);
+  }, 30 * 60 * 1000);
+
+  console.log('[CRON] Rétention + purge + nettoyage guest programmés');
 }

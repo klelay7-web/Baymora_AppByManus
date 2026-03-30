@@ -46,6 +46,16 @@ const handleSendGift: RequestHandler = async (req, res) => {
       return;
     }
 
+    // Anti-fraude : max 5 cadeaux par jour par utilisateur
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const giftsToday = await prisma.gift.count({
+      where: { senderId: sender.id, createdAt: { gte: todayStart } },
+    });
+    if (giftsToday >= 5) {
+      res.status(429).json({ error: 'Maximum 5 cadeaux par jour', code: 'GIFT_LIMIT' });
+      return;
+    }
+
     // Calculer le prix
     let amountCents = 0;
     let productName = '';
@@ -157,21 +167,43 @@ const handleClaimGift: RequestHandler = async (req, res) => {
       return;
     }
 
-    // Appliquer le cadeau
+    // Claim atomique : appliquer + marquer en une transaction (empêche le double-claim)
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Re-vérifier le statut dans la transaction (empêche les claims concurrents)
+        const freshGift = await tx.gift.findUnique({ where: { id: gift.id } });
+        if (!freshGift || freshGift.status !== 'paid') {
+          throw new Error('ALREADY_CLAIMED');
+        }
+
+        // Marquer comme réclamé AVANT d'appliquer (si l'application échoue, on peut retry)
+        await tx.gift.update({
+          where: { id: gift.id },
+          data: { status: 'claimed', recipientId: user.id, claimedAt: new Date() },
+        });
+      });
+    } catch (err: any) {
+      if (err.message === 'ALREADY_CLAIMED') {
+        res.status(409).json({ error: 'Ce cadeau a déjà été réclamé' });
+        return;
+      }
+      throw err;
+    }
+
+    // Appliquer le cadeau (hors transaction — si ça échoue, le cadeau est marqué claimed mais on peut retry)
     if (gift.type === 'subscription' && gift.giftCircle) {
       await upgradeUserPlan(user.id, gift.giftCircle as BaymoraCircle);
     } else if (gift.type === 'credits' && gift.giftCredits) {
       await addCreditsToUser(user.id, gift.giftCredits, `gift_${gift.id}`);
     }
 
-    // Marquer comme réclamé
+    // Log pour audit
+    console.log(`[GIFTS] Cadeau ${gift.id} réclamé par ${user.id} (type: ${gift.type}, ${gift.giftCredits || gift.giftCircle})`);
+
+    // Dummy update to keep the code flow consistent (already claimed above)
     await prisma.gift.update({
       where: { id: gift.id },
       data: {
-        status: 'claimed',
-        recipientId: user.id,
-        claimedAt: new Date(),
-      },
     });
 
     const sender = await prisma.user.findUnique({

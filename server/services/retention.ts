@@ -164,3 +164,101 @@ async function sendCancellationEmail(email: string, prenom: string | null, purge
 
   await sendEmail(email, subject, html);
 }
+
+// ─── Emails de relance J+7, J+30, J+60 ──────────────────────────────────────
+
+export async function checkRetentionEmails(): Promise<number> {
+  const now = new Date();
+  let sent = 0;
+
+  for (const daysAgo of [7, 30, 60]) {
+    const targetDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    const dayBefore = new Date(targetDate.getTime() - 24 * 60 * 60 * 1000);
+
+    // Users résiliés il y a exactement N jours (fenêtre de 24h)
+    const users = await prisma.user.findMany({
+      where: {
+        cancelledAt: { gte: dayBefore, lt: targetDate },
+        purgeAt: { not: null },
+        email: { not: null },
+      },
+      select: { id: true, email: true, prenom: true, purgeAt: true, cancelReason: true },
+    });
+
+    for (const user of users) {
+      if (!user.email) continue;
+      const daysLeft = user.purgeAt ? retentionDaysLeft(user) : 0;
+
+      if (daysAgo === 7) {
+        await sendRetentionEmailJ7(user.email, user.prenom, daysLeft);
+      } else if (daysAgo === 30) {
+        await sendRetentionEmailJ30(user.email, user.prenom, daysLeft);
+      } else if (daysAgo === 60) {
+        await sendRetentionEmailJ60(user.email, user.prenom, daysLeft);
+      }
+      sent++;
+    }
+  }
+
+  if (sent > 0) console.log(`[RETENTION] ${sent} email(s) de relance envoyé(s)`);
+  return sent;
+}
+
+async function sendRetentionEmailJ7(email: string, prenom: string | null, daysLeft: number): Promise<void> {
+  const name = prenom || 'Voyageur';
+  await sendEmail(email, `${name}, on pense à vous`, buildRetentionHtml(name,
+    'Une semaine sans Baymora...',
+    `Vos préférences, vos compagnons de voyage et vos plans sont toujours là. Il vous reste <strong>${daysLeft} jours</strong> pour revenir.`,
+    'Retrouver mon compte →',
+  ));
+}
+
+async function sendRetentionEmailJ30(email: string, prenom: string | null, daysLeft: number): Promise<void> {
+  const name = prenom || 'Voyageur';
+  await sendEmail(email, `${name}, vos voyages vous attendent`, buildRetentionHtml(name,
+    'Ça fait un mois...',
+    `Votre conciergerie est en pause mais vos données sont intactes. Plus que <strong>${daysLeft} jours</strong> avant la suppression.<br><br><strong>Offre de retour : -50% sur votre premier mois</strong> si vous réactivez maintenant.`,
+    'Réactiver avec -50% →',
+  ));
+}
+
+async function sendRetentionEmailJ60(email: string, prenom: string | null, daysLeft: number): Promise<void> {
+  const name = prenom || 'Voyageur';
+  await sendEmail(email, `Dernier rappel — ${name}, vos données seront supprimées`, buildRetentionHtml(name,
+    'Dernier rappel avant suppression',
+    `Il ne reste que <strong>${daysLeft} jours</strong> avant la suppression définitive de votre compte, vos conversations, vos compagnons de voyage et vos plans sauvegardés.<br><br>Après cette date, tout sera perdu.`,
+    'Sauver mon compte →',
+  ));
+}
+
+function buildRetentionHtml(name: string, title: string, body: string, ctaText: string): string {
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="font-family:-apple-system,sans-serif;background:#f5f3ef;margin:0;padding:0;">
+<div style="max-width:560px;margin:32px auto;background:#fff;border:1px solid #e8e3da;border-radius:16px;overflow:hidden;">
+  <div style="background:linear-gradient(135deg,#1a1e2e,#0f1420);padding:32px;text-align:center;">
+    <span style="font-weight:800;font-size:24px;color:#c8a94a;">B</span>
+  </div>
+  <div style="padding:32px;">
+    <h1 style="font-size:22px;color:#1a1a1a;margin:0 0 12px;">${title}</h1>
+    <p style="color:#555;font-size:15px;line-height:1.6;margin:0 0 24px;">${body}</p>
+    <div style="text-align:center;margin-bottom:12px;">
+      <a href="https://baymora.com/chat" style="display:inline-block;background:#c8a94a;color:#000;font-weight:700;font-size:15px;padding:14px 32px;border-radius:10px;text-decoration:none;">${ctaText}</a>
+    </div>
+  </div>
+  <div style="padding:16px 32px;text-align:center;border-top:1px solid #e8e3da;background:#faf9f7;">
+    <span style="color:#999;font-size:11px;">Baymora · Conciergerie de voyage privée</span>
+  </div>
+</div></body></html>`;
+}
+
+// ─── Nettoyage sessions guest expirées ───────────────────────────────────────
+
+export async function cleanupExpiredGuestSessions(): Promise<number> {
+  const result = await prisma.guestSession.deleteMany({
+    where: { expiresAt: { lt: new Date() } },
+  });
+  if (result.count > 0) {
+    console.log(`[RETENTION] ${result.count} session(s) guest expirée(s) supprimée(s)`);
+  }
+  return result.count;
+}
