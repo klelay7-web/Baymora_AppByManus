@@ -3,6 +3,7 @@ import { hashPassword, verifyPassword } from '../services/auth';
 import { prisma } from '../db';
 import jwt from 'jsonwebtoken';
 import type { BaymoraUser, TravelCompanion, ImportantDate } from '../types';
+import { PLANS } from '../types';
 import { getUpcomingForUser } from '../services/birthdayCron';
 import { sendWelcomeEmail } from '../services/email';
 import { addPoints, generateInviteCode } from './club';
@@ -58,6 +59,13 @@ function dbUserToBaymora(user: any): BaymoraUser {
     email: user.email ?? undefined,
     mode: user.mode as 'fantome' | 'signature',
     circle: user.circle as BaymoraUser['circle'],
+    // Crédits
+    creditsUsed: user.creditsUsed ?? 0,
+    creditsLimit: user.creditsLimit ?? 15,
+    creditsResetAt: user.creditsResetAt ?? new Date(),
+    perplexityUsed: user.perplexityUsed ?? 0,
+    perplexityLimit: user.perplexityLimit ?? 3,
+    // Legacy
     messagesUsed: user.messagesUsed,
     messagesLimit: user.messagesLimit,
     passwordHash: user.passwordHash ?? undefined,
@@ -66,6 +74,8 @@ function dbUserToBaymora(user: any): BaymoraUser {
     clubPoints: user.clubPoints ?? 0,
     clubVerified: user.clubVerified ?? false,
     invitedById: user.invitedById ?? undefined,
+    stripeCustomerId: user.stripeCustomerId ?? undefined,
+    stripeSubscriptionId: user.stripeSubscriptionId ?? undefined,
     travelCompanions: (user.companions || []).map((c: any): TravelCompanion => ({
       id: c.id,
       name: c.name,
@@ -123,6 +133,8 @@ export const handleRegister: RequestHandler = async (req, res) => {
 
     const passwordHash = password ? await hashPassword(password) : undefined;
 
+    const plan = PLANS.decouverte;
+
     const user = await prisma.user.create({
       data: {
         pseudo: pseudo.trim(),
@@ -132,6 +144,12 @@ export const handleRegister: RequestHandler = async (req, res) => {
         passwordHash: passwordHash || null,
         preferences: {},
         invitedById: inviter?.id ?? null,
+        // Initialisation crédits (plan Découverte)
+        creditsUsed: 0,
+        creditsLimit: plan.creditsLimit,
+        perplexityUsed: 0,
+        perplexityLimit: plan.perplexityLimit,
+        creditsResetAt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
       },
       include: { companions: true, dates: true },
     });
