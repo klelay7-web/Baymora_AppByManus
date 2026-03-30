@@ -1120,7 +1120,7 @@ export default function Chat() {
   };
 
   const circleBadge = user
-    ? ({ decouverte: '○', essentiel: '✦', elite: '✦✦', prive: '✦✦✦', fondateur: '✦✦✦✦' } as Record<string, string>)[user.circle]
+    ? ({ decouverte: '○', voyageur: '✦', explorateur: '✦✦', prive: '✦✦✦', fondateur: '✦✦✦✦' } as Record<string, string>)[user.circle]
     : null;
 
   const hasPlan = tripPlan && (tripPlan.destination || tripPlan.hotels?.length || tripPlan.flights?.length || tripPlan.activities?.length || tripPlan.restaurants?.length);

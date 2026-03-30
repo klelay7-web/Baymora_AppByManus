@@ -8,13 +8,28 @@ export interface BaymoraUser {
   prenom?: string;
   email?: string;
   mode: 'fantome' | 'signature';
-  circle: 'decouverte' | 'essentiel' | 'elite' | 'prive' | 'fondateur';
+  circle: 'decouverte' | 'voyageur' | 'explorateur' | 'prive' | 'fondateur';
+  creditsUsed: number;
+  creditsLimit: number;
+  creditsResetAt: string;
+  perplexityUsed: number;
+  perplexityLimit: number;
+  // Legacy
   messagesUsed: number;
   messagesLimit: number;
   preferences: Record<string, any>;
   travelCompanions: any[];
   importantDates: any[];
   createdAt: string;
+}
+
+/** Crédits info renvoyés par chaque réponse chat */
+export interface ChatCreditsInfo {
+  used: number;
+  limit: number;
+  remaining: number;
+  cost: number;
+  model: 'opus' | 'sonnet' | 'fallback';
 }
 
 interface AuthState {
@@ -26,7 +41,11 @@ interface AuthState {
 
 const TOKEN_KEY = 'baymora_token';
 const GUEST_MSG_KEY = 'baymora_guest_msgs';
-export const FREE_MESSAGES_LIMIT = 10;
+
+/** Nombre de crédits gratuits (Découverte) — correspond au serveur */
+export const FREE_CREDITS_LIMIT = 15;
+/** @deprecated — utiliser FREE_CREDITS_LIMIT */
+export const FREE_MESSAGES_LIMIT = 15;
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 

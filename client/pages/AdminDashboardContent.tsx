@@ -74,13 +74,13 @@ function authHeader() {
 }
 
 const CIRCLE_BADGE: Record<string, string> = {
-  decouverte: "○", essentiel: "✦", elite: "✦✦", prive: "✦✦✦", fondateur: "✦✦✦✦",
+  decouverte: "○", voyageur: "✦", explorateur: "✦✦", prive: "✦✦✦", fondateur: "✦✦✦✦",
 };
 const CIRCLE_COLOR: Record<string, string> = {
-  decouverte: "text-white/30", essentiel: "text-secondary", elite: "text-secondary",
+  decouverte: "text-white/30", voyageur: "text-secondary", explorateur: "text-secondary",
   prive: "text-amber-300", fondateur: "text-amber-200",
 };
-const CIRCLES = ["decouverte", "essentiel", "elite", "prive", "fondateur"];
+const CIRCLES = ["decouverte", "voyageur", "explorateur", "prive", "fondateur"];
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 

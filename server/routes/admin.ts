@@ -107,7 +107,7 @@ router.get('/users', requireOwner, async (req, res) => {
 router.patch('/users/:id/circle', requireOwner, async (req, res) => {
   try {
     const { circle } = req.body;
-    const valid = ['decouverte', 'essentiel', 'elite', 'prive', 'fondateur'];
+    const valid = ['decouverte', 'voyageur', 'explorateur', 'prive', 'fondateur'];
     if (!valid.includes(circle)) {
       res.status(400).json({ error: 'Circle invalide' }); return;
     }

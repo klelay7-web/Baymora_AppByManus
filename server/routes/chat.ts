@@ -4,7 +4,14 @@ import { callLLM, type LLMMessage } from '../services/ai/llm';
 import { getUserById } from './users';
 import { prisma } from '../db';
 import type { Message } from '../types';
+import { CREDIT_PACKS, UNLOCK_SINGLE_PRICE_CENTS } from '../types';
 import { sendEmail } from '../services/email';
+import {
+  checkUserCredits, checkGuestCredits,
+  deductUserCredits, deductGuestCredits,
+  calculateCreditCost, buildGuestFingerprint,
+  checkUserPerplexity, checkGuestPerplexity,
+} from '../services/credits';
 
 const router = Router();
 
@@ -100,6 +107,35 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
     const trimmed = content.trim();
     const baymoraUser = (req as any).baymoraUser;
 
+    // ── Build guest fingerprint for credit tracking ─────────────────────────
+    const guestFingerprint = !baymoraUser?.id
+      ? buildGuestFingerprint(req.ip || 'unknown', req.headers['user-agent'] || 'unknown')
+      : null;
+
+    // ── Vérification crédits AVANT l'appel IA ───────────────────────────────
+    const creditCheck = baymoraUser?.id
+      ? await checkUserCredits(baymoraUser.id)
+      : await checkGuestCredits(guestFingerprint!);
+
+    if (!creditCheck.allowed) {
+      res.status(402).json({
+        error: 'Crédits épuisés',
+        code: 'CREDITS_EXHAUSTED',
+        credits: {
+          used: creditCheck.used,
+          limit: creditCheck.limit,
+          remaining: 0,
+        },
+        upgrade: creditCheck.upgradeOptions,
+      });
+      return;
+    }
+
+    // ── Vérification Perplexity disponible (pour gating côté LLM) ───────────
+    const perplexityCheck = baymoraUser?.id
+      ? await checkUserPerplexity(baymoraUser.id)
+      : await checkGuestPerplexity(guestFingerprint!);
+
     // ── Conversation en base (utilisateur authentifié)
     if (baymoraUser?.id) {
       const conversation = await prisma.conversation.findUnique({
@@ -133,7 +169,16 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
 
       const userRecord = await getUserById(baymoraUser.id);
       const msgCount = llmMessages.filter(m => m.role === 'user').length;
-      const llmResult = await callLLM(llmMessages, baymoraUser.id, conversation.language as 'fr' | 'en', userRecord, msgCount);
+      const llmResult = await callLLM(llmMessages, baymoraUser.id, conversation.language as 'fr' | 'en', userRecord, msgCount, perplexityCheck.allowed);
+
+      // ── Décompte crédits après l'appel ────────────────────────────────────
+      const deduction = calculateCreditCost(
+        llmResult.model === 'fallback' ? 'fallback' : llmResult.model,
+        llmResult.usedPerplexity ?? false,
+      );
+      if (deduction.totalCost > 0) {
+        await deductUserCredits(baymoraUser.id, deduction);
+      }
 
       // Sauvegarder réponse assistant
       const assistantMsg = await prisma.message.create({
@@ -155,15 +200,25 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
         },
       });
 
+      // Récupérer le solde mis à jour
+      const updatedCredits = await checkUserCredits(baymoraUser.id);
+
       res.status(200).json({
         messageId: assistantMsg.id,
         response: llmResult.content,
         conversationId,
         timestamp: assistantMsg.createdAt,
+        credits: {
+          used: updatedCredits.used,
+          limit: updatedCredits.limit,
+          remaining: updatedCredits.remaining,
+          cost: deduction.totalCost,
+          model: deduction.model,
+        },
       });
 
     } else {
-      // ── Guest : conversation en mémoire
+      // ── Guest : conversation en mémoire ───────────────────────────────────
       const conv = guestConvMap.get(conversationId);
       if (!conv) {
         res.status(404).json({ error: 'Conversation non trouvée', code: 'NOT_FOUND' });
@@ -179,7 +234,16 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
 
       const llmMessages: LLMMessage[] = conv.messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
       const guestMsgCount = llmMessages.filter(m => m.role === 'user').length;
-      const llmResult = await callLLM(llmMessages, conv.userId, conv.language as 'fr' | 'en', null, guestMsgCount);
+      const llmResult = await callLLM(llmMessages, conv.userId, conv.language as 'fr' | 'en', null, guestMsgCount, perplexityCheck.allowed);
+
+      // ── Décompte crédits guest ────────────────────────────────────────────
+      const deduction = calculateCreditCost(
+        llmResult.model === 'fallback' ? 'fallback' : llmResult.model,
+        llmResult.usedPerplexity ?? false,
+      );
+      if (deduction.totalCost > 0 && guestFingerprint) {
+        await deductGuestCredits(guestFingerprint, deduction);
+      }
 
       const assistantMsg: Message = { id: uuidv4(), role: 'assistant', content: llmResult.content, timestamp: new Date() };
       conv.messages.push(assistantMsg);
@@ -188,11 +252,23 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
       const signals = extractProfileSignals(conv.messages);
       conv.pendingProfile = { ...conv.pendingProfile, ...signals };
 
+      // Récupérer solde guest mis à jour
+      const updatedCredits = guestFingerprint
+        ? await checkGuestCredits(guestFingerprint)
+        : { used: 0, limit: 15, remaining: 15 };
+
       res.status(200).json({
         messageId: assistantMsg.id,
         response: llmResult.content,
         conversationId,
         timestamp: assistantMsg.timestamp,
+        credits: {
+          used: updatedCredits.used,
+          limit: updatedCredits.limit,
+          remaining: updatedCredits.remaining,
+          cost: deduction.totalCost,
+          model: deduction.model,
+        },
       });
     }
   } catch (error) {

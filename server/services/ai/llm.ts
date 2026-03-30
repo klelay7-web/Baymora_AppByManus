@@ -550,17 +550,20 @@ type LLMMessage = PersonaLLMMessage;
 export interface LLMResponse {
   content: string;
   model: 'opus' | 'sonnet' | 'fallback';
+  usedPerplexity: boolean;
 }
 
 /**
  * Appeler l'IA avec routing automatique Opus / Sonnet
+ * @param perplexityAllowed — false si le quota Perplexity du user/guest est épuisé
  */
 export async function callLLM(
   messages: LLMMessage[],
   userId: string = 'guest',
   language: 'fr' | 'en' = 'fr',
   userRecord?: any,
-  messageCount?: number
+  messageCount?: number,
+  perplexityAllowed: boolean = true,
 ): Promise<LLMResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
@@ -569,6 +572,7 @@ export async function callLLM(
     return {
       content: getFallbackResponse(messages, language),
       model: 'fallback',
+      usedPerplexity: false,
     };
   }
 
@@ -580,13 +584,15 @@ export async function callLLM(
 
   console.log(`[LLM] Routing → ${modelKey} (${modelId}) | user: ${userId} | msg length: ${lastMessage.length}`);
 
-  // ── Enrichissement Perplexity (données temps réel) ──────────────────────────
+  // ── Enrichissement Perplexity (données temps réel, gated par quota) ─────────
   let webContext: string | null = null;
-  if (shouldCallPerplexity(lastMessage)) {
+  let usedPerplexity = false;
+  if (perplexityAllowed && shouldCallPerplexity(lastMessage)) {
     const searchQuery = buildSearchQuery(lastMessage);
     const perplexityResult = await searchPerplexity(searchQuery);
     if (perplexityResult) {
       webContext = formatPerplexityContext(perplexityResult);
+      usedPerplexity = true;
     }
   }
 
@@ -633,7 +639,7 @@ export async function callLLM(
         const prefs = userRecord.preferences;
         const profile: FlightProfile = {
           flightType: /international|long.?courr|usa|asia|monde/i.test(lastMessage) ? 'international' : 'schengen',
-          hasLounge: prefs.hasLounge || userRecord.circle === 'prive' || userRecord.circle === 'fondateur' || userRecord.circle === 'elite',
+          hasLounge: prefs.hasLounge || userRecord.circle === 'prive' || userRecord.circle === 'fondateur' || userRecord.circle === 'explorateur',
           hasTSAPrecheck: prefs.hasPriorityLane || userRecord.circle === 'prive' || userRecord.circle === 'fondateur',
           checkedLuggage: !/cabine only|carry.?on|sans bagage/i.test(lastMessage),
           flightTime,
@@ -704,7 +710,7 @@ export async function callLLM(
 
     console.log(`[LLM] Réponse reçue | modèle: ${modelKey} | tokens: ${response.usage?.output_tokens}`);
 
-    return { content, model: modelKey };
+    return { content, model: modelKey, usedPerplexity };
   } catch (error) {
     console.error(`[LLM] Erreur ${modelKey}:`, error);
 
@@ -723,7 +729,7 @@ export async function callLLM(
         const content = response.content[0].type === 'text'
           ? response.content[0].text
           : getFallbackResponse(messages, language);
-        return { content, model: 'sonnet' };
+        return { content, model: 'sonnet', usedPerplexity };
       } catch {
         // Les deux ont échoué
       }
@@ -732,6 +738,7 @@ export async function callLLM(
     return {
       content: getFallbackResponse(messages, language),
       model: 'fallback',
+      usedPerplexity: false,
     };
   }
 }

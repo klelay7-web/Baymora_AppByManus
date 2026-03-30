@@ -32,33 +32,33 @@ function authHeader() {
 
 const CIRCLE_LABEL: Record<string, string> = {
   decouverte: 'Découverte',
-  essentiel: 'Essentiel',
-  elite: 'Élite',
-  prive: 'Privé',
+  voyageur: 'Voyageur',
+  explorateur: 'Explorateur',
+  prive: 'Cercle Privé',
   fondateur: 'Fondateur',
 };
 
 const CIRCLE_BADGE: Record<string, string> = {
   decouverte: '○',
-  essentiel: '✦',
-  elite: '✦✦',
+  voyageur: '✦',
+  explorateur: '✦✦',
   prive: '✦✦✦',
   fondateur: '✦✦✦✦',
 };
 
 const CIRCLE_COLOR: Record<string, string> = {
   decouverte: 'text-white/40',
-  essentiel: 'text-secondary',
-  elite: 'text-secondary',
+  voyageur: 'text-secondary',
+  explorateur: 'text-secondary',
   prive: 'text-amber-300',
   fondateur: 'text-amber-200',
 };
 
 const PLAN_NEXT: Record<string, { label: string; circle: string; price: string }> = {
-  decouverte: { label: 'Essentiel', circle: 'essentiel', price: '29€/mois' },
-  essentiel: { label: 'Élite', circle: 'elite', price: '99€/mois' },
-  elite: { label: 'Privé', circle: 'prive', price: '299€/mois' },
-  prive: { label: '', circle: '', price: '' },
+  decouverte: { label: 'Voyageur', circle: 'voyageur', price: '9,90€/mois' },
+  voyageur: { label: 'Explorateur', circle: 'explorateur', price: '29€/mois' },
+  explorateur: { label: 'Cercle Privé', circle: 'prive', price: '79€/mois' },
+  prive: { label: 'Fondateur', circle: 'fondateur', price: '199€/mois' },
   fondateur: { label: '', circle: '', price: '' },
 };
 
