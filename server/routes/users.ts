@@ -412,8 +412,117 @@ const handleUpcoming: RequestHandler = async (req, res) => {
   }
 };
 
+// ─── Password Reset ──────────────────────────────────────────────────────────
+
+const handleForgotPassword: RequestHandler = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) { res.status(400).json({ error: 'Email requis' }); return; }
+
+    const user = await prisma.user.findFirst({
+      where: { email: email.trim().toLowerCase() },
+    });
+
+    // Toujours répondre succès (ne pas révéler si l'email existe)
+    if (!user) {
+      res.json({ success: true, message: 'Si ce compte existe, un lien de réinitialisation a été envoyé.' });
+      return;
+    }
+
+    // Générer un token de reset (valide 1h)
+    const crypto = await import('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
+    // Stocker dans preferences (pas de champ dédié — pragmatique)
+    const prefs = (user.preferences as Record<string, any>) || {};
+    prefs._resetToken = resetToken;
+    prefs._resetExpiry = resetExpiry.toISOString();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { preferences: prefs },
+    });
+
+    const resetUrl = `${process.env.CORS_ORIGIN || 'https://baymora.com'}/auth?reset=${resetToken}`;
+    const name = user.prenom || 'Voyageur';
+
+    await sendWelcomeEmail(email, name); // Temporary — TODO: create dedicated reset email template
+    // For now, use a simple email:
+    const { sendEmail } = await import('../services/email');
+    await sendEmail(email, 'Réinitialisation de votre mot de passe Baymora', `
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="font-family:-apple-system,sans-serif;background:#f5f3ef;margin:0;padding:0;">
+<div style="max-width:560px;margin:32px auto;background:#fff;border:1px solid #e8e3da;border-radius:16px;overflow:hidden;">
+  <div style="background:linear-gradient(135deg,#1a1e2e,#0f1420);padding:32px;text-align:center;">
+    <span style="font-weight:800;font-size:24px;color:#c8a94a;">B</span>
+  </div>
+  <div style="padding:32px;">
+    <h1 style="font-size:22px;color:#1a1a1a;margin:0 0 12px;">Réinitialisation du mot de passe</h1>
+    <p style="color:#555;font-size:15px;line-height:1.6;margin:0 0 24px;">
+      Bonjour ${name}, cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe. Ce lien est valable 1 heure.
+    </p>
+    <div style="text-align:center;margin-bottom:12px;">
+      <a href="${resetUrl}" style="display:inline-block;background:#c8a94a;color:#000;font-weight:700;font-size:15px;padding:14px 32px;border-radius:10px;text-decoration:none;">Réinitialiser mon mot de passe →</a>
+    </div>
+    <p style="color:#999;font-size:12px;text-align:center;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+  </div>
+</div></body></html>`);
+
+    console.log(`[AUTH] Reset password email envoyé à ${email}`);
+    res.json({ success: true, message: 'Si ce compte existe, un lien de réinitialisation a été envoyé.' });
+  } catch (error) {
+    console.error('Erreur forgot-password:', error);
+    res.status(500).json({ error: 'Erreur envoi email' });
+  }
+};
+
+const handleResetPassword: RequestHandler = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      res.status(400).json({ error: 'Token et mot de passe requis' }); return;
+    }
+    if (password.length < 8) {
+      res.status(400).json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }); return;
+    }
+
+    // Chercher l'utilisateur par token
+    const users = await prisma.user.findMany({
+      where: { preferences: { path: ['_resetToken'], equals: token } },
+    });
+
+    const user = users[0];
+    if (!user) {
+      res.status(400).json({ error: 'Lien invalide ou expiré' }); return;
+    }
+
+    const prefs = (user.preferences as Record<string, any>) || {};
+    if (!prefs._resetExpiry || new Date(prefs._resetExpiry) < new Date()) {
+      res.status(400).json({ error: 'Lien expiré. Demandez un nouveau lien.' }); return;
+    }
+
+    // Mettre à jour le mot de passe
+    const newHash = await hashPassword(password);
+    delete prefs._resetToken;
+    delete prefs._resetExpiry;
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: newHash, preferences: prefs },
+    });
+
+    console.log(`[AUTH] Mot de passe réinitialisé pour ${user.email}`);
+    res.json({ success: true, message: 'Mot de passe réinitialisé avec succès' });
+  } catch (error) {
+    console.error('Erreur reset-password:', error);
+    res.status(500).json({ error: 'Erreur réinitialisation' });
+  }
+};
+
 router.post('/register', handleRegister);
 router.post('/login', handleLogin);
+router.post('/forgot-password', handleForgotPassword);
+router.post('/reset-password', handleResetPassword);
 router.get('/me', handleGetMe);
 router.patch('/me', handleUpdateMe);
 router.get('/me/upcoming', handleUpcoming);

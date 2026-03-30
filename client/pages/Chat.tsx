@@ -1,112 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, Calendar, Users, Wallet, Hotel, Utensils, Zap, Plane, StickyNote, ChevronRight, Star, ExternalLink, Navigation, Car, Mail, Download, Printer, ExternalLink as LinkIcon, Bookmark } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT, FREE_CREDITS_LIMIT } from '@/hooks/useAuth';
 import ConversionModal from '@/components/ConversionModal';
 import CreditGate from '@/components/CreditGate';
 import ContactPicker from '@/components/ContactPicker';
+import { CalendarCard, PlacesCarousel, MapEmbed, JourneyView } from '@/components/chat/ChatCards';
+import {
+  type TripPlan, type TripPlanItem, type TripPlanFlight, type TripPlanTransport,
+  type CalendarEvent, type PlaceItem, type MapView, type Journey,
+  parseMessage, mergeTripPlan, formatPlanAsText,
+  TYPE_EMOJI, TRANSPORT_MODE_LABELS, INSPIRATION_CHIPS, DESTINATION_CHIPS,
+} from '@/components/chat/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-// ─── Parseur de message complet ───────────────────────────────────────────────
-// Tags supportés :
-//   :::QR::: A | B | C :::END:::          → suggestions rapides
-//   :::CONTACTS:::                          → sélecteur de contacts
-//   :::GCAL:::{"title":...}:::END:::        → bouton Google Calendar
+// Types, parsing et composants visuels extraits dans @/components/chat/
 
-// ─── Plan de voyage ───────────────────────────────────────────────────────────
 
-export interface TripPlanItem {
-  name: string;
-  note?: string;
-  stars?: number;
-  bookingUrl?: string;
-  price?: string;
-  status?: 'suggestion' | 'selected';
-}
+type ReservationMode = 'self' | 'assistant' | 'baymora';
 
-export interface TripPlanFlight {
-  from: string;
-  to: string;
-  date?: string;
-  time?: string;
-  operator?: string;
-  price?: string;
-  status?: 'suggestion' | 'selected';
-}
-
-export interface TripPlanTransport {
-  toAirport?: { needed: boolean; mode?: string; departureTime?: string; price?: string };
-  onSite?: { needed: boolean; mode?: string; note?: string };
-  return?: { needed: boolean; mode?: string; note?: string };
-  eatAtAirport?: boolean;
-  flightDeparture?: string;
-  returnFlightDeparture?: string;
-}
-
-export interface TripPlan {
-  destination?: string;
-  dates?: string;
-  duration?: string;
-  travelers?: number;
-  travelerNames?: string[];
-  budget?: string;
-  hotels?: TripPlanItem[];
-  flights?: TripPlanFlight[];
-  activities?: TripPlanItem[];
-  restaurants?: TripPlanItem[];
-  notes?: string[];
-  transport?: TripPlanTransport;
-  logistiqueComplete?: boolean;
-}
-
-// Deep merge for trip plan (preserves existing items, updates by name)
-function mergeByName<T extends { name: string }>(prev?: T[], next?: T[]): T[] | undefined {
-  if (!next?.length) return prev;
-  if (!prev?.length) return next;
-  const map = new Map(prev.map(i => [i.name, i]));
-  for (const item of next) map.set(item.name, { ...map.get(item.name), ...item });
-  return Array.from(map.values());
-}
-
-function mergeTripPlan(prev: TripPlan | null, update: TripPlan): TripPlan {
-  const base = prev ?? {};
-  return {
-    ...base,
-    ...update,
-    hotels: mergeByName(base.hotels, update.hotels),
-    flights: update.flights ?? base.flights,
-    activities: mergeByName(base.activities, update.activities),
-    restaurants: mergeByName(base.restaurants, update.restaurants),
-    notes: update.notes ?? base.notes,
-    transport: {
-      ...base.transport,
-      ...update.transport,
-      toAirport: update.transport?.toAirport
-        ? { ...base.transport?.toAirport, ...update.transport.toAirport }
-        : base.transport?.toAirport,
-      onSite: update.transport?.onSite
-        ? { ...base.transport?.onSite, ...update.transport.onSite }
-        : base.transport?.onSite,
-      return: update.transport?.return
-        ? { ...base.transport?.return, ...update.transport.return }
-        : base.transport?.return,
-    },
-  };
-}
-
-export interface CalendarEvent {
-  title: string;
-  date: string;       // YYYY-MM-DD
-  time?: string;      // HH:MM
-  duration?: number;  // minutes
-  location?: string;
-  notes?: string;
-}
-
-// ─── Carte lieu (carte enrichie) ───────────────────────────────────────────
+// Types et composants visuels extraits dans @/components/chat/
+// PlaceItem, MapView, Journey, CalendarEvent — importés depuis ./chat/types
+// CalendarCard, PlaceCard, PlacesCarousel, MapEmbed, JourneyView — importés depuis ./chat/ChatCards
 
 export interface PlaceItem {
   name: string;

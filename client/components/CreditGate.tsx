@@ -14,7 +14,7 @@
  */
 
 import { useState } from 'react';
-import { Sparkles, ArrowRight, Crown, Zap, Gift, TrendingUp, X } from 'lucide-react';
+import { Sparkles, ArrowRight, Crown, Zap, Gift, TrendingUp, X, AlertCircle } from 'lucide-react';
 import type { UpgradeOptions, CreditsInfo } from '@/hooks/useChat';
 
 // ─── Config des plans pour l'affichage ──────────────────────────────────────
@@ -111,6 +111,7 @@ export default function CreditGate({
 }: Props) {
   const [loadingUnlock, setLoadingUnlock] = useState<string | null>(null);
   const [loadingUpgrade, setLoadingUpgrade] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const nextPlan = upgradeOptions?.nextPlan;
   const nextPlanInfo = nextPlan ? PLAN_DISPLAY[nextPlan] : null;
@@ -133,7 +134,7 @@ export default function CreditGate({
       const data = await response.json();
       if (data.url) window.location.href = data.url;
     } catch {
-      // silently fail
+      setError('Erreur lors du paiement. Veuillez réessayer.');
     } finally {
       setLoadingUnlock(null);
     }
@@ -159,7 +160,7 @@ export default function CreditGate({
       const data = await response.json();
       if (data.url) window.location.href = data.url;
     } catch {
-      // silently fail
+      setError('Erreur lors de la mise à niveau. Veuillez réessayer.');
     } finally {
       setLoadingUpgrade(false);
     }
@@ -192,6 +193,15 @@ export default function CreditGate({
         )}
 
         <div className="p-6 sm:p-8">
+
+          {/* ── Erreur ── */}
+          {error && (
+            <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+              <p className="text-red-300 text-xs">{error}</p>
+              <button onClick={() => setError(null)} className="text-red-400 ml-auto"><X className="h-3 w-3" /></button>
+            </div>
+          )}
 
           {/* ── Header ── */}
           <div className="text-center mb-6">
@@ -411,6 +421,6 @@ async function handleBuyPack(packId: string) {
     const data = await response.json();
     if (data.url) window.location.href = data.url;
   } catch {
-    // silently fail
+    console.error('[CreditGate] Erreur achat pack');
   }
 }
