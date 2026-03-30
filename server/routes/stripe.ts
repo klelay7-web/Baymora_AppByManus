@@ -23,6 +23,8 @@ import { Router, RequestHandler } from 'express';
 import Stripe from 'stripe';
 import { PLANS, CREDIT_PACKS, UNLOCK_TIERS, type BaymoraCircle } from '../types';
 import { upgradeUserPlan, addCreditsToUser, grantGuestUnlock, grantUserUnlock } from '../services/credits';
+import { handleGiftPayment } from './gifts';
+import { cancelSubscription } from '../services/retention';
 import { prisma } from '../db';
 
 const router = Router();
@@ -299,22 +301,23 @@ const handleWebhook: RequestHandler = async (req, res) => {
 
         console.log(`[STRIPE] Déblocage ${meta.unlockId} (+${credits} crédits) pour ${meta.userId || `guest ${meta.fingerprint?.substring(0, 8)}...`}`);
       }
+
+      // ── Cadeau payé ─────────────────────────────────────────────────────
+      if (paymentType === 'gift' && meta.giftId) {
+        await handleGiftPayment(meta.giftId, session.id);
+        console.log(`[STRIPE] Cadeau ${meta.giftId} payé`);
+      }
     }
 
-    // ── Annulation d'abonnement ─────────────────────────────────────────────
+    // ── Annulation d'abonnement → rétention 90 jours ───────────────────────
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as Stripe.Subscription;
-      // Retrouver l'utilisateur par stripeSubscriptionId
       const user = await prisma.user.findFirst({
         where: { stripeSubscriptionId: subscription.id },
       });
       if (user) {
-        await upgradeUserPlan(user.id, 'decouverte');
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { stripeSubscriptionId: null },
-        });
-        console.log(`[STRIPE] Abonnement annulé → ${user.pseudo} revient en Découverte`);
+        await cancelSubscription(user.id, 'stripe_cancellation');
+        console.log(`[STRIPE] Résiliation → ${user.pseudo} en rétention 90 jours`);
       }
     }
 

@@ -46,6 +46,10 @@ model User {
   // ─── Stripe ───────────────────────────────────────────────────────────────
   stripeCustomerId   String?  @unique
   stripeSubscriptionId String?
+  // ─── Résiliation & rétention ──────────────────────────────────────────────
+  cancelledAt    DateTime?                     // date de résiliation
+  purgeAt        DateTime?                     // date de suppression définitive (cancelledAt + 90 jours)
+  cancelReason   String?                       // motif de départ (optionnel)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -57,6 +61,8 @@ model User {
   trips              Trip[]
   conciergeRequests  ConciergeRequest[]
   creditPurchases    CreditPurchase[]
+  giftsSent          Gift[]     @relation("GiftSender")
+  giftsReceived      Gift[]     @relation("GiftRecipient")
 
   @@map("users")
 }
@@ -322,4 +328,35 @@ model PartnerOffer {
   partner       Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
 
   @@map("partner_offers")
+}
+
+// ─── Cadeaux ─────────────────────────────────────────────────────────────────
+
+model Gift {
+  id             String   @id @default(uuid())
+  senderId       String                          // qui offre
+  recipientId    String?                         // destinataire (si déjà inscrit)
+  recipientEmail String?                         // ou email du destinataire (pas encore inscrit)
+  type           String                          // subscription | credits | boutique_item
+  // Détails selon le type
+  giftCircle     String?                         // plan offert (voyageur, explorateur...)
+  giftMonths     Int?                            // durée du plan offert (1, 3, 6, 12 mois)
+  giftCredits    Int?                            // nombre de crédits offerts
+  giftItemId     String?                         // ID produit boutique (futur)
+  giftItemName   String?                         // nom du produit (affichage)
+  // Message personnel
+  message        String?                         // "Joyeux anniversaire !"
+  // Paiement
+  amountEur      Int      @default(0)            // montant payé en centimes
+  stripeSessionId String? @unique
+  // État
+  status         String   @default("pending")    // pending | paid | claimed | expired
+  claimedAt      DateTime?                       // date de réclamation par le destinataire
+  expiresAt      DateTime?                       // expiration si non réclamé (90 jours)
+  createdAt      DateTime @default(now())
+
+  sender         User     @relation("GiftSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient      User?    @relation("GiftRecipient", fields: [recipientId], references: [id], onDelete: SetNull)
+
+  @@map("gifts")
 }
