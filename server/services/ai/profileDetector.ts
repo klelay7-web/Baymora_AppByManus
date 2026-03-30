@@ -267,18 +267,98 @@ export function detectExpressMode(messages: LLMMessage[]): boolean {
   );
 }
 
+// ─── detectTravelMode ────────────────────────────────────────────────────────
+
+import type { TravelMode, InteractionStyle } from './personas';
+
+/**
+ * Détecte le mode de voyage du client (6 modes).
+ * Analyse l'ensemble de la conversation.
+ */
+export function detectTravelMode(messages: LLMMessage[], userPrefs?: any): TravelMode {
+  const text = messages.filter(m => m.role === 'user').map(m => m.content).join(' ');
+
+  // Business : priorité haute (signaux forts)
+  if (/réunion|conférence|séminaire|corporate|client|business|team.?building|kickoff|off.?site/i.test(text)) {
+    return 'business';
+  }
+
+  // Hybride travail-lifestyle
+  if (/coworking|co.?working|wifi|bosser|remote|digital.?nomad|workation|travailler.{0,15}(voyage|partir)|laptop/i.test(text)) {
+    return 'hybrid_work';
+  }
+
+  // À domicile / local (vit sur place)
+  const homeCity = userPrefs?.homeAddress || userPrefs?.city;
+  if (/chez moi|ma ville|sans voyager|à domicile|mon quartier|dans ma ville|pas loin/i.test(text)) {
+    return 'local';
+  }
+  if (homeCity && new RegExp(`je (suis|vis|habite) (à|en) ${homeCity}`, 'i').test(text)) {
+    return 'local';
+  }
+
+  // Lifestyle (en ville, veut des bons plans immédiats)
+  if (/ce soir|bon plan|bon.?coin|local|sortir|apéro|rooftop|bar|tonight|en ce moment|cette semaine/i.test(text)) {
+    return 'lifestyle';
+  }
+
+  // Découverte (première fois quelque part)
+  if (/jamais allé|première fois|découvrir|explorer|inconnu|nouveau pays|never been/i.test(text)) {
+    return 'discovery';
+  }
+
+  // Par défaut : loisir/vacances
+  return 'leisure';
+}
+
+/**
+ * Détecte le style d'interaction du client (4 styles).
+ * Analyse le dernier message + tendance générale.
+ */
+export function detectInteractionStyle(messages: LLMMessage[]): InteractionStyle {
+  const lastUser = [...messages].reverse().find(m => m.role === 'user');
+  if (!lastUser) return 'explorer';
+
+  const last = lastUser.content;
+  const allText = messages.filter(m => m.role === 'user').map(m => m.content).join(' ');
+
+  // Express : message court et direct
+  if (last.length < 40 && /^(prix|combien|où|quand|quel|c'est quoi|donne|juste|le meilleur)/i.test(last.trim())) {
+    return 'express';
+  }
+  if (/vite|rapide|direct|pas le temps|en 2 min|go\b|let's go/i.test(last)) {
+    return 'express';
+  }
+
+  // Improvisateur : au feeling, pas de plan
+  if (/on verra|au feeling|pas de programme|surprise|dernière minute|improv|au hasard|sans plan|spontan|au pif|on s'en fout|on avise|improvise/i.test(allText)) {
+    return 'improviser';
+  }
+
+  // Organisateur : veut du structuré
+  if (/planifier|programme|jour par jour|itinéraire|planning|organiser|check.?list|agenda|heure par heure|détaillé|étape par étape/i.test(allText)) {
+    return 'organizer';
+  }
+  if (last.length > 200) return 'organizer'; // Long message = veut du détail
+
+  // Par défaut : explorateur (curieux, ouvert)
+  return 'explorer';
+}
+
 // ─── detectProfile ────────────────────────────────────────────────────────────
 
 /**
  * Orchestre la détection complète du profil client.
  * Point d'entrée principal depuis llm.ts.
  */
-export function detectProfile(messages: LLMMessage[]): DetectedProfile {
+export function detectProfile(messages: LLMMessage[], userPrefs?: any): DetectedProfile {
   const { tier, confidence } = scoreTier(messages);
   const dimensions = scoreDimensions(messages);
   const status = detectStatus(messages);
   const objectives = detectObjectives(messages);
   const expressMode = detectExpressMode(messages);
+  const travelMode = detectTravelMode(messages, userPrefs);
+  const interactionStyle = detectInteractionStyle(messages);
 
   const tierProfile = TIER_PROFILES.find(t => t.id === tier) ?? TIER_PROFILES[1];
 
@@ -304,6 +384,8 @@ export function detectProfile(messages: LLMMessage[]): DetectedProfile {
     status,
     objectives,
     expressMode,
+    travelMode,
+    interactionStyle,
     profileLabel,
     recommendationCalibration,
   };
@@ -437,17 +519,90 @@ export function buildPersonaPrompt(profile: DetectedProfile): string {
     lines.push('- Activités kids-friendly, menus enfants, espaces de jeux, baby-sitting disponible');
   }
 
-  if (profile.expressMode) {
-    lines.push('');
-    lines.push('## ⚡ MODE EXPRESS ACTIVÉ');
-    lines.push('Ce client sait exactement ce qu\'il veut. Il n\'a pas de temps à perdre.');
-    lines.push('**RÈGLES EXPRESS :**');
-    lines.push('- ZÉRO question de clarification — propose directement le meilleur');
-    lines.push('- Format compact : NOM · ADRESSE · PRIX · ⭐NOTE');
-    lines.push('- 1 seule recommandation par catégorie — la meilleure, pas de liste');
-    lines.push('- Ajoute immédiatement le :::GCAL::: et le lien de réservation');
-    lines.push('- Termine par : "Je vous réserve ça maintenant ?" avec :::QR::: ✅ Réserver | 📞 M\'appeler | ✨ Autre option :::END:::');
-  }
+  // ── Mode de voyage détecté ──────────────────────────────────────────────────
+
+  const travelModePrompts: Record<string, string> = {
+    leisure: `## 🏖️ MODE LOISIR / VACANCES
+Ce client veut se détendre, décrocher, vivre des expériences mémorables.
+- Propositions orientées plaisir, bien-être, découverte
+- All-inclusive, spa, plage, nature, gastronomie
+- Pas de logistique lourde sauf si demandé`,
+
+    hybrid_work: `## 💻 MODE HYBRIDE TRAVAIL-LIFESTYLE
+Ce client bosse en remote et veut combiner productivité + plaisir.
+- Matin : café/coworking avec wifi fiable, prises, calme
+- Après-midi/soir : spots locaux, restos, sorties
+- Logements avec bureau/espace de travail
+- Quartiers vivants le soir mais calmes pour travailler`,
+
+    lifestyle: `## 🌆 MODE LIFESTYLE URBAIN
+Ce client est en ville et cherche des bons plans immédiats.
+- Réponses ultra-locales : ce soir, ce week-end, dans ton quartier
+- Bars, restos, expos, concerts, événements, rooftops
+- Priorise les partenaires Baymora locaux
+- Pas de logistique voyage — il est déjà sur place`,
+
+    business: `## 💼 MODE BUSINESS
+Ce client voyage pour affaires. Efficacité et image avant tout.
+- Hôtels business haut de gamme avec salles de réunion
+- Restaurants pour dîner client (cadre, service, discrétion)
+- Transport efficace (chauffeur, transfer, vol direct)
+- Propositions team-building si séminaire`,
+
+    local: `## 🏠 MODE À DOMICILE
+Ce client vit ici et veut les meilleurs plans locaux, services et expériences.
+- Priorise les partenaires Baymora dans sa ville en PREMIER
+- Bons plans récurrents : restos, spas, loisirs proches
+- Services utiles : traiteur, chauffeur, nanny, pet-sitter
+- Pas de logistique voyage, juste le meilleur de chez lui`,
+
+    discovery: `## 🧭 MODE DÉCOUVERTE
+Ce client explore un endroit pour la première fois.
+- Guide touristique premium : incontournables + pépites cachées
+- Contexte culturel et historique (mais concis)
+- Les erreurs de débutant à éviter
+- "Demande le menu en [langue locale]" — conseils d'initié`,
+  };
+
+  const interactionPrompts: Record<string, string> = {
+    organizer: `## 📋 STYLE ORGANISATEUR
+Ce client veut un plan structuré et complet.
+- Programme jour par jour avec horaires précis
+- Budget estimé par poste
+- Checklist de réservations à faire (avec deadlines)
+- Logistique détaillée (transferts, temps de trajet, documents)
+- Carte mentale du séjour avec alternatives`,
+
+    improviser: `## 🎲 STYLE IMPROVISATEUR — MODE RÉACTIF CRÉATIF
+Ce client déteste les plans. Il veut du spontané, du foufou, de la surprise.
+- **JAMAIS** de programme jour par jour ou d'horaire
+- 2-3 spots incontournables, pas plus — "si tu passes par là"
+- **Bons plans de dernière minute** : "Ce soir, concert secret dans un speakeasy à 5 min"
+- **Propositions foufous** : "Croisière privée au coucher du soleil, départ dans 2h — tu veux ?"
+- **Réactivité** : "Il pleut ? Parfait — expo éphémère à côté, entrée libre"
+- **Ton** : complice, décontracté, comme un ami qui connaît tous les bons coins
+- L'ambiance, l'énergie, le ressenti — pas les détails logistiques`,
+
+    explorer: `## 🧭 STYLE EXPLORATEUR
+Ce client cherche l'inspiration et veut comparer.
+- 3 scénarios très différents avec storytelling
+- Comparaisons émotionnelles entre les options
+- Questions pour affiner ses envies
+- Du contexte, de l'émotion, du vécu — pas juste des infos`,
+
+    express: `## ⚡ STYLE EXPRESS
+Ce client veut une réponse IMMÉDIATE. Pas de temps à perdre.
+- ZÉRO question de clarification — propose directement le meilleur
+- Format compact : NOM · ADRESSE · PRIX · ⭐NOTE
+- 1 seule recommandation par catégorie — la meilleure, pas de liste
+- Ajoute immédiatement le :::GCAL::: et le lien de réservation
+- Termine par :::QR::: ✅ Réserver | ✨ Autre option :::END:::`,
+  };
+
+  lines.push('');
+  lines.push(travelModePrompts[profile.travelMode] || '');
+  lines.push('');
+  lines.push(interactionPrompts[profile.interactionStyle] || '');
 
   return lines.join('\n');
 }

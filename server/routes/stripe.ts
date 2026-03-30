@@ -21,7 +21,7 @@
 
 import { Router, RequestHandler } from 'express';
 import Stripe from 'stripe';
-import { PLANS, CREDIT_PACKS, UNLOCK_TIERS, type BaymoraCircle } from '../types';
+import { PLANS, CREDIT_PACKS, CREDIT_PACKS_BY_PLAN, UNLOCK_TIERS, getPacksForPlan, type BaymoraCircle } from '../types';
 import { upgradeUserPlan, addCreditsToUser, grantGuestUnlock, grantUserUnlock } from '../services/credits';
 import { handleGiftPayment } from './gifts';
 import { cancelSubscription } from '../services/retention';
@@ -95,9 +95,11 @@ const handleBuyCredits: RequestHandler = async (req, res) => {
     }
 
     const { packId } = req.body;
-    const pack = CREDIT_PACKS.find(p => p.id === packId);
+    // Chercher dans les packs du plan de l'utilisateur
+    const userPacks = getPacksForPlan(user.circle as BaymoraCircle);
+    const pack = userPacks.find(p => p.id === packId);
     if (!pack) {
-      res.status(400).json({ error: 'Pack invalide', code: 'INVALID_PACK' });
+      res.status(400).json({ error: 'Pack invalide pour votre plan', code: 'INVALID_PACK' });
       return;
     }
 
@@ -346,18 +348,22 @@ const handlePlans: RequestHandler = (_req, res) => {
     historyDays: p.historyDays,
   }));
 
-  const publicPacks = CREDIT_PACKS.map(p => ({
-    id: p.id,
-    name: p.name,
-    credits: p.credits,
-    priceEur: p.priceEurCents / 100,
-    pricePerCredit: p.pricePerCredit,
-    bonusLabel: p.bonusLabel,
-  }));
+  // Packs de crédits adaptés par plan
+  const packsByPlan: Record<string, any[]> = {};
+  for (const [circle, packs] of Object.entries(CREDIT_PACKS_BY_PLAN)) {
+    packsByPlan[circle] = packs.map(p => ({
+      id: p.id,
+      name: p.name,
+      credits: p.credits,
+      priceEur: p.priceEurCents / 100,
+      pricePerCredit: p.pricePerCredit,
+      bonusLabel: p.bonusLabel,
+    }));
+  }
 
   res.json({
     plans: publicPlans,
-    creditPacks: publicPacks,
+    creditPacksByPlan: packsByPlan,
     unlockTiers: UNLOCK_TIERS.map(t => ({
       id: t.id,
       credits: t.credits,

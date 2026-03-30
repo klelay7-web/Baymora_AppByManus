@@ -284,6 +284,13 @@ model Partner {
   tags             Json     @default("[]")       // ["Piscine", "Spa", "Vue mer"]
   priceLevel       Int      @default(3)          // 1-4
 
+  // Vérification Baymora
+  verificationLevel String  @default("auto")     // auto | human_verified
+  verifiedById     String?                        // ID du prestataire qui a vérifié
+  verifiedAt       DateTime?
+  verificationReport String?                      // rapport de visite terrain
+  badgeType        String   @default("listed")    // listed | verified | premium
+
   // Affiliation
   affiliateCode    String   @unique @default("")
   commissionRate   Float    @default(15)
@@ -322,6 +329,9 @@ model PartnerOffer {
   currency      String   @default("EUR")
   bookingUrl    String?
   minTier       String   @default("crystal") // crystal|gold|platinum|diamond
+  // ─── Catégorie d'offre ────────────────────────────────────────────────────
+  category      String   @default("escapade") // escapade = "Échappées Baymora" (prix réduit) | experience = "Expériences Privées" (privilèges VIP)
+  premiumPerks  Json     @default("[]")       // ["Champagne offert", "Surclassement", "Chauffeur privé", "Accès VIP"]
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
 

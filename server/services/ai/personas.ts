@@ -49,6 +49,11 @@ export interface TierProfile {
   signalPatterns: RegExp[];
 }
 
+// ─── Modes de voyage ─────────────────────────────────────────────────────────
+
+export type TravelMode = 'leisure' | 'hybrid_work' | 'lifestyle' | 'business' | 'local' | 'discovery';
+export type InteractionStyle = 'organizer' | 'improviser' | 'explorer' | 'express';
+
 export interface DetectedProfile {
   tier: string;
   tierConfidence: number;
@@ -56,6 +61,8 @@ export interface DetectedProfile {
   status?: string;
   objectives: string[];
   expressMode: boolean;
+  travelMode: TravelMode;
+  interactionStyle: InteractionStyle;
   profileLabel: string;
   recommendationCalibration: string;
 }

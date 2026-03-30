@@ -509,34 +509,59 @@ function buildSystemPrompt(userId: string, modelKey: ModelKey, userRecord?: any)
 function buildPartnerContext(partners: any[]): string {
   if (partners.length === 0) return '';
 
+  // Trier : vérifiés humains en premier, puis auto
+  const sorted = [...partners].sort((a, b) => {
+    if (a.verificationLevel === 'human_verified' && b.verificationLevel !== 'human_verified') return -1;
+    if (b.verificationLevel === 'human_verified' && a.verificationLevel !== 'human_verified') return 1;
+    return 0;
+  });
+
   const lines: string[] = [
-    '## Partenaires Baymora approuvés — recommandation prioritaire',
+    '## Partenaires Baymora — recommandation prioritaire',
     '',
-    'Ces établissements ont été testés et validés personnellement par Baymora. Quand tu recommandes une destination ou un service qui correspond à un de ces partenaires, TOUJOURS le mentionner EN PREMIER avec le badge 🤝 et le tarif exclusif membres.',
+    'Ces établissements font partie du réseau Baymora. Ceux avec le badge ✓ ont été visités et vérifiés en personne par un expert Baymora.',
+    'TOUJOURS mentionner les partenaires vérifiés EN PREMIER. Utilise le badge 🤝 pour les partenaires référencés et ✓ pour les vérifiés.',
     '',
   ];
 
-  for (const p of partners) {
-    lines.push(`**🤝 ${p.name}** (${p.city}) — ${p.type}`);
+  for (const p of sorted) {
+    const isVerified = p.verificationLevel === 'human_verified';
+    const badge = isVerified ? '✓ Vérifié Baymora' : '🤝 Référencé';
+    lines.push(`**${badge} — ${p.name}** (${p.city}) — ${p.type}`);
     if (p.vibe) lines.push(`  Ambiance : ${p.vibe}`);
     if (p.tags && Array.isArray(p.tags) && p.tags.length > 0) {
       lines.push(`  Tags : ${(p.tags as string[]).join(', ')}`);
     }
     const activeOffers = (p.offers ?? []).filter((o: any) => o.isActive);
     if (activeOffers.length > 0) {
-      lines.push('  Offres exclusives Baymora :');
-      for (const o of activeOffers) {
-        const priceNote = o.baymoraPrice
-          ? ` · ${o.baymoraPrice}€ (tarif membre)`
-          : o.normalPrice ? ` · ${o.normalPrice}€` : '';
-        lines.push(`    - ${o.title}${priceNote}`);
+      // Séparer Échappées Baymora et Expériences Privées
+      const escapades = activeOffers.filter((o: any) => o.category !== 'experience');
+      const experiences = activeOffers.filter((o: any) => o.category === 'experience');
+
+      if (escapades.length > 0) {
+        lines.push('  Échappées Baymora (tarifs réduits) :');
+        for (const o of escapades) {
+          const priceNote = o.baymoraPrice
+            ? ` · ${o.baymoraPrice}€ au lieu de ${o.normalPrice || '?'}€`
+            : o.normalPrice ? ` · ${o.normalPrice}€` : '';
+          lines.push(`    - ${o.title}${priceNote}`);
+        }
+      }
+      if (experiences.length > 0) {
+        lines.push('  Expériences Privées (privilèges VIP, pas de réduction) :');
+        for (const o of experiences) {
+          const perks = Array.isArray(o.premiumPerks) && o.premiumPerks.length > 0
+            ? ` → ${(o.premiumPerks as string[]).join(', ')}`
+            : '';
+          lines.push(`    - ${o.title}${perks}`);
+        }
       }
     }
     lines.push(`  Lien affilié : https://baymora.com/go/${p.affiliateCode}`);
     lines.push('');
   }
 
-  lines.push('Quand tu mentionnes un partenaire Baymora dans :::PLACES:::, ajoute : `"baymoraPartner": true, "affiliateCode": "BAY-XXX-YYYY"` pour afficher le badge partenaire sur la carte.');
+  lines.push('Quand tu mentionnes un partenaire Baymora dans :::PLACES:::, ajoute : `"baymoraPartner": true, "affiliateCode": "BAY-XXX-YYYY", "verified": true/false` pour afficher le badge sur la carte.');
   return lines.join('\n');
 }
 
@@ -655,10 +680,10 @@ export async function callLLM(
     }
   }
 
-  // ── Détection persona (analyse des messages user uniquement) ──────────────
-  const detectedProfile = detectProfile(messages);
+  // ── Détection persona + mode voyage + style interaction ──────────────────
+  const detectedProfile = detectProfile(messages, userRecord?.preferences);
   const personaContext = buildPersonaPrompt(detectedProfile);
-  console.log(`[LLM] Persona détecté: ${detectedProfile.profileLabel} | tier: ${detectedProfile.tier} | confidence: ${Math.round(detectedProfile.tierConfidence * 100)}% | express: ${detectedProfile.expressMode}`);
+  console.log(`[LLM] Persona: ${detectedProfile.profileLabel} | tier: ${detectedProfile.tier} (${Math.round(detectedProfile.tierConfidence * 100)}%) | mode: ${detectedProfile.travelMode} | style: ${detectedProfile.interactionStyle}`);
 
   // ── Conversion naturelle (invités, messages 7-8 uniquement) ──────────────
   const guestMsgN = messageCount ?? messages.filter(m => m.role === 'user').length;

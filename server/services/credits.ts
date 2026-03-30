@@ -10,7 +10,7 @@
  */
 
 import { prisma } from '../db';
-import { PLANS, CREDIT_COSTS, CREDIT_PACKS, UNLOCK_TIERS, ROLLOVER_MAX_MULTIPLIER, type BaymoraCircle } from '../types';
+import { PLANS, CREDIT_COSTS, CREDIT_PACKS, CREDIT_PACKS_BY_PLAN, UNLOCK_TIERS, ROLLOVER_MAX_MULTIPLIER, getPacksForPlan, type BaymoraCircle } from '../types';
 import crypto from 'crypto';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -244,7 +244,7 @@ export async function addCreditsToUser(userId: string, credits: number, purchase
       userId,
       type: purchaseType,
       credits,
-      amountEur: CREDIT_PACKS.find(p => p.id === purchaseType)?.priceEurCents ?? 0,
+      amountEur: Object.values(CREDIT_PACKS_BY_PLAN).flat().find(p => p.id === purchaseType)?.priceEurCents ?? 0,
       status: 'completed',
     },
   });

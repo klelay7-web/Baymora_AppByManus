@@ -156,12 +156,39 @@ export const PLANS: Record<BaymoraCircle, BaymoraPlan> = {
   },
 };
 
-export const CREDIT_PACKS: CreditPack[] = [
-  { id: 'pack_50',   name: 'Recharge',   credits: 50,   priceEurCents: 490,  pricePerCredit: 0.098 },
-  { id: 'pack_150',  name: 'Standard',   credits: 150,  priceEurCents: 1290, pricePerCredit: 0.086 },
-  { id: 'pack_500',  name: 'Maxi',       credits: 500,  priceEurCents: 3490, pricePerCredit: 0.070, bonusLabel: 'Accès Boutique Gold 1 mois' },
-  { id: 'pack_1000', name: 'Ultra',      credits: 1000, priceEurCents: 5990, pricePerCredit: 0.060, bonusLabel: 'Accès Boutique Platinum 1 mois' },
-];
+export const CREDIT_PACKS_BY_PLAN: Record<string, CreditPack[]> = {
+  voyageur: [
+    { id: 'voyageur_30',   name: 'Recharge',  credits: 30,   priceEurCents: 390,   pricePerCredit: 0.130 },
+    { id: 'voyageur_80',   name: 'Standard',  credits: 80,   priceEurCents: 890,   pricePerCredit: 0.111 },
+    { id: 'voyageur_200',  name: 'Maxi',      credits: 200,  priceEurCents: 1990,  pricePerCredit: 0.100 },
+  ],
+  explorateur: [
+    { id: 'explorateur_100',  name: 'Recharge',  credits: 100,  priceEurCents: 990,   pricePerCredit: 0.099 },
+    { id: 'explorateur_300',  name: 'Standard',  credits: 300,  priceEurCents: 2490,  pricePerCredit: 0.083 },
+    { id: 'explorateur_700',  name: 'Maxi',      credits: 700,  priceEurCents: 4990,  pricePerCredit: 0.071 },
+  ],
+  prive: [
+    { id: 'prive_300',   name: 'Recharge',  credits: 300,   priceEurCents: 2490,  pricePerCredit: 0.083 },
+    { id: 'prive_800',   name: 'Standard',  credits: 800,   priceEurCents: 5990,  pricePerCredit: 0.075 },
+    { id: 'prive_2000',  name: 'Maxi',      credits: 2000,  priceEurCents: 12990, pricePerCredit: 0.065 },
+    { id: 'prive_5000',  name: 'Ultra',     credits: 5000,  priceEurCents: 34990, pricePerCredit: 0.070, bonusLabel: 'Accès Boutique Diamond 1 mois' },
+  ],
+  fondateur: [
+    { id: 'fondateur_500',   name: 'Recharge',  credits: 500,   priceEurCents: 4490,  pricePerCredit: 0.090 },
+    { id: 'fondateur_2000',  name: 'Standard',  credits: 2000,  priceEurCents: 14990, pricePerCredit: 0.075 },
+    { id: 'fondateur_5000',  name: 'Maxi',      credits: 5000,  priceEurCents: 34990, pricePerCredit: 0.070 },
+    { id: 'fondateur_10000', name: 'Élite',     credits: 10000, priceEurCents: 64990, pricePerCredit: 0.065, bonusLabel: 'Conciergerie prioritaire 1 mois' },
+  ],
+};
+
+/** @deprecated — utiliser CREDIT_PACKS_BY_PLAN. Conservé pour backward compat API. */
+export const CREDIT_PACKS: CreditPack[] = CREDIT_PACKS_BY_PLAN.voyageur;
+
+/** Retourne les packs adaptés au plan du user */
+export function getPacksForPlan(circle: BaymoraCircle): CreditPack[] {
+  if (circle === 'decouverte') return []; // pas de packs pour le plan gratuit
+  return CREDIT_PACKS_BY_PLAN[circle] || CREDIT_PACKS_BY_PLAN.voyageur;
+}
 
 /**
  * Déblocages ponctuels (guest ou abonné à court de crédits)
