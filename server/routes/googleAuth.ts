@@ -8,6 +8,8 @@ import { Router, RequestHandler } from 'express';
 import { prisma } from '../db';
 import { generateUserToken } from './users';
 import { sendWelcomeEmail } from '../services/email';
+import { PLANS } from '../types';
+import { addPoints, generateInviteCode } from './club';
 
 const router = Router();
 
@@ -97,6 +99,7 @@ export const handleGoogleCallback: RequestHandler = async (req, res) => {
 
     if (!user) {
       const prenom = googleUser.given_name || googleUser.name?.split(' ')[0] || '';
+      const plan = PLANS.decouverte;
       user = await prisma.user.create({
         data: {
           googleId: googleUser.id,
@@ -105,9 +108,26 @@ export const handleGoogleCallback: RequestHandler = async (req, res) => {
           pseudo: prenom || googleUser.email.split('@')[0],
           mode: 'signature',
           preferences: {},
+          // Initialisation crédits (plan Découverte)
+          creditsUsed: 0,
+          creditsLimit: plan.creditsLimit,
+          perplexityUsed: 0,
+          perplexityLimit: plan.perplexityLimit,
+          creditsResetAt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
         },
         include: { companions: true, dates: true },
       });
+
+      // Code d'invitation + points Club
+      try {
+        let code = generateInviteCode(user.pseudo);
+        while (await prisma.inviteCode.findUnique({ where: { code } })) {
+          code = generateInviteCode(user.pseudo);
+        }
+        await prisma.inviteCode.create({ data: { userId: user.id, code } });
+        await addPoints(user.id, 'registration', 50, 'Bienvenue au Baymora Club !');
+      } catch {}
+
       console.log(`[GOOGLE] Nouveau compte: ${user.pseudo} (${user.email})`);
     } else if (!user.googleId) {
       // Lier le compte existant à Google

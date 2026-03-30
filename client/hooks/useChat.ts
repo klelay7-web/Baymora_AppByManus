@@ -130,7 +130,13 @@ export function useChat(initialConversationId?: string) {
         }
 
         if (!response.ok) {
-          throw new Error('Failed to send message');
+          // Essayer de lire l'erreur serveur pour un message utile
+          let serverError = 'Erreur lors de l\'envoi du message';
+          try {
+            const errData = await response.json();
+            serverError = errData.error || serverError;
+          } catch {}
+          throw new Error(serverError);
         }
 
         const data = await response.json();

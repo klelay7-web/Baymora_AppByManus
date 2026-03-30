@@ -1151,72 +1151,46 @@ export default function Chat() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto min-h-0 px-4 py-6">
 
-        {/* ── Welcome screen ── */}
+        {/* ── Welcome screen (simplifié — zéro friction) ── */}
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center min-h-full gap-6 animate-fade-in py-4">
+          <div className="flex flex-col items-center justify-center min-h-full gap-5 animate-fade-in py-8">
 
             {/* Logo + tagline */}
             <div className="text-center">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-secondary/30 to-secondary/10 border border-secondary/20 flex items-center justify-center mx-auto mb-4">
-                <span className="text-xl font-bold text-secondary">B</span>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary/30 to-secondary/10 border border-secondary/20 flex items-center justify-center mx-auto mb-3">
+                <span className="text-lg font-bold text-secondary">B</span>
               </div>
-              <h2 className="text-2xl font-bold mb-1" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 40%, #c8bfa8 70%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 8px rgba(255,245,220,0.4))'}}>
-                {user?.prenom ? `Bonjour ${user.prenom}` : 'Bonjour'}
+              <h2 className="text-2xl font-bold mb-1" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 40%, #c8bfa8 70%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>
+                {user?.prenom ? `${user.prenom}, où on va ?` : 'Où on va ?'}
               </h2>
-              {/* La phrase iconique */}
-              <p className="text-sm font-medium tracking-wide" style={{background: 'linear-gradient(135deg, #c8a94a 0%, #f5d87a 35%, #e4c057 65%, #f5d87a 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 10px rgba(212,168,80,0.5))'}}>
-                L'expérience de votre vie commence ici.
-              </p>
-              <p className="text-white/40 text-xs mt-2 max-w-xs mx-auto">
-                Dites-nous n'importe quoi — même si ce n'est pas clair. Baymora s'occupe du reste.
+              <p className="text-white/35 text-xs mt-1">
+                Écrivez ou cliquez — Baymora s'occupe du reste.
               </p>
             </div>
 
-            {/* Chips d'inspiration */}
-            <div className="w-full max-w-lg">
-              <p className="text-xs uppercase tracking-widest mb-2 text-center" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 45%, #c8bfa8 75%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 6px rgba(255,245,220,0.35))'}}>Quelle envie ?</p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {INSPIRATION_CHIPS.map((chip) => (
-                  <button
-                    key={chip.label}
-                    onClick={() => handleChip(chip.msg)}
-                    disabled={isLoading || isCreditsExhausted}
-                    className="px-3 py-1.5 rounded-full border border-white/15 bg-white/5 text-white/65 text-xs hover:bg-secondary/15 hover:border-secondary/40 hover:text-white transition-all disabled:opacity-40"
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
+            {/* 5 chips seulement — les plus populaires */}
+            <div className="flex flex-wrap gap-2 justify-center max-w-md">
+              {[
+                { label: 'Week-end', msg: 'Je cherche un week-end, propose-moi' },
+                { label: 'Gastronomie', msg: 'Je veux un voyage axé gastronomie et bons restaurants' },
+                { label: 'Plage & soleil', msg: 'Plage et îles, quelque chose d\'exceptionnel' },
+                { label: 'Romantique', msg: 'Séjour romantique pour deux, je veux quelque chose d\'inoubliable' },
+                { label: 'Surprends-moi ✨', msg: 'Surprends-moi totalement, je te fais confiance' },
+              ].map((chip) => (
+                <button
+                  key={chip.label}
+                  onClick={() => handleChip(chip.msg)}
+                  disabled={isLoading || isCreditsExhausted}
+                  className="px-4 py-2 rounded-full border border-white/15 bg-white/5 text-white/70 text-sm hover:bg-secondary/15 hover:border-secondary/40 hover:text-white transition-all disabled:opacity-40"
+                >
+                  {chip.label}
+                </button>
+              ))}
             </div>
 
-            {/* Chips destination */}
-            <div className="w-full max-w-lg">
-              <p className="text-xs uppercase tracking-widest mb-2 text-center" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 45%, #c8bfa8 75%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 6px rgba(255,245,220,0.35))'}}>Quelle destination ?</p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {DESTINATION_CHIPS.map((chip) => (
-                  <button
-                    key={chip.label}
-                    onClick={() => handleChip(chip.msg)}
-                    disabled={isLoading || isCreditsExhausted}
-                    className="px-3 py-1.5 rounded-full border border-white/15 bg-white/5 text-white/65 text-xs hover:bg-secondary/15 hover:border-secondary/40 hover:text-white transition-all disabled:opacity-40"
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Confidentialité */}
-            <div className="w-full max-w-lg bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-center">
-              <p className="text-white/50 text-xs leading-relaxed">
-                🔒 <span className="font-medium" style={{background: 'linear-gradient(135deg, #ffffff 0%, #e8e0d0 40%, #d0c8b8 70%, #ffffff 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 0 6px rgba(255,245,220,0.4))'}}>Vos données restent privées.</span><br />
-                Baymora mémorise vos préférences, vos proches et leurs habitudes pour personnaliser chaque conseil — anniversaires, régimes alimentaires, dress codes...<br />
-                <span className="text-white/35">Rien n'est partagé. Tout s'efface si vous ne créez pas de compte.</span>
-              </p>
-            </div>
-            <p className="text-white/25 text-xs text-center -mt-2">
-              Ou écrivez directement — week-end, soirée, gastro, US, chill...
-              {!isAuthenticated && <><br /><span className="text-secondary/50">{FREE_CREDITS_LIMIT} échanges gratuits · Créez un compte pour continuer</span></>}
+            {/* Micro-footer discret */}
+            <p className="text-white/20 text-xs text-center mt-2">
+              🔒 Gratuit · Vos données restent privées
             </p>
           </div>
         )}

@@ -16,7 +16,7 @@ const T = {
       sub: "Dites-nous ce que vous voulez. Baymora crée le voyage. Comme si vous aviez un concierge haut de gamme disponible à toute heure.",
       cta: "Commencer — c'est gratuit",
       ctaSub: "Voir les cercles",
-      fine: "10 messages gratuits · Aucune carte requise · Anonymat possible",
+      fine: "15 échanges gratuits · Aucune carte requise · Anonymat possible",
     },
     how: {
       title: "Aussi simple que d'envoyer un message",
@@ -48,7 +48,7 @@ const T = {
       tags: ["Pseudonyme possible", "Données en Europe", "Suppression totale", "Aucun tracking"],
     },
     finalCta: {
-      title: "À 10 échanges de\nl'expérience de votre vie.",
+      title: "À 15 échanges de\nl'expérience de votre vie.",
       sub: "Commencez maintenant. Aucune carte requise.",
       btn: "Parler à Baymora",
     },
@@ -125,14 +125,16 @@ type Lang = "fr" | "en";
 // ─── Plans data ───────────────────────────────────────────────────────────────
 
 const PLANS = [
-  { circle: "Découverte", badge: "○", price: "Gratuit / Free", color: "border-white/12", highlight: false,
-    features: { fr: ["10 messages gratuits", "Suggestions de voyage", "Aucun compte requis"], en: ["10 free messages", "Travel suggestions", "No account needed"] } },
-  { circle: "Essentiel", badge: "✦", price: "29€/mois", color: "border-secondary/40", highlight: false,
-    features: { fr: ["Messages illimités", "Mémoire de vos proches", "Dates & anniversaires"], en: ["Unlimited messages", "Companion memory", "Dates & birthdays"] } },
-  { circle: "Élite", badge: "✦✦", price: "99€/mois", color: "border-amber-400/35", highlight: true,
-    features: { fr: ["Tout Essentiel", "Recommandations exclusives", "Accès prioritaire"], en: ["Everything in Essentiel", "Exclusive recommendations", "Priority access"] } },
-  { circle: "Privé", badge: "✦✦✦", price: "299€/mois", color: "border-white/15", highlight: false,
-    features: { fr: ["Tout Élite", "Conciergerie sur-mesure", "Service blanc-gant"], en: ["Everything in Élite", "Bespoke concierge", "White-glove service"] } },
+  { circle: "Découverte", badge: "○", price: "Gratuit", color: "border-white/12", highlight: false,
+    features: { fr: ["15 échanges gratuits", "IA Opus complète", "Aucun compte requis"], en: ["15 free exchanges", "Full Opus AI", "No account needed"] } },
+  { circle: "Voyageur", badge: "✦", price: "9,90€/mois", color: "border-secondary/40", highlight: false,
+    features: { fr: ["100 crédits/mois (rollover)", "Mémoire de vos proches", "3 plans de voyage"], en: ["100 credits/month (rollover)", "Companion memory", "3 trip plans"] } },
+  { circle: "Explorateur", badge: "✦✦", price: "29€/mois", color: "border-amber-400/35", highlight: true,
+    features: { fr: ["350 crédits/mois", "Recherches illimitées", "Conciergerie IA"], en: ["350 credits/month", "Unlimited searches", "AI concierge"] } },
+  { circle: "Cercle Privé", badge: "✦✦✦", price: "79€/mois", color: "border-white/15", highlight: false,
+    features: { fr: ["1 200 crédits/mois", "Tout illimité", "Tarifs partenaires"], en: ["1,200 credits/month", "Everything unlimited", "Partner rates"] } },
+  { circle: "Fondateur", badge: "✦✦✦✦", price: "199€/mois", color: "border-white/15", highlight: false,
+    features: { fr: ["4 000 crédits/mois", "Conciergerie humaine", "Accès VIP"], en: ["4,000 credits/month", "Human concierge", "VIP access"] } },
 ];
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
