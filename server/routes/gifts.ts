@@ -200,12 +200,6 @@ const handleClaimGift: RequestHandler = async (req, res) => {
     // Log pour audit
     console.log(`[GIFTS] Cadeau ${gift.id} réclamé par ${user.id} (type: ${gift.type}, ${gift.giftCredits || gift.giftCircle})`);
 
-    // Dummy update to keep the code flow consistent (already claimed above)
-    await prisma.gift.update({
-      where: { id: gift.id },
-      data: {
-    });
-
     const sender = await prisma.user.findUnique({
       where: { id: gift.senderId },
       select: { prenom: true, pseudo: true },
