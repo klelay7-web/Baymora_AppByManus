@@ -154,14 +154,12 @@ router.post('/apply', async (req, res) => {
   }
 });
 
-// GET /api/partners/track/:affiliateCode — tracking + redirect
+// GET /api/partners/track/:affiliateCode — tracking affilié persistant + redirect
 router.get('/track/:affiliateCode', async (req, res) => {
   try {
     const { affiliateCode } = req.params;
     const { redirect, offer } = req.query as Record<string, string>;
-
-    // Log le click
-    console.log(`[PARTNER_TRACK] Click affilié: ${affiliateCode} | offer: ${offer || 'none'} | redirect: ${redirect || 'none'}`);
+    const baymoraUser = (req as any).baymoraUser;
 
     const partner = await prisma.partner.findFirst({
       where: { affiliateCode },
@@ -173,8 +171,19 @@ router.get('/track/:affiliateCode', async (req, res) => {
       return;
     }
 
-    // Incrémenter totalCommissions serait fait lors du paiement réel — ici juste log
-    console.log(`[PARTNER_TRACK] Partenaire: ${partner.name} (id: ${partner.id})`);
+    // Persister le clic en base (remplace le console.log)
+    await prisma.affiliateClick.create({
+      data: {
+        partnerId: partner.id,
+        affiliateCode,
+        userId: baymoraUser?.id || null,
+        offerId: offer || null,
+        ip: req.ip || null,
+        userAgent: req.headers['user-agent']?.substring(0, 200) || null,
+      },
+    });
+
+    console.log(`[AFFILIATE] Click: ${partner.name} (${affiliateCode}) | user: ${baymoraUser?.id || 'guest'}`);
 
     if (redirect) {
       res.redirect(302, redirect);
@@ -184,6 +193,131 @@ router.get('/track/:affiliateCode', async (req, res) => {
   } catch (err) {
     console.error('[PARTNERS] Erreur tracking:', err);
     res.status(500).json({ error: 'Erreur tracking' });
+  }
+});
+
+// ─── POST /api/partners/login — Auth partenaire via magic link ──────────────
+
+router.post('/login', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) { res.status(400).json({ error: 'Email requis' }); return; }
+
+    const partner = await prisma.partner.findFirst({
+      where: { contactEmail: email.trim().toLowerCase(), status: 'approved' },
+    });
+
+    if (!partner) {
+      // Ne pas révéler si le partenaire existe
+      res.json({ success: true, message: 'Si ce compte existe, un lien de connexion a été envoyé.' });
+      return;
+    }
+
+    // Générer un token temporaire (valide 1h)
+    const crypto = await import('crypto');
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1h
+
+    await prisma.partner.update({
+      where: { id: partner.id },
+      data: { loginToken: token, loginTokenExpiry: expiry },
+    });
+
+    const loginUrl = `${process.env.CORS_ORIGIN || 'https://baymora.com'}/partner?token=${token}`;
+
+    await sendEmail(
+      email.trim().toLowerCase(),
+      'Connexion à votre espace partenaire Baymora',
+      `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="font-family:-apple-system,sans-serif;background:#f5f3ef;margin:0;padding:0;">
+<div style="max-width:560px;margin:32px auto;background:#fff;border:1px solid #e8e3da;border-radius:16px;overflow:hidden;">
+  <div style="background:linear-gradient(135deg,#1a1e2e,#0f1420);padding:32px;text-align:center;">
+    <span style="font-weight:800;font-size:24px;color:#c8a94a;">B</span>
+    <p style="color:rgba(200,169,74,0.9);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:8px 0 0;">Baymora Partenaires</p>
+  </div>
+  <div style="padding:32px;">
+    <h1 style="font-size:22px;color:#1a1a1a;margin:0 0 12px;">Bonjour ${partner.contactName || partner.name}</h1>
+    <p style="color:#555;font-size:15px;line-height:1.6;">Cliquez sur le bouton ci-dessous pour accéder à votre espace partenaire. Ce lien est valable 1 heure.</p>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${loginUrl}" style="display:inline-block;background:#c8a94a;color:#000;font-weight:700;font-size:15px;padding:14px 32px;border-radius:10px;text-decoration:none;">Accéder à mon espace →</a>
+    </div>
+    <p style="color:#999;font-size:12px;text-align:center;">Si vous n'avez pas demandé ce lien, ignorez cet email.</p>
+  </div>
+</div></body></html>`,
+    );
+
+    res.json({ success: true, message: 'Si ce compte existe, un lien de connexion a été envoyé.' });
+  } catch (err) {
+    console.error('[PARTNERS] Erreur login:', err);
+    res.status(500).json({ error: 'Erreur connexion' });
+  }
+});
+
+// ─── GET /api/partners/me — Dashboard partenaire (auth via token) ───────────
+
+router.get('/me', async (req, res) => {
+  try {
+    const token = (req.query.token as string) || req.headers.authorization?.replace('Bearer ', '');
+    if (!token) { res.status(401).json({ error: 'Token requis' }); return; }
+
+    const partner = await prisma.partner.findFirst({
+      where: { loginToken: token, loginTokenExpiry: { gte: new Date() } },
+      include: {
+        offers: { orderBy: { createdAt: 'desc' } },
+        affiliateClicks: { orderBy: { createdAt: 'desc' }, take: 50 },
+      },
+    });
+
+    if (!partner) {
+      res.status(401).json({ error: 'Token invalide ou expiré' });
+      return;
+    }
+
+    // Stats du partenaire
+    const totalClicks = await prisma.affiliateClick.count({ where: { partnerId: partner.id } });
+    const conversions = await prisma.affiliateClick.count({ where: { partnerId: partner.id, convertedAt: { not: null } } });
+    const totalCommission = await prisma.affiliateClick.aggregate({
+      where: { partnerId: partner.id, commissionEur: { not: null } },
+      _sum: { commissionEur: true },
+    });
+
+    const thisMonth = new Date();
+    thisMonth.setDate(1); thisMonth.setHours(0, 0, 0, 0);
+    const monthlyClicks = await prisma.affiliateClick.count({
+      where: { partnerId: partner.id, createdAt: { gte: thisMonth } },
+    });
+
+    res.json({
+      partner: {
+        id: partner.id,
+        name: partner.name,
+        type: partner.type,
+        city: partner.city,
+        affiliateCode: partner.affiliateCode,
+        commissionRate: partner.commissionRate,
+        verificationLevel: partner.verificationLevel,
+        badgeType: partner.badgeType,
+        status: partner.status,
+      },
+      offers: partner.offers,
+      stats: {
+        totalClicks,
+        conversions,
+        conversionRate: totalClicks > 0 ? Math.round((conversions / totalClicks) * 100) : 0,
+        totalCommission: totalCommission._sum.commissionEur || 0,
+        monthlyClicks,
+      },
+      recentClicks: partner.affiliateClicks.map(c => ({
+        id: c.id,
+        offerId: c.offerId,
+        converted: !!c.convertedAt,
+        commission: c.commissionEur,
+        createdAt: c.createdAt,
+      })),
+    });
+  } catch (err) {
+    console.error('[PARTNERS] Erreur dashboard:', err);
+    res.status(500).json({ error: 'Erreur chargement dashboard' });
   }
 });
 

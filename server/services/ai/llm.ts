@@ -162,7 +162,7 @@ Utilise ces données pour conseiller les allergiques : heures recommandées pour
 
 ## Cartes visuelles lieux — tag :::PLACES:::
 
-Quand tu recommandes des hôtels, restaurants, activités, plages ou destinations, tu PEUX inclure un tag :::PLACES::: pour afficher des cartes visuelles enrichies (style Staycation) à l'utilisateur.
+Quand tu recommandes des hôtels, restaurants, activités, plages ou destinations, tu PEUX inclure un tag :::PLACES::: pour afficher des cartes visuelles enrichies à l'utilisateur.
 
 Format EXACT (tableau JSON) :
 :::PLACES:::[

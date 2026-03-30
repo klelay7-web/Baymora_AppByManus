@@ -106,7 +106,7 @@ export interface CalendarEvent {
   notes?: string;
 }
 
-// ─── Carte lieu (Staycation-style) ───────────────────────────────────────────
+// ─── Carte lieu (carte enrichie) ───────────────────────────────────────────
 
 export interface PlaceItem {
   name: string;
@@ -288,7 +288,7 @@ function CalendarCard({ event }: { event: CalendarEvent }) {
   );
 }
 
-// ─── Carte lieu (style Staycation) ───────────────────────────────────────────
+// ─── Carte lieu (style Baymora) ───────────────────────────────────────────
 
 const PLACE_TYPE_CONFIG: Record<string, { emoji: string; gradient: string; badge: string }> = {
   hotel:      { emoji: '🏨', gradient: 'from-amber-950 via-amber-900/80 to-amber-950',   badge: 'Hôtel' },
@@ -1360,7 +1360,7 @@ export default function Chat() {
                   </div>
                 )}
 
-                {/* Carousel de lieux style Staycation */}
+                {/* Carousel de lieux style Baymora */}
                 {msg.role === 'assistant' && parsed && parsed.places.length > 0 && (
                   <div className="ml-11 mt-2">
                     <PlacesCarousel places={parsed.places} />

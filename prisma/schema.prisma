@@ -64,6 +64,7 @@ model User {
   giftsSent          Gift[]     @relation("GiftSender")
   giftsReceived      Gift[]     @relation("GiftRecipient")
   tripShares         TripShare[]
+  prestataire        Prestataire?
 
   @@map("users")
 }
@@ -335,6 +336,10 @@ model Partner {
   // Application message
   applyMessage     String?
 
+  // Auth partenaire (magic link)
+  loginToken       String?  @unique           // token temporaire pour connexion
+  loginTokenExpiry DateTime?
+
   // Metadata
   approvedAt       DateTime?
   approvedBy       String?
@@ -343,6 +348,8 @@ model Partner {
   updatedAt        DateTime @updatedAt
 
   offers           PartnerOffer[]
+  affiliateClicks  AffiliateClick[]
+  visits           PartnerVisit[]
 
   @@map("partners")
 }
@@ -398,4 +405,79 @@ model Gift {
   recipient      User?    @relation("GiftRecipient", fields: [recipientId], references: [id], onDelete: SetNull)
 
   @@map("gifts")
+}
+
+// ─── Tracking affilié ────────────────────────────────────────────────────────
+
+model AffiliateClick {
+  id            String    @id @default(uuid())
+  partnerId     String
+  affiliateCode String
+  userId        String?                        // si user connecté
+  offerId       String?                        // offre cliquée
+  ip            String?
+  userAgent     String?
+  convertedAt   DateTime?                      // si réservation confirmée
+  commissionEur Float?
+  createdAt     DateTime  @default(now())
+
+  partner       Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@map("affiliate_clicks")
+}
+
+// ─── Prestataires Baymora (terrain) ──────────────────────────────────────────
+
+model Prestataire {
+  id                String   @id @default(uuid())
+  userId            String   @unique              // lié à un compte User
+  status            String   @default("active")   // active | suspended | terminated
+  region            String                        // zone géographique
+  speciality        String?                       // hotel | restaurant | spa | all
+
+  // Activité
+  visitsCompleted   Int      @default(0)
+  partnersRecruited Int      @default(0)
+  fichesCreated     Int      @default(0)
+
+  // Rémunération
+  ratePerVisit      Float    @default(50)         // € par visite validée
+  ratePerFiche      Float    @default(30)         // € par fiche créée et publiée
+  ratePerRecruit    Float    @default(100)        // € par partenaire recruté et approuvé
+  commissionOnRecruit Float  @default(10)         // % commission sur partenaires recrutés (12 mois)
+  totalEarned       Float    @default(0)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id])
+  visits            PartnerVisit[]
+
+  @@map("prestataires")
+}
+
+model PartnerVisit {
+  id                String   @id @default(uuid())
+  prestataireId     String
+  partnerId         String?                        // si partenaire existant
+  // Rapport de visite
+  establishmentName String
+  establishmentType String                         // hotel | spa | restaurant | activity | villa
+  city              String
+  visitDate         DateTime
+  report            String                         // rapport écrit détaillé
+  photos            Json     @default("[]")        // URLs photos prises sur place
+  rating            Int?                           // note interne 1-10
+  recommendation    String?                        // approved | needs_work | rejected
+  // État
+  status            String   @default("draft")     // draft | submitted | reviewed | published
+  reviewedBy        String?                        // admin qui a relu
+  reviewNotes       String?
+  publishedAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  prestataire       Prestataire @relation(fields: [prestataireId], references: [id], onDelete: Cascade)
+  partner           Partner?    @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+
+  @@map("partner_visits")
 }

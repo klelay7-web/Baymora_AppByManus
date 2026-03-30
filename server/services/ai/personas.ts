@@ -99,7 +99,7 @@ export const TIER_PROFILES: TierProfile[] = [
   },
   {
     id: 't2',
-    label: 'Staycation',
+    label: 'Échappée',
     budgetRange: '1500–5000€',
     transport: ['TGV standard', 'Transavia', 'EasyJet', 'Voiture de location'],
     hotels: ['Hôtel 3–4★', 'Airbnb qualité', 'Charme & caractère', 'B&B de charme'],
@@ -108,7 +108,7 @@ export const TIER_PROFILES: TierProfile[] = [
     alcools: ['Champagne entrée de gamme', 'Bordeaux milieu de gamme', 'Whisky standard'],
     cigares: false,
     destinations: ['Saint-Malo', 'Bordeaux', 'Nice', 'Biarritz', 'Colmar', 'Lyon', 'Annecy'],
-    dailyUsage: 'Profil Staycation — qualité de vie sans ostentation',
+    dailyUsage: 'Profil Échappée — qualité de vie sans ostentation',
     proactiveAlerts: ['Promos weekend', 'Tables disponibles', 'Expériences insolites'],
     signalPatterns: [
       /airbnb/i,
