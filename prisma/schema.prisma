@@ -63,6 +63,7 @@ model User {
   creditPurchases    CreditPurchase[]
   giftsSent          Gift[]     @relation("GiftSender")
   giftsReceived      Gift[]     @relation("GiftRecipient")
+  tripShares         TripShare[]
 
   @@map("users")
 }
@@ -184,12 +185,40 @@ model Trip {
   planData     Json                           // TripPlan JSON complet
   status       String   @default("planning") // planning|confirmed|past
   sourceConvId String?                        // conversationId d'origine
+  // ─── Partage ──────────────────────────────────────────────────────────────
+  shareCode    String?  @unique              // code unique de partage (ex: "KYOTO-2026-A3K7")
+  isPublic     Boolean  @default(false)      // visible via lien de partage
+  shareCount   Int      @default(0)          // nombre de fois partagé
+  forkedFromId String?                       // si copié depuis un autre trip
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  forkedFrom   Trip?    @relation("TripFork", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks        Trip[]   @relation("TripFork")
+  shares       TripShare[]
 
   @@map("trips")
+}
+
+// ─── Partage de voyages & commissions ────────────────────────────────────────
+
+model TripShare {
+  id               String   @id @default(uuid())
+  tripId           String
+  sharerId         String                       // qui partage
+  viewCount        Int      @default(0)         // nombre de vues du lien
+  forkCount        Int      @default(0)         // combien l'ont copié dans leur profil
+  signupCount      Int      @default(0)         // inscriptions via ce partage
+  bookingCount     Int      @default(0)         // réservations partenaires via ce partage
+  creditsEarned    Int      @default(0)         // crédits gagnés par le shareur
+  commissionEarned Float    @default(0)         // commission en € gagnée
+  createdAt        DateTime @default(now())
+
+  trip             Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  sharer           User     @relation(fields: [sharerId], references: [id], onDelete: Cascade)
+
+  @@map("trip_shares")
 }
 
 // ─── Conciergerie ────────────────────────────────────────────────────────────

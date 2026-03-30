@@ -221,6 +221,20 @@ export const CREDIT_COSTS = {
   perplexity_search: 1,   // en plus du coût message
 } as const;
 
+/**
+ * Récompenses de partage de trip
+ * Créer un trip coûte ~5-15 crédits (3-5 messages Opus)
+ * Un parrainage rapporte 30 crédits → créateur toujours gagnant dès la 1ère conversion
+ */
+export const SHARING_REWARDS = {
+  /** Crédits offerts au shareur quand un ami s'inscrit via son lien */
+  signupCredits: 30,
+  /** Points Club offerts au shareur quand un ami s'inscrit */
+  signupPoints: 100,
+  /** % de commission partenaire reversée au shareur quand un ami réserve */
+  bookingCommissionPercent: 5,
+} as const;
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
