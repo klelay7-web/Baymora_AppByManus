@@ -16,6 +16,37 @@ interface Conversation {
   updatedAt: string;
 }
 
+// ─── Crédits ─────────────────────────────────────────────────────────────────
+
+export interface CreditsInfo {
+  used: number;
+  limit: number;
+  remaining: number;
+  cost?: number;
+  model?: 'opus' | 'sonnet' | 'fallback';
+}
+
+export interface UnlockTier {
+  id: string;
+  credits: number;
+  priceEur: number;
+  label: string;
+}
+
+export interface UpgradeOptions {
+  nextPlan?: string;
+  nextPlanPrice?: number;
+  unlockTiers?: UnlockTier[];
+  subscriptionHint?: string;
+  creditPacks?: Array<{
+    id: string;
+    name: string;
+    credits: number;
+    priceEur: number;
+    bonusLabel?: string;
+  }>;
+}
+
 export function useChat(initialConversationId?: string) {
   const [conversationId, setConversationId] = useState(
     initialConversationId || ''
@@ -24,6 +55,11 @@ export function useChat(initialConversationId?: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+
+  // ─── État crédits ──────────────────────────────────────────────────────────
+  const [credits, setCredits] = useState<CreditsInfo | null>(null);
+  const [creditsExhausted, setCreditsExhausted] = useState(false);
+  const [upgradeOptions, setUpgradeOptions] = useState<UpgradeOptions | null>(null);
 
   /**
    * Démarrer une nouvelle conversation
@@ -47,6 +83,8 @@ export function useChat(initialConversationId?: string) {
         const data = await response.json();
         setConversationId(data.conversationId);
         setMessages([]);
+        setCreditsExhausted(false);
+        setUpgradeOptions(null);
         return data.conversationId;
       } catch (err) {
         const message =
@@ -61,7 +99,7 @@ export function useChat(initialConversationId?: string) {
   );
 
   /**
-   * Envoyer un message
+   * Envoyer un message — gère HTTP 402 (crédits épuisés)
    */
   const sendMessage = useCallback(
     async (content: string) => {
@@ -82,11 +120,26 @@ export function useChat(initialConversationId?: string) {
           }),
         });
 
+        // ── Crédits épuisés → déclencher la porte dorée ──────────────────
+        if (response.status === 402) {
+          const data = await response.json();
+          setCreditsExhausted(true);
+          setCredits(data.credits || null);
+          setUpgradeOptions(data.upgrade || null);
+          return null;
+        }
+
         if (!response.ok) {
           throw new Error('Failed to send message');
         }
 
         const data = await response.json();
+
+        // Mettre à jour les crédits si renvoyés par le serveur
+        if (data.credits) {
+          setCredits(data.credits);
+          setCreditsExhausted(false);
+        }
 
         // Add user message
         setMessages((prev) => [
@@ -223,17 +276,27 @@ export function useChat(initialConversationId?: string) {
     [conversationId]
   );
 
+  /** Réinitialiser l'état crédits (après un achat) */
+  const resetCreditsGate = useCallback(() => {
+    setCreditsExhausted(false);
+    setUpgradeOptions(null);
+  }, []);
+
   return {
     conversationId,
     messages,
     isLoading,
     error,
     conversations,
+    credits,
+    creditsExhausted,
+    upgradeOptions,
     startChat,
     sendMessage,
     loadConversation,
     listConversations,
     deleteConversation,
     setConversationId,
+    resetCreditsGate,
   };
 }

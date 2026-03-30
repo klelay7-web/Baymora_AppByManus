@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, Calendar, Users, Wallet, Hotel, Utensils, Zap, Plane, StickyNote, ChevronRight, Star, ExternalLink, Navigation, Car, Mail, Download, Printer, ExternalLink as LinkIcon, Bookmark } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
-import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT } from '@/hooks/useAuth';
+import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT, FREE_CREDITS_LIMIT } from '@/hooks/useAuth';
 import ConversionModal from '@/components/ConversionModal';
+import CreditGate from '@/components/CreditGate';
 import ContactPicker from '@/components/ContactPicker';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -1027,7 +1028,7 @@ export default function Chat() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
-  const { messages, isLoading, error, conversationId, startChat, sendMessage, deleteConversation } = useChat();
+  const { messages, isLoading, error, conversationId, startChat, sendMessage, deleteConversation, credits, creditsExhausted, upgradeOptions, resetCreditsGate } = useChat();
 
   useEffect(() => { startChat('fr'); }, []);
 
@@ -1057,21 +1058,22 @@ export default function Chat() {
     }
   }, [messages, isLoading]);
 
-  const guestRemaining = FREE_MESSAGES_LIMIT - guestMsgCount;
-  // Ne pas bloquer pendant le chargement auth initial — évite le bug compteur
-  const isGuestLimitReached = !authLoading && !isAuthenticated && guestMsgCount >= FREE_MESSAGES_LIMIT;
+  // Crédits : utiliser les données serveur si disponibles, sinon localStorage legacy
+  const creditsRemaining = credits ? credits.remaining : (FREE_CREDITS_LIMIT - guestMsgCount);
+  const isCreditsExhausted = creditsExhausted || (!authLoading && !isAuthenticated && creditsRemaining <= 0);
 
   const SOFT_HINT_AT = 6;
   const SOFT_MODAL_AT = 7;
 
   const canSend = () => {
-    if (authLoading) return false; // Attendre la résolution auth avant de compter
-    if (isGuestLimitReached) { setShowConversion(true); return false; }
-    if (!isAuthenticated) {
+    if (authLoading) return false;
+    // Bloqué par le serveur (HTTP 402)
+    if (creditsExhausted) return false;
+    // Legacy guest limit (avant que le serveur ne réponde)
+    if (!isAuthenticated && !credits) {
       const newCount = incrementGuestMessageCount();
       setGuestMsgCount(newCount);
-      // Soft modal au message 7 : bloque une fois, laisse passer après dismiss
-      if (newCount >= SOFT_MODAL_AT && newCount < FREE_MESSAGES_LIMIT && !softModalDismissed) {
+      if (newCount >= SOFT_MODAL_AT && newCount < FREE_CREDITS_LIMIT && !softModalDismissed) {
         setShowSoftConversion(true);
         return false;
       }
@@ -1128,7 +1130,21 @@ export default function Chat() {
   return (
     <div className="flex h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
 
-      {showConversion && !showSoftConversion && (
+      {/* Porte dorée — quand les crédits sont épuisés */}
+      {isCreditsExhausted && (
+        <CreditGate
+          isAuthenticated={isAuthenticated}
+          currentCircle={user?.circle || 'decouverte'}
+          credits={credits}
+          upgradeOptions={upgradeOptions}
+          conversationId={conversationId || undefined}
+          onClose={() => resetCreditsGate()}
+          onSignup={() => { resetCreditsGate(); setShowConversion(true); }}
+        />
+      )}
+
+      {/* Conversion classique (inscription) — soft modal au message 7 */}
+      {showConversion && !isCreditsExhausted && (
         <ConversionModal
           onClose={() => setShowConversion(false)}
           onSuccess={() => setShowConversion(false)}
@@ -1136,7 +1152,7 @@ export default function Chat() {
         />
       )}
 
-      {showSoftConversion && !isAuthenticated && (
+      {showSoftConversion && !isAuthenticated && !isCreditsExhausted && (
         <ConversionModal
           onClose={() => { setShowSoftConversion(false); setSoftModalDismissed(true); }}
           onSuccess={() => { setShowSoftConversion(false); setShowConversion(false); }}
@@ -1190,17 +1206,27 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Bannière messages restants */}
-      {!isAuthenticated && guestMsgCount > 0 && !isGuestLimitReached && (
-        <div className="flex-shrink-0 bg-secondary/10 border-b border-secondary/20 px-4 py-2 flex items-center justify-between">
-          <p className="text-secondary/80 text-xs">{guestRemaining === 1 ? 'Plus qu\'un message gratuit' : `${guestRemaining} messages gratuits restants`}</p>
-          <button onClick={() => setShowConversion(true)} className="text-secondary text-xs font-medium hover:underline">Créer un compte →</button>
+      {/* Bannière crédits restants */}
+      {credits && credits.remaining > 0 && credits.remaining <= 5 && (
+        <div className="flex-shrink-0 bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center justify-between">
+          <p className="text-amber-400/80 text-xs">
+            {credits.remaining === 1
+              ? 'Dernier crédit disponible'
+              : `${credits.remaining} crédits restants`
+            }
+            {credits.cost ? ` · Dernier échange : ${credits.cost} crédit${credits.cost > 1 ? 's' : ''}` : ''}
+          </p>
+          {!isAuthenticated ? (
+            <button onClick={() => setShowConversion(true)} className="text-secondary text-xs font-medium hover:underline">Créer un compte →</button>
+          ) : (
+            <button onClick={() => resetCreditsGate()} className="text-secondary text-xs font-medium hover:underline">Recharger →</button>
+          )}
         </div>
       )}
-      {isGuestLimitReached && (
-        <div className="flex-shrink-0 bg-slate-800/80 border-b border-white/10 px-4 py-2.5 flex items-center justify-between">
-          <p className="text-white/70 text-xs">Vous avez utilisé vos {FREE_MESSAGES_LIMIT} échanges gratuits.</p>
-          <button onClick={() => setShowConversion(true)} className="bg-secondary text-white text-xs font-semibold px-3 py-1 rounded-full hover:bg-secondary/90">Continuer →</button>
+      {!isAuthenticated && !credits && guestMsgCount > 0 && guestMsgCount < FREE_CREDITS_LIMIT && (
+        <div className="flex-shrink-0 bg-secondary/10 border-b border-secondary/20 px-4 py-2 flex items-center justify-between">
+          <p className="text-secondary/80 text-xs">{creditsRemaining <= 1 ? 'Plus qu\'un échange gratuit' : `${creditsRemaining} échanges gratuits restants`}</p>
+          <button onClick={() => setShowConversion(true)} className="text-secondary text-xs font-medium hover:underline">Créer un compte →</button>
         </div>
       )}
 
@@ -1236,7 +1262,7 @@ export default function Chat() {
                   <button
                     key={chip.label}
                     onClick={() => handleChip(chip.msg)}
-                    disabled={isLoading || isGuestLimitReached}
+                    disabled={isLoading || isCreditsExhausted}
                     className="px-3 py-1.5 rounded-full border border-white/15 bg-white/5 text-white/65 text-xs hover:bg-secondary/15 hover:border-secondary/40 hover:text-white transition-all disabled:opacity-40"
                   >
                     {chip.label}
@@ -1253,7 +1279,7 @@ export default function Chat() {
                   <button
                     key={chip.label}
                     onClick={() => handleChip(chip.msg)}
-                    disabled={isLoading || isGuestLimitReached}
+                    disabled={isLoading || isCreditsExhausted}
                     className="px-3 py-1.5 rounded-full border border-white/15 bg-white/5 text-white/65 text-xs hover:bg-secondary/15 hover:border-secondary/40 hover:text-white transition-all disabled:opacity-40"
                   >
                     {chip.label}
@@ -1272,7 +1298,7 @@ export default function Chat() {
             </div>
             <p className="text-white/25 text-xs text-center -mt-2">
               Ou écrivez directement — week-end, soirée, gastro, US, chill...
-              {!isAuthenticated && <><br /><span className="text-secondary/50">{FREE_MESSAGES_LIMIT} échanges gratuits · Créez un compte pour continuer</span></>}
+              {!isAuthenticated && <><br /><span className="text-secondary/50">{FREE_CREDITS_LIMIT} échanges gratuits · Créez un compte pour continuer</span></>}
             </p>
           </div>
         )}
@@ -1362,7 +1388,7 @@ export default function Chat() {
                       <button
                         key={reply}
                         onClick={() => handleChip(reply)}
-                        disabled={isGuestLimitReached}
+                        disabled={isCreditsExhausted}
                         className="px-3 py-1.5 rounded-full border border-secondary/30 bg-secondary/10 text-secondary text-xs font-medium hover:bg-secondary/25 hover:border-secondary/60 transition-all disabled:opacity-40"
                       >
                         {reply}
@@ -1421,12 +1447,12 @@ export default function Chat() {
           <input
             ref={inputRef}
             type="text"
-            placeholder={isGuestLimitReached ? 'Créez un compte pour continuer...' : 'Week-end, fête, plage, gastro, surprise... dites-nous tout'}
+            placeholder={isCreditsExhausted ? 'Créez un compte pour continuer...' : 'Week-end, fête, plage, gastro, surprise... dites-nous tout'}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             disabled={isLoading}
-            onClick={() => isGuestLimitReached && setShowConversion(true)}
+            onClick={() => isCreditsExhausted && setShowConversion(true)}
             autoFocus
             className="flex-1 h-10 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-secondary/60 focus:ring-1 focus:ring-secondary/40 disabled:opacity-50 disabled:cursor-not-allowed"
           />
@@ -1442,8 +1468,8 @@ export default function Chat() {
             </Button>
           )}
           <Button
-            onClick={isGuestLimitReached ? () => setShowConversion(true) : handleSend}
-            disabled={isLoading || (!isGuestLimitReached && !input.trim())}
+            onClick={isCreditsExhausted ? () => setShowConversion(true) : handleSend}
+            disabled={isLoading || (!isCreditsExhausted && !input.trim())}
             size="sm"
             className="bg-secondary hover:bg-secondary/90 text-white px-4"
           >
