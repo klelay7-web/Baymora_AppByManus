@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { initSentry, captureException } from "./services/sentry";
 import express from "express";
 import cors from "cors";
 import authRouter from "./routes/auth";
@@ -64,6 +65,15 @@ export function createServer() {
   app.use("/api/{*path}", (_req, res) => {
     res.status(404).json({ error: "Not found" });
   });
+
+  // Global error handler — capture vers Sentry
+  app.use((err: any, _req: any, res: any, _next: any) => {
+    captureException(err, { route: _req?.path, method: _req?.method });
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  });
+
+  // Init Sentry au démarrage (async, non-bloquant)
+  initSentry().catch(() => {});
 
   return app;
 }
