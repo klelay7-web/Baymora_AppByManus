@@ -18,6 +18,7 @@ import { detectProfile, buildPersonaPrompt } from './profileDetector';
 import type { LLMMessage as PersonaLLMMessage } from './personas';
 import { getCachedApprovedPartners } from '../../routes/partners';
 import { getClubTier } from '../../routes/club';
+import { buildTemporalContext } from '../calendar-events';
 
 // ─── Modèles disponibles ──────────────────────────────────────────────────────
 
@@ -74,6 +75,16 @@ Quand le client est déjà sur place et cherche des expériences locales :
 - "Mon hôtel est à Miami Beach, recommande-moi" → tu te bases sur la localisation pour proposer le meilleur accessible
 - Toujours : adresse précise, à quelle heure y aller, comment réserver, quoi commander/demander
 - Propose toujours des options à différents niveaux : casual premium, haut de gamme, secret/confidentiel
+
+## Conscience temporelle — fêtes, saisons, cadeaux
+Tu connais TOUJOURS la date et l'heure actuelles (injectées en contexte). Tu dois :
+- **Adapter tes recommandations à la saison** : ski en hiver, plages en été, vendanges en automne, cherry blossoms au printemps
+- **Anticiper les événements proches** : si Noël est dans 15 jours et le client parle de cadeau → propose des idées premium
+- **Être proactif sur les fêtes** : si la Saint-Valentin est dans 5 jours, glisse naturellement "D'ailleurs, la Saint-Valentin c'est dans 5 jours — un dîner étoilé ou un week-end surprise ?"
+- **Solliciter pour les cadeaux** : anniversaires des proches (si connus), Fête des Mères/Pères, Noël → "L'anniversaire de Marie est dans 10 jours — un cadeau ou une expérience ?"
+- **Ne jamais recommander un événement passé** : si un festival est fini, ne le propose pas
+- **Contextualiser l'heure** : si c'est 19h → "Ce soir", si c'est samedi matin → "Ce week-end"
+- **Connaître les vacances scolaires** : Toussaint, Noël, Février, Pâques, Été (FR) pour anticiper les périodes de réservation
 
 ## Deux modes d'entrée
 1. **"Je sais où aller"** — Le client a une destination. Tu poses des questions intelligentes pour affiner, puis tu fournis un plan complet.
@@ -406,18 +417,21 @@ const OPUS_TRIGGERS = [
 ];
 
 function selectModel(message: string, conversationLength: number): ModelKey {
-  // Toujours Opus pour le premier message si la demande est substantielle
-  if (conversationLength <= 1 && message.length > 30) return 'opus';
+  // Sonnet pour les messages courts de suivi (oui/non, choix, réponse courte)
+  if (message.length < 50 && conversationLength > 1) return 'sonnet';
 
   // Opus si le message déclenche un trigger de complexité
   for (const trigger of OPUS_TRIGGERS) {
     if (trigger.test(message)) return 'opus';
   }
 
-  // Opus si message long (demande détaillée)
-  if (message.length > 200) return 'opus';
+  // Opus si message long (demande détaillée) et début de conversation
+  if (message.length > 200 && conversationLength <= 3) return 'opus';
 
-  // Sonnet pour tout le reste (conversation fluide)
+  // Opus pour le tout premier message substantiel
+  if (conversationLength <= 1 && message.length > 80) return 'opus';
+
+  // Sonnet pour tout le reste (conversation fluide, rapide)
   return 'sonnet';
 }
 
@@ -680,6 +694,10 @@ export async function callLLM(
     }
   }
 
+  // ── Contexte temporel (date, heure, fêtes proches) ──────────────────────
+  const temporalCtx = buildTemporalContext(userRecord?.country || 'FR');
+  console.log(`[LLM] Événements proches: ${temporalCtx.upcomingEvents.length > 0 ? temporalCtx.upcomingEvents.map(e => `${e.name} (${e.daysUntil}j)`).join(', ') : 'aucun'}`);
+
   // ── Détection persona + mode voyage + style interaction ──────────────────
   const detectedProfile = detectProfile(messages, userRecord?.preferences);
   const personaContext = buildPersonaPrompt(detectedProfile);
@@ -717,10 +735,11 @@ export async function callLLM(
       systemPrompt = `${contextParts.join('\n\n')}\n\n---\n\n${systemPrompt}`;
       console.log(`[LLM] Contextes injectés: ${contextParts.map(c => c.split('\n')[0]).join(' | ')}`);
     }
-    // Persona + partenaires + conversion hint appendés en fin de system prompt
-    systemPrompt = `${systemPrompt}\n\n${personaContext}${partnerContext ? '\n\n' + partnerContext : ''}${conversionHint}`;
+    // Temporal + Persona + partenaires + conversion hint appendés en fin de system prompt
+    systemPrompt = `${systemPrompt}\n\n${temporalCtx.dateTimeBlock}\n\n${personaContext}${partnerContext ? '\n\n' + partnerContext : ''}${conversionHint}`;
 
-    const maxTokens = modelKey === 'opus' ? 2048 : 1024;
+    // Opus: réponses longues (plans complets). Sonnet: réponses courtes (conversation).
+    const maxTokens = modelKey === 'opus' ? 1800 : 800;
 
     const response = await client.messages.create({
       model: modelId,
