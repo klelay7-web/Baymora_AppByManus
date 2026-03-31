@@ -141,4 +141,52 @@ router.patch('/users/:id/messages', requireOwner, async (req, res) => {
   }
 });
 
+// ─── POST /api/admin/grant-unlimited ─────────────────────────────────────────
+// Route sécurisée par ADMIN_SECRET pour donner un accès illimité au owner.
+// Usage : POST /api/admin/grant-unlimited { email, secret }
+
+router.post('/grant-unlimited', async (req, res) => {
+  try {
+    const { email, secret } = req.body;
+    const adminSecret = process.env.ADMIN_SECRET;
+
+    if (!adminSecret || secret !== adminSecret) {
+      res.status(403).json({ error: 'Secret invalide' });
+      return;
+    }
+
+    if (!email) {
+      res.status(400).json({ error: 'Email requis' });
+      return;
+    }
+
+    const user = await prisma.user.findFirst({ where: { email } });
+    if (!user) {
+      res.status(404).json({ error: 'Utilisateur non trouvé' });
+      return;
+    }
+
+    // Passer en fondateur avec crédits quasi-illimités
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        circle: 'fondateur',
+        creditsLimit: 999999,
+        creditsUsed: 0,
+        perplexityLimit: -1,        // illimité
+        perplexityUsed: 0,
+        messagesLimit: 999999,
+        messagesUsed: 0,
+        creditsResetAt: new Date(2099, 11, 31), // ne reset jamais
+      },
+    });
+
+    console.log(`[ADMIN] Accès illimité accordé à ${email} (${user.id})`);
+    res.json({ success: true, message: `${email} est maintenant Fondateur avec accès illimité` });
+  } catch (error) {
+    console.error('Admin grant-unlimited error:', error);
+    res.status(500).json({ error: 'Erreur' });
+  }
+});
+
 export default router;
