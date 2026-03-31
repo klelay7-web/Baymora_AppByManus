@@ -148,9 +148,11 @@ router.patch('/users/:id/messages', requireOwner, async (req, res) => {
 router.post('/grant-unlimited', async (req, res) => {
   try {
     const { email, secret } = req.body;
-    const adminSecret = process.env.ADMIN_SECRET;
+    const adminSecret = (process.env.ADMIN_SECRET || '').trim();
 
-    if (!adminSecret || secret !== adminSecret) {
+    console.log(`[ADMIN] grant-unlimited attempt | secret match: ${secret?.trim() === adminSecret} | env set: ${!!adminSecret}`);
+
+    if (!adminSecret || secret?.trim() !== adminSecret) {
       res.status(403).json({ error: 'Secret invalide' });
       return;
     }
