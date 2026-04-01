@@ -260,6 +260,74 @@ export const SHARING_REWARDS = {
   bookingCommissionPercent: 5,
 } as const;
 
+// ─── Système d'accès par feature ─────────────────────────────────────────────
+//
+// Chaque plan a un set de features incluses.
+// Les features non-incluses peuvent être débloquées :
+//   - One-shot (paiement ponctuel, accès temporaire ou permanent)
+//   - Par les points Club (gagner puis dépenser)
+//
+// Privé a TOUT par défaut (sauf certains bonus points-only).
+// Premium a accès aux fiches Baymora + Échappées mais PAS aux Expériences VIP.
+// Découverte n'a que l'IA de base.
+
+export type FeatureKey =
+  | 'curated_guides'        // Fiches & parcours Baymora curatés
+  | 'echappees'             // Offres partenaires Échappées
+  | 'experiences_vip'       // Expériences Privées VIP
+  | 'human_concierge'       // Conciergerie humaine
+  | 'baymora_booking'       // Réservation par Baymora
+  | 'family_circle'         // Cercle familial complet (>5 proches)
+  | 'unlimited_trips'       // Plans de voyage illimités
+  | 'priority_ai'           // IA prioritaire (file d'attente réduite)
+  | 'boutique_premium';     // Boutique articles exclusifs
+
+/** Features incluses par plan */
+export const PLAN_FEATURES: Record<string, FeatureKey[]> = {
+  decouverte: [],
+  premium: ['curated_guides', 'echappees'],
+  prive: ['curated_guides', 'echappees', 'experiences_vip', 'human_concierge', 'baymora_booking', 'family_circle', 'unlimited_trips', 'priority_ai', 'boutique_premium'],
+};
+
+/** Déblocage one-shot : prix pour accéder à une feature sans changer de plan */
+export interface FeatureUnlock {
+  feature: FeatureKey;
+  name: string;
+  description: string;
+  priceEurCents: number;
+  duration: 'permanent' | '30days' | '7days' | '24h' | 'one_use';
+  pointsCost?: number;        // alternative : payer en points Club
+  minPlan: 'decouverte' | 'premium';  // plan minimum pour pouvoir acheter
+}
+
+export const FEATURE_UNLOCKS: FeatureUnlock[] = [
+  // Découverte → peut acheter ces features
+  { feature: 'curated_guides',    name: 'Fiches Baymora',         description: 'Accès aux guides et parcours curatés par Baymora', priceEurCents: 490,  duration: '30days',  pointsCost: 500,  minPlan: 'decouverte' },
+  { feature: 'echappees',         name: 'Échappées Baymora',      description: 'Accès aux offres partenaires exclusives',          priceEurCents: 290,  duration: '30days',  pointsCost: 300,  minPlan: 'decouverte' },
+
+  // Premium → peut acheter ces features (incluses dans Privé)
+  { feature: 'experiences_vip',   name: 'Expériences VIP',        description: 'Accès aux expériences privées et privilèges VIP',  priceEurCents: 1490, duration: '30days',  pointsCost: 1500, minPlan: 'premium' },
+  { feature: 'human_concierge',   name: 'Conciergerie humaine',   description: 'Un concierge humain pour vos demandes complexes',  priceEurCents: 1990, duration: '7days',   pointsCost: 2000, minPlan: 'premium' },
+  { feature: 'baymora_booking',   name: 'Réservation Baymora',    description: 'Baymora réserve pour vous (1 réservation)',        priceEurCents: 990,  duration: 'one_use', pointsCost: 1000, minPlan: 'premium' },
+  { feature: 'family_circle',     name: 'Cercle familial élargi', description: 'Plus de 5 proches + fiches croisées complètes',    priceEurCents: 990,  duration: '30days',  pointsCost: 800,  minPlan: 'premium' },
+
+  // Points-only (pour tous, débloquable uniquement avec des points)
+  { feature: 'boutique_premium',  name: 'Boutique exclusive',     description: 'Accès aux articles et cadeaux premium',           priceEurCents: 0,    duration: '30days',  pointsCost: 2000, minPlan: 'decouverte' },
+  { feature: 'priority_ai',      name: 'IA prioritaire',         description: 'Réponses IA en priorité, temps d\'attente réduit', priceEurCents: 0,    duration: '7days',   pointsCost: 500,  minPlan: 'decouverte' },
+];
+
+/** Vérifie si un user a accès à une feature (plan inclus OU débloqué) */
+export function hasFeatureAccess(circle: string, unlockedFeatures: string[], feature: FeatureKey): boolean {
+  const normalized = normalizeCircle(circle);
+  // Privé a tout
+  if (normalized === 'prive') return true;
+  // Feature incluse dans le plan ?
+  if (PLAN_FEATURES[normalized]?.includes(feature)) return true;
+  // Feature débloquée (one-shot ou points) ?
+  if (unlockedFeatures.includes(feature)) return true;
+  return false;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';

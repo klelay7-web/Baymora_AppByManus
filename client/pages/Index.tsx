@@ -126,11 +126,11 @@ type Lang = "fr" | "en";
 
 const PLANS = [
   { circle: "Découverte", badge: "○", price: "Gratuit", color: "border-white/12", highlight: false,
-    features: { fr: ["15 échanges gratuits", "IA Opus complète", "Aucun compte requis"], en: ["15 free exchanges", "Full Opus AI", "No account needed"] } },
+    features: { fr: ["15 échanges gratuits", "IA Opus complète", "Recommandations 100% IA", "Aucun compte requis"], en: ["15 free exchanges", "Full Opus AI", "100% AI recommendations", "No account needed"] } },
   { circle: "Premium", badge: "✦", price: "14,90€/mois", color: "border-secondary/40", highlight: true,
-    features: { fr: ["200 crédits/mois + rollover", "Mémoire permanente + 5 proches", "5 plans de voyage sauvegardés", "Échappées Baymora (-30%)", "Recherches web illimitées"], en: ["200 credits/month + rollover", "Permanent memory + 5 companions", "5 saved trip plans", "Baymora Escapes (-30%)", "Unlimited web searches"] } },
+    features: { fr: ["200 crédits/mois + rollover", "Mémoire permanente + 5 proches", "5 plans de voyage sauvegardés", "Fiches & parcours Baymora", "Échappées Baymora (offres partenaires)", "Accès Expériences VIP en option"], en: ["200 credits/month + rollover", "Permanent memory + 5 companions", "5 saved trip plans", "Baymora curated guides", "Baymora Escapes (partner offers)", "VIP Experiences available as add-on"] } },
   { circle: "Privé", badge: "✦✦✦", price: "49,90€/mois", color: "border-amber-400/35", highlight: false,
-    features: { fr: ["Crédits illimités", "Cercle familial complet", "Conciergerie humaine", "Expériences Privées VIP", "Réservation par Baymora"], en: ["Unlimited credits", "Full family circle", "Human concierge", "VIP Private Experiences", "Booking by Baymora"] } },
+    features: { fr: ["Crédits illimités", "Cercle familial complet", "Conciergerie humaine", "Expériences Privées VIP incluses", "Réservation par Baymora", "Tout inclus, zéro limite"], en: ["Unlimited credits", "Full family circle", "Human concierge", "VIP Private Experiences included", "Booking by Baymora", "All-inclusive, zero limits"] } },
 ];
 
 // ─── Styles ───────────────────────────────────────────────────────────────────

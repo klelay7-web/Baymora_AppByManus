@@ -39,8 +39,9 @@ const PLAN_DISPLAY: Record<string, {
       '200 crédits/mois + rollover',
       'Mémoire permanente + 5 proches',
       '5 plans de voyage sauvegardés',
-      'Échappées Baymora (-30%)',
-      'Recherches web illimitées',
+      'Fiches & parcours Baymora',
+      'Échappées Baymora (offres partenaires)',
+      'Expériences VIP en option',
     ],
   },
   prive: {
@@ -54,8 +55,9 @@ const PLAN_DISPLAY: Record<string, {
       'Crédits illimités',
       'Cercle familial complet',
       'Conciergerie humaine',
-      'Expériences Privées VIP',
+      'Expériences Privées VIP incluses',
       'Réservation par Baymora',
+      'Tout inclus, zéro limite',
     ],
   },
 };
