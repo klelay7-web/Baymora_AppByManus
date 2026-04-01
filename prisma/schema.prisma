@@ -82,7 +82,7 @@ model TravelCompanion {
   id               String   @id @default(uuid())
   userId           String
   name             String
-  relationship     String   @default("ami")
+  relationship     String   @default("ami")       // ami|frere|soeur|maman|papa|conjoint|enfant|collegue|animal
   birthday         String?
   age              Int?
   heightCm         Int?
@@ -94,11 +94,20 @@ model TravelCompanion {
   preferences      Json     @default("{}")
   firstMentionedAt DateTime @default(now())
   lastSeenWith     String?
+
+  // ─── Connexion cercle familial ────────────────────────────────────────────
+  linkedUserId     String?                         // ID du compte Baymora du proche (si inscrit)
+  inviteToken      String?  @unique                // token d'invitation unique pour ce proche
+  inviteSentAt     DateTime?                       // quand le lien a été envoyé
+  inviteAccepted   Boolean  @default(false)        // le proche s'est inscrit via le lien
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([linkedUserId])
+  @@index([inviteToken])
   @@map("travel_companions")
 }
 

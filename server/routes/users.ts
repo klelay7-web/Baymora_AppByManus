@@ -532,4 +532,184 @@ router.delete('/me/companions/:id', handleDeleteCompanion);
 router.post('/me/dates', handleAddDate);
 router.delete('/me/dates/:id', handleDeleteDate);
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// CERCLE FAMILIAL — Inviter un proche à rejoindre Baymora
+// ═══════════════════════════════════════════════════════════════════════════════
+
+import crypto from 'crypto';
+import { sendEmail } from '../services/email';
+
+// POST /api/users/me/companions/:id/invite — Générer un lien d'invitation pour un proche
+router.post('/me/companions/:id/invite', async (req, res) => {
+  try {
+    const baymoraUser = (req as any).baymoraUser;
+    if (!baymoraUser?.id) { res.status(401).json({ error: 'Non authentifié' }); return; }
+
+    const companion = await prisma.travelCompanion.findFirst({
+      where: { id: req.params.id, userId: baymoraUser.id },
+    });
+    if (!companion) { res.status(404).json({ error: 'Proche non trouvé' }); return; }
+
+    // Générer un token d'invitation unique
+    const inviteToken = crypto.randomBytes(24).toString('hex');
+    await prisma.travelCompanion.update({
+      where: { id: companion.id },
+      data: { inviteToken, inviteSentAt: new Date() },
+    });
+
+    const appUrl = process.env.APP_URL || 'https://www.baymora.com';
+    const inviteLink = `${appUrl}/join?invite=${inviteToken}&from=${baymoraUser.id}`;
+
+    // Envoyer par email si le proche a un email dans ses préférences
+    const companionEmail = (companion.preferences as any)?.email;
+    if (companionEmail) {
+      const senderName = baymoraUser.prenom || baymoraUser.pseudo || 'Quelqu\'un';
+      await sendEmail(
+        companionEmail,
+        `${senderName} vous invite sur Baymora`,
+        `<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:40px 20px;background:#ffffff;">
+          <h1 style="color:#1a1a2e;font-size:22px;">Vous avez été invité(e) !</h1>
+          <p style="color:#444;font-size:14px;line-height:1.6;">
+            ${senderName} vous a ajouté comme ${companion.relationship} sur Baymora, la conciergerie de voyage premium.
+          </p>
+          <p style="color:#444;font-size:14px;">
+            Votre profil est déjà pré-rempli avec les infos que ${senderName} connaît de vous. Cliquez pour compléter :
+          </p>
+          <a href="${inviteLink}" style="display:inline-block;background:#c8a94a;color:#1a1a2e;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:bold;font-size:14px;margin:24px 0;">
+            Rejoindre Baymora
+          </a>
+          <p style="color:#999;font-size:11px;margin-top:30px;">
+            Gratuit · 15 échanges offerts · Vos données restent privées
+          </p>
+        </div>`,
+      );
+    }
+
+    console.log(`[CIRCLE] Invitation envoyée: ${companion.name} par ${baymoraUser.id}`);
+    res.json({ success: true, inviteLink, inviteToken });
+  } catch (error) {
+    console.error('[CIRCLE] Invite error:', error);
+    res.status(500).json({ error: 'Erreur invitation' });
+  }
+});
+
+// GET /api/users/join?invite=TOKEN — Accepter une invitation (pré-remplir le signup)
+router.get('/join', async (req, res) => {
+  try {
+    const { invite } = req.query as Record<string, string>;
+    if (!invite) { res.status(400).json({ error: 'Token requis' }); return; }
+
+    const companion = await prisma.travelCompanion.findFirst({
+      where: { inviteToken: invite },
+      include: { user: { select: { id: true, pseudo: true, prenom: true } } },
+    });
+
+    if (!companion) { res.status(404).json({ error: 'Invitation invalide ou expirée' }); return; }
+
+    // Retourner les infos pré-remplies
+    res.json({
+      prefilled: {
+        name: companion.name,
+        relationship: companion.relationship,
+        birthday: companion.birthday,
+        diet: companion.diet,
+        preferences: companion.preferences,
+      },
+      invitedBy: {
+        name: companion.user.prenom || companion.user.pseudo,
+        relationship: companion.relationship,
+      },
+      inviteToken: invite,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur invitation' });
+  }
+});
+
+// POST /api/users/join — Créer le compte du proche invité
+router.post('/join', async (req, res) => {
+  try {
+    const { inviteToken, pseudo, email, password } = req.body;
+    if (!inviteToken || !pseudo) { res.status(400).json({ error: 'Token et pseudo requis' }); return; }
+
+    const companion = await prisma.travelCompanion.findFirst({
+      where: { inviteToken },
+    });
+    if (!companion) { res.status(404).json({ error: 'Invitation invalide' }); return; }
+    if (companion.inviteAccepted) { res.status(409).json({ error: 'Invitation déjà acceptée' }); return; }
+
+    // Créer le compte
+    const passwordHash = password ? await hashPassword(password) : undefined;
+    const newUser = await prisma.user.create({
+      data: {
+        pseudo,
+        prenom: companion.name,
+        email: email || undefined,
+        passwordHash,
+        mode: 'signature',
+        circle: 'decouverte',
+        creditsUsed: 0,
+        creditsLimit: PLANS.decouverte.creditsLimit,
+        perplexityUsed: 0,
+        perplexityLimit: PLANS.decouverte.perplexityLimit,
+        messagesUsed: 0,
+        messagesLimit: PLANS.decouverte.creditsLimit,
+        creditsResetAt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+        preferences: {
+          diet: companion.diet || undefined,
+          ...(companion.preferences as object || {}),
+        },
+        invitedById: companion.userId,
+      },
+    });
+
+    // Marquer l'invitation comme acceptée + lier les comptes
+    await prisma.travelCompanion.update({
+      where: { id: companion.id },
+      data: { inviteAccepted: true, linkedUserId: newUser.id },
+    });
+
+    // Créer une fiche réciproque (le nouveau user a aussi le créateur dans ses proches)
+    const creator = await prisma.user.findUnique({
+      where: { id: companion.userId },
+      select: { prenom: true, pseudo: true },
+    });
+    if (creator) {
+      const reverseRelation: Record<string, string> = {
+        ami: 'ami', frere: 'frere', soeur: 'soeur', maman: 'enfant', papa: 'enfant',
+        conjoint: 'conjoint', enfant: 'parent', collegue: 'collegue',
+      };
+      await prisma.travelCompanion.create({
+        data: {
+          userId: newUser.id,
+          name: creator.prenom || creator.pseudo,
+          relationship: reverseRelation[companion.relationship] || 'ami',
+          linkedUserId: companion.userId,
+        },
+      });
+    }
+
+    // Récompense pour l'inviteur : 30 crédits + 100 points
+    await prisma.user.update({
+      where: { id: companion.userId },
+      data: {
+        creditsLimit: { increment: 30 },
+        clubPoints: { increment: 100 },
+      },
+    });
+
+    const token = generateUserToken(newUser.id, 'decouverte');
+
+    console.log(`[CIRCLE] Proche inscrit: ${companion.name} → ${newUser.id} (invité par ${companion.userId})`);
+    res.json({
+      success: true,
+      user: { id: newUser.id, pseudo: newUser.pseudo, prenom: newUser.prenom },
+      token,
+    });
+  } catch (error) {
+    console.error('[CIRCLE] Join error:', error);
+    res.status(500).json({ error: 'Erreur inscription' });
+  }
+});
+
 export default router;
