@@ -301,6 +301,12 @@ export default function PartnerDashboard() {
           </section>
         )}
 
+        {/* ── Réservations reçues ── */}
+        <ReservationsSection token={token!} partnerId={partner.id} />
+
+        {/* ── Notes & factures ── */}
+        <NotesSection token={token!} partnerId={partner.id} />
+
         {/* ── Contact ── */}
         <div className="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
           <p className="text-white/30 text-sm">Questions sur votre espace partenaire ?</p>
@@ -317,5 +323,205 @@ export default function PartnerDashboard() {
         </button>
       </div>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RESERVATIONS — Réservations reçues via Baymora
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function ReservationsSection({ token, partnerId }: { token: string; partnerId: string }) {
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/partners/reservations?token=${token}`)
+      .then(res => res.ok ? res.json() : Promise.resolve({ reservations: [] }))
+      .then(data => setReservations(data.reservations || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  if (loading) return null;
+
+  return (
+    <section>
+      <h2 className="text-white/70 font-semibold text-sm mb-3 flex items-center gap-2">
+        📋 Réservations reçues
+        {reservations.filter(r => r.status === 'pending').length > 0 && (
+          <span className="bg-secondary text-black text-[10px] font-bold rounded-full px-2 py-0.5">
+            {reservations.filter(r => r.status === 'pending').length} nouvelles
+          </span>
+        )}
+      </h2>
+      {reservations.length === 0 ? (
+        <div className="bg-white/4 border border-white/10 rounded-xl p-6 text-center">
+          <p className="text-white/30 text-sm">Aucune réservation pour le moment</p>
+          <p className="text-white/20 text-xs mt-1">Les réservations Baymora apparaîtront ici avec les détails du client</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {reservations.map((r: any) => (
+            <div key={r.id} className={`bg-white/4 border rounded-xl p-4 ${r.status === 'pending' ? 'border-secondary/30' : 'border-white/10'}`}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-white font-medium text-sm">{r.clientName || 'Client Baymora'}</p>
+                  <p className="text-white/40 text-xs mt-0.5">
+                    {new Date(r.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    {r.dates && ` · ${r.dates}`}
+                    {r.guests && ` · ${r.guests} pers.`}
+                  </p>
+                </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                  r.status === 'pending' ? 'bg-secondary/20 text-secondary' :
+                  r.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-400' :
+                  r.status === 'completed' ? 'bg-blue-500/20 text-blue-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  {r.status === 'pending' ? 'Nouvelle' : r.status === 'confirmed' ? 'Confirmée' : r.status === 'completed' ? 'Terminée' : 'Annulée'}
+                </span>
+              </div>
+              {/* Détails client / préférences */}
+              {r.clientPreferences && (
+                <div className="mt-2 bg-white/3 rounded-lg p-2.5">
+                  <p className="text-white/50 text-xs font-medium mb-1">Préférences client :</p>
+                  <p className="text-white/40 text-xs">{r.clientPreferences}</p>
+                </div>
+              )}
+              {r.specialRequests && (
+                <div className="mt-1.5 bg-amber-500/5 rounded-lg p-2.5">
+                  <p className="text-amber-400/70 text-xs font-medium mb-0.5">Exigences spéciales :</p>
+                  <p className="text-white/40 text-xs">{r.specialRequests}</p>
+                </div>
+              )}
+              {/* Commission */}
+              {r.commission && (
+                <p className="text-emerald-400 text-xs font-semibold mt-2">Commission : +{r.commission.toFixed(2)}€</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NOTES & FACTURES — Le partenaire peut laisser des notes et uploader des factures
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function NotesSection({ token, partnerId }: { token: string; partnerId: string }) {
+  const [notes, setNotes] = useState<any[]>([]);
+  const [newNote, setNewNote] = useState('');
+  const [sending, setSending] = useState(false);
+  const [invoiceUploading, setInvoiceUploading] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/partners/notes?token=${token}`)
+      .then(res => res.ok ? res.json() : Promise.resolve({ notes: [] }))
+      .then(data => setNotes(data.notes || []))
+      .catch(() => {});
+  }, [token]);
+
+  const handleSendNote = async () => {
+    if (!newNote.trim()) return;
+    setSending(true);
+    try {
+      const res = await fetch('/api/partners/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, content: newNote.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotes(prev => [data.note, ...prev]);
+        setNewNote('');
+      }
+    } catch (e) { console.error(e); }
+    setSending(false);
+  };
+
+  const handleInvoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setInvoiceUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      // Upload vers Supabase via l'API
+      const uploadRes = await fetch('/api/upload/photo?bucket=partner-photos', {
+        method: 'POST',
+        headers: { 'x-admin-secret': token },
+        body: formData,
+      });
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        // Sauvegarder comme note avec le lien de la facture
+        const res = await fetch('/api/partners/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, content: `📄 Facture uploadée: ${file.name}`, attachmentUrl: uploadData.url, type: 'invoice' }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setNotes(prev => [data.note, ...prev]);
+        }
+      }
+    } catch (e) { console.error(e); }
+    setInvoiceUploading(false);
+    e.target.value = '';
+  };
+
+  return (
+    <section>
+      <h2 className="text-white/70 font-semibold text-sm mb-3">💬 Notes & Factures</h2>
+      <div className="bg-white/4 border border-white/10 rounded-xl p-4 space-y-3">
+        {/* Formulaire nouvelle note */}
+        <div className="flex gap-2">
+          <input
+            value={newNote}
+            onChange={e => setNewNote(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSendNote()}
+            placeholder="Laisser une note à l'équipe Baymora..."
+            className="flex-1 h-9 rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-secondary/40"
+          />
+          <label className={`h-9 px-3 rounded-lg border border-white/10 bg-white/5 flex items-center gap-1 text-white/40 text-xs cursor-pointer hover:bg-white/10 ${invoiceUploading ? 'opacity-50' : ''}`}>
+            📄 {invoiceUploading ? '...' : 'Facture'}
+            <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleInvoiceUpload} disabled={invoiceUploading} />
+          </label>
+          <button
+            onClick={handleSendNote}
+            disabled={sending || !newNote.trim()}
+            className="h-9 px-4 bg-secondary hover:bg-secondary/90 text-black text-sm font-medium rounded-lg disabled:opacity-40"
+          >
+            {sending ? '...' : 'Envoyer'}
+          </button>
+        </div>
+
+        {/* Liste des notes */}
+        {notes.length > 0 && (
+          <div className="space-y-2 max-h-60 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+            {notes.map((n: any, i: number) => (
+              <div key={n.id || i} className="flex gap-2 items-start">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 mt-0.5 ${n.fromPartner ? 'bg-secondary/20 text-secondary' : 'bg-white/10 text-white/40'}`}>
+                  {n.fromPartner ? 'P' : 'B'}
+                </div>
+                <div>
+                  <p className="text-white/70 text-xs">{n.content}</p>
+                  {n.attachmentUrl && (
+                    <a href={n.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-secondary/60 text-xs hover:text-secondary mt-0.5 block">
+                      📎 Voir la pièce jointe
+                    </a>
+                  )}
+                  <p className="text-white/20 text-[10px] mt-0.5">
+                    {n.createdAt ? new Date(n.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

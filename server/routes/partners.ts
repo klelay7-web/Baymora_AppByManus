@@ -549,4 +549,103 @@ router.delete('/admin/:id/offers/:offerId', requireOwner, async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// RESERVATIONS — Réservations via Baymora pour les partenaires
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/partners/reservations — Liste des réservations du partenaire
+router.get('/reservations', async (req, res) => {
+  try {
+    const { token } = req.query as Record<string, string>;
+    if (!token) { res.status(401).json({ error: 'Token requis' }); return; }
+
+    const partner = await prisma.partner.findFirst({
+      where: { loginToken: token },
+    });
+    if (!partner) { res.status(403).json({ error: 'Token invalide' }); return; }
+
+    // Pour l'instant, on retourne les clics convertis comme "réservations"
+    const conversions = await prisma.affiliateClick.findMany({
+      where: { partnerId: partner.id, converted: true },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    const reservations = conversions.map(c => ({
+      id: c.id,
+      clientName: 'Client Baymora',
+      dates: null,
+      guests: null,
+      clientPreferences: null,
+      specialRequests: null,
+      commission: c.commission,
+      status: 'completed',
+      createdAt: c.createdAt,
+    }));
+
+    res.json({ reservations });
+  } catch (error) {
+    console.error('[PARTNER] Reservations error:', error);
+    res.status(500).json({ error: 'Erreur réservations' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NOTES — Communication partenaire ↔ équipe Baymora
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Notes stockées dans le champ `notes` du Partner (JSON array) pour simplicité
+// TODO: migrer vers un modèle PartnerNote dédié si le volume augmente
+
+// GET /api/partners/notes — Liste des notes
+router.get('/notes', async (req, res) => {
+  try {
+    const { token } = req.query as Record<string, string>;
+    if (!token) { res.status(401).json({ error: 'Token requis' }); return; }
+
+    const partner = await prisma.partner.findFirst({ where: { loginToken: token } });
+    if (!partner) { res.status(403).json({ error: 'Token invalide' }); return; }
+
+    const notesData = (partner as any).notesHistory || [];
+    res.json({ notes: notesData });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur notes' });
+  }
+});
+
+// POST /api/partners/notes — Ajouter une note
+router.post('/notes', async (req, res) => {
+  try {
+    const { token, content, attachmentUrl, type } = req.body;
+    if (!token || !content) { res.status(400).json({ error: 'Token et contenu requis' }); return; }
+
+    const partner = await prisma.partner.findFirst({ where: { loginToken: token } });
+    if (!partner) { res.status(403).json({ error: 'Token invalide' }); return; }
+
+    const note = {
+      id: `note_${Date.now()}`,
+      content,
+      attachmentUrl: attachmentUrl || null,
+      type: type || 'note',
+      fromPartner: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Stocker dans le champ notes du Partner (JSON)
+    const existingNotes = (partner as any).notesHistory || [];
+    const updatedNotes = [note, ...existingNotes].slice(0, 100); // Garder max 100 notes
+
+    await prisma.partner.update({
+      where: { id: partner.id },
+      data: { notes: JSON.stringify(updatedNotes) },
+    });
+
+    console.log(`[PARTNER] Note ajoutée par ${partner.name}: ${content.substring(0, 50)}`);
+    res.json({ note });
+  } catch (error) {
+    console.error('[PARTNER] Note error:', error);
+    res.status(500).json({ error: 'Erreur ajout note' });
+  }
+});
+
 export default router;
