@@ -313,7 +313,7 @@ function PlaceCard({ place }: { place: PlaceItem }) {
 function PlacesCarousel({ places }: { places: PlaceItem[] }) {
   if (!places.length) return null;
   return (
-    <div className="mt-2 -mr-4">
+    <div className="mt-2 overflow-hidden">
       <div className="flex gap-3 overflow-x-auto pb-2 pr-4" style={{ scrollbarWidth: 'none' }}>
         {places.map((place, i) => <PlaceCard key={i} place={place} />)}
       </div>
@@ -1212,7 +1212,7 @@ export default function Chat() {
                   {msg.role === 'assistant' && (
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-secondary/30 to-secondary/10 border border-secondary/20 flex items-center justify-center flex-shrink-0 text-secondary font-bold text-xs mt-1">B</div>
                   )}
-                  <div className={`max-w-sm md:max-w-2xl px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                  <div className={`max-w-[calc(100vw-5rem)] sm:max-w-sm md:max-w-2xl px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                     msg.role === 'user'
                       ? 'bg-primary text-white rounded-br-sm'
                       : 'bg-slate-800/60 border border-white/10 text-white/90 rounded-bl-sm'

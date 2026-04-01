@@ -115,7 +115,7 @@ export function PlaceCard({ place }: { place: PlaceItem }) {
 export function PlacesCarousel({ places }: { places: PlaceItem[] }) {
   if (!places.length) return null;
   return (
-    <div className="mt-2 -mr-4">
+    <div className="mt-2 overflow-hidden">
       <div className="flex gap-3 overflow-x-auto pb-2 pr-4" style={{ scrollbarWidth: 'none' }}>
         {places.map((place, i) => <PlaceCard key={i} place={place} />)}
       </div>

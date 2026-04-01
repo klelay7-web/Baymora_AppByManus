@@ -604,5 +604,13 @@ Ce client veut une réponse IMMÉDIATE. Pas de temps à perdre.
   lines.push('');
   lines.push(interactionPrompts[profile.interactionStyle] || '');
 
+  // Rappel anti-répétition — toujours en dernier pour que ça soit la dernière instruction lue
+  lines.push('');
+  lines.push('## ⚠️ RAPPEL FINAL — Ces instructions de mode/style ne remplacent JAMAIS les règles core :');
+  lines.push('- TOUJOURS vérifier le :::PLAN::: et l\'historique avant de poser une question');
+  lines.push('- Ne JAMAIS redemander destination/durée/compagnons/transport si déjà confirmés');
+  lines.push('- Ne JAMAIS relancer la séquence logistique si logistiqueComplete === true');
+  lines.push('- 1 question max par message, ATTENDRE la réponse');
+
   return lines.join('\n');
 }
