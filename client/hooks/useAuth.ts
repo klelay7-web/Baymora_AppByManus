@@ -8,7 +8,7 @@ export interface BaymoraUser {
   prenom?: string;
   email?: string;
   mode: 'fantome' | 'signature';
-  circle: 'decouverte' | 'voyageur' | 'explorateur' | 'prive' | 'fondateur';
+  circle: 'decouverte' | 'premium' | 'prive' | 'voyageur' | 'explorateur' | 'fondateur';
   creditsUsed: number;
   creditsLimit: number;
   creditsResetAt: string;

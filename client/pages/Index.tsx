@@ -127,14 +127,10 @@ type Lang = "fr" | "en";
 const PLANS = [
   { circle: "Découverte", badge: "○", price: "Gratuit", color: "border-white/12", highlight: false,
     features: { fr: ["15 échanges gratuits", "IA Opus complète", "Aucun compte requis"], en: ["15 free exchanges", "Full Opus AI", "No account needed"] } },
-  { circle: "Voyageur", badge: "✦", price: "9,90€/mois", color: "border-secondary/40", highlight: false,
-    features: { fr: ["100 crédits/mois (rollover)", "Mémoire de vos proches", "3 plans de voyage"], en: ["100 credits/month (rollover)", "Companion memory", "3 trip plans"] } },
-  { circle: "Explorateur", badge: "✦✦", price: "29€/mois", color: "border-amber-400/35", highlight: true,
-    features: { fr: ["350 crédits/mois", "Recherches illimitées", "Conciergerie IA"], en: ["350 credits/month", "Unlimited searches", "AI concierge"] } },
-  { circle: "Cercle Privé", badge: "✦✦✦", price: "79€/mois", color: "border-white/15", highlight: false,
-    features: { fr: ["1 200 crédits/mois", "Tout illimité", "Tarifs partenaires"], en: ["1,200 credits/month", "Everything unlimited", "Partner rates"] } },
-  { circle: "Fondateur", badge: "✦✦✦✦", price: "199€/mois", color: "border-white/15", highlight: false,
-    features: { fr: ["4 000 crédits/mois", "Conciergerie humaine", "Accès VIP"], en: ["4,000 credits/month", "Human concierge", "VIP access"] } },
+  { circle: "Premium", badge: "✦", price: "14,90€/mois", color: "border-secondary/40", highlight: true,
+    features: { fr: ["200 crédits/mois + rollover", "Mémoire permanente + 5 proches", "5 plans de voyage sauvegardés", "Échappées Baymora (-30%)", "Recherches web illimitées"], en: ["200 credits/month + rollover", "Permanent memory + 5 companions", "5 saved trip plans", "Baymora Escapes (-30%)", "Unlimited web searches"] } },
+  { circle: "Privé", badge: "✦✦✦", price: "49,90€/mois", color: "border-amber-400/35", highlight: false,
+    features: { fr: ["Crédits illimités", "Cercle familial complet", "Conciergerie humaine", "Expériences Privées VIP", "Réservation par Baymora"], en: ["Unlimited credits", "Full family circle", "Human concierge", "VIP Private Experiences", "Booking by Baymora"] } },
 ];
 
 // ─── Styles ───────────────────────────────────────────────────────────────────

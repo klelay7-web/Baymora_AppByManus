@@ -10,7 +10,7 @@
  */
 
 import { prisma } from '../db';
-import { PLANS, CREDIT_COSTS, CREDIT_PACKS, CREDIT_PACKS_BY_PLAN, UNLOCK_TIERS, ROLLOVER_MAX_MULTIPLIER, getPacksForPlan, type BaymoraCircle } from '../types';
+import { PLANS, CREDIT_COSTS, CREDIT_PACKS, CREDIT_PACKS_BY_PLAN, UNLOCK_TIERS, ROLLOVER_MAX_MULTIPLIER, getPacksForPlan, normalizeCircle, type BaymoraCircle } from '../types';
 import crypto from 'crypto';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -464,8 +464,10 @@ function getNextResetDate(): Date {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getNextPlan(current: BaymoraCircle): BaymoraCircle | null {
-  const order: BaymoraCircle[] = ['decouverte', 'voyageur', 'explorateur', 'prive', 'fondateur'];
-  const idx = order.indexOf(current);
+  // Normaliser les anciens plans vers les 3 nouveaux
+  const normalized = normalizeCircle(current);
+  const order: BaymoraCircle[] = ['decouverte', 'premium', 'prive'];
+  const idx = order.indexOf(normalized);
   if (idx === -1 || idx >= order.length - 1) return null;
   return order[idx + 1];
 }

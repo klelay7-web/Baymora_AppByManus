@@ -28,62 +28,34 @@ const PLAN_DISPLAY: Record<string, {
   color: string;
   features: string[];
 }> = {
-  voyageur: {
-    name: 'Voyageur',
+  premium: {
+    name: 'Premium',
     badge: '✦',
-    credits: 100,
-    price: '9,90 €/mois',
-    priceValue: 9.90,
+    credits: 200,
+    price: '14,90 €/mois',
+    priceValue: 14.90,
     color: 'from-blue-500/20 to-blue-600/10',
     features: [
-      '100 crédits/mois (rollover)',
-      '20 recherches temps réel',
-      '3 plans de voyage',
-      'Mémoire de vos préférences',
-    ],
-  },
-  explorateur: {
-    name: 'Explorateur',
-    badge: '✦✦',
-    credits: 350,
-    price: '29 €/mois',
-    priceValue: 29,
-    color: 'from-emerald-500/20 to-emerald-600/10',
-    features: [
-      '350 crédits/mois (rollover)',
-      'Recherches temps réel illimitées',
-      '10 plans de voyage',
-      'Conciergerie IA',
-      'Boutique Gold',
+      '200 crédits/mois + rollover',
+      'Mémoire permanente + 5 proches',
+      '5 plans de voyage sauvegardés',
+      'Échappées Baymora (-30%)',
+      'Recherches web illimitées',
     ],
   },
   prive: {
-    name: 'Cercle Privé',
+    name: 'Privé',
     badge: '✦✦✦',
-    credits: 1200,
-    price: '79 €/mois',
-    priceValue: 79,
+    credits: 9999,
+    price: '49,90 €/mois',
+    priceValue: 49.90,
     color: 'from-amber-500/20 to-amber-600/10',
     features: [
-      '1 200 crédits/mois (rollover)',
-      'Tout illimité',
-      'Conciergerie prioritaire',
-      'Boutique Platinum',
-      'Tarifs partenaires négociés',
-    ],
-  },
-  fondateur: {
-    name: 'Fondateur',
-    badge: '✦✦✦✦',
-    credits: 4000,
-    price: '199 €/mois',
-    priceValue: 199,
-    color: 'from-purple-500/20 to-purple-600/10',
-    features: [
-      '4 000 crédits/mois (rollover)',
-      'Conciergerie humaine dédiée',
-      'Boutique Diamond',
-      'Accès VIP partenaires',
+      'Crédits illimités',
+      'Cercle familial complet',
+      'Conciergerie humaine',
+      'Expériences Privées VIP',
+      'Réservation par Baymora',
     ],
   },
 };
@@ -115,7 +87,7 @@ export default function CreditGate({
 
   const nextPlan = upgradeOptions?.nextPlan;
   const nextPlanInfo = nextPlan ? PLAN_DISPLAY[nextPlan] : null;
-  const isTopTier = currentCircle === 'fondateur';
+  const isTopTier = currentCircle === 'prive' || currentCircle === 'fondateur';
 
   // ── Déblocage ponctuel ─────────────────────────────────────────────────────
 
