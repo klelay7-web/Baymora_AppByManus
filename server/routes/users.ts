@@ -20,7 +20,7 @@ export function generateUserToken(userId: string, circle: string): string {
   return jwt.sign(
     { userId, role: 'user', circle, iat: Math.floor(Date.now() / 1000) },
     jwtSecret,
-    { expiresIn: '30d', algorithm: 'HS256' }
+    { expiresIn: '90d', algorithm: 'HS256' }
   );
 }
 

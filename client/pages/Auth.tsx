@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -10,8 +10,19 @@ export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo') || '/chat';
+  const tokenParam = searchParams.get('token');
+  const isTeam = searchParams.get('team') === 'true';
 
   const { register, login } = useAuth();
+
+  // Auto-login si token dans l'URL (invitation équipe)
+  useEffect(() => {
+    if (tokenParam) {
+      localStorage.setItem('baymora_token', tokenParam);
+      navigate(isTeam ? '/admin/dashboard' : '/chat', { replace: true });
+      window.location.reload();
+    }
+  }, [tokenParam]);
 
   const [tab, setTab] = useState<Tab>('register');
   const [mode, setMode] = useState<Mode>('fantome');
