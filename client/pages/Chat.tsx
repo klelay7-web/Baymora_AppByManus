@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark, X } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT, FREE_CREDITS_LIMIT } from '@/hooks/useAuth';
 import ConversionModal from '@/components/ConversionModal';
@@ -1044,6 +1044,8 @@ export default function Chat() {
     : null;
 
   const hasPlan = tripPlan && (tripPlan.destination || tripPlan.hotels?.length || tripPlan.flights?.length || tripPlan.activities?.length || tripPlan.restaurants?.length);
+  const hasResults = hasPlan || allPlaces.length > 0;
+  const mapQuery = tripPlan?.destination || allPlaces[0]?.city || allPlaces[0]?.name;
 
   return (
     <div className="flex h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden max-w-full">
@@ -1078,17 +1080,66 @@ export default function Chat() {
         />
       )}
 
-      {/* Mobile plan overlay */}
-      {showPlanMobile && hasPlan && (
-        <div className="fixed inset-0 z-40 bg-slate-950 lg:hidden">
-          <div className="h-full">
-            <TripPlanPanel plan={tripPlan!} allPlaces={allPlaces} onClose={() => setShowPlanMobile(false)} />
+      {/* Mobile results overlay (slide-up) */}
+      {showPlanMobile && hasResults && (
+        <div className="fixed inset-0 z-40 bg-slate-950 lg:hidden overflow-y-auto">
+          <div className="min-h-full pb-20">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-slate-950/95 backdrop-blur-sm border-b border-white/10">
+              <h3 className="text-white font-semibold text-sm">Résultats & Parcours</h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowPlanMobile(false)} className="text-white/60 hover:text-white">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            {/* Map */}
+            {mapQuery && (
+              <div className="px-3 pt-3">
+                <div className="rounded-lg overflow-hidden border border-white/10">
+                  <iframe
+                    title="map"
+                    width="100%"
+                    height="200"
+                    style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }}
+                    loading="lazy"
+                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(mapQuery)}&zoom=13`}
+                  />
+                </div>
+              </div>
+            )}
+            {/* Places */}
+            {allPlaces.length > 0 && (
+              <div className="px-3 pt-3 space-y-2">
+                {allPlaces.map((place, i) => (
+                  <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-white font-medium text-sm">{place.name}</p>
+                        <p className="text-white/50 text-xs">{place.city} · {place.type}</p>
+                      </div>
+                      {place.rating && <span className="text-secondary text-xs font-bold">⭐ {place.rating}</span>}
+                    </div>
+                    {place.description && <p className="text-white/60 text-xs mt-1.5">{place.description}</p>}
+                    {place.tags && <div className="flex gap-1 mt-2 flex-wrap">{place.tags.map((t, j) => <span key={j} className="bg-white/8 text-white/50 text-[10px] px-2 py-0.5 rounded-full">{t}</span>)}</div>}
+                    {place.priceFrom && <p className="text-secondary text-xs mt-1.5">À partir de {place.priceFrom}{place.currency || '€'}/{place.priceUnit || 'nuit'}</p>}
+                    <div className="flex gap-2 mt-2">
+                      {place.bookingUrl && <a href={place.bookingUrl} target="_blank" rel="noopener noreferrer" className="text-xs bg-secondary/20 text-secondary px-2 py-1 rounded hover:bg-secondary/30">Réserver</a>}
+                      {place.address && <span className="text-white/30 text-[10px] mt-1">{place.address}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Trip Plan */}
+            {hasPlan && (
+              <div className="mt-3">
+                <TripPlanPanel plan={tripPlan!} allPlaces={allPlaces} />
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* ── Left: Chat ── */}
-      <div className={`flex flex-col flex-1 min-w-0 ${hasPlan ? 'lg:max-w-[60%]' : ''}`}>
+      <div className={`flex flex-col flex-1 min-w-0 ${hasResults ? 'lg:max-w-[55%]' : ''}`}>
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-slate-950/80 backdrop-blur-sm flex-shrink-0">
@@ -1353,15 +1404,16 @@ export default function Chat() {
             autoFocus
             className="flex-1 h-10 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-secondary/60 focus:ring-1 focus:ring-secondary/40 disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          {hasPlan && (
+          {hasResults && (
             <Button
               onClick={() => setShowPlanMobile(true)}
               size="sm"
               variant="ghost"
               className="lg:hidden text-secondary border border-secondary/30 px-3"
-              title="Voir le plan"
+              title="Voir les résultats"
             >
               <MapPin className="h-4 w-4" />
+              {allPlaces.length > 0 && <span className="ml-1 text-[10px] bg-secondary/30 rounded-full px-1.5">{allPlaces.length}</span>}
             </Button>
           )}
           <Button
@@ -1378,10 +1430,63 @@ export default function Chat() {
 
       </div>{/* end left chat column */}
 
-      {/* ── Right: Trip Plan Panel (desktop only) ── */}
-      {hasPlan && (
-        <div className="hidden lg:flex w-96 xl:w-[420px] flex-shrink-0 border-l border-white/10 flex-col">
-          <TripPlanPanel plan={tripPlan!} allPlaces={allPlaces} />
+      {/* ── Right: Results Panel (desktop only) ── */}
+      {hasResults && (
+        <div className="hidden lg:flex w-[45%] max-w-[520px] flex-shrink-0 border-l border-white/10 flex-col overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+          {/* Map */}
+          {mapQuery && (
+            <div className="p-3 border-b border-white/10">
+              <div className="rounded-lg overflow-hidden border border-white/10">
+                <iframe
+                  title="map"
+                  width="100%"
+                  height="220"
+                  style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }}
+                  loading="lazy"
+                  src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(mapQuery)}&zoom=13`}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Places list */}
+          {allPlaces.length > 0 && (
+            <div className="p-3 space-y-2 border-b border-white/10">
+              <h4 className="text-white/60 text-xs font-semibold uppercase tracking-wider">Établissements ({allPlaces.length})</h4>
+              {allPlaces.map((place, i) => (
+                <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-3 hover:bg-white/8 transition-colors cursor-pointer">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-white font-medium text-sm truncate">{place.name}</p>
+                      <p className="text-white/50 text-xs">{place.city} · {place.type}</p>
+                    </div>
+                    {place.rating && <span className="text-secondary text-xs font-bold flex-shrink-0 ml-2">⭐ {place.rating}</span>}
+                  </div>
+                  {place.description && <p className="text-white/60 text-xs mt-1.5 line-clamp-2">{place.description}</p>}
+                  {place.tags && place.tags.length > 0 && (
+                    <div className="flex gap-1 mt-2 flex-wrap">
+                      {place.tags.slice(0, 4).map((t, j) => <span key={j} className="bg-white/8 text-white/50 text-[10px] px-2 py-0.5 rounded-full">{t}</span>)}
+                    </div>
+                  )}
+                  {place.priceFrom && <p className="text-secondary text-xs mt-1.5">À partir de {place.priceFrom}{place.currency || '€'}/{place.priceUnit || 'nuit'}</p>}
+                  <div className="flex items-center gap-2 mt-2">
+                    {place.bookingUrl && (
+                      <a href={place.bookingUrl} target="_blank" rel="noopener noreferrer" className="text-xs bg-secondary/20 text-secondary px-2.5 py-1 rounded hover:bg-secondary/30 transition-colors">
+                        Réserver
+                      </a>
+                    )}
+                    {(place as any).baymoraPartner && <span className="text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">🤝 Partenaire Baymora</span>}
+                  </div>
+                  {place.address && <p className="text-white/25 text-[10px] mt-1.5">{place.address}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Trip plan details */}
+          {hasPlan && (
+            <TripPlanPanel plan={tripPlan!} allPlaces={allPlaces} />
+          )}
         </div>
       )}
 
