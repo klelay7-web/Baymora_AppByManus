@@ -16,6 +16,7 @@ import conciergeRouter from "./routes/concierge";
 import giftsRouter from "./routes/gifts";
 import prestatairesRouter from "./routes/prestataires";
 import atlasRouter from "./routes/atlas";
+import uploadRouter from "./routes/upload";
 import googleAuthRouter from "./routes/googleAuth";
 import { chatRateLimit, authRateLimit } from "./middleware/rateLimit";
 import { startBirthdayCron } from "./services/birthdayCron";
@@ -62,6 +63,7 @@ export function createServer() {
   app.use("/api/gifts", giftsRouter);
   app.use("/api/prestataires", prestatairesRouter);
   app.use("/api/atlas", atlasRouter);
+  app.use("/api/upload", uploadRouter);
 
   // 404
   app.use("/api/{*path}", (_req, res) => {

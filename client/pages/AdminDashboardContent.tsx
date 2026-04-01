@@ -1562,6 +1562,55 @@ function AtlasPanel({ token }: { token: string }) {
             <Input value={editingVenue.seasonalNotes || ''} onChange={e => setEditingVenue({ ...editingVenue, seasonalNotes: e.target.value })} placeholder="Fermé en janvier. Haute saison juillet-août." className="bg-white/8 border-white/10 text-white mt-1" />
           </div>
 
+          {/* Photos & vidéos */}
+          <div>
+            <label className="text-white/60 text-xs font-medium">📸 Photos & vidéos</label>
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {(editingVenue.photos as string[] || []).map((url, i) => (
+                <div key={i} className="relative group">
+                  <img src={url} alt="" className="w-20 h-20 object-cover rounded-lg border border-white/10" />
+                  <button onClick={() => setEditingVenue({ ...editingVenue, photos: (editingVenue.photos as string[]).filter((_, j) => j !== i) })} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                </div>
+              ))}
+              <label className="w-20 h-20 border-2 border-dashed border-white/20 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-secondary/50 transition-colors">
+                <span className="text-white/30 text-xl">+</span>
+                <span className="text-white/20 text-[9px]">Photo</span>
+                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  try {
+                    const res = await fetch('/api/upload/photo?bucket=atlas-photos', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setEditingVenue({ ...editingVenue, photos: [...(editingVenue.photos as string[] || []), data.url] });
+                    }
+                  } catch (err) { console.error('Upload error:', err); }
+                  e.target.value = '';
+                }} />
+              </label>
+              <label className="w-20 h-20 border-2 border-dashed border-white/20 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-secondary/50 transition-colors">
+                <span className="text-white/30 text-xl">🎥</span>
+                <span className="text-white/20 text-[9px]">Vidéo</span>
+                <input type="file" accept="video/*" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  try {
+                    const res = await fetch('/api/upload/video', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setEditingVenue({ ...editingVenue, photos: [...(editingVenue.photos as string[] || []), data.url] });
+                    }
+                  } catch (err) { console.error('Upload error:', err); }
+                  e.target.value = '';
+                }} />
+              </label>
+            </div>
+          </div>
+
           <div className="flex items-center gap-4 flex-wrap">
             <label className="flex items-center gap-2 text-white/70 text-sm cursor-pointer">
               <input type="checkbox" checked={editingVenue.testedByBaymora || false} onChange={e => setEditingVenue({ ...editingVenue, testedByBaymora: e.target.checked, testedAt: e.target.checked ? new Date().toISOString() : undefined })} className="rounded" />
