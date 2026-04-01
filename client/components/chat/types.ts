@@ -175,6 +175,16 @@ export function buildGoogleCalendarUrl(event: CalendarEvent): string {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
+// ─── Booking option ─────────────────────────────────────────────────────────
+
+export interface BookingOption {
+  name: string;
+  type?: string;
+  bookingUrl?: string;
+  phone?: string;
+  options: ('self' | 'assistant' | 'concierge' | 'baymora')[];
+}
+
 // ─── Message parser ──────────────────────────────────────────────────────────
 
 export function parseMessage(content: string): {
@@ -228,13 +238,26 @@ export function parseMessage(content: string): {
     return '';
   });
 
+  // Booking options
+  const bookings: BookingOption[] = [];
+  working = working.replace(/:::BOOKING:::([\s\S]*?):::END:::/g, (_, json) => {
+    try {
+      const b = JSON.parse(json.trim()) as BookingOption;
+      if (b.name) bookings.push(b);
+    } catch {}
+    return '';
+  });
+
+  // Atlas save (team only — hidden from display)
+  working = working.replace(/:::ATLAS_SAVE:::[\s\S]*?:::END:::/g, '');
+
   const qrMatch = working.match(/:::QR:::([\s\S]*?):::END:::/);
   const quickReplies = qrMatch
     ? qrMatch[1].split('|').map(s => s.trim()).filter(Boolean)
     : [];
   working = working.replace(/:::QR:::[\s\S]*?:::END:::/, '').trim();
 
-  return { text: working, quickReplies, showContacts, calendarEvents, planUpdate, places, mapView, journey };
+  return { text: working, quickReplies, showContacts, calendarEvents, planUpdate, places, mapView, journey, bookings };
 }
 
 // ─── Plan helpers ────────────────────────────────────────────────────────────

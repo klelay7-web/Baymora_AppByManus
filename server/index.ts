@@ -19,6 +19,7 @@ import atlasRouter from "./routes/atlas";
 import uploadRouter from "./routes/upload";
 import boutiqueRouter from "./routes/boutique";
 import googleAuthRouter from "./routes/googleAuth";
+import seoRouter from "./routes/seo";
 import { chatRateLimit, authRateLimit } from "./middleware/rateLimit";
 import { startBirthdayCron } from "./services/birthdayCron";
 
@@ -29,6 +30,9 @@ export function createServer() {
     origin: process.env.CORS_ORIGIN || "http://localhost:8080",
     credentials: true,
   }));
+
+  // SEO routes (sitemap, robots.txt, meta) — avant le static serving
+  app.use("/", seoRouter);
 
   // Webhook Stripe doit recevoir le body brut (avant express.json)
   app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));

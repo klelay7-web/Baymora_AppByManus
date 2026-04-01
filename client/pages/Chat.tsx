@@ -8,7 +8,7 @@ import { useVoice } from '@/hooks/useVoice';
 import ConversionModal from '@/components/ConversionModal';
 import CreditGate from '@/components/CreditGate';
 import ContactPicker from '@/components/ContactPicker';
-import { CalendarCard, PlacesCarousel, MapEmbed, JourneyView } from '@/components/chat/ChatCards';
+import { CalendarCard, PlacesCarousel, MapEmbed, JourneyView, BookingCard } from '@/components/chat/ChatCards';
 import {
   type TripPlan, type TripPlanItem, type TripPlanFlight, type TripPlanTransport,
   type CalendarEvent, type PlaceItem, type MapView, type Journey,
@@ -113,72 +113,8 @@ function buildGoogleCalendarUrl(event: CalendarEvent): string {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-function parseMessage(content: string): {
-  text: string;
-  quickReplies: string[];
-  showContacts: boolean;
-  calendarEvents: CalendarEvent[];
-  planUpdate: TripPlan | null;
-  places: PlaceItem[];
-  mapView: MapView | null;
-  journey: Journey | null;
-} {
-  let working = content;
-
-  // Extract :::CONTACTS:::
-  const showContacts = working.includes(':::CONTACTS:::');
-  working = working.replace(':::CONTACTS:::', '').trim();
-
-  // Extract :::GCAL::: events
-  const calendarEvents: CalendarEvent[] = [];
-  working = working.replace(/:::GCAL:::([\s\S]*?):::END:::/g, (_, json) => {
-    try {
-      const ev = JSON.parse(json.trim()) as CalendarEvent;
-      if (ev.title && ev.date) calendarEvents.push(ev);
-    } catch {}
-    return '';
-  });
-
-  // Extract :::PLAN:::
-  let planUpdate: TripPlan | null = null;
-  working = working.replace(/:::PLAN:::([\s\S]*?):::END:::/g, (_, json) => {
-    try { planUpdate = JSON.parse(json.trim()) as TripPlan; } catch {}
-    return '';
-  });
-
-  // Extract :::PLACES:::
-  const places: PlaceItem[] = [];
-  working = working.replace(/:::PLACES:::([\s\S]*?):::END:::/g, (_, json) => {
-    try {
-      const parsed = JSON.parse(json.trim());
-      if (Array.isArray(parsed)) places.push(...parsed);
-    } catch {}
-    return '';
-  });
-
-  // Extract :::MAP:::
-  let mapView: MapView | null = null;
-  working = working.replace(/:::MAP:::([\s\S]*?):::END:::/g, (_, json) => {
-    try { mapView = JSON.parse(json.trim()) as MapView; } catch {}
-    return '';
-  });
-
-  // Extract :::JOURNEY:::
-  let journey: Journey | null = null;
-  working = working.replace(/:::JOURNEY:::([\s\S]*?):::END:::/g, (_, json) => {
-    try { journey = JSON.parse(json.trim()) as Journey; } catch {}
-    return '';
-  });
-
-  // Extract :::QR:::
-  const qrMatch = working.match(/:::QR:::([\s\S]*?):::END:::/);
-  const quickReplies = qrMatch
-    ? qrMatch[1].split('|').map(s => s.trim()).filter(Boolean)
-    : [];
-  working = working.replace(/:::QR:::[\s\S]*?:::END:::/, '').trim();
-
-  return { text: working, quickReplies, showContacts, calendarEvents, planUpdate, places, mapView, journey };
-}
+// parseMessage importé depuis @/components/chat/types — version locale supprimée
+// Utilise le parseMessage importé dans les imports en haut du fichier
 
 // ─── Carte Google Calendar ────────────────────────────────────────────────────
 
@@ -1357,6 +1293,13 @@ export default function Chat() {
                 {msg.role === 'assistant' && parsed && parsed.journey && (
                   <div className="ml-11 mt-2">
                     <JourneyView journey={parsed.journey} />
+                  </div>
+                )}
+
+                {/* Options de réservation */}
+                {msg.role === 'assistant' && parsed && parsed.bookings?.length > 0 && (
+                  <div className="ml-11 mt-1 space-y-1">
+                    {parsed.bookings.map((b, bi) => <BookingCard key={bi} booking={b} />)}
                   </div>
                 )}
 

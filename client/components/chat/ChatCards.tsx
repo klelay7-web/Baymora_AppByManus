@@ -3,8 +3,8 @@
  * Extrait de Chat.tsx pour modularité.
  */
 
-import { MapPin, Navigation, Star, ExternalLink } from 'lucide-react';
-import type { CalendarEvent, PlaceItem, MapView, Journey } from './types';
+import { MapPin, Navigation, Star, ExternalLink, Phone, User, Headphones, Crown } from 'lucide-react';
+import type { CalendarEvent, PlaceItem, MapView, Journey, BookingOption } from './types';
 import { buildGoogleCalendarUrl } from './types';
 
 // ─── Carte Google Calendar ────────────────────────────────────────────────────
@@ -202,6 +202,50 @@ export function JourneyView({ journey }: { journey: Journey }) {
         <span className="truncate">🏠 {journey.from}</span>
         <span className="flex-shrink-0 text-secondary">→→→</span>
         <span className="truncate text-right">📍 {journey.to}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Carte réservation ──────────────────────────────────────────────────────
+
+const BOOKING_LABELS: Record<string, { label: string; icon: any; color: string }> = {
+  self: { label: 'Je réserve', icon: User, color: 'bg-white/10 text-white/70 hover:bg-white/20' },
+  assistant: { label: 'Mon assistant', icon: ExternalLink, color: 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20' },
+  concierge: { label: 'Conciergerie', icon: Headphones, color: 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20' },
+  baymora: { label: 'Baymora réserve', icon: Crown, color: 'bg-secondary/15 text-secondary hover:bg-secondary/25' },
+};
+
+export function BookingCard({ booking }: { booking: BookingOption }) {
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl p-3 mt-2">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-white/80 text-xs font-semibold">📋 Réserver : {booking.name}</p>
+        {booking.phone && (
+          <a href={`tel:${booking.phone}`} className="text-white/30 hover:text-white/60 flex items-center gap-1 text-[10px]">
+            <Phone className="h-3 w-3" /> {booking.phone}
+          </a>
+        )}
+      </div>
+      <div className="flex gap-1.5 flex-wrap">
+        {booking.options.map(opt => {
+          const cfg = BOOKING_LABELS[opt];
+          if (!cfg) return null;
+          const Icon = cfg.icon;
+          if (opt === 'self' && booking.bookingUrl) {
+            return (
+              <a key={opt} href={booking.bookingUrl} target="_blank" rel="noopener noreferrer"
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${cfg.color}`}>
+                <Icon className="h-3 w-3" /> {cfg.label}
+              </a>
+            );
+          }
+          return (
+            <button key={opt} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${cfg.color}`}>
+              <Icon className="h-3 w-3" /> {cfg.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
