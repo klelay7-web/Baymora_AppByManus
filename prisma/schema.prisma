@@ -365,6 +365,7 @@ model Partner {
   offers           PartnerOffer[]
   affiliateClicks  AffiliateClick[]
   visits           PartnerVisit[]
+  atlasVenues      AtlasVenue[]
 
   @@map("partners")
 }
@@ -503,4 +504,111 @@ model PartnerVisit {
   @@index([prestataireId, createdAt])
   @@index([partnerId])
   @@map("partner_visits")
+}
+
+// ─── Baymora Atlas — CMS Venues ──────────────────────────────────────────────
+
+model AtlasVenue {
+  id               String    @id @default(uuid())
+  name             String
+  type             String    // hotel|restaurant|bar|spa|activity|beach|club|transport|shop|service
+  city             String
+  country          String    @default("FR")
+  address          String?
+  phone            String?
+  website          String?
+  socialLinks      Json      @default("{}")
+  photos           Json      @default("[]")
+  videos           Json      @default("{}")
+  description      String?   @db.Text
+  insiderTips      String?   @db.Text
+
+  testedByBaymora  Boolean   @default(false)
+  testedAt         DateTime?
+  testedBy         String?
+
+  rating           Float?
+  priceLevel       Int       @default(2)
+  priceFrom        Float?
+  currency         String    @default("EUR")
+
+  tags             Json      @default("[]")
+  ambiance         String?
+  openingHours     Json      @default("{}")
+  seasonalNotes    String?   @db.Text
+
+  affiliateType    String    @default("none")   // none|auto|negotiated|terrain
+  affiliateUrl     String?
+  commissionPercent Float?
+  isPartner        Boolean   @default(false)
+  partnerId        String?
+
+  status           String    @default("draft")  // draft|published|archived
+  createdBy        String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  partner          Partner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+
+  @@index([city, status])
+  @@index([type, status])
+  @@index([country, city])
+  @@index([status])
+  @@index([partnerId])
+  @@map("atlas_venues")
+}
+
+// ─── Baymora Atlas — City Guides ─────────────────────────────────────────────
+
+model AtlasCityGuide {
+  id            String   @id @default(uuid())
+  city          String
+  country       String   @default("FR")
+  region        String?
+  description   String?  @db.Text
+  secrets       String?  @db.Text
+  vipAccess     String?  @db.Text
+  localTips     String?  @db.Text
+  bestSeasons   Json     @default("[]")
+  climate       Json     @default("{}")
+  transitTips   String?  @db.Text
+  dangerZones   String?  @db.Text
+  photos        Json     @default("[]")
+
+  status        String   @default("draft")
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([city, country])
+  @@index([status])
+  @@index([country])
+  @@map("atlas_city_guides")
+}
+
+// ─── Baymora Atlas — Curated Routes (Parcours) ──────────────────────────────
+
+model AtlasCuratedRoute {
+  id                 String   @id @default(uuid())
+  name               String
+  city               String
+  theme              String   // romantic|nightlife|gastronomie|culture|sport|business|family
+  description        String?  @db.Text
+  duration           String?
+  budgetLevel        Int      @default(2)
+  stops              Json     @default("[]")
+  mapPolyline        String?  @db.Text
+  totalEstimatedCost Float?
+  currency           String   @default("EUR")
+  tags               Json     @default("[]")
+
+  status             String   @default("draft")
+  createdBy          String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([city, status])
+  @@index([theme, status])
+  @@index([status])
+  @@map("atlas_curated_routes")
 }
