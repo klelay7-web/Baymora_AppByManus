@@ -10,6 +10,8 @@ interface Stats {
   users: { total: number; today: number; thisWeek: number; paid: number; byCircle: Record<string, number> };
   conversations: { total: number };
   messages: { total: number; thisWeek: number };
+  revenue?: { totalPurchases: number; monthlyPurchases: number; purchaseCount: number; monthlyPurchaseCount: number; estimatedMRR: number; giftsCompleted: number };
+  partners?: { totalClicks: number; conversions: number; conversionRate: number };
 }
 
 interface AdminUser {
@@ -501,6 +503,32 @@ export default function AdminDashboardContent() {
             </div>
           ))}
         </div>
+
+        {/* ── Revenue & Business ── */}
+        {stats?.revenue && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-5">
+              <div className="flex items-center gap-2 text-emerald-400/70 mb-2"><TrendingUp className="h-4 w-4" /><span className="text-white/40 text-xs">CA total</span></div>
+              <p className="text-3xl font-bold text-emerald-400">{stats.revenue.totalPurchases.toFixed(0)}€</p>
+              <p className="text-white/20 text-xs mt-1">{stats.revenue.purchaseCount} achats</p>
+            </div>
+            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-5">
+              <div className="flex items-center gap-2 text-emerald-400/70 mb-2"><TrendingUp className="h-4 w-4" /><span className="text-white/40 text-xs">CA ce mois</span></div>
+              <p className="text-3xl font-bold text-emerald-400">{stats.revenue.monthlyPurchases.toFixed(0)}€</p>
+              <p className="text-white/20 text-xs mt-1">{stats.revenue.monthlyPurchaseCount} achats</p>
+            </div>
+            <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
+              <div className="flex items-center gap-2 text-blue-400/70 mb-2"><Crown className="h-4 w-4" /><span className="text-white/40 text-xs">MRR estimé</span></div>
+              <p className="text-3xl font-bold text-blue-400">{stats.revenue.estimatedMRR.toFixed(0)}€</p>
+              <p className="text-white/20 text-xs mt-1">{stats.users.paid} abonnés actifs</p>
+            </div>
+            <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-5">
+              <div className="flex items-center gap-2 text-purple-400/70 mb-2"><Handshake className="h-4 w-4" /><span className="text-white/40 text-xs">Partenaires</span></div>
+              <p className="text-3xl font-bold text-purple-400">{stats.partners?.totalClicks || 0}</p>
+              <p className="text-white/20 text-xs mt-1">{stats.partners?.conversions || 0} conversions ({stats.partners?.conversionRate || 0}%)</p>
+            </div>
+          </div>
+        )}
 
         {/* ── Répartition par cercle ── */}
         {stats && (

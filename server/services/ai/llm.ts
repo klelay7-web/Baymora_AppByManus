@@ -860,6 +860,39 @@ export async function callLLM(
     console.error('[LLM] Erreur chargement Atlas:', e);
   }
 
+  // ── Boutique : produits affiliés si cadeau/anniversaire détecté ─────────
+  let boutiqueContext = '';
+  if (/cadeau|offrir|anniversaire|anniv|fleurs|cigare|whisky|montre|parfum|bijou|surprise pour|idée.*pour/i.test(lastMessage)) {
+    try {
+      const { prisma: db } = await import('../../db');
+      const boutiqueItems = await db.boutiqueItem.findMany({
+        where: { status: 'published' },
+        orderBy: [{ featured: 'desc' }, { priceEur: 'asc' }],
+        take: 8,
+      });
+      if (boutiqueItems.length > 0) {
+        const lines = [
+          '## 🎁 Boutique Baymora — Produits cadeaux disponibles',
+          'Quand le client cherche un cadeau, propose ces produits EN PRIORITÉ (Baymora gagne une commission).',
+          'Inclus le lien d\'achat dans ta réponse.',
+          '',
+        ];
+        for (const item of boutiqueItems) {
+          lines.push(`**${item.name}** (${item.category})${item.brand ? ` · ${item.brand}` : ''}`);
+          lines.push(`  ${item.priceEur}€${item.deliveryInfo ? ` · ${item.deliveryInfo}` : ''}`);
+          if (item.description) lines.push(`  ${item.description}`);
+          if (item.giftSuggestion) lines.push(`  💡 ${item.giftSuggestion}`);
+          if (item.affiliateUrl) lines.push(`  🔗 ${item.affiliateUrl}`);
+          lines.push('');
+        }
+        boutiqueContext = lines.join('\n');
+        console.log(`[LLM] Boutique injectée: ${boutiqueItems.length} produits (cadeau détecté)`);
+      }
+    } catch (e) {
+      console.error('[LLM] Erreur boutique:', e);
+    }
+  }
+
   try {
     const client = new Anthropic({ apiKey });
     let systemPrompt = buildSystemPrompt(userId, modelKey, userRecord);
@@ -873,8 +906,8 @@ export async function callLLM(
       systemPrompt = `${contextParts.join('\n\n')}\n\n---\n\n${systemPrompt}`;
       console.log(`[LLM] Contextes injectés: ${contextParts.map(c => c.split('\n')[0]).join(' | ')}`);
     }
-    // Temporal + Atlas + Persona + partenaires + conversion hint appendés en fin de system prompt
-    systemPrompt = `${systemPrompt}\n\n${temporalCtx.dateTimeBlock}${atlasContext ? '\n\n' + atlasContext : ''}\n\n${personaContext}${partnerContext ? '\n\n' + partnerContext : ''}${conversionHint}`;
+    // Temporal + Atlas + Boutique + Persona + partenaires + conversion hint appendés en fin de system prompt
+    systemPrompt = `${systemPrompt}\n\n${temporalCtx.dateTimeBlock}${atlasContext ? '\n\n' + atlasContext : ''}${boutiqueContext ? '\n\n' + boutiqueContext : ''}\n\n${personaContext}${partnerContext ? '\n\n' + partnerContext : ''}${conversionHint}`;
 
     // Opus: réponses longues (plans complets). Sonnet: réponses courtes (conversation).
     const maxTokens = modelKey === 'opus' ? 1800 : 800;

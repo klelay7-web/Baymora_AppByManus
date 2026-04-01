@@ -27,6 +27,8 @@ router.get('/stats', requireOwner, async (_req, res) => {
     today.setHours(0, 0, 0, 0);
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
     const [
       totalUsers,
       newUsersToday,
@@ -36,6 +38,11 @@ router.get('/stats', requireOwner, async (_req, res) => {
       messagesWeek,
       usersByCircle,
       paidUsers,
+      totalPurchases,
+      monthlyPurchases,
+      totalGifts,
+      totalPartnerClicks,
+      totalConversions,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: today } } }),
@@ -45,7 +52,22 @@ router.get('/stats', requireOwner, async (_req, res) => {
       prisma.message.count({ where: { createdAt: { gte: weekAgo } } }),
       prisma.user.groupBy({ by: ['circle'], _count: { id: true } }),
       prisma.user.count({ where: { circle: { not: 'decouverte' } } }),
+      prisma.creditPurchase.aggregate({ _sum: { amountEur: true }, _count: { id: true } }),
+      prisma.creditPurchase.aggregate({
+        where: { createdAt: { gte: monthStart } },
+        _sum: { amountEur: true },
+        _count: { id: true },
+      }),
+      prisma.gift.count({ where: { status: 'claimed' } }),
+      prisma.affiliateClick.count(),
+      prisma.affiliateClick.count({ where: { converted: true } }),
     ]);
+
+    // Calcul CA estimé (abonnements + achats)
+    const premiumCount = paidUsers; // simplified
+    const estimatedMRR = premiumCount * 14.90; // estimation basse (tous premium)
+    const totalRevenue = (totalPurchases._sum.amountEur || 0) / 100; // cents → euros
+    const monthlyRevenue = (monthlyPurchases._sum.amountEur || 0) / 100;
 
     res.json({
       users: {
@@ -60,6 +82,19 @@ router.get('/stats', requireOwner, async (_req, res) => {
       },
       conversations: { total: totalConversations },
       messages: { total: totalMessages, thisWeek: messagesWeek },
+      revenue: {
+        totalPurchases: totalRevenue,
+        monthlyPurchases: monthlyRevenue,
+        purchaseCount: totalPurchases._count.id,
+        monthlyPurchaseCount: monthlyPurchases._count.id,
+        estimatedMRR,
+        giftsCompleted: totalGifts,
+      },
+      partners: {
+        totalClicks: totalPartnerClicks,
+        conversions: totalConversions,
+        conversionRate: totalPartnerClicks > 0 ? Math.round((totalConversions / totalPartnerClicks) * 100) : 0,
+      },
     });
   } catch (error) {
     console.error('Admin stats error:', error);

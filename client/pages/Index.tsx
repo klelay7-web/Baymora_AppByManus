@@ -367,7 +367,7 @@ export default function Index() {
           <h2 className="text-3xl font-bold text-center mb-2" style={gold}>{t.plans.title}</h2>
           <p className="text-white/30 text-sm text-center mb-12">{t.plans.sub}</p>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-3xl mx-auto">
             {PLANS.map((p, i) => (
               <div
                 key={p.circle}

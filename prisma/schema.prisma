@@ -621,3 +621,33 @@ model AtlasCuratedRoute {
   @@index([status])
   @@map("atlas_curated_routes")
 }
+
+// ─── Boutique Baymora — Produits affiliés premium ───────────────────────────
+
+model BoutiqueItem {
+  id               String   @id @default(uuid())
+  name             String
+  category         String   // spiritueux|fleurs|accessoires|experiences|cigares|mode|montres|beaute|tech|gastronomie
+  description      String?  @db.Text
+  brand            String?
+  photos           Json     @default("[]")
+  priceEur         Float
+  affiliateUrl     String                          // lien achat (affilié)
+  commissionPercent Float   @default(8)
+  deliveryInfo     String?                         // "Livré en 48h", "Retrait en boutique"
+  tags             Json     @default("[]")
+  giftSuggestion   String?                         // "Parfait pour un amateur de whisky"
+  targetRelation   String?                         // "conjoint|ami|parent|collegue" — pour quel type de proche
+  occasion         String?                         // "anniversaire|noel|saint-valentin|remerciement"
+  minPlan          String   @default("premium")    // plan minimum pour acheter
+  featured         Boolean  @default(false)        // mis en avant sur la boutique
+
+  status           String   @default("draft")
+  createdBy        String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([category, status])
+  @@index([status, featured])
+  @@map("boutique_items")
+}
