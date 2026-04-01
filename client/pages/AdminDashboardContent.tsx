@@ -1683,17 +1683,263 @@ function AtlasPanel({ token }: { token: string }) {
         </div>
       )}
 
-      {/* Guides et Routes — placeholder */}
-      {atlasTab === 'guides' && (
-        <div className="text-center py-12">
-          <p className="text-white/30 text-lg">🏙️ Guides ville</p>
-          <p className="text-white/20 text-sm mt-1">Bientôt disponible — commencez par créer des fiches établissements</p>
+      {/* ── Guides ville ── */}
+      {atlasTab === 'guides' && <CityGuidesPanel token={token} />}
+
+      {/* ── Parcours curatés ── */}
+      {atlasTab === 'routes' && <CuratedRoutesPanel token={token} />}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CITY GUIDES PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function CityGuidesPanel({ token }: { token: string }) {
+  const [guides, setGuides] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const headers: any = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const loadGuides = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/atlas/city-guides', { headers });
+      if (res.ok) { const data = await res.json(); setGuides(data.guides); }
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  useEffect(() => { loadGuides(); }, []);
+
+  const handleSave = async () => {
+    if (!editing?.city) return;
+    setSaving(true);
+    try {
+      const method = editing.id ? 'PUT' : 'POST';
+      const url = editing.id ? `/api/atlas/city-guides/${editing.id}` : '/api/atlas/city-guides';
+      const res = await fetch(url, { method, headers, body: JSON.stringify(editing) });
+      if (res.ok) { setEditing(null); loadGuides(); }
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h4 className="text-white/60 text-xs font-semibold uppercase tracking-wider">Guides ville ({guides.length})</h4>
+        <button onClick={() => setEditing({ country: 'FR', status: 'draft', bestSeasons: [], photos: [] })} className="px-4 py-2 rounded-lg text-sm font-medium bg-secondary text-black hover:bg-secondary/90 flex items-center gap-1.5">
+          <Plus className="h-3.5 w-3.5" /> Nouveau guide
+        </button>
+      </div>
+
+      {editing && (
+        <div className="bg-white/5 border border-secondary/30 rounded-xl p-6 space-y-4">
+          <h3 className="text-white font-semibold">{editing.id ? `Modifier : ${editing.city}` : 'Nouveau guide ville'}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div><label className="text-white/60 text-xs">Ville *</label><Input value={editing.city || ''} onChange={e => setEditing({ ...editing, city: e.target.value })} placeholder="Saint-Tropez" className="bg-white/8 border-white/10 text-white mt-1" /></div>
+            <div><label className="text-white/60 text-xs">Pays</label><Input value={editing.country || 'FR'} onChange={e => setEditing({ ...editing, country: e.target.value })} className="bg-white/8 border-white/10 text-white mt-1" /></div>
+            <div><label className="text-white/60 text-xs">Région</label><Input value={editing.region || ''} onChange={e => setEditing({ ...editing, region: e.target.value })} placeholder="Côte d'Azur" className="bg-white/8 border-white/10 text-white mt-1" /></div>
+          </div>
+          <div><label className="text-white/60 text-xs">Description générale</label><textarea value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={3} placeholder="Ce qu'il faut savoir sur cette ville..." className="w-full rounded-md border border-white/10 bg-white/8 px-3 py-2 text-white text-sm mt-1" /></div>
+          <div><label className="text-white/60 text-xs">🔑 Secrets d'initié</label><textarea value={editing.secrets || ''} onChange={e => setEditing({ ...editing, secrets: e.target.value })} rows={2} placeholder="Les trucs que seuls les locaux savent..." className="w-full rounded-md border border-white/10 bg-white/8 px-3 py-2 text-white text-sm mt-1" /></div>
+          <div><label className="text-white/60 text-xs">👑 Accès VIP</label><textarea value={editing.vipAccess || ''} onChange={e => setEditing({ ...editing, vipAccess: e.target.value })} rows={2} placeholder="Comment obtenir des accès privilégiés..." className="w-full rounded-md border border-white/10 bg-white/8 px-3 py-2 text-white text-sm mt-1" /></div>
+          <div><label className="text-white/60 text-xs">💡 Tips locaux (circulation, marchés, horaires...)</label><textarea value={editing.localTips || ''} onChange={e => setEditing({ ...editing, localTips: e.target.value })} rows={2} placeholder="Jeudi 10h-13h marché = circulation bloquée..." className="w-full rounded-md border border-white/10 bg-white/8 px-3 py-2 text-white text-sm mt-1" /></div>
+          <div><label className="text-white/60 text-xs">🚗 Transport & circulation</label><textarea value={editing.transitTips || ''} onChange={e => setEditing({ ...editing, transitTips: e.target.value })} rows={2} placeholder="Se garer ici, éviter cette zone en été..." className="w-full rounded-md border border-white/10 bg-white/8 px-3 py-2 text-white text-sm mt-1" /></div>
+          <div><label className="text-white/60 text-xs">⚠️ Zones à éviter</label><textarea value={editing.dangerZones || ''} onChange={e => setEditing({ ...editing, dangerZones: e.target.value })} rows={1} placeholder="Eau polluée zone X, quartier Y la nuit..." className="w-full rounded-md border border-white/10 bg-white/8 px-3 py-2 text-white text-sm mt-1" /></div>
+          <div><label className="text-white/60 text-xs">Meilleures saisons (séparées par virgule)</label><Input value={(editing.bestSeasons || []).join(', ')} onChange={e => setEditing({ ...editing, bestSeasons: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) })} placeholder="mai, juin, septembre" className="bg-white/8 border-white/10 text-white mt-1" /></div>
+          {/* Photos */}
+          <div>
+            <label className="text-white/60 text-xs">📸 Photos</label>
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {(editing.photos || []).map((url: string, i: number) => (
+                <div key={i} className="relative group">
+                  <img src={url} alt="" className="w-20 h-20 object-cover rounded-lg border border-white/10" />
+                  <button onClick={() => setEditing({ ...editing, photos: editing.photos.filter((_: any, j: number) => j !== i) })} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100">✕</button>
+                </div>
+              ))}
+              <label className="w-20 h-20 border-2 border-dashed border-white/20 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-secondary/50">
+                <span className="text-white/30 text-xl">+</span>
+                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0]; if (!file) return;
+                  const fd = new FormData(); fd.append('file', file);
+                  try { const res = await fetch('/api/upload/photo?bucket=atlas-photos', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd }); if (res.ok) { const d = await res.json(); setEditing({ ...editing, photos: [...(editing.photos || []), d.url] }); } } catch (err) { console.error(err); }
+                  e.target.value = '';
+                }} />
+              </label>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button onClick={handleSave} disabled={saving || !editing.city} className="bg-secondary hover:bg-secondary/90 text-black">{saving ? 'Enregistrement...' : editing.id ? 'Mettre à jour' : 'Créer le guide'}</Button>
+            <Button variant="ghost" onClick={() => setEditing(null)} className="text-white/50">Annuler</Button>
+          </div>
         </div>
       )}
-      {atlasTab === 'routes' && (
-        <div className="text-center py-12">
-          <p className="text-white/30 text-lg">🗺️ Parcours curatés</p>
-          <p className="text-white/20 text-sm mt-1">Bientôt disponible — créez d'abord des fiches puis assemblez-les en parcours</p>
+
+      {loading ? <div className="text-center py-8 text-white/30">Chargement...</div> : guides.length === 0 ? (
+        <div className="text-center py-12"><p className="text-white/30">Aucun guide</p><p className="text-white/20 text-sm mt-1">Créez un guide pour enrichir les recommandations IA</p></div>
+      ) : (
+        <div className="space-y-2">
+          {guides.map((g: any) => (
+            <div key={g.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-start gap-4 hover:bg-white/8 transition-colors">
+              <div className="text-2xl">🏙️</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2"><h4 className="text-white font-semibold text-sm">{g.city}</h4><span className="text-white/30 text-xs">{g.country}</span><span className={`text-[10px] px-2 py-0.5 rounded-full ${g.status === 'published' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'}`}>{g.status}</span></div>
+                {g.description && <p className="text-white/40 text-xs mt-0.5 line-clamp-1">{g.description}</p>}
+                {g.secrets && <p className="text-secondary/60 text-xs mt-0.5 italic line-clamp-1">🔑 {g.secrets}</p>}
+              </div>
+              <button onClick={() => setEditing(g)} className="p-1.5 text-white/30 hover:text-white"><Pencil className="h-3.5 w-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CURATED ROUTES PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const ROUTE_THEMES = ['romantic', 'nightlife', 'gastronomie', 'culture', 'sport', 'business', 'family', 'lifestyle', 'adventure'];
+const THEME_EMOJI: Record<string, string> = { romantic: '💑', nightlife: '🌙', gastronomie: '🍽️', culture: '🏛️', sport: '⚽', business: '💼', family: '👨‍👩‍👧', lifestyle: '✨', adventure: '🧭' };
+
+function CuratedRoutesPanel({ token }: { token: string }) {
+  const [routes, setRoutes] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const headers: any = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const loadRoutes = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/atlas/routes', { headers });
+      if (res.ok) { const data = await res.json(); setRoutes(data.routes); }
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  useEffect(() => { loadRoutes(); }, []);
+
+  const handleSave = async () => {
+    if (!editing?.name || !editing?.city) return;
+    setSaving(true);
+    try {
+      const method = editing.id ? 'PUT' : 'POST';
+      const url = editing.id ? `/api/atlas/routes/${editing.id}` : '/api/atlas/routes';
+      const res = await fetch(url, { method, headers, body: JSON.stringify(editing) });
+      if (res.ok) { setEditing(null); loadRoutes(); }
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  // Ajouter une étape au parcours
+  const addStop = () => {
+    const stops = editing.stops || [];
+    setEditing({ ...editing, stops: [...stops, { order: stops.length + 1, notes: '', transportToNext: '', transportDuration: '' }] });
+  };
+
+  const updateStop = (index: number, field: string, value: string) => {
+    const stops = [...(editing.stops || [])];
+    stops[index] = { ...stops[index], [field]: value };
+    setEditing({ ...editing, stops });
+  };
+
+  const removeStop = (index: number) => {
+    const stops = (editing.stops || []).filter((_: any, i: number) => i !== index);
+    setEditing({ ...editing, stops: stops.map((s: any, i: number) => ({ ...s, order: i + 1 })) });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h4 className="text-white/60 text-xs font-semibold uppercase tracking-wider">Parcours curatés ({routes.length})</h4>
+        <button onClick={() => setEditing({ theme: 'lifestyle', budgetLevel: 2, status: 'draft', stops: [], tags: [], currency: 'EUR' })} className="px-4 py-2 rounded-lg text-sm font-medium bg-secondary text-black hover:bg-secondary/90 flex items-center gap-1.5">
+          <Plus className="h-3.5 w-3.5" /> Nouveau parcours
+        </button>
+      </div>
+
+      {editing && (
+        <div className="bg-white/5 border border-secondary/30 rounded-xl p-6 space-y-4">
+          <h3 className="text-white font-semibold">{editing.id ? `Modifier : ${editing.name}` : 'Nouveau parcours'}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div><label className="text-white/60 text-xs">Nom du parcours *</label><Input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value })} placeholder="Soirée romantique à Paris" className="bg-white/8 border-white/10 text-white mt-1" /></div>
+            <div><label className="text-white/60 text-xs">Ville *</label><Input value={editing.city || ''} onChange={e => setEditing({ ...editing, city: e.target.value })} placeholder="Paris" className="bg-white/8 border-white/10 text-white mt-1" /></div>
+            <div>
+              <label className="text-white/60 text-xs">Thème *</label>
+              <select value={editing.theme || 'lifestyle'} onChange={e => setEditing({ ...editing, theme: e.target.value })} className="w-full h-10 rounded-md border border-white/10 bg-white/8 px-3 text-white text-sm mt-1">
+                {ROUTE_THEMES.map(t => <option key={t} value={t}>{THEME_EMOJI[t] || '📍'} {t}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div><label className="text-white/60 text-xs">Durée</label><Input value={editing.duration || ''} onChange={e => setEditing({ ...editing, duration: e.target.value })} placeholder="4h, 2 jours..." className="bg-white/8 border-white/10 text-white mt-1" /></div>
+            <div>
+              <label className="text-white/60 text-xs">Budget (1-4)</label>
+              <select value={editing.budgetLevel || 2} onChange={e => setEditing({ ...editing, budgetLevel: parseInt(e.target.value) })} className="w-full h-10 rounded-md border border-white/10 bg-white/8 px-3 text-white text-sm mt-1">
+                <option value={1}>€ Accessible</option><option value={2}>€€ Confort</option><option value={3}>€€€ Premium</option><option value={4}>€€€€ Luxe</option>
+              </select>
+            </div>
+            <div><label className="text-white/60 text-xs">Coût total estimé (€)</label><Input type="number" value={editing.totalEstimatedCost || ''} onChange={e => setEditing({ ...editing, totalEstimatedCost: parseFloat(e.target.value) || undefined })} placeholder="350" className="bg-white/8 border-white/10 text-white mt-1" /></div>
+          </div>
+          <div><label className="text-white/60 text-xs">Description</label><textarea value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={2} placeholder="Une soirée inoubliable en 4 étapes..." className="w-full rounded-md border border-white/10 bg-white/8 px-3 py-2 text-white text-sm mt-1" /></div>
+
+          {/* Étapes du parcours */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-white/60 text-xs font-medium">📍 Étapes du parcours ({(editing.stops || []).length})</label>
+              <button onClick={addStop} className="text-xs text-secondary hover:text-secondary/80 flex items-center gap-1"><Plus className="h-3 w-3" /> Ajouter étape</button>
+            </div>
+            <div className="space-y-2">
+              {(editing.stops || []).map((stop: any, i: number) => (
+                <div key={i} className="bg-white/3 border border-white/8 rounded-lg p-3 flex gap-3 items-start">
+                  <span className="text-secondary font-bold text-sm mt-1">{i + 1}</span>
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <Input value={stop.notes || ''} onChange={e => updateStop(i, 'notes', e.target.value)} placeholder="Nom du lieu / activité" className="bg-white/5 border-white/10 text-white text-xs" />
+                    <Input value={stop.arrivalTime || ''} onChange={e => updateStop(i, 'arrivalTime', e.target.value)} placeholder="Arrivée (ex: 19h30)" className="bg-white/5 border-white/10 text-white text-xs" />
+                    <Input value={stop.transportToNext || ''} onChange={e => updateStop(i, 'transportToNext', e.target.value)} placeholder="Transport → suivant" className="bg-white/5 border-white/10 text-white text-xs" />
+                    <Input value={stop.transportDuration || ''} onChange={e => updateStop(i, 'transportDuration', e.target.value)} placeholder="Durée (ex: 10min)" className="bg-white/5 border-white/10 text-white text-xs" />
+                  </div>
+                  <button onClick={() => removeStop(i)} className="text-red-500/40 hover:text-red-400 mt-1"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div><label className="text-white/60 text-xs">Tags (séparés par virgule)</label><Input value={(editing.tags || []).join(', ')} onChange={e => setEditing({ ...editing, tags: e.target.value.split(',').map((t: string) => t.trim()).filter(Boolean) })} placeholder="Romantique, Vue panoramique, Étoilé" className="bg-white/8 border-white/10 text-white mt-1" /></div>
+
+          <div className="flex gap-3 pt-2">
+            <Button onClick={handleSave} disabled={saving || !editing.name || !editing.city} className="bg-secondary hover:bg-secondary/90 text-black">{saving ? 'Enregistrement...' : editing.id ? 'Mettre à jour' : 'Créer le parcours'}</Button>
+            <Button variant="ghost" onClick={() => setEditing(null)} className="text-white/50">Annuler</Button>
+          </div>
+        </div>
+      )}
+
+      {loading ? <div className="text-center py-8 text-white/30">Chargement...</div> : routes.length === 0 ? (
+        <div className="text-center py-12"><p className="text-white/30">Aucun parcours</p><p className="text-white/20 text-sm mt-1">Créez un parcours pour proposer des itinéraires premium</p></div>
+      ) : (
+        <div className="space-y-2">
+          {routes.map((r: any) => (
+            <div key={r.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-start gap-4 hover:bg-white/8 transition-colors">
+              <div className="text-2xl">{THEME_EMOJI[r.theme] || '🗺️'}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-white font-semibold text-sm">{r.name}</h4>
+                  <span className="text-white/30 text-xs">{r.city}</span>
+                  <span className="text-[10px] bg-white/10 text-white/50 px-2 py-0.5 rounded-full">{r.theme}</span>
+                  <span className="text-[10px] text-white/30">{'€'.repeat(r.budgetLevel)}</span>
+                  {r.duration && <span className="text-[10px] text-white/30">⏱️ {r.duration}</span>}
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${r.status === 'published' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40'}`}>{r.status}</span>
+                </div>
+                {r.description && <p className="text-white/40 text-xs mt-0.5 line-clamp-1">{r.description}</p>}
+                {(r.stops as any[])?.length > 0 && <p className="text-secondary/50 text-xs mt-0.5">{(r.stops as any[]).length} étapes : {(r.stops as any[]).map((s: any) => s.notes || `Étape ${s.order}`).join(' → ')}</p>}
+              </div>
+              <button onClick={() => setEditing(r)} className="p-1.5 text-white/30 hover:text-white"><Pencil className="h-3.5 w-3.5" /></button>
+            </div>
+          ))}
         </div>
       )}
     </div>
