@@ -87,7 +87,7 @@ const CIRCLES = ["decouverte", "voyageur", "explorateur", "prive", "fondateur"];
 export default function AdminDashboardContent() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'partners' | 'club' | 'notifications' | 'concierge'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'partners' | 'club' | 'notifications' | 'concierge' | 'atlas'>('users');
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
@@ -441,6 +441,12 @@ export default function AdminDashboardContent() {
               {conciergeStats?.pending > 0 && (
                 <span className="bg-secondary text-black text-[10px] font-bold rounded-full px-1.5">{conciergeStats.pending}</span>
               )}
+            </button>
+            <button
+              onClick={() => setActiveTab('atlas')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeTab === 'atlas' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'}`}
+            >
+              🗺️ Atlas
             </button>
           </div>
         </div>
@@ -1339,6 +1345,306 @@ export default function AdminDashboardContent() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── Onglet Atlas CMS ── */}
+      {activeTab === 'atlas' && <AtlasPanel token={token} />}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ATLAS PANEL — Éditeur de fiches, guides, parcours
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface AtlasVenue {
+  id: string; name: string; type: string; city: string; country: string; address?: string;
+  phone?: string; website?: string; description?: string; insiderTips?: string;
+  testedByBaymora: boolean; testedAt?: string; testedBy?: string;
+  rating?: number; priceLevel: number; priceFrom?: number; currency: string;
+  tags: string[]; ambiance?: string; seasonalNotes?: string;
+  affiliateType: string; affiliateUrl?: string; commissionPercent?: number; isPartner: boolean;
+  status: string; photos: string[]; createdBy: string; updatedAt: string;
+}
+
+const VENUE_TYPES = ['hotel', 'restaurant', 'bar', 'spa', 'activity', 'beach', 'club', 'transport', 'shop', 'service'];
+const VENUE_TYPE_EMOJI: Record<string, string> = { hotel: '🏨', restaurant: '🍽️', bar: '🍸', spa: '💆', activity: '⚡', beach: '🏖️', club: '🎶', transport: '🚗', shop: '🛍️', service: '🛎️' };
+
+function AtlasPanel({ token }: { token: string }) {
+  const [atlasTab, setAtlasTab] = useState<'venues' | 'guides' | 'routes'>('venues');
+  const [venues, setVenues] = useState<AtlasVenue[]>([]);
+  const [totalVenues, setTotalVenues] = useState(0);
+  const [venueSearch, setVenueSearch] = useState('');
+  const [venueFilter, setVenueFilter] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [editingVenue, setEditingVenue] = useState<Partial<AtlasVenue> | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [atlasStats, setAtlasStats] = useState<any>(null);
+
+  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'x-admin-secret': process.env.ADMIN_SECRET || localStorage.getItem('admin_secret') || '' };
+
+  const loadVenues = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (venueSearch) params.set('search', venueSearch);
+      if (venueFilter) params.set('type', venueFilter);
+      const res = await fetch(`/api/atlas/venues?${params}`, { headers });
+      if (res.ok) { const data = await res.json(); setVenues(data.venues); setTotalVenues(data.total); }
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  const loadStats = async () => {
+    try {
+      const res = await fetch('/api/atlas/stats', { headers });
+      if (res.ok) setAtlasStats(await res.json());
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => { loadVenues(); loadStats(); }, [venueFilter]);
+
+  const handleSaveVenue = async () => {
+    if (!editingVenue?.name || !editingVenue?.type || !editingVenue?.city) return;
+    setSaving(true);
+    try {
+      const method = editingVenue.id ? 'PUT' : 'POST';
+      const url = editingVenue.id ? `/api/atlas/venues/${editingVenue.id}` : '/api/atlas/venues';
+      const res = await fetch(url, { method, headers, body: JSON.stringify(editingVenue) });
+      if (res.ok) { setEditingVenue(null); loadVenues(); loadStats(); }
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  const handlePublish = async (id: string) => {
+    try {
+      await fetch(`/api/atlas/venues/${id}/publish`, { method: 'POST', headers });
+      loadVenues();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleArchive = async (id: string) => {
+    try {
+      await fetch(`/api/atlas/venues/${id}`, { method: 'DELETE', headers });
+      loadVenues();
+    } catch (e) { console.error(e); }
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+      {/* Stats rapides */}
+      {atlasStats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-white">{atlasStats.venues?.total || 0}</p>
+            <p className="text-white/40 text-xs">Venues totales</p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-emerald-400">{atlasStats.venues?.published || 0}</p>
+            <p className="text-white/40 text-xs">Publiées</p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-white">{atlasStats.cityGuides?.total || 0}</p>
+            <p className="text-white/40 text-xs">Guides ville</p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+            <p className="text-2xl font-bold text-white">{atlasStats.routes?.total || 0}</p>
+            <p className="text-white/40 text-xs">Parcours</p>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-tabs */}
+      <div className="flex gap-2">
+        {(['venues', 'guides', 'routes'] as const).map(t => (
+          <button key={t} onClick={() => setAtlasTab(t)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${atlasTab === t ? 'bg-secondary text-black' : 'bg-white/5 text-white/50 hover:text-white'}`}>
+            {t === 'venues' ? '📍 Établissements' : t === 'guides' ? '🏙️ Guides ville' : '🗺️ Parcours'}
+          </button>
+        ))}
+        <button onClick={() => setEditingVenue({ type: 'hotel', city: '', country: 'FR', priceLevel: 2, currency: 'EUR', affiliateType: 'none', status: 'draft', tags: [], photos: [], isPartner: false, testedByBaymora: false })} className="ml-auto px-4 py-2 rounded-lg text-sm font-medium bg-secondary text-black hover:bg-secondary/90 flex items-center gap-1.5">
+          <Plus className="h-3.5 w-3.5" /> Nouvelle fiche
+        </button>
+      </div>
+
+      {/* ── Formulaire édition venue ── */}
+      {editingVenue && (
+        <div className="bg-white/5 border border-secondary/30 rounded-xl p-6 space-y-4">
+          <h3 className="text-white font-semibold text-lg">{editingVenue.id ? `Modifier : ${editingVenue.name}` : 'Nouvelle fiche établissement'}</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-white/60 text-xs font-medium">Nom *</label>
+              <Input value={editingVenue.name || ''} onChange={e => setEditingVenue({ ...editingVenue, name: e.target.value })} placeholder="Hotel Byblos" className="bg-white/8 border-white/10 text-white mt-1" />
+            </div>
+            <div>
+              <label className="text-white/60 text-xs font-medium">Type *</label>
+              <select value={editingVenue.type || 'hotel'} onChange={e => setEditingVenue({ ...editingVenue, type: e.target.value })} className="w-full h-10 rounded-md border border-white/10 bg-white/8 px-3 text-white text-sm mt-1">
+                {VENUE_TYPES.map(t => <option key={t} value={t}>{VENUE_TYPE_EMOJI[t]} {t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-white/60 text-xs font-medium">Ville *</label>
+              <Input value={editingVenue.city || ''} onChange={e => setEditingVenue({ ...editingVenue, city: e.target.value })} placeholder="Saint-Tropez" className="bg-white/8 border-white/10 text-white mt-1" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-white/60 text-xs font-medium">Pays</label>
+              <Input value={editingVenue.country || 'FR'} onChange={e => setEditingVenue({ ...editingVenue, country: e.target.value })} className="bg-white/8 border-white/10 text-white mt-1" />
+            </div>
+            <div>
+              <label className="text-white/60 text-xs font-medium">Adresse</label>
+              <Input value={editingVenue.address || ''} onChange={e => setEditingVenue({ ...editingVenue, address: e.target.value })} placeholder="Avenue Paul Signac" className="bg-white/8 border-white/10 text-white mt-1" />
+            </div>
+            <div>
+              <label className="text-white/60 text-xs font-medium">Téléphone</label>
+              <Input value={editingVenue.phone || ''} onChange={e => setEditingVenue({ ...editingVenue, phone: e.target.value })} placeholder="+33 4 94 56 68 00" className="bg-white/8 border-white/10 text-white mt-1" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-white/60 text-xs font-medium">Description</label>
+            <textarea value={editingVenue.description || ''} onChange={e => setEditingVenue({ ...editingVenue, description: e.target.value })} rows={3} placeholder="Palace mythique de la Côte d'Azur depuis 1967..." className="w-full rounded-md border border-white/10 bg-white/8 px-3 py-2 text-white text-sm mt-1 placeholder:text-white/30" />
+          </div>
+
+          <div>
+            <label className="text-white/60 text-xs font-medium">💡 Notes terrain / Insider tips</label>
+            <textarea value={editingVenue.insiderTips || ''} onChange={e => setEditingVenue({ ...editingVenue, insiderTips: e.target.value })} rows={2} placeholder="Demander la chambre 12 vue mer. Le barman Éric fait les meilleurs cocktails." className="w-full rounded-md border border-white/10 bg-white/8 px-3 py-2 text-white text-sm mt-1 placeholder:text-white/30" />
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <label className="text-white/60 text-xs font-medium">Note /5</label>
+              <Input type="number" step="0.1" min="0" max="5" value={editingVenue.rating || ''} onChange={e => setEditingVenue({ ...editingVenue, rating: parseFloat(e.target.value) || undefined })} className="bg-white/8 border-white/10 text-white mt-1" />
+            </div>
+            <div>
+              <label className="text-white/60 text-xs font-medium">Niveau prix (1-4)</label>
+              <select value={editingVenue.priceLevel || 2} onChange={e => setEditingVenue({ ...editingVenue, priceLevel: parseInt(e.target.value) })} className="w-full h-10 rounded-md border border-white/10 bg-white/8 px-3 text-white text-sm mt-1">
+                <option value={1}>€</option><option value={2}>€€</option><option value={3}>€€€</option><option value={4}>€€€€</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-white/60 text-xs font-medium">Prix à partir de</label>
+              <Input type="number" value={editingVenue.priceFrom || ''} onChange={e => setEditingVenue({ ...editingVenue, priceFrom: parseFloat(e.target.value) || undefined })} placeholder="450" className="bg-white/8 border-white/10 text-white mt-1" />
+            </div>
+            <div>
+              <label className="text-white/60 text-xs font-medium">Ambiance</label>
+              <Input value={editingVenue.ambiance || ''} onChange={e => setEditingVenue({ ...editingVenue, ambiance: e.target.value })} placeholder="Méditerranéen chic" className="bg-white/8 border-white/10 text-white mt-1" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-white/60 text-xs font-medium">Type affiliation</label>
+              <select value={editingVenue.affiliateType || 'none'} onChange={e => setEditingVenue({ ...editingVenue, affiliateType: e.target.value })} className="w-full h-10 rounded-md border border-white/10 bg-white/8 px-3 text-white text-sm mt-1">
+                <option value="none">Aucune</option><option value="auto">Automatique (web)</option><option value="negotiated">Négociée</option><option value="terrain">Terrain (visite)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-white/60 text-xs font-medium">URL affiliation</label>
+              <Input value={editingVenue.affiliateUrl || ''} onChange={e => setEditingVenue({ ...editingVenue, affiliateUrl: e.target.value })} placeholder="https://..." className="bg-white/8 border-white/10 text-white mt-1" />
+            </div>
+            <div>
+              <label className="text-white/60 text-xs font-medium">Commission %</label>
+              <Input type="number" value={editingVenue.commissionPercent || ''} onChange={e => setEditingVenue({ ...editingVenue, commissionPercent: parseFloat(e.target.value) || undefined })} placeholder="15" className="bg-white/8 border-white/10 text-white mt-1" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-white/60 text-xs font-medium">Tags (séparés par virgule)</label>
+            <Input value={(editingVenue.tags as string[] || []).join(', ')} onChange={e => setEditingVenue({ ...editingVenue, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })} placeholder="Palace, Piscine, Spa, Vue mer" className="bg-white/8 border-white/10 text-white mt-1" />
+          </div>
+
+          <div>
+            <label className="text-white/60 text-xs font-medium">Notes saisonnières</label>
+            <Input value={editingVenue.seasonalNotes || ''} onChange={e => setEditingVenue({ ...editingVenue, seasonalNotes: e.target.value })} placeholder="Fermé en janvier. Haute saison juillet-août." className="bg-white/8 border-white/10 text-white mt-1" />
+          </div>
+
+          <div className="flex items-center gap-4 flex-wrap">
+            <label className="flex items-center gap-2 text-white/70 text-sm cursor-pointer">
+              <input type="checkbox" checked={editingVenue.testedByBaymora || false} onChange={e => setEditingVenue({ ...editingVenue, testedByBaymora: e.target.checked, testedAt: e.target.checked ? new Date().toISOString() : undefined })} className="rounded" />
+              ✅ Testé par Baymora
+            </label>
+            <label className="flex items-center gap-2 text-white/70 text-sm cursor-pointer">
+              <input type="checkbox" checked={editingVenue.isPartner || false} onChange={e => setEditingVenue({ ...editingVenue, isPartner: e.target.checked })} className="rounded" />
+              🤝 Partenaire affilié
+            </label>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button onClick={handleSaveVenue} disabled={saving || !editingVenue.name || !editingVenue.city} className="bg-secondary hover:bg-secondary/90 text-black">
+              {saving ? 'Enregistrement...' : editingVenue.id ? 'Mettre à jour' : 'Créer la fiche'}
+            </Button>
+            <Button variant="ghost" onClick={() => setEditingVenue(null)} className="text-white/50">Annuler</Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Liste des venues ── */}
+      {atlasTab === 'venues' && (
+        <div className="space-y-3">
+          <div className="flex gap-3 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+              <Input value={venueSearch} onChange={e => setVenueSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && loadVenues()} placeholder="Rechercher un établissement..." className="pl-9 bg-white/8 border-white/10 text-white" />
+            </div>
+            <select value={venueFilter} onChange={e => setVenueFilter(e.target.value)} className="h-10 rounded-md border border-white/10 bg-white/8 px-3 text-white text-sm">
+              <option value="">Tous types</option>
+              {VENUE_TYPES.map(t => <option key={t} value={t}>{VENUE_TYPE_EMOJI[t]} {t}</option>)}
+            </select>
+            <span className="text-white/40 text-sm">{totalVenues} fiches</span>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-12 text-white/30">Chargement...</div>
+          ) : venues.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-white/30 text-lg mb-2">Aucune fiche</p>
+              <p className="text-white/20 text-sm">Cliquez "Nouvelle fiche" pour commencer à enrichir l'Atlas Baymora</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {venues.map(v => (
+                <div key={v.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-start gap-4 hover:bg-white/8 transition-colors">
+                  <div className="text-2xl flex-shrink-0">{VENUE_TYPE_EMOJI[v.type] || '📍'}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-white font-semibold text-sm">{v.name}</h4>
+                      {v.testedByBaymora && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">✅ Testé</span>}
+                      {v.isPartner && <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">🤝 Partenaire</span>}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full ${v.status === 'published' ? 'bg-emerald-500/20 text-emerald-400' : v.status === 'archived' ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white/40'}`}>
+                        {v.status}
+                      </span>
+                    </div>
+                    <p className="text-white/50 text-xs mt-0.5">{v.city}, {v.country} · {v.type} · {'€'.repeat(v.priceLevel)}{v.rating ? ` · ⭐${v.rating}` : ''}</p>
+                    {v.description && <p className="text-white/40 text-xs mt-1 line-clamp-1">{v.description}</p>}
+                    {v.insiderTips && <p className="text-secondary/60 text-xs mt-0.5 italic line-clamp-1">💡 {v.insiderTips}</p>}
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button onClick={() => setEditingVenue(v)} className="p-1.5 text-white/30 hover:text-white transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                    {v.status === 'draft' && <button onClick={() => handlePublish(v.id)} className="p-1.5 text-emerald-500/50 hover:text-emerald-400 transition-colors" title="Publier"><CheckCircle className="h-3.5 w-3.5" /></button>}
+                    <button onClick={() => handleArchive(v.id)} className="p-1.5 text-red-500/30 hover:text-red-400 transition-colors" title="Archiver"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Guides et Routes — placeholder */}
+      {atlasTab === 'guides' && (
+        <div className="text-center py-12">
+          <p className="text-white/30 text-lg">🏙️ Guides ville</p>
+          <p className="text-white/20 text-sm mt-1">Bientôt disponible — commencez par créer des fiches établissements</p>
+        </div>
+      )}
+      {atlasTab === 'routes' && (
+        <div className="text-center py-12">
+          <p className="text-white/30 text-lg">🗺️ Parcours curatés</p>
+          <p className="text-white/20 text-sm mt-1">Bientôt disponible — créez d'abord des fiches puis assemblez-les en parcours</p>
         </div>
       )}
     </div>
