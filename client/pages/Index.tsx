@@ -124,6 +124,19 @@ type Lang = "fr" | "en";
 
 // ─── Plans data ───────────────────────────────────────────────────────────────
 
+// ─── Packs thématiques (visuels landing) ────────────────────────────────────
+
+const THEME_PACKS = [
+  { id: 'ski', emoji: '⛷️', title: 'Ski & Montagne', subtitle: 'Courchevel · Megève · Verbier', gradient: 'from-blue-600/30 to-cyan-500/10', prompt: 'Je veux un séjour au ski dans une station premium' },
+  { id: 'beach', emoji: '🏖️', title: 'Plage & Soleil', subtitle: 'St-Tropez · Mykonos · Maldives', gradient: 'from-amber-500/30 to-orange-400/10', prompt: 'Je cherche une destination plage et soleil premium' },
+  { id: 'city', emoji: '🌃', title: 'City Break', subtitle: 'NYC · Paris · Tokyo · Milan', gradient: 'from-purple-600/30 to-pink-500/10', prompt: 'Je veux un city break dans une grande ville' },
+  { id: 'gastro', emoji: '🍽️', title: 'Gastronomie', subtitle: 'Étoilés · Caves · Dégustations', gradient: 'from-red-600/30 to-rose-400/10', prompt: 'Je veux un séjour gastronomique avec restaurants étoilés' },
+  { id: 'romantic', emoji: '💑', title: 'Romantique', subtitle: 'Venise · Santorin · Bora Bora', gradient: 'from-pink-500/30 to-red-400/10', prompt: 'Je cherche un séjour romantique en couple' },
+  { id: 'nightlife', emoji: '🌙', title: 'Nightlife & Fête', subtitle: 'Ibiza · Miami · Dubai', gradient: 'from-violet-600/30 to-blue-500/10', prompt: 'Je veux faire la fête dans les meilleurs clubs et beach clubs' },
+  { id: 'wellness', emoji: '🧘', title: 'Détente & Spa', subtitle: 'Thalasso · Yoga · Retraites', gradient: 'from-emerald-500/30 to-teal-400/10', prompt: 'Je cherche un séjour détente spa et bien-être' },
+  { id: 'adventure', emoji: '🧭', title: 'Aventure', subtitle: 'Safari · Trek · Expéditions', gradient: 'from-orange-600/30 to-yellow-500/10', prompt: 'Je veux une aventure unique et hors des sentiers battus' },
+];
+
 const PLANS = [
   { circle: "Découverte", badge: "○", price: "Gratuit", color: "border-white/12", highlight: false,
     features: { fr: ["15 échanges gratuits", "IA Opus complète", "Recommandations 100% IA", "Aucun compte requis"], en: ["15 free exchanges", "Full Opus AI", "100% AI recommendations", "No account needed"] } },
@@ -311,6 +324,40 @@ export default function Index() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Packs thématiques ── */}
+      <section className="py-20 px-4 border-t border-white/5">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-2" style={gold}>
+            {lang === 'fr' ? 'Destinations & Expériences' : 'Destinations & Experiences'}
+          </h2>
+          <p className="text-white/30 text-sm text-center mb-10">
+            {lang === 'fr' ? 'Cliquez et partez. L\'IA fait le reste.' : 'Click and go. AI does the rest.'}
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {THEME_PACKS.map(pack => (
+              <Link
+                key={pack.id}
+                to={`/chat?prompt=${encodeURIComponent(pack.prompt)}`}
+                className={`group relative bg-gradient-to-br ${pack.gradient} border border-white/10 rounded-2xl p-5 hover:border-secondary/40 hover:scale-[1.02] transition-all cursor-pointer overflow-hidden`}
+              >
+                <div className="relative z-10">
+                  <span className="text-3xl">{pack.emoji}</span>
+                  <h3 className="text-white font-bold text-sm mt-2">{pack.title}</h3>
+                  <p className="text-white/40 text-xs mt-0.5">{pack.subtitle}</p>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+            ))}
+          </div>
+
+          <p className="text-center text-white/20 text-xs mt-6">
+            {lang === 'fr' ? 'Ou dites simplement ce que vous voulez à l\'IA →' : 'Or just tell the AI what you want →'}
+            {' '}<Link to="/chat" className="text-secondary/60 hover:text-secondary">{'Ouvrir le chat'}</Link>
+          </p>
         </div>
       </section>
 

@@ -967,7 +967,19 @@ export default function Chat() {
     }
   }, [transcript, isListening]);
 
-  useEffect(() => { startChat('fr'); }, []);
+  // Démarrer le chat + envoyer le prompt initial si ?prompt= dans l'URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const initialPrompt = params.get('prompt');
+    startChat('fr').then(() => {
+      if (initialPrompt) {
+        // Petit délai pour que la conversation soit initialisée
+        setTimeout(() => sendMessage(initialPrompt), 500);
+        // Nettoyer l'URL
+        window.history.replaceState({}, '', '/chat');
+      }
+    });
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
