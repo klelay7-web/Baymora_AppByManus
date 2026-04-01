@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark, X } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark, X, Mic, MicOff } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT, FREE_CREDITS_LIMIT } from '@/hooks/useAuth';
+import { useVoice } from '@/hooks/useVoice';
 import ConversionModal from '@/components/ConversionModal';
 import CreditGate from '@/components/CreditGate';
 import ContactPicker from '@/components/ContactPicker';
@@ -948,6 +949,24 @@ export default function Chat() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { messages, isLoading, error, conversationId, startChat, sendMessage, deleteConversation, credits, creditsExhausted, upgradeOptions, resetCreditsGate } = useChat();
 
+  // ── Voice recognition ──────────────────────────────────────────────────────
+  const { isListening, isSupported: voiceSupported, transcript, toggleListening, stopListening } = useVoice({
+    language: 'fr-FR',
+    onResult: (text) => {
+      if (text.trim() && !isLoading && !isCreditsExhausted) {
+        setInput('');
+        sendMessage(text.trim());
+      }
+    },
+  });
+
+  // Sync interim transcript to input field while listening
+  useEffect(() => {
+    if (isListening && transcript) {
+      setInput(transcript);
+    }
+  }, [transcript, isListening]);
+
   useEffect(() => { startChat('fr'); }, []);
 
   useEffect(() => {
@@ -1392,17 +1411,29 @@ export default function Chat() {
       {/* Input */}
       <div className="px-4 pb-6 pt-3 border-t border-white/10 bg-slate-950/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex gap-2 max-w-2xl mx-auto">
+          {/* Bouton micro — raccourci vocal */}
+          {voiceSupported && (
+            <Button
+              onClick={toggleListening}
+              size="sm"
+              variant="ghost"
+              className={`px-3 transition-all ${isListening ? 'bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse' : 'text-white/40 hover:text-white border border-slate-600'}`}
+              title={isListening ? 'Arrêter l\'écoute' : 'Parler à Baymora'}
+            >
+              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          )}
           <input
             ref={inputRef}
             type="text"
-            placeholder={isCreditsExhausted ? 'Créez un compte pour continuer...' : 'Week-end, fête, plage, gastro, surprise... dites-nous tout'}
+            placeholder={isListening ? '🎤 Parlez, Baymora écoute...' : isCreditsExhausted ? 'Créez un compte pour continuer...' : 'Week-end, fête, plage, gastro, surprise...'}
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => { setInput(e.target.value); if (isListening) stopListening(); }}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             disabled={isLoading}
             onClick={() => isCreditsExhausted && setShowConversion(true)}
             autoFocus
-            className="flex-1 h-10 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-secondary/60 focus:ring-1 focus:ring-secondary/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`flex-1 h-10 rounded-md border px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-secondary/60 focus:ring-1 focus:ring-secondary/40 disabled:opacity-50 disabled:cursor-not-allowed ${isListening ? 'border-red-500/40 bg-red-500/5' : 'border-slate-600 bg-slate-800'}`}
           />
           {hasResults && (
             <Button

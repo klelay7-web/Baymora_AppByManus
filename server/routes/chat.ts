@@ -190,6 +190,27 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
         await deductUserCredits(baymoraUser.id, deduction);
       }
 
+      // ── Auto-save Atlas fiche si l'IA en génère une (team members) ────────
+      const atlasMatch = llmResult.content.match(/:::ATLAS_SAVE:::([\s\S]*?):::END:::/);
+      if (atlasMatch) {
+        try {
+          const venueData = JSON.parse(atlasMatch[1]);
+          await prisma.atlasVenue.create({
+            data: {
+              ...venueData,
+              status: 'draft',
+              createdBy: baymoraUser.id,
+              country: venueData.country || 'FR',
+              currency: venueData.currency || 'EUR',
+              priceLevel: venueData.priceLevel || 2,
+            },
+          });
+          console.log(`[ATLAS] Fiche créée par dictée vocale: ${venueData.name} (${venueData.city}) — team: ${baymoraUser.id}`);
+        } catch (e) {
+          console.error('[ATLAS] Erreur auto-save fiche:', e);
+        }
+      }
+
       // Sauvegarder réponse assistant
       const assistantMsg = await prisma.message.create({
         data: { conversationId, role: 'assistant', content: llmResult.content },
