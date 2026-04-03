@@ -32,18 +32,20 @@ function authHeader() {
 
 const CIRCLE_LABEL: Record<string, string> = {
   decouverte: 'Découverte',
-  voyageur: 'Voyageur',
-  explorateur: 'Explorateur',
-  prive: 'Cercle Privé',
-  fondateur: 'Fondateur',
+  premium: 'Premium',
+  prive: 'Privé',
+  voyageur: 'Premium',
+  explorateur: 'Premium',
+  fondateur: 'Privé',
 };
 
 const CIRCLE_BADGE: Record<string, string> = {
   decouverte: '○',
-  voyageur: '✦',
-  explorateur: '✦✦',
+  premium: '✦',
   prive: '✦✦✦',
-  fondateur: '✦✦✦✦',
+  voyageur: '✦',
+  explorateur: '✦',
+  fondateur: '✦✦✦',
 };
 
 const CIRCLE_COLOR: Record<string, string> = {
@@ -1276,32 +1278,8 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* ── Préférences ── */}
-        {user.preferences && Object.keys(user.preferences).length > 0 && (
-          <section>
-            <h2 className="text-white/80 font-semibold text-sm flex items-center gap-2 mb-3">
-              <Sparkles className="h-4 w-4 text-secondary/70" /> Ce que Baymora sait de vous
-            </h2>
-            <div className="bg-white/4 border border-white/10 rounded-xl px-4 py-3">
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(user.preferences as Record<string, any>).map(([key, val]) => {
-                  if (!val || (Array.isArray(val) && val.length === 0)) return null;
-                  const display = Array.isArray(val) ? val.join(', ') : typeof val === 'object' ? JSON.stringify(val) : String(val);
-                  const labels: Record<string, string> = {
-                    travelStyle: 'Style', diet: 'Régime', pets: 'Animal', children: 'Enfants',
-                    budgetTier: 'Budget', travelWith: 'Voyage', ecoConscious: 'Éco',
-                    mentionedDestinations: 'Destinations',
-                  };
-                  return (
-                    <span key={key} className="bg-white/5 border border-white/10 rounded-full px-2.5 py-1 text-xs text-white/50">
-                      <span className="text-white/30">{labels[key] || key}:</span> {display}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        )}
+        {/* ── Préférences & Profil complet ── */}
+        <ProfilePreferences user={user} authHeader={authHeader} onUpdate={() => window.location.reload()} />
 
         {/* ── Footer ── */}
         <div className="text-center text-white/15 text-xs pb-4">
@@ -1309,5 +1287,178 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PROFIL PRÉFÉRENCES — Fiche client complète
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const DIET_OPTIONS = ['Aucun', 'Végétarien', 'Végan', 'Halal', 'Casher', 'Sans gluten', 'Sans lactose', 'Pescetarien', 'Flexitarien'];
+const ALLERGY_OPTIONS = ['Arachides', 'Noix', 'Fruits de mer', 'Crustacés', 'Gluten', 'Lactose', 'Œufs', 'Soja', 'Sésame', 'Sulfites'];
+const TRAVEL_STYLE_OPTIONS = ['Détente', 'Aventure', 'Culture', 'Gastronomie', 'Nightlife', 'Nature', 'Shopping', 'Sport', 'Romance', 'Bien-être'];
+const BUDGET_OPTIONS = ['Économique', 'Confort', 'Premium', 'Luxe', 'Sans limite'];
+const TRAVEL_WITH_OPTIONS = ['Solo', 'En couple', 'En famille', 'Entre amis', 'Business'];
+const MOBILITY_OPTIONS = ['Aucune restriction', 'PMR (fauteuil)', 'Mobilité réduite', 'Poussette/bébé'];
+const LANGUAGE_OPTIONS = ['Français', 'Anglais', 'Espagnol', 'Italien', 'Allemand', 'Arabe', 'Mandarin', 'Japonais', 'Portugais', 'Russe'];
+const PET_OPTIONS = ['Aucun', 'Chien', 'Chat', 'Autre animal'];
+const SMOKING_OPTIONS = ['Non-fumeur', 'Fumeur', 'Cigare', 'Vape'];
+const DRESS_CODE_OPTIONS = ['Casual', 'Smart casual', 'Chic', 'Formel / Black tie'];
+
+function ProfilePreferences({ user, authHeader, onUpdate }: { user: any; authHeader: () => any; onUpdate: () => void }) {
+  const prefs = (user.preferences || {}) as Record<string, any>;
+  const [form, setForm] = useState({
+    diet: prefs.diet || '',
+    allergies: (prefs.allergies as string[]) || [],
+    allergyOther: prefs.allergyOther || '',
+    travelStyle: (prefs.travelStyle as string[]) || [],
+    budgetTier: prefs.budgetTier || '',
+    travelWith: prefs.travelWith || '',
+    mobility: prefs.mobility || '',
+    languages: (prefs.languages as string[]) || [],
+    pet: prefs.pet || '',
+    smoking: prefs.smoking || '',
+    dressCode: prefs.dressCode || '',
+    ecoConscious: prefs.ecoConscious || false,
+    homeCity: prefs.homeCity || '',
+    homeAddress: prefs.homeAddress || '',
+    homeAirport: prefs.homeAirport || '',
+    shirtSize: prefs.shirtSize || '',
+    shoeSize: prefs.shoeSize || '',
+    favoriteAlcohol: prefs.favoriteAlcohol || '',
+    favoriteCuisine: prefs.favoriteCuisine || '',
+    sleepPreference: prefs.sleepPreference || '',
+    temperaturePreference: prefs.temperaturePreference || '',
+    notes: prefs.notes || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const toggleArray = (field: string, value: string) => {
+    setForm(f => {
+      const arr = (f as any)[field] as string[];
+      return { ...f, [field]: arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value] };
+    });
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: { ...authHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferences: { ...prefs, ...form } }),
+      });
+      if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); onUpdate(); }
+    } catch (e) { console.error(e); }
+    setSaving(false);
+  };
+
+  const ChipSelect = ({ label, options, field, multi = false }: { label: string; options: string[]; field: string; multi?: boolean }) => (
+    <div>
+      <label className="text-white/50 text-xs font-medium mb-1.5 block">{label}</label>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map(opt => {
+          const isActive = multi ? ((form as any)[field] as string[])?.includes(opt) : (form as any)[field] === opt;
+          return (
+            <button key={opt} onClick={() => multi ? toggleArray(field, opt) : setForm(f => ({ ...f, [field]: isActive ? '' : opt }))}
+              className={`px-2.5 py-1 rounded-full text-xs transition-all ${isActive ? 'bg-secondary/20 text-secondary border border-secondary/40' : 'bg-white/5 text-white/40 border border-white/10 hover:border-white/20'}`}>
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <section>
+      <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between mb-3">
+        <h2 className="text-white/80 font-semibold text-sm flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-secondary/70" /> Mon profil & préférences
+        </h2>
+        <ChevronRight className={`h-4 w-4 text-white/30 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+      </button>
+
+      {expanded && (
+        <div className="bg-white/4 border border-white/10 rounded-xl p-5 space-y-5">
+          <p className="text-white/30 text-xs">Plus votre profil est complet, plus les recommandations de Baymora seront précises et personnalisées.</p>
+
+          {/* Alimentation */}
+          <div className="space-y-3">
+            <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider">🍽️ Alimentation</h3>
+            <ChipSelect label="Régime alimentaire" options={DIET_OPTIONS} field="diet" />
+            <ChipSelect label="Allergies & intolérances" options={ALLERGY_OPTIONS} field="allergies" multi />
+            <div>
+              <label className="text-white/50 text-xs font-medium">Autre allergie / restriction</label>
+              <Input value={form.allergyOther} onChange={e => setForm(f => ({ ...f, allergyOther: e.target.value }))} placeholder="Précisez..." className="bg-white/8 border-white/10 text-white mt-1 text-xs h-8" />
+            </div>
+          </div>
+
+          {/* Voyage */}
+          <div className="space-y-3">
+            <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider">✈️ Voyage</h3>
+            <ChipSelect label="Style de voyage préféré" options={TRAVEL_STYLE_OPTIONS} field="travelStyle" multi />
+            <ChipSelect label="Budget habituel" options={BUDGET_OPTIONS} field="budgetTier" />
+            <ChipSelect label="Voyage généralement" options={TRAVEL_WITH_OPTIONS} field="travelWith" />
+            <ChipSelect label="Mobilité" options={MOBILITY_OPTIONS} field="mobility" />
+          </div>
+
+          {/* Lifestyle */}
+          <div className="space-y-3">
+            <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider">✨ Lifestyle</h3>
+            <ChipSelect label="Langues parlées" options={LANGUAGE_OPTIONS} field="languages" multi />
+            <ChipSelect label="Animal de compagnie" options={PET_OPTIONS} field="pet" />
+            <ChipSelect label="Tabac" options={SMOKING_OPTIONS} field="smoking" />
+            <ChipSelect label="Dress code préféré" options={DRESS_CODE_OPTIONS} field="dressCode" />
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={form.ecoConscious} onChange={e => setForm(f => ({ ...f, ecoConscious: e.target.checked }))} className="rounded" />
+              <span className="text-white/50 text-xs">🌱 Sensible à l'écologie (options durables en priorité)</span>
+            </div>
+          </div>
+
+          {/* Logistique */}
+          <div className="space-y-3">
+            <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider">🏠 Logistique</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label className="text-white/50 text-xs">Ville de résidence</label><Input value={form.homeCity} onChange={e => setForm(f => ({ ...f, homeCity: e.target.value }))} placeholder="Paris" className="bg-white/8 border-white/10 text-white mt-1 text-xs h-8" /></div>
+              <div><label className="text-white/50 text-xs">Aéroport préféré</label><Input value={form.homeAirport} onChange={e => setForm(f => ({ ...f, homeAirport: e.target.value }))} placeholder="CDG, ORY..." className="bg-white/8 border-white/10 text-white mt-1 text-xs h-8" /></div>
+            </div>
+            <div><label className="text-white/50 text-xs">Adresse domicile (pour calcul trajet aéroport)</label><Input value={form.homeAddress} onChange={e => setForm(f => ({ ...f, homeAddress: e.target.value }))} placeholder="12 rue de Rivoli, 75001 Paris" className="bg-white/8 border-white/10 text-white mt-1 text-xs h-8" /></div>
+          </div>
+
+          {/* Tailles & goûts */}
+          <div className="space-y-3">
+            <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider">👔 Tailles & goûts</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div><label className="text-white/50 text-xs">Taille vêtements</label><Input value={form.shirtSize} onChange={e => setForm(f => ({ ...f, shirtSize: e.target.value }))} placeholder="M, L, 42..." className="bg-white/8 border-white/10 text-white mt-1 text-xs h-8" /></div>
+              <div><label className="text-white/50 text-xs">Pointure</label><Input value={form.shoeSize} onChange={e => setForm(f => ({ ...f, shoeSize: e.target.value }))} placeholder="42, 43..." className="bg-white/8 border-white/10 text-white mt-1 text-xs h-8" /></div>
+              <div><label className="text-white/50 text-xs">Alcool préféré</label><Input value={form.favoriteAlcohol} onChange={e => setForm(f => ({ ...f, favoriteAlcohol: e.target.value }))} placeholder="Whisky, Champagne..." className="bg-white/8 border-white/10 text-white mt-1 text-xs h-8" /></div>
+              <div><label className="text-white/50 text-xs">Cuisine préférée</label><Input value={form.favoriteCuisine} onChange={e => setForm(f => ({ ...f, favoriteCuisine: e.target.value }))} placeholder="Italienne, Japonaise..." className="bg-white/8 border-white/10 text-white mt-1 text-xs h-8" /></div>
+            </div>
+          </div>
+
+          {/* Confort */}
+          <div className="space-y-3">
+            <h3 className="text-white/60 text-xs font-bold uppercase tracking-wider">🛏️ Confort</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label className="text-white/50 text-xs">Préférence de sommeil</label><Input value={form.sleepPreference} onChange={e => setForm(f => ({ ...f, sleepPreference: e.target.value }))} placeholder="Oreiller ferme, calme absolu..." className="bg-white/8 border-white/10 text-white mt-1 text-xs h-8" /></div>
+              <div><label className="text-white/50 text-xs">Température préférée</label><Input value={form.temperaturePreference} onChange={e => setForm(f => ({ ...f, temperaturePreference: e.target.value }))} placeholder="Chaud, tempéré, froid..." className="bg-white/8 border-white/10 text-white mt-1 text-xs h-8" /></div>
+            </div>
+          </div>
+
+          {/* Notes libres */}
+          <div>
+            <label className="text-white/50 text-xs font-medium">📝 Notes personnelles (tout ce que Baymora devrait savoir)</label>
+            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} placeholder="J'ai peur en avion, je déteste attendre, j'adore les surprises..." className="w-full rounded-md border border-white/10 bg-white/8 px-3 py-2 text-white text-xs mt-1 placeholder:text-white/25" />
+          </div>
+
+          <Button onClick={handleSave} disabled={saving} className="bg-secondary hover:bg-secondary/90 text-black text-xs px-6">
+            {saving ? 'Enregistrement...' : saved ? '✅ Enregistré !' : 'Sauvegarder mes préférences'}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }

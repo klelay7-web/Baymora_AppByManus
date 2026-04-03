@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Lock, Sparkles, Crown, Users, Star, MessageSquare } from "lucide-react";
+import { ArrowRight, Lock, Sparkles, Crown, Users, Star, MessageSquare, Menu, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
@@ -167,6 +167,7 @@ const gold = {
 export default function Index() {
   const { isAuthenticated } = useAuth();
   const [lang, setLang] = useState<Lang>("fr");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const t = T[lang];
 
   return (
@@ -175,52 +176,100 @@ export default function Index() {
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-50 border-b border-white/8 bg-[#080c14]/85 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-shrink-0">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-secondary/40 to-secondary/10 border border-secondary/20 flex items-center justify-center">
               <span className="text-secondary font-bold text-sm">B</span>
             </div>
             <span className="font-bold text-white text-base tracking-tight">Baymora</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Desktop nav */}
+          <div className="hidden sm:flex items-center gap-2">
             {/* Lang switcher */}
             <div className="flex bg-white/5 border border-white/10 rounded-full p-0.5 mr-2">
               {(["fr","en"] as Lang[]).map(l => (
                 <button
                   key={l}
                   onClick={() => setLang(l)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${lang === l ? "bg-white/15 text-white" : "text-white/30 hover:text-white/60"}`}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${lang === l ? "bg-white/15 text-white" : "text-white/30 hover:text-white/60"}`}
                 >
                   {l.toUpperCase()}
                 </button>
               ))}
             </div>
 
-            <Link to="/partner" className="text-white/30 hover:text-white/60 text-xs transition-colors hidden sm:block">
+            <Link to="/partner" className="text-white/30 hover:text-white/60 text-xs transition-colors whitespace-nowrap">
               {t.nav.partners}
             </Link>
 
             {isAuthenticated ? (
               <Link to="/dashboard">
-                <button className="bg-white/6 border border-white/12 text-white/70 text-xs px-3.5 py-1.5 rounded-full hover:bg-white/12 transition-all">
+                <button className="bg-white/6 border border-white/12 text-white/70 text-xs px-3.5 py-1.5 rounded-full hover:bg-white/12 transition-all whitespace-nowrap">
                   {t.nav.mySpace}
                 </button>
               </Link>
             ) : (
               <Link to="/auth">
-                <button className="bg-white/6 border border-white/12 text-white/70 text-xs px-3.5 py-1.5 rounded-full hover:bg-white/12 transition-all">
+                <button className="bg-white/6 border border-white/12 text-white/70 text-xs px-3.5 py-1.5 rounded-full hover:bg-white/12 transition-all whitespace-nowrap">
                   {t.nav.login}
                 </button>
               </Link>
             )}
 
             <Link to="/chat">
-              <button className="bg-secondary text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-secondary/90 transition-all flex items-center gap-1.5">
+              <button className="bg-secondary text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-secondary/90 transition-all flex items-center gap-1.5 whitespace-nowrap">
                 {t.nav.start} <ArrowRight className="h-3 w-3" />
               </button>
             </Link>
           </div>
+
+          {/* Mobile nav: lang switcher + CTA + hamburger */}
+          <div className="flex sm:hidden items-center gap-2">
+            <div className="flex bg-white/5 border border-white/10 rounded-full p-0.5">
+              {(["fr","en"] as Lang[]).map(l => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className={`px-2 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${lang === l ? "bg-white/15 text-white" : "text-white/30 hover:text-white/60"}`}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            <Link to="/chat">
+              <button className="bg-secondary text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-secondary/90 transition-all flex items-center gap-1 whitespace-nowrap">
+                {t.nav.start} <ArrowRight className="h-3 w-3" />
+              </button>
+            </Link>
+
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-1.5 text-white/50 hover:text-white/80 transition-colors"
+              aria-label="Menu"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile dropdown */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-t border-white/8 bg-[#080c14]/95 backdrop-blur-md px-4 py-3 space-y-2">
+            {isAuthenticated ? (
+              <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="block text-white/60 text-sm py-2 whitespace-nowrap">
+                {t.nav.mySpace}
+              </Link>
+            ) : (
+              <Link to="/auth" onClick={() => setMobileMenuOpen(false)} className="block text-white/60 text-sm py-2 whitespace-nowrap">
+                {t.nav.login}
+              </Link>
+            )}
+            <Link to="/partner" onClick={() => setMobileMenuOpen(false)} className="block text-white/30 text-sm py-2 whitespace-nowrap">
+              {t.nav.partners}
+            </Link>
+          </div>
+        )}
       </nav>
 
       {/* ── Hero ── */}
@@ -233,8 +282,8 @@ export default function Index() {
         <div className="relative max-w-2xl mx-auto">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-white/5 border border-white/12 rounded-full px-4 py-1.5 mb-10">
-            <Star className="h-3 w-3 text-secondary" />
-            <span className="text-white/50 text-xs tracking-wide">{t.hero.badge}</span>
+            <Star className="h-3 w-3 text-secondary flex-shrink-0" />
+            <span className="text-white/50 text-xs tracking-wide whitespace-nowrap">{t.hero.badge}</span>
           </div>
 
           {/* Headline */}
@@ -252,12 +301,12 @@ export default function Index() {
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/chat">
-              <button className="bg-secondary text-white font-bold px-8 py-3.5 rounded-full text-sm hover:bg-secondary/90 transition-all flex items-center justify-center gap-2">
-                {t.hero.cta} <ArrowRight className="h-4 w-4" />
+              <button className="bg-secondary text-white font-bold px-8 py-3.5 rounded-full text-sm hover:bg-secondary/90 transition-all flex items-center justify-center gap-2 whitespace-nowrap">
+                {t.hero.cta} <ArrowRight className="h-4 w-4 flex-shrink-0" />
               </button>
             </Link>
             <a href="#plans">
-              <button className="bg-white/5 border border-white/12 text-white/50 font-medium px-8 py-3.5 rounded-full text-sm hover:bg-white/10 transition-all">
+              <button className="bg-white/5 border border-white/12 text-white/50 font-medium px-8 py-3.5 rounded-full text-sm hover:bg-white/10 transition-all whitespace-nowrap">
                 {t.hero.ctaSub}
               </button>
             </a>
@@ -346,8 +395,8 @@ export default function Index() {
               >
                 <div className="relative z-10">
                   <span className="text-3xl">{pack.emoji}</span>
-                  <h3 className="text-white font-bold text-sm mt-2">{pack.title}</h3>
-                  <p className="text-white/40 text-xs mt-0.5">{pack.subtitle}</p>
+                  <h3 className="text-white font-bold text-xs sm:text-sm mt-2 whitespace-nowrap">{pack.title}</h3>
+                  <p className="text-white/40 text-xs mt-0.5 truncate">{pack.subtitle}</p>
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
@@ -356,7 +405,7 @@ export default function Index() {
 
           <p className="text-center text-white/20 text-xs mt-6">
             {lang === 'fr' ? 'Ou dites simplement ce que vous voulez à l\'IA →' : 'Or just tell the AI what you want →'}
-            {' '}<Link to="/chat" className="text-secondary/60 hover:text-secondary">{'Ouvrir le chat'}</Link>
+            {' '}<Link to="/chat" className="text-secondary/60 hover:text-secondary whitespace-nowrap">{'Ouvrir le chat'}</Link>
           </p>
         </div>
       </section>
@@ -380,18 +429,19 @@ export default function Index() {
                 )}
                 <div className="mb-4">
                   <p className="text-secondary text-lg font-semibold">{p.badge}</p>
-                  <h3 className="text-white font-bold text-base">{p.circle}</h3>
-                  <p className="text-white/60 font-bold text-xl mt-1">{p.price}</p>
+                  <h3 className="text-white font-bold text-base whitespace-nowrap">{p.circle}</h3>
+                  <p className="text-white/60 font-bold text-lg sm:text-xl mt-1 whitespace-nowrap">{p.price}</p>
                 </div>
                 <ul className="space-y-1.5 flex-1 mb-5">
                   {p.features[lang].map(f => (
-                    <li key={f} className="flex items-start gap-2 text-white/40 text-xs">
-                      <span className="text-secondary mt-0.5 text-xs">✓</span> {f}
+                    <li key={f} className="flex items-start gap-2 text-white/40 text-[11px] leading-snug">
+                      <span className="text-secondary mt-0.5 text-[11px] flex-shrink-0">✓</span>
+                      <span className="min-w-0">{f}</span>
                     </li>
                   ))}
                 </ul>
                 <Link to="/chat">
-                  <button className={`w-full py-2 rounded-xl text-xs font-semibold transition-all ${
+                  <button className={`w-full py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
                     p.highlight
                       ? "bg-secondary text-white hover:bg-secondary/90"
                       : "bg-white/6 border border-white/12 text-white/60 hover:bg-white/12"
@@ -415,7 +465,7 @@ export default function Index() {
           <p className="text-white/30 text-sm leading-relaxed mb-5">{t.privacy.text}</p>
           <div className="flex flex-wrap justify-center gap-2">
             {t.privacy.tags.map(tag => (
-              <span key={tag} className="bg-white/4 border border-white/8 rounded-full px-3 py-1 text-white/25 text-xs">{tag}</span>
+              <span key={tag} className="bg-white/4 border border-white/8 rounded-full px-3 py-1 text-white/25 text-xs whitespace-nowrap">{tag}</span>
             ))}
           </div>
         </div>
@@ -432,8 +482,8 @@ export default function Index() {
           </h2>
           <p className="text-white/25 text-sm mb-8">{t.finalCta.sub}</p>
           <Link to="/chat">
-            <button className="bg-secondary text-white font-bold px-10 py-4 rounded-full text-base hover:bg-secondary/90 transition-all inline-flex items-center gap-2">
-              {t.finalCta.btn} <ArrowRight className="h-4 w-4" />
+            <button className="bg-secondary text-white font-bold px-10 py-4 rounded-full text-base hover:bg-secondary/90 transition-all inline-flex items-center gap-2 whitespace-nowrap">
+              {t.finalCta.btn} <ArrowRight className="h-4 w-4 flex-shrink-0" />
             </button>
           </Link>
         </div>
@@ -470,11 +520,11 @@ export default function Index() {
             <span className="text-white/12 text-xs hidden sm:block">— {t.footer.tagline}</span>
           </div>
           <div className="flex items-center gap-4 text-white/20 text-xs">
-            <Link to="/chat" className="hover:text-white/45 transition-colors">{t.footer.links[0]}</Link>
-            <Link to="/auth" className="hover:text-white/45 transition-colors">{t.footer.links[1]}</Link>
-            <Link to="/partner" className="hover:text-white/45 transition-colors">{t.footer.links[2]}</Link>
-            <Link to="/admin" className="hover:text-white/45 transition-colors">{t.footer.links[3]}</Link>
-            <span className="text-white/10">© 2025</span>
+            <Link to="/chat" className="hover:text-white/45 transition-colors whitespace-nowrap">{t.footer.links[0]}</Link>
+            <Link to="/auth" className="hover:text-white/45 transition-colors whitespace-nowrap">{t.footer.links[1]}</Link>
+            <Link to="/partner" className="hover:text-white/45 transition-colors whitespace-nowrap">{t.footer.links[2]}</Link>
+            <Link to="/admin" className="hover:text-white/45 transition-colors whitespace-nowrap">{t.footer.links[3]}</Link>
+            <span className="text-white/10 whitespace-nowrap">© 2025</span>
           </div>
         </div>
       </footer>
