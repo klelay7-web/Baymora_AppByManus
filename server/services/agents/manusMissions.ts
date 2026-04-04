@@ -242,7 +242,152 @@ Réponds en JSON : [{"name":"...","type":"...","address":"...","description":"..
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MISSION 4 : Rapport quotidien
+// MISSION 4 : Vidéos virales TikTok/Reels pour les fiches
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export async function missionFindViralVideos(): Promise<void> {
+  console.log('[MANUS_MISSION] 🎬 Recherche de vidéos virales...');
+
+  const venues = await prisma.atlasVenue.findMany({
+    where: { status: 'published' },
+    take: 3,
+    orderBy: { updatedAt: 'asc' }, // Les plus anciennes d'abord
+  });
+
+  for (const venue of venues) {
+    const prompt = `Cherche les vidéos les plus populaires/virales sur TikTok et Instagram Reels concernant "${venue.name}" à ${venue.city}.
+
+Je veux :
+1. Les 2-3 vidéos TikTok les plus vues (URL + nombre de vues approximatif + description courte)
+2. Les 2-3 Reels Instagram les plus vues (URL + nombre de vues + description)
+3. Le hashtag principal utilisé pour ce lieu
+
+Réponds en JSON :
+{
+  "tiktok": [{"url":"...","views":"...","description":"..."}],
+  "reels": [{"url":"...","views":"...","description":"..."}],
+  "hashtag": "#...",
+  "viralScore": 1-10
+}`;
+
+    const result = await callManus(prompt, 45000);
+    if (!result || result.status !== 'completed') continue;
+
+    try {
+      const text = typeof result.output === 'string' ? result.output : result.output?.text || '';
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const data = JSON.parse(jsonMatch[0]);
+        const currentVideos = (venue.videos as any) || {};
+        await prisma.atlasVenue.update({
+          where: { id: venue.id },
+          data: {
+            videos: { ...currentVideos, ...data },
+          },
+        });
+        console.log(`[MANUS_MISSION] 🎬 Vidéos trouvées: ${venue.name} (${data.tiktok?.length || 0} TikTok, ${data.reels?.length || 0} Reels)`);
+      }
+    } catch (e) {
+      console.error(`[MANUS_MISSION] Erreur vidéos ${venue.name}:`, e);
+    }
+
+    await logMission('find_viral_videos', venue.name, result);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MISSION 5 : Résumé des avis par Claude (Manus scrape + Claude résume)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export async function missionSummarizeReviews(): Promise<void> {
+  console.log('[MANUS_MISSION] 💬 Résumé des avis...');
+
+  const venues = await prisma.atlasVenue.findMany({
+    where: { status: 'published', seasonalNotes: null },
+    take: 3,
+  });
+
+  for (const venue of venues) {
+    // Étape 1 : Manus scrape les avis
+    const scrapePrompt = `Cherche les avis récents sur "${venue.name}" à ${venue.city} sur Google Reviews, TripAdvisor, et les réseaux sociaux.
+
+Collecte :
+1. Les 10 avis les plus récents et pertinents (positifs ET négatifs)
+2. La note moyenne sur Google et TripAdvisor
+3. Les points forts mentionnés le plus souvent
+4. Les points faibles mentionnés
+5. Des citations marquantes de clients
+
+Réponds en JSON :
+{
+  "googleRating": 4.5,
+  "tripadvisorRating": 4.3,
+  "totalReviews": 250,
+  "topPositive": ["service exceptionnel", "vue incroyable", "cuisine raffinée"],
+  "topNegative": ["prix élevés", "attente longue"],
+  "bestQuotes": ["La meilleure soirée de notre vie", "On y retourne chaque été"],
+  "worstQuotes": ["Un peu cher pour ce que c'est"],
+  "recentTrend": "en hausse"
+}`;
+
+    const scrapeResult = await callManus(scrapePrompt, 45000);
+    if (!scrapeResult || scrapeResult.status !== 'completed') continue;
+
+    try {
+      const scrapeText = typeof scrapeResult.output === 'string' ? scrapeResult.output : scrapeResult.output?.text || '';
+      const jsonMatch = scrapeText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) continue;
+
+      const reviewData = JSON.parse(jsonMatch[0]);
+
+      // Étape 2 : Claude fait un résumé sexy
+      const Anthropic = (await import('@anthropic-ai/sdk')).default;
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) continue;
+
+      const client = new Anthropic({ apiKey });
+      const response = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: `Tu es rédacteur pour un magazine de voyage premium. À partir de ces données d'avis sur "${venue.name}" à ${venue.city}, écris un résumé de 3-4 phrases qui donne envie. Style magazine, vivant, avec des citations de clients.
+
+Données : ${JSON.stringify(reviewData)}
+
+Le résumé doit :
+- Commencer par une accroche (pas "Ce restaurant..." mais quelque chose de vivant)
+- Inclure 1-2 citations de clients entre guillemets
+- Mentionner ce qui rend ce lieu unique
+- Donner le ton général (romantique, festif, intime, etc.)
+- Terminer par un détail qui fait la différence
+
+Écris UNIQUEMENT le résumé, rien d'autre. En français.`,
+        }],
+      });
+
+      const summary = response.content[0].type === 'text' ? response.content[0].text : '';
+
+      if (summary) {
+        await prisma.atlasVenue.update({
+          where: { id: venue.id },
+          data: {
+            seasonalNotes: summary,
+            rating: reviewData.googleRating || venue.rating,
+          },
+        });
+        console.log(`[MANUS_MISSION] 💬 Résumé avis: ${venue.name} → "${summary.substring(0, 80)}..."`);
+      }
+    } catch (e) {
+      console.error(`[MANUS_MISSION] Erreur résumé ${venue.name}:`, e);
+    }
+
+    await logMission('summarize_reviews', venue.name, scrapeResult);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MISSION 6 : Rapport quotidien
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function missionDailyReport(): Promise<void> {
@@ -305,14 +450,16 @@ export async function runAllManusMissions(): Promise<void> {
     return;
   }
 
-  console.log('[MANUS] ═══ Démarrage des missions ═══');
+  console.log('[MANUS] ═══ Démarrage des 6 missions ═══');
 
   await missionDailyReport();
   await missionEnrichVenues();
   await missionEnrichGuides();
+  await missionFindViralVideos();
+  await missionSummarizeReviews();
   await missionDiscoverTrends();
 
-  console.log('[MANUS] ═══ Missions terminées ═══');
+  console.log('[MANUS] ═══ 6 missions terminées ═══');
 }
 
 export function startManusCron(): void {
