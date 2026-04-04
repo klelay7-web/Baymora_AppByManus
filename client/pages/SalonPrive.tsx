@@ -57,6 +57,7 @@ function LuxuryCard({ emoji, name, location, price }: { emoji: string; name: str
         <p className="text-white font-semibold text-sm">{name}</p>
         <p className="text-white/40 text-xs">{location}</p>
         <p className="text-amber-400 font-bold text-xs mt-auto pt-1">{price}</p>
+        <p className="text-white/20 text-[10px]">Sur demande · Disponibilité à confirmer</p>
         <button className="mt-1 w-full text-center text-[11px] font-bold px-3 py-2 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-400 hover:bg-amber-500/25 transition-all">
           Contacter la conciergerie
         </button>

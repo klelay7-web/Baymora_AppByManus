@@ -166,26 +166,60 @@ async function agentScout(query: string, city: string): Promise<any> {
 
 async function callManus(query: string, city: string, apiKey: string): Promise<any> {
   try {
-    const res = await fetch('https://api.manus.im/v2/tasks', {
+    // 1. Créer la tâche
+    const createRes = await fetch('https://api.manus.im/v2/tasks', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        prompt: `Research the best options for: "${query}" in ${city}. Return structured JSON with hotels, restaurants, activities including: name, address, price range, rating, booking URL, photos, brief description. Focus on quality and accuracy.`,
+        prompt: `Recherche les meilleures options pour "${query}" à ${city}.
+Retourne un résumé structuré avec pour chaque lieu: nom, adresse, fourchette de prix, note, URL de réservation, description courte.
+Concentre-toi sur la qualité et la pertinence. Langue: français.`,
         agentProfile: 'manus-1.6-lite',
         mode: 'agent',
       }),
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      // Manus renvoie un task_id — on devrait poller pour le résultat
-      // Pour l'instant on log le task ID
-      console.log(`[SCOUT/MANUS] Task créé: ${data.task_id || data.id}`);
-      return data;
+    if (!createRes.ok) {
+      console.error(`[SCOUT/MANUS] Create failed: ${createRes.status}`);
+      return null;
     }
+
+    const task = await createRes.json();
+    const taskId = task.task_id || task.id;
+    console.log(`[SCOUT/MANUS] Task créé: ${taskId}`);
+
+    // 2. Poller le résultat (max 30s, poll toutes les 2s)
+    const maxWait = 30000;
+    const pollInterval = 2000;
+    const start = Date.now();
+
+    while (Date.now() - start < maxWait) {
+      await new Promise(r => setTimeout(r, pollInterval));
+
+      const pollRes = await fetch(`https://api.manus.im/v2/tasks/${taskId}`, {
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+      });
+
+      if (!pollRes.ok) continue;
+
+      const status = await pollRes.json();
+      if (status.status === 'completed' || status.status === 'done') {
+        const content = status.output?.text || status.result?.text || status.output || JSON.stringify(status.result || {});
+        console.log(`[SCOUT/MANUS] Résultat reçu en ${Date.now() - start}ms`);
+        return { source: 'manus', city, query, content };
+      }
+
+      if (status.status === 'failed' || status.status === 'error') {
+        console.error(`[SCOUT/MANUS] Task failed: ${status.error || 'unknown'}`);
+        return null;
+      }
+    }
+
+    console.warn(`[SCOUT/MANUS] Timeout après ${maxWait}ms — task ${taskId} toujours en cours`);
+    return null;
   } catch (e) {
     console.error('[SCOUT/MANUS] Error:', e);
   }
