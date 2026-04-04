@@ -3,7 +3,7 @@
  * Extrait de Chat.tsx pour modularité.
  */
 
-import { MapPin, Navigation, Star, ExternalLink, Phone, User, Headphones, Crown } from 'lucide-react';
+import { MapPin, Navigation, Star, ExternalLink, Phone, User, Headphones, Crown, Bookmark } from 'lucide-react';
 import type { CalendarEvent, PlaceItem, MapView, Journey, BookingOption } from './types';
 import { buildGoogleCalendarUrl } from './types';
 
@@ -107,6 +107,30 @@ export function PlaceCard({ place }: { place: PlaceItem }) {
             {place.baymoraPartner ? '🤝 Réserver (membre)' : 'Voir'} <ExternalLink className="h-2.5 w-2.5" />
           </a>
         )}
+        <button
+          onClick={() => {
+            const token = localStorage.getItem('baymora_token');
+            if (!token) { alert('Connectez-vous pour sauvegarder'); return; }
+            // Sauvegarder dans la collection par défaut
+            fetch('/api/collections', { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } })
+              .then(r => r.json())
+              .then(async (data) => {
+                let collId = data.collections?.[0]?.id;
+                if (!collId) {
+                  const createRes = await fetch('/api/collections', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Mes favoris', emoji: '❤️' }) });
+                  if (createRes.ok) { const c = await createRes.json(); collId = c.id; }
+                }
+                if (collId) {
+                  await fetch(`/api/collections/${collId}/items`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: place.type, name: place.name, city: place.city, description: place.description, rating: place.rating, bookingUrl: place.bookingUrl, priceRange: place.priceFrom ? `${place.priceFrom}${place.currency || '€'}` : undefined }) });
+                }
+              })
+              .catch(() => {});
+          }}
+          className="mt-1 w-full flex items-center justify-center gap-1 text-[10px] text-white/30 hover:text-secondary py-1 transition-colors"
+          title="Sauvegarder"
+        >
+          <Bookmark className="h-2.5 w-2.5" /> Sauvegarder
+        </button>
       </div>
     </div>
   );

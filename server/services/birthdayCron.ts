@@ -7,6 +7,7 @@
 import { prisma } from '../db';
 import { sendBirthdayAlertEmail } from './email';
 import { sendNotification, NotifTemplates } from './sms';
+import { startAsyncAgents } from './agents/asyncAgents';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -237,4 +238,7 @@ export function startBirthdayCron(): void {
   }, 30 * 60 * 1000);
 
   console.log('[CRON] Rétention + purge + nettoyage guest programmés');
+
+  // ── Async background agents (Plume, Gardien, Data) ────────────────────
+  startAsyncAgents();
 }

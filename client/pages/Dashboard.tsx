@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell, Home, Plane, CheckCircle2, Circle, Save, Smartphone, Bookmark } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell, Home, Plane, CheckCircle2, Circle, Save, Smartphone, Bookmark, Trash2, Share2, Plus, Star, X, MapPin } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,33 @@ interface UpcomingAlert {
   daysLeft: number;
   alertWindow: number;
   googleCalendarUrl: string;
+}
+
+interface CollectionItem {
+  id: string;
+  type: string;
+  name: string;
+  city?: string;
+  description?: string;
+  photo?: string;
+  rating?: number;
+  priceRange?: string;
+}
+
+interface Collection {
+  id: string;
+  name: string;
+  emoji: string;
+  description?: string;
+  shareCode?: string;
+  isPublic?: boolean;
+  items: CollectionItem[];
+  _count?: { items: number };
+}
+
+interface CollectionLimits {
+  maxCollections: number;
+  maxItems: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1278,6 +1305,9 @@ export default function Dashboard() {
           )}
         </section>
 
+        {/* ── Mes Collections ── */}
+        <CollectionsSection circle={circle} />
+
         {/* ── Préférences & Profil complet ── */}
         <ProfilePreferences user={user} authHeader={authHeader} onUpdate={() => window.location.reload()} />
 
@@ -1304,6 +1334,347 @@ const LANGUAGE_OPTIONS = ['Français', 'Anglais', 'Espagnol', 'Italien', 'Allema
 const PET_OPTIONS = ['Aucun', 'Chien', 'Chat', 'Autre animal'];
 const SMOKING_OPTIONS = ['Non-fumeur', 'Fumeur', 'Cigare', 'Vape'];
 const DRESS_CODE_OPTIONS = ['Casual', 'Smart casual', 'Chic', 'Formel / Black tie'];
+
+// ─── Collections Section ─────────────────────────────────────────────────────
+
+const EMOJI_PICKS = ['📌', '✈️', '🍽️', '🏨', '🎭', '🏖️', '🛍️', '🎯', '❤️', '⭐', '🗺️', '🌍', '🎉', '🏔️', '🌊', '🍷'];
+
+const ITEM_TYPE_ICONS: Record<string, string> = {
+  restaurant: '🍽️',
+  hotel: '🏨',
+  activity: '🎭',
+  bar: '🍸',
+  shop: '🛍️',
+  beach: '🏖️',
+  museum: '🏛️',
+  default: '📍',
+};
+
+function CollectionsSection({ circle }: { circle: string }) {
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [limits, setLimits] = useState<CollectionLimits>({ maxCollections: 1, maxItems: 5 });
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<CollectionItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmoji, setNewEmoji] = useState('📌');
+  const [creating, setCreating] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+
+  const fetchCollections = () => {
+    fetch('/api/collections', { headers: authHeader() })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          setCollections(d.collections || []);
+          setLimits(d.limits || { maxCollections: 1, maxItems: 5 });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchCollections(); }, []);
+
+  const handleCreate = () => {
+    if (!newName.trim() || creating) return;
+    setCreating(true);
+    fetch('/api/collections', {
+      method: 'POST',
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName.trim(), emoji: newEmoji }),
+    })
+      .then(r => r.json())
+      .then(() => {
+        setNewName('');
+        setNewEmoji('📌');
+        setShowForm(false);
+        fetchCollections();
+      })
+      .catch(() => {})
+      .finally(() => setCreating(false));
+  };
+
+  const handleExpand = (col: Collection) => {
+    if (expandedId === col.id) {
+      setExpandedId(null);
+      setExpandedItems([]);
+      return;
+    }
+    setExpandedId(col.id);
+    setLoadingItems(true);
+    setShareUrl(null);
+    fetch(`/api/collections/${col.id}`, { headers: authHeader() })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setExpandedItems(d.items || []); })
+      .catch(() => {})
+      .finally(() => setLoadingItems(false));
+  };
+
+  const handleDeleteItem = (colId: string, itemId: string) => {
+    fetch(`/api/collections/${colId}/items/${itemId}`, {
+      method: 'DELETE',
+      headers: authHeader(),
+    })
+      .then(r => {
+        if (r.ok) {
+          setExpandedItems(prev => prev.filter(it => it.id !== itemId));
+          setCollections(prev =>
+            prev.map(c => c.id === colId ? { ...c, items: c.items.filter(it => it.id !== itemId) } : c)
+          );
+        }
+      })
+      .catch(() => {});
+  };
+
+  const handleShare = (colId: string) => {
+    fetch(`/api/collections/${colId}/share`, {
+      method: 'POST',
+      headers: authHeader(),
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.shareUrl) {
+          setShareUrl(d.shareUrl);
+          navigator.clipboard?.writeText(d.shareUrl).catch(() => {});
+        }
+      })
+      .catch(() => {});
+  };
+
+  const usedCount = collections.length;
+  const maxCount = limits.maxCollections;
+  const limitLabel = maxCount === -1 ? `${usedCount} collections` : `${usedCount}/${maxCount} collection${maxCount > 1 ? 's' : ''}`;
+  const limitReached = maxCount !== -1 && usedCount >= maxCount;
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-white/80 font-semibold text-sm flex items-center gap-2">
+          <Bookmark className="h-4 w-4 text-secondary/70" /> Mes Collections
+        </h2>
+        <span className="text-white/30 text-xs">{limitLabel}</span>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {[1, 2].map(i => (
+            <div key={i} className="bg-white/3 border border-white/8 rounded-xl h-28 animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* ── Collection cards grid ── */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {collections.map(col => {
+              const itemCount = col.items?.length ?? 0;
+              const isExpanded = expandedId === col.id;
+              return (
+                <button
+                  key={col.id}
+                  onClick={() => handleExpand(col)}
+                  className={`bg-white/4 border rounded-xl p-3 text-left hover:bg-white/6 transition-all ${
+                    isExpanded ? 'border-secondary/40 ring-1 ring-secondary/20' : 'border-white/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">{col.emoji}</span>
+                    <span className="text-white/80 text-sm font-medium truncate flex-1">{col.name}</span>
+                  </div>
+                  <p className="text-white/30 text-xs mb-2">{itemCount} élément{itemCount !== 1 ? 's' : ''}</p>
+                  {/* Preview thumbnails */}
+                  {col.items && col.items.length > 0 && (
+                    <div className="flex gap-1">
+                      {col.items.slice(0, 4).map((it, idx) => (
+                        it.photo ? (
+                          <div key={idx} className="w-8 h-8 rounded-md overflow-hidden bg-white/8 flex-shrink-0">
+                            <img src={it.photo} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div key={idx} className="w-8 h-8 rounded-md bg-white/8 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs">{ITEM_TYPE_ICONS[it.type] || ITEM_TYPE_ICONS.default}</span>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+
+            {/* ── New collection button ── */}
+            {!limitReached && !showForm && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-white/3 border border-dashed border-white/15 rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 hover:bg-white/6 hover:border-secondary/30 transition-all text-white/40 hover:text-secondary/70 min-h-[7rem]"
+              >
+                <Plus className="h-5 w-5" />
+                <span className="text-xs">Nouvelle collection</span>
+              </button>
+            )}
+          </div>
+
+          {/* ── Inline create form ── */}
+          {showForm && (
+            <div className="mt-3 bg-white/4 border border-white/10 rounded-xl p-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <button
+                  className="text-2xl w-10 h-10 rounded-lg bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
+                  title="Choisir emoji"
+                >
+                  {newEmoji}
+                </button>
+                <Input
+                  value={newName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}
+                  placeholder="Nom de la collection..."
+                  className="flex-1 bg-white/6 border-white/10 text-white placeholder:text-white/25 text-sm"
+                  onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && handleCreate()}
+                />
+              </div>
+              {/* Emoji picker row */}
+              <div className="flex flex-wrap gap-1.5">
+                {EMOJI_PICKS.map(em => (
+                  <button
+                    key={em}
+                    onClick={() => setNewEmoji(em)}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm transition-all ${
+                      newEmoji === em ? 'bg-secondary/20 border border-secondary/40 scale-110' : 'bg-white/6 border border-white/8 hover:bg-white/10'
+                    }`}
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => { setShowForm(false); setNewName(''); setNewEmoji('📌'); }}
+                  className="text-white/40 text-xs px-3 py-1.5 hover:text-white/60 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleCreate}
+                  disabled={!newName.trim() || creating}
+                  className="bg-secondary text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-secondary/90 transition-all disabled:opacity-40"
+                >
+                  {creating ? '...' : 'Créer'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Expanded collection detail ── */}
+          {expandedId && (
+            <div className="mt-3 bg-white/4 border border-white/10 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-white/80 text-sm font-semibold">
+                  {collections.find(c => c.id === expandedId)?.emoji}{' '}
+                  {collections.find(c => c.id === expandedId)?.name}
+                </h3>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleShare(expandedId)}
+                    className="flex items-center gap-1 bg-white/6 border border-white/10 text-white/50 text-xs px-2 py-1 rounded-lg hover:bg-white/10 hover:text-white/70 transition-all"
+                    title="Partager"
+                  >
+                    <Share2 className="h-3 w-3" /> Partager
+                  </button>
+                  <button
+                    onClick={() => { setExpandedId(null); setExpandedItems([]); setShareUrl(null); }}
+                    className="text-white/30 hover:text-white/60 transition-colors p-1"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {shareUrl && (
+                <div className="bg-secondary/10 border border-secondary/20 rounded-lg px-3 py-2 mb-3 flex items-center justify-between">
+                  <span className="text-secondary/80 text-xs truncate flex-1 mr-2">{shareUrl}</span>
+                  <span className="text-secondary text-xs font-medium flex-shrink-0">Copié !</span>
+                </div>
+              )}
+
+              {loadingItems ? (
+                <div className="space-y-2">
+                  {[1, 2].map(i => (
+                    <div key={i} className="bg-white/3 border border-white/8 rounded-lg h-16 animate-pulse" />
+                  ))}
+                </div>
+              ) : expandedItems.length > 0 ? (
+                <div className="space-y-2">
+                  {expandedItems.map(item => (
+                    <div key={item.id} className="bg-white/3 border border-white/8 rounded-lg px-3 py-2.5 flex items-start gap-3">
+                      {item.photo ? (
+                        <div className="w-10 h-10 rounded-md overflow-hidden bg-white/8 flex-shrink-0">
+                          <img src={item.photo} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-md bg-white/8 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm">{ITEM_TYPE_ICONS[item.type] || ITEM_TYPE_ICONS.default}</span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-white/80 text-sm font-medium truncate">{item.name}</span>
+                          <span className="text-white/20 text-xs flex-shrink-0">{item.type}</span>
+                        </div>
+                        {(item.city || item.rating) && (
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {item.city && (
+                              <span className="text-white/30 text-xs flex items-center gap-0.5">
+                                <MapPin className="h-2.5 w-2.5" /> {item.city}
+                              </span>
+                            )}
+                            {item.rating && (
+                              <span className="text-amber-400/70 text-xs flex items-center gap-0.5">
+                                <Star className="h-2.5 w-2.5 fill-current" /> {item.rating}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {item.description && (
+                          <p className="text-white/25 text-xs mt-0.5 line-clamp-2">{item.description}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteItem(expandedId, item.id); }}
+                        className="text-white/20 hover:text-red-400/70 transition-colors p-1 flex-shrink-0"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-white/20 text-xs text-center py-3">Aucun élément dans cette collection.</p>
+              )}
+            </div>
+          )}
+
+          {/* ── Upgrade CTA if limit reached ── */}
+          {limitReached && (
+            <div className="mt-3 bg-gradient-to-r from-secondary/10 to-secondary/5 border border-secondary/20 rounded-xl px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-white/70 text-sm font-medium">Limite atteinte</p>
+                <p className="text-white/30 text-xs">Passez au plan supérieur pour plus de collections</p>
+              </div>
+              <Link to="/chat?upgrade=1">
+                <button className="bg-secondary text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-secondary/90 transition-all flex-shrink-0">
+                  Upgrade →
+                </button>
+              </Link>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
 
 function ProfilePreferences({ user, authHeader, onUpdate }: { user: any; authHeader: () => any; onUpdate: () => void }) {
   const prefs = (user.preferences || {}) as Record<string, any>;
