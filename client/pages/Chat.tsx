@@ -1160,8 +1160,8 @@ export default function Chat() {
               </button>
             </Link>
           )}
-          <Button variant="ghost" size="sm" onClick={handleClear} disabled={isLoading} className="text-white/20 hover:text-white/50" title="Nouvelle conversation">
-            <span className="text-[10px]">+ Nouveau</span>
+          <Button variant="ghost" size="sm" onClick={handleClear} disabled={isLoading} className="text-white/20 hover:text-white/50" title="Actualiser">
+            <span className="text-[10px]">Actualiser</span>
           </Button>
         </div>
       </div>
