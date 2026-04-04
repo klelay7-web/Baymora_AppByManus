@@ -565,6 +565,18 @@ function ParcoursSection({ lang }: { lang: 'fr' | 'en' }) {
 
   if (loading || trips.length === 0) return null;
 
+  // Trier par budget (petit → gros) et appliquer le système 40/30/30
+  const sorted = [...trips].sort((a, b) => {
+    const ba = parseInt((a.budget || '0').replace(/[^\d]/g, '')) || 0;
+    const bb = parseInt((b.budget || '0').replace(/[^\d]/g, '')) || 0;
+    return ba - bb;
+  });
+
+  const total = sorted.length;
+  const freeCount = Math.ceil(total * 0.4);      // 40% visible
+  const premiumCount = Math.ceil(total * 0.3);    // 30% semi-voilé
+  // reste = 30% verrouillé
+
   return (
     <section className="py-20 px-4 border-t border-white/5">
       <div className="max-w-5xl mx-auto">
@@ -574,48 +586,80 @@ function ParcoursSection({ lang }: { lang: 'fr' | 'en' }) {
         }}>
           {lang === 'fr' ? 'Parcours prêts à vivre' : 'Ready-to-go Itineraries'}
         </h2>
-        <p className="text-white/30 text-sm text-center mb-10">
-          {lang === 'fr' ? 'Sélectionnés, testés, modifiables. Choisissez et partez.' : 'Selected, tested, customizable. Choose and go.'}
+        <p className="text-white/30 text-sm text-center mb-3">
+          {lang === 'fr' ? 'Sélectionnés, testés, personnalisables sur mesure.' : 'Selected, tested, fully customizable.'}
         </p>
 
+        {/* Légende des niveaux */}
+        <div className="flex justify-center gap-4 mb-8">
+          <span className="flex items-center gap-1.5 text-[10px] text-white/40"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Accessible</span>
+          <span className="flex items-center gap-1.5 text-[10px] text-white/40"><span className="w-2 h-2 rounded-full bg-secondary" /> Premium</span>
+          <span className="flex items-center gap-1.5 text-[10px] text-white/40"><span className="w-2 h-2 rounded-full bg-amber-400" /> Privé</span>
+        </div>
+
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {trips.map((trip: any) => {
+          {sorted.map((trip: any, index: number) => {
             const emoji = Object.entries(PARCOURS_EMOJI).find(([key]) => trip.destination?.includes(key))?.[1] || '🌍';
-            const budgetNum = parseInt((trip.budget || '0').replace(/[^\d]/g, '')) || 0;
-            const tier = BUDGET_TIERS.find(t => budgetNum <= t.max) || BUDGET_TIERS[0];
             const isVerified = trip.isVerified;
             const isTrending = (trip.forkCount || 0) >= 3;
+
+            // Déterminer le niveau d'accès
+            const accessLevel: 'free' | 'premium' | 'locked' =
+              index < freeCount ? 'free' :
+              index < freeCount + premiumCount ? 'premium' : 'locked';
+
+            const isBlurred = accessLevel === 'locked';
+            const isSemiBlurred = accessLevel === 'premium';
+
+            // Couleur de bordure selon le niveau
+            const borderColor = accessLevel === 'free' ? 'border-emerald-500/20 hover:border-emerald-500/40'
+              : accessLevel === 'premium' ? 'border-secondary/20 hover:border-secondary/40'
+              : 'border-amber-500/20 hover:border-amber-500/30';
+
+            const linkTarget = isBlurred ? '/auth' : `/chat?prompt=${encodeURIComponent(`Je veux faire le même parcours : ${trip.title}`)}`;
 
             return (
               <Link
                 key={trip.id}
-                to={`/chat?prompt=${encodeURIComponent(`Je veux faire le même parcours : ${trip.title}`)}`}
-                className={`group relative bg-white/3 border rounded-2xl overflow-hidden hover:border-secondary/40 hover:scale-[1.02] transition-all ${tier.color}`}
+                to={linkTarget}
+                className={`group relative bg-white/3 border rounded-2xl overflow-hidden transition-all ${borderColor} ${!isBlurred ? 'hover:scale-[1.02]' : ''}`}
               >
                 {/* Header visuel */}
-                <div className="h-32 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center relative overflow-hidden">
-                  <span className="text-5xl opacity-30 group-hover:scale-110 transition-transform duration-500">{emoji}</span>
+                <div className={`h-32 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center relative overflow-hidden ${isSemiBlurred ? 'opacity-80' : ''}`}>
+                  <span className={`text-5xl transition-transform duration-500 ${isBlurred ? 'opacity-10 blur-sm' : 'opacity-30 group-hover:scale-110'}`}>{emoji}</span>
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
 
                   {/* Badges */}
                   <div className="absolute top-2 left-2 flex gap-1.5">
-                    <span className="bg-black/60 backdrop-blur-sm text-white/80 text-[9px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
-                      Sélection {tier.badge}
-                    </span>
-                    {isVerified && (
+                    {accessLevel === 'free' && (
+                      <span className="bg-emerald-500/20 backdrop-blur-sm text-emerald-400 text-[9px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                        Accessible
+                      </span>
+                    )}
+                    {accessLevel === 'premium' && (
+                      <span className="bg-secondary/20 backdrop-blur-sm text-secondary text-[9px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                        ✦ Premium
+                      </span>
+                    )}
+                    {accessLevel === 'locked' && (
+                      <span className="bg-amber-500/20 backdrop-blur-sm text-amber-400 text-[9px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap flex items-center gap-0.5">
+                        <Lock className="h-2.5 w-2.5" /> Privé
+                      </span>
+                    )}
+                    {isVerified && !isBlurred && (
                       <span className="bg-emerald-500/20 backdrop-blur-sm text-emerald-400 text-[9px] px-2 py-0.5 rounded-full font-medium flex items-center gap-0.5 whitespace-nowrap">
                         <CheckCircle className="h-2.5 w-2.5" /> Vérifié
                       </span>
                     )}
-                    {isTrending && (
+                    {isTrending && !isBlurred && (
                       <span className="bg-purple-500/20 backdrop-blur-sm text-purple-400 text-[9px] px-2 py-0.5 rounded-full font-medium flex items-center gap-0.5 whitespace-nowrap">
                         <TrendingUp className="h-2.5 w-2.5" /> Populaire
                       </span>
                     )}
                   </div>
 
-                  {/* Destination + budget */}
-                  <div className="absolute bottom-2 left-3 right-3">
+                  {/* Destination */}
+                  <div className={`absolute bottom-2 left-3 right-3 ${isBlurred ? 'blur-[6px]' : ''}`}>
                     <p className="text-white font-bold text-sm truncate">{trip.title || trip.destination}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       {trip.destination && <span className="text-white/50 text-[10px] flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" /> {trip.destination}</span>}
@@ -624,16 +668,34 @@ function ParcoursSection({ lang }: { lang: 'fr' | 'en' }) {
                   </div>
                 </div>
 
+                {/* Overlay verrouillé pour Privé */}
+                {isBlurred && (
+                  <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] flex flex-col items-center justify-center z-10">
+                    <Lock className="h-5 w-5 text-amber-400/70 mb-1.5" />
+                    <p className="text-amber-400/80 text-xs font-semibold">Parcours Privé</p>
+                    <p className="text-white/30 text-[10px] mt-0.5">Débloquer avec le plan Privé</p>
+                  </div>
+                )}
+
+                {/* Semi-voile pour Premium */}
+                {isSemiBlurred && (
+                  <div className="absolute top-0 right-0 left-0 h-32 flex items-start justify-end p-2 z-10 pointer-events-none">
+                    <span className="bg-slate-900/80 backdrop-blur-sm text-secondary text-[9px] px-2 py-1 rounded-lg font-medium">
+                      Aperçu · Plan Premium
+                    </span>
+                  </div>
+                )}
+
                 {/* Footer */}
-                <div className="p-3 flex items-center justify-between">
+                <div className={`p-3 flex items-center justify-between ${isBlurred ? 'blur-[4px]' : ''}`}>
                   <div>
                     {trip.budget && <span className="text-secondary text-xs font-semibold">{trip.budget}</span>}
                     {trip.user && <span className="text-white/20 text-[10px] ml-2">par {trip.user.prenom || trip.user.pseudo}</span>}
                   </div>
                   <div className="flex items-center gap-2">
-                    {(trip.forkCount || 0) > 0 && <span className="text-white/20 text-[10px]">{trip.forkCount}× utilisé</span>}
+                    {(trip.forkCount || 0) > 0 && !isBlurred && <span className="text-white/20 text-[10px]">{trip.forkCount}× utilisé</span>}
                     <span className="text-secondary/60 text-xs font-medium group-hover:text-secondary transition-colors whitespace-nowrap">
-                      Personnalisable →
+                      {isBlurred ? '' : isSemiBlurred ? 'Voir →' : 'Personnalisable →'}
                     </span>
                   </div>
                 </div>
@@ -642,9 +704,20 @@ function ParcoursSection({ lang }: { lang: 'fr' | 'en' }) {
           })}
         </div>
 
-        <p className="text-center text-white/20 text-xs mt-8">
-          {lang === 'fr' ? 'Chaque parcours est personnalisable sur mesure selon vos envies et votre budget.' : 'Each itinerary is fully customizable to your preferences and budget.'}
-        </p>
+        {/* CTA conversion */}
+        <div className="mt-10 text-center">
+          <p className="text-white/25 text-xs mb-4">
+            {lang === 'fr' ? 'Chaque parcours est personnalisable sur mesure selon vos envies et votre budget.' : 'Each itinerary is fully customizable to your preferences and budget.'}
+          </p>
+          <div className="flex justify-center gap-3 flex-wrap">
+            <Link to="/chat" className="bg-secondary hover:bg-secondary/90 text-slate-900 font-bold text-sm px-6 py-2.5 rounded-xl transition-all whitespace-nowrap">
+              Créer mon parcours
+            </Link>
+            <Link to="/auth" className="border border-white/15 text-white/60 hover:text-white hover:border-white/30 text-sm px-6 py-2.5 rounded-xl transition-all whitespace-nowrap">
+              Voir tous les parcours
+            </Link>
+          </div>
+        </div>
       </div>
     </section>
   );
