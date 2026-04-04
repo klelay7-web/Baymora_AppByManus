@@ -30,6 +30,7 @@ const BoutiquePage = lazy(() => import("./pages/BoutiquePage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const ConciergePage = lazy(() => import("./pages/ConciergePage"));
 const PrestataireDashboard = lazy(() => import("./pages/PrestataireDashboard"));
+const SalonPrive = lazy(() => import("./pages/SalonPrive"));
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/voyages" element={<TripsPage />} />
             <Route path="/conciergerie" element={<ConciergePage />} />
             <Route path="/prestataire" element={<PrestataireDashboard />} />
+            <Route path="/salon" element={<SalonPrive />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
