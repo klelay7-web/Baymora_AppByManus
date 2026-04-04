@@ -49,7 +49,7 @@ export interface UpgradeOptions {
 
 export function useChat(initialConversationId?: string) {
   const [conversationId, setConversationId] = useState(
-    initialConversationId || ''
+    initialConversationId || sessionStorage.getItem('baymora_conv_id') || ''
   );
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,18 +61,65 @@ export function useChat(initialConversationId?: string) {
   const [creditsExhausted, setCreditsExhausted] = useState(false);
   const [upgradeOptions, setUpgradeOptions] = useState<UpgradeOptions | null>(null);
 
+  // Persister le conversationId dans sessionStorage
+  useEffect(() => {
+    if (conversationId) {
+      sessionStorage.setItem('baymora_conv_id', conversationId);
+    }
+  }, [conversationId]);
+
+  // Recharger la conversation existante si on a un ID en sessionStorage
+  useEffect(() => {
+    const savedId = sessionStorage.getItem('baymora_conv_id');
+    if (savedId && !initialConversationId && messages.length === 0) {
+      const token = localStorage.getItem('baymora_token');
+      if (token) {
+        fetch(`/api/chat/conversations/${savedId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data?.messages?.length > 0) {
+              setConversationId(savedId);
+              setMessages(data.messages.map((m: any) => ({
+                id: m.id,
+                role: m.role,
+                content: m.content,
+                timestamp: m.timestamp || m.createdAt,
+              })));
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, []);
+
   /**
-   * Démarrer une nouvelle conversation
+   * Démarrer une nouvelle conversation (ou reprendre la dernière si elle existe)
    */
   const startChat = useCallback(
     async (language: 'en' | 'fr' = 'fr', title?: string) => {
+      // Si on a déjà un conversationId avec des messages, ne pas recréer
+      if (conversationId && messages.length > 0) {
+        return conversationId;
+      }
+
+      // Si on a un conversationId sauvegardé mais pas encore de messages,
+      // c'est que le useEffect de rechargement est en cours
+      const savedId = sessionStorage.getItem('baymora_conv_id');
+      if (savedId && !conversationId) {
+        setConversationId(savedId);
+        return savedId;
+      }
+
       setIsLoading(true);
       setError(null);
 
       try {
+        const token = localStorage.getItem('baymora_token');
         const response = await fetch('/api/chat/start', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify({ language, title }),
         });
 

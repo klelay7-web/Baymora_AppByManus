@@ -980,7 +980,8 @@ export default function Chat() {
     await deleteConversation(conversationId);
     setTripPlan(null);
     setAllPlaces([]);
-    await startChat('fr');
+    sessionStorage.removeItem('baymora_conv_id'); // Force nouvelle conversation
+    window.location.reload();
   };
 
   const circleBadge = user
