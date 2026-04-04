@@ -18,10 +18,48 @@ const TYPE_GRADIENTS: Record<string, string> = {
   activity: 'from-red-900/80 to-orange-800/40',
 };
 
-// Photo satellite Google Maps du lieu (vue aérienne réelle)
-function getPhotoUrl(name: string, type: string, city: string): string {
-  const query = encodeURIComponent(`${name}, ${city}`);
-  return `https://maps.googleapis.com/maps/api/staticmap?center=${query}&zoom=18&size=600x400&maptype=satellite&key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8`;
+// Photos thématiques par type (images libres de droits Unsplash — URLs stables)
+const FALLBACK_PHOTOS: Record<string, string[]> = {
+  restaurant: [
+    'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1550966871-3ed3cdb51f3a?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1481833761820-0509d3217039?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1544148103-0773bf10d330?w=600&h=400&fit=crop',
+  ],
+  hotel: [
+    'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1582719508461-905c673771eb?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&h=400&fit=crop',
+  ],
+  bar: [
+    'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1572116469696-31de0f17cc34?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1543007630-9710e4a00a20?w=600&h=400&fit=crop',
+  ],
+  beach: [
+    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=600&h=400&fit=crop',
+  ],
+  spa: [
+    'https://images.unsplash.com/photo-1540555700478-4be289fbec6b?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=600&h=400&fit=crop',
+  ],
+  activity: [
+    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=600&h=400&fit=crop',
+  ],
+};
+
+function getPhotoUrl(name: string, type: string, city: string, index: number): string {
+  const photos = FALLBACK_PHOTOS[type] || FALLBACK_PHOTOS.restaurant;
+  return photos[index % photos.length];
 }
 
 export default function GuidePage() {
@@ -94,7 +132,7 @@ export default function GuidePage() {
             {guide.items.map((item: any, i: number) => {
               const letter = String.fromCharCode(65 + i);
               const isExpanded = expandedItem === i;
-              const photoUrl = item.photo || getPhotoUrl(item.name, item.type || 'place', guide.city || '');
+              const photoUrl = item.photo || getPhotoUrl(item.name, item.type || 'restaurant', guide.city || '', i);
               const grad = TYPE_GRADIENTS[item.type] || 'from-slate-800/80 to-slate-700/40';
               const emoji = TYPE_EMOJI[item.type] || '📍';
 
