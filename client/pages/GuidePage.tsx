@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MapPin, Lock, Star, Sparkles, Crown, ExternalLink, Phone, ChevronDown, ChevronUp, Map, X } from "lucide-react";
+import { ArrowLeft, MapPin, Lock, Star, Sparkles, Crown, ExternalLink, Phone, ChevronDown, ChevronUp, Map, X, Heart } from "lucide-react";
 
 const gold = { background: "linear-gradient(135deg,#c8a94a 0%,#f5d87a 35%,#e4c057 65%,#f0d070 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" } as const;
 
@@ -67,7 +67,34 @@ export default function GuidePage() {
   const [guide, setGuide] = useState<any>(null);
   const [error, setError] = useState(false);
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
+  const [showMap, setShowMap] = useState(false); // map cachée par défaut
   const [showMapMobile, setShowMapMobile] = useState(false);
+  const [favorites, setFavorites] = useState<Set<number>>(new Set());
+
+  const toggleFavorite = (index: number, item: any) => {
+    const newFavs = new Set(favorites);
+    if (newFavs.has(index)) { newFavs.delete(index); }
+    else {
+      newFavs.add(index);
+      // Sauvegarder dans les collections
+      const token = localStorage.getItem('baymora_token');
+      if (token) {
+        fetch('/api/collections', { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } })
+          .then(r => r.json())
+          .then(async (data) => {
+            let collId = data.collections?.[0]?.id;
+            if (!collId) {
+              const cr = await fetch('/api/collections', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Mes favoris', emoji: '❤️' }) });
+              if (cr.ok) { const c = await cr.json(); collId = c.id; }
+            }
+            if (collId) {
+              fetch(`/api/collections/${collId}/items`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: item.type || 'restaurant', name: item.name, city: guide?.city, description: item.description, rating: item.rating, priceRange: item.price }) });
+            }
+          }).catch(() => {});
+      }
+    }
+    setFavorites(newFavs);
+  };
 
   useEffect(() => {
     if (!slug) return;
@@ -118,8 +145,10 @@ export default function GuidePage() {
               <p className="text-white/30 text-xs">{guide.city} · {guide.totalItems} adresses · {guide.viewCount || 0} vues</p>
             </div>
           </div>
-          <button onClick={() => setShowMapMobile(true)} className="lg:hidden flex items-center gap-1.5 bg-white text-slate-900 font-semibold text-xs px-4 py-2 rounded-full">
-            <Map className="w-3.5 h-3.5" /> Carte
+          {/* Toggle carte — mobile : overlay, desktop : split */}
+          <button onClick={() => { if (window.innerWidth < 1024) setShowMapMobile(true); else setShowMap(!showMap); }}
+            className="flex items-center gap-1.5 bg-white text-slate-900 font-semibold text-xs px-4 py-2 rounded-full hover:bg-white/90 transition-all">
+            <Map className="w-3.5 h-3.5" /> {showMap ? 'Masquer la carte' : 'Afficher la carte'}
           </button>
         </div>
       </div>
@@ -160,11 +189,19 @@ export default function GuidePage() {
                       <span className="w-7 h-7 rounded-full bg-secondary text-slate-900 text-xs font-bold flex items-center justify-center shadow-lg">{letter}</span>
                     </div>
 
-                    {item.rating && (
-                      <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-2 py-0.5 flex items-center gap-0.5">
-                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" /><span className="text-white text-xs font-semibold">{item.rating}</span>
-                      </div>
-                    )}
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                      {/* Coeur favoris */}
+                      <button onClick={e => { e.stopPropagation(); toggleFavorite(i, item); }}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${favorites.has(i) ? 'bg-red-500 text-white' : 'bg-black/50 backdrop-blur-sm text-white/70 hover:text-red-400'}`}>
+                        <Heart className={`w-4 h-4 ${favorites.has(i) ? 'fill-current' : ''}`} />
+                      </button>
+                      {/* Rating */}
+                      {item.rating && (
+                        <div className="bg-black/60 backdrop-blur-sm rounded-full px-2 py-0.5 flex items-center gap-0.5">
+                          <Star className="w-3 h-3 text-amber-400 fill-amber-400" /><span className="text-white text-xs font-semibold">{item.rating}</span>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="absolute bottom-3 left-3 right-3">
                       <h3 className="font-bold text-white text-base">{item.name}</h3>
@@ -250,16 +287,18 @@ export default function GuidePage() {
           </div>
         </div>
 
-        {/* ── DROITE : Map sticky (desktop only) ── */}
-        <div className="hidden lg:block w-[45%] max-w-[550px] sticky top-[57px] h-[calc(100vh-57px)] border-l border-white/8">
-          <iframe
-            src={mapEmbedUrl}
-            width="100%" height="100%"
-            style={{ border: 0 }}
-            loading="lazy"
-            className="w-full h-full"
-          />
-        </div>
+        {/* ── DROITE : Map sticky (s'affiche quand on clique "Afficher la carte") ── */}
+        {showMap && (
+          <div className="hidden lg:block w-[45%] max-w-[550px] sticky top-[57px] h-[calc(100vh-57px)] border-l border-white/8 animate-in slide-in-from-right duration-300">
+            <iframe
+              src={mapEmbedUrl}
+              width="100%" height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              className="w-full h-full"
+            />
+          </div>
+        )}
       </div>
 
       {/* Map plein écran mobile */}
