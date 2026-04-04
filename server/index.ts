@@ -18,6 +18,7 @@ import prestatairesRouter from "./routes/prestataires";
 import atlasRouter from "./routes/atlas";
 import uploadRouter from "./routes/upload";
 import boutiqueRouter from "./routes/boutique";
+import collectionsRouter from "./routes/collections";
 import googleAuthRouter from "./routes/googleAuth";
 import seoRouter from "./routes/seo";
 import { chatRateLimit, authRateLimit } from "./middleware/rateLimit";
@@ -70,6 +71,7 @@ export function createServer() {
   app.use("/api/atlas", atlasRouter);
   app.use("/api/upload", uploadRouter);
   app.use("/api/boutique", boutiqueRouter);
+  app.use("/api/collections", collectionsRouter);
 
   // 404
   app.use("/api/{*path}", (_req, res) => {

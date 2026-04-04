@@ -492,19 +492,20 @@ const OPUS_TRIGGERS = [
 ];
 
 function selectModel(message: string, conversationLength: number): ModelKey {
-  // Sonnet pour les messages courts de suivi (oui/non, choix, réponse courte)
-  if (message.length < 50 && conversationLength > 1) return 'sonnet';
+  // ── EFFET WOW : Opus forcé pour les 5 premiers messages de TOUT utilisateur ──
+  // C'est la vitrine. Le gratuit doit être bluffant pour convertir.
+  if (conversationLength <= 5) return 'opus';
+
+  // Sonnet pour les messages courts de suivi (oui/non, choix)
+  if (message.length < 50) return 'sonnet';
 
   // Opus si le message déclenche un trigger de complexité
   for (const trigger of OPUS_TRIGGERS) {
     if (trigger.test(message)) return 'opus';
   }
 
-  // Opus si message long (demande détaillée) et début de conversation
-  if (message.length > 200 && conversationLength <= 3) return 'opus';
-
-  // Opus pour le tout premier message substantiel
-  if (conversationLength <= 1 && message.length > 80) return 'opus';
+  // Opus si message long (demande détaillée)
+  if (message.length > 200) return 'opus';
 
   // Sonnet pour tout le reste (conversation fluide, rapide)
   return 'sonnet';

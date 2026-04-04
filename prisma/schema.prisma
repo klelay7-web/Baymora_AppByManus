@@ -66,6 +66,7 @@ model User {
   giftsReceived      Gift[]     @relation("GiftRecipient")
   tripShares         TripShare[]
   prestataire        Prestataire?
+  collections        Collection[]
 
   @@index([email])
   @@index([circle])
@@ -650,6 +651,53 @@ model BoutiqueItem {
   @@index([category, status])
   @@index([status, featured])
   @@map("boutique_items")
+}
+
+// ─── Collections (modèle Pinterest) ─────────────────────────────────────────
+
+model Collection {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  emoji       String?  @default("📌")
+  isPublic    Boolean  @default(false)
+  shareCode   String?  @unique
+  viewCount   Int      @default(0)
+  forkCount   Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       CollectionItem[]
+
+  @@index([userId, createdAt])
+  @@index([shareCode])
+  @@map("collections")
+}
+
+model CollectionItem {
+  id            String   @id @default(uuid())
+  collectionId  String
+  type          String   // venue|hotel|restaurant|activity|product|experience|offmarket
+  name          String
+  city          String?
+  description   String?
+  photo         String?
+  priceRange    String?
+  rating        Float?
+  bookingUrl    String?
+  sourceId      String?  // atlasVenueId ou boutiqueItemId
+  notes         String?  // notes personnelles du user
+  position      Int      @default(0)
+
+  createdAt     DateTime @default(now())
+
+  collection    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId, position])
+  @@map("collection_items")
 }
 
 // ─── Multi-Agent Pipeline — Résultats et tâches des agents IA ───────────────
