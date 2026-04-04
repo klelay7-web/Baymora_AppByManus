@@ -207,7 +207,7 @@ model Trip {
   status       String   @default("planning") // planning|confirmed|past|verified
   sourceConvId String?                        // conversationId d'origine
   // ─── Visibilité & Partage ─────────────────────────────────────────────────
-  visibility   String   @default("private")  // private|friends|public
+  visibility   String   @default("public")   // private|friends|public — public par défaut
   shareCode    String?  @unique              // code unique de partage (ex: "KYOTO-2026-A3K7")
   isPublic     Boolean  @default(false)      // visible via lien de partage (compat)
   isFavorite   Boolean  @default(false)      // épinglé dans le dashboard

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Lock, Sparkles, Crown, Users, Star, MessageSquare, Menu, X } from "lucide-react";
+import { ArrowRight, Lock, Sparkles, Crown, Users, Star, MessageSquare, Menu, X, CheckCircle, TrendingUp, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
@@ -410,6 +410,9 @@ export default function Index() {
         </div>
       </section>
 
+      {/* ── Parcours populaires (SEO + conversion) ── */}
+      <ParcoursSection lang={lang} />
+
       {/* ── Plans ── */}
       <section id="plans" className="py-20 px-4 border-t border-white/5">
         <div className="max-w-4xl mx-auto">
@@ -529,5 +532,120 @@ export default function Index() {
         </div>
       </footer>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PARCOURS POPULAIRES — Section landing avec trips publics
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const BUDGET_TIERS = [
+  { label: 'Découverte', max: 2000, color: 'border-white/15', access: 'gratuit', badge: '○' },
+  { label: 'Premium', max: 8000, color: 'border-secondary/40', access: 'premium', badge: '✦' },
+  { label: 'Privé', max: Infinity, color: 'border-amber-400/35', access: 'prive', badge: '✦✦✦' },
+];
+
+const PARCOURS_EMOJI: Record<string, string> = {
+  'Paris': '🇫🇷', 'New York': '🗽', 'NYC': '🗽', 'Tokyo': '🇯🇵', 'Mykonos': '🏝️', 'Saint-Tropez': '⛵',
+  'Courchevel': '⛷️', 'Dubai': '🏙️', 'Dubaï': '🏙️', 'Bali': '🌴', 'Maldives': '🏖️', 'Milan': '🇮🇹',
+  'London': '🇬🇧', 'Londres': '🇬🇧', 'Miami': '🌴', 'Los Angeles': '🌅', 'LA': '🌅',
+};
+
+function ParcoursSection({ lang }: { lang: 'fr' | 'en' }) {
+  const [trips, setTrips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/trips/feed?limit=9')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setTrips(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || trips.length === 0) return null;
+
+  return (
+    <section className="py-20 px-4 border-t border-white/5">
+      <div className="max-w-5xl mx-auto">
+        <h2 className="text-3xl font-bold text-center mb-2" style={{
+          background: "linear-gradient(135deg, #c8a94a 0%, #f5d87a 35%, #e4c057 65%, #f0d070 100%)",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+        }}>
+          {lang === 'fr' ? 'Parcours prêts à vivre' : 'Ready-to-go Itineraries'}
+        </h2>
+        <p className="text-white/30 text-sm text-center mb-10">
+          {lang === 'fr' ? 'Sélectionnés, testés, modifiables. Choisissez et partez.' : 'Selected, tested, customizable. Choose and go.'}
+        </p>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {trips.map((trip: any) => {
+            const emoji = Object.entries(PARCOURS_EMOJI).find(([key]) => trip.destination?.includes(key))?.[1] || '🌍';
+            const budgetNum = parseInt((trip.budget || '0').replace(/[^\d]/g, '')) || 0;
+            const tier = BUDGET_TIERS.find(t => budgetNum <= t.max) || BUDGET_TIERS[0];
+            const isVerified = trip.isVerified;
+            const isTrending = (trip.forkCount || 0) >= 3;
+
+            return (
+              <Link
+                key={trip.id}
+                to={`/chat?prompt=${encodeURIComponent(`Je veux faire le même parcours : ${trip.title}`)}`}
+                className={`group relative bg-white/3 border rounded-2xl overflow-hidden hover:border-secondary/40 hover:scale-[1.02] transition-all ${tier.color}`}
+              >
+                {/* Header visuel */}
+                <div className="h-32 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center relative overflow-hidden">
+                  <span className="text-5xl opacity-30 group-hover:scale-110 transition-transform duration-500">{emoji}</span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
+
+                  {/* Badges */}
+                  <div className="absolute top-2 left-2 flex gap-1.5">
+                    <span className="bg-black/60 backdrop-blur-sm text-white/80 text-[9px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+                      Sélection {tier.badge}
+                    </span>
+                    {isVerified && (
+                      <span className="bg-emerald-500/20 backdrop-blur-sm text-emerald-400 text-[9px] px-2 py-0.5 rounded-full font-medium flex items-center gap-0.5 whitespace-nowrap">
+                        <CheckCircle className="h-2.5 w-2.5" /> Vérifié
+                      </span>
+                    )}
+                    {isTrending && (
+                      <span className="bg-purple-500/20 backdrop-blur-sm text-purple-400 text-[9px] px-2 py-0.5 rounded-full font-medium flex items-center gap-0.5 whitespace-nowrap">
+                        <TrendingUp className="h-2.5 w-2.5" /> Populaire
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Destination + budget */}
+                  <div className="absolute bottom-2 left-3 right-3">
+                    <p className="text-white font-bold text-sm truncate">{trip.title || trip.destination}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {trip.destination && <span className="text-white/50 text-[10px] flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" /> {trip.destination}</span>}
+                      {trip.duration && <span className="text-white/30 text-[10px]">{trip.duration}</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-3 flex items-center justify-between">
+                  <div>
+                    {trip.budget && <span className="text-secondary text-xs font-semibold">{trip.budget}</span>}
+                    {trip.user && <span className="text-white/20 text-[10px] ml-2">par {trip.user.prenom || trip.user.pseudo}</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(trip.forkCount || 0) > 0 && <span className="text-white/20 text-[10px]">{trip.forkCount}× utilisé</span>}
+                    <span className="text-secondary/60 text-xs font-medium group-hover:text-secondary transition-colors whitespace-nowrap">
+                      Parcours modifiable →
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        <p className="text-center text-white/20 text-xs mt-8">
+          {lang === 'fr' ? 'Tous les parcours sont personnalisables par l\'IA selon vos préférences et votre budget.' : 'All itineraries are customizable by AI based on your preferences and budget.'}
+        </p>
+      </div>
+    </section>
   );
 }
