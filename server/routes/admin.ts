@@ -1,6 +1,7 @@
 import { Router, RequestHandler } from 'express';
 import { verifyToken } from '../services/auth';
 import { prisma } from '../db';
+import { runAllManusMissions } from '../services/agents/manusMissions';
 import { sendEmail, sendBetaInviteEmail } from '../services/email';
 import { generateUserToken } from './users';
 import { PLANS } from '../types';
@@ -381,6 +382,26 @@ router.delete('/team/:id', requireOwner, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Erreur suppression membre' });
+  }
+});
+
+// ─── POST /api/admin/run-agents — Lancer les agents Manus manuellement ──────
+
+router.post('/run-agents', async (req, res) => {
+  try {
+    const { secret } = req.body;
+    const adminSecret = (process.env.ADMIN_SECRET || '').trim();
+    if (!adminSecret || secret?.trim() !== adminSecret) {
+      res.status(403).json({ error: 'Secret invalide' }); return;
+    }
+
+    console.log('[ADMIN] Lancement manuel des agents Manus...');
+    // Lancer en background (ne pas bloquer la réponse)
+    runAllManusMissions().catch(e => console.error('[ADMIN] Erreur agents:', e));
+
+    res.json({ success: true, message: 'Agents Manus lancés. Consultez les logs Railway pour le suivi.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lancement agents' });
   }
 });
 

@@ -8,6 +8,7 @@ import { prisma } from '../db';
 import { sendBirthdayAlertEmail } from './email';
 import { sendNotification, NotifTemplates } from './sms';
 import { startAsyncAgents } from './agents/asyncAgents';
+import { startManusCron } from './agents/manusMissions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -241,4 +242,7 @@ export function startBirthdayCron(): void {
 
   // ── Async background agents (Plume, Gardien, Data) ────────────────────
   startAsyncAgents();
+
+  // ── Manus missions (enrichissement, photos, tendances) ─────────────────
+  startManusCron();
 }
