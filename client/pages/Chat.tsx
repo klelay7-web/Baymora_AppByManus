@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark, X, Mic, MicOff, Crown, Share2, Copy, Check } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark, X, Mic, MicOff, Crown, Share2, Copy, Check, Bell } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT, FREE_CREDITS_LIMIT } from '@/hooks/useAuth';
 import { useVoice } from '@/hooks/useVoice';
@@ -1144,6 +1144,7 @@ export default function Chat() {
                   <Crown className="h-3 w-3" /> Salon
                 </Link>
               )}
+              <NotifBell />
               <Link to="/dashboard">
                 <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1 hover:bg-white/10 transition-colors">
                   <span className="text-secondary text-xs">{circleBadge}</span>
@@ -1584,5 +1585,38 @@ export default function Chat() {
       )}
 
     </div>
+  );
+}
+
+// ─── Notification Bell ───────────────────────────────────────────────────────
+
+function NotifBell() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const token = localStorage.getItem('baymora_token');
+    if (!token) return;
+
+    const fetchCount = () => {
+      fetch('/api/inbox/unread-count', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : { count: 0 })
+        .then(d => setCount(d.count || 0))
+        .catch(() => {});
+    };
+
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000); // Poll toutes les 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Link to="/dashboard" className="relative p-1.5 text-white/40 hover:text-white transition-colors">
+      <Bell className="h-4 w-4" />
+      {count > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+          {count > 9 ? '9+' : count}
+        </span>
+      )}
+    </Link>
   );
 }

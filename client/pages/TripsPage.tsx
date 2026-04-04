@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Calendar, Users, Wallet, Plane, Hotel, Utensils, Activity, Mail, Printer, Download, Trash2, X, ChevronRight } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Users, Wallet, Plane, Hotel, Utensils, Activity, Mail, Printer, Download, Trash2, X, ChevronRight, Heart, Globe, Lock, Eye, Share2, CheckCircle, GitFork } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 
@@ -17,6 +17,11 @@ interface TripSummary {
   status: 'planning' | 'confirmed' | 'past';
   createdAt: string;
   updatedAt: string;
+  isFavorite?: boolean;
+  visibility?: 'private' | 'friends' | 'public';
+  isVerified?: boolean;
+  viewCount?: number;
+  forkCount?: number;
 }
 
 interface TripFull extends TripSummary {
@@ -280,28 +285,53 @@ function TripDetailModal({ trip, onClose, onStatusChange, onDelete }: {
 
 // ─── Trip Card ────────────────────────────────────────────────────────────────
 
-function TripCard({ trip, onClick }: { trip: TripSummary; onClick: () => void }) {
+function TripCard({ trip, onClick, onToggleFavorite, onVisibilityChange, onShare, shareMsg }: {
+  trip: TripSummary;
+  onClick: () => void;
+  onToggleFavorite: (e: React.MouseEvent, id: string) => void;
+  onVisibilityChange: (e: React.MouseEvent, id: string, visibility: string) => void;
+  onShare: (e: React.MouseEvent, id: string) => void;
+  shareMsg: string | null;
+}) {
   const statusCfg = STATUS_CONFIG[trip.status] ?? STATUS_CONFIG.planning;
+  const [visDropdown, setVisDropdown] = useState(false);
+
+  const visibilityBadge = () => {
+    switch (trip.visibility) {
+      case 'public':  return <span className="inline-flex items-center gap-1 text-xs text-emerald-400/80"><Globe className="h-3 w-3" /> Public</span>;
+      case 'friends': return <span className="inline-flex items-center gap-1 text-xs text-sky-400/80"><Users className="h-3 w-3" /> Proches</span>;
+      default:        return <span className="inline-flex items-center gap-1 text-xs text-white/30"><Lock className="h-3 w-3" /> Priv{'\u00e9'}</span>;
+    }
+  };
 
   return (
-    <button
+    <div
       onClick={onClick}
-      className="w-full text-left bg-white/4 border border-white/10 rounded-2xl p-4 hover:bg-white/6 hover:border-white/20 transition-all group space-y-3"
+      className="w-full text-left bg-white/4 border border-white/10 rounded-2xl p-4 hover:bg-white/6 hover:border-white/20 transition-all group space-y-3 cursor-pointer relative"
     >
       {/* Emoji + titre */}
       <div className="flex items-start gap-3">
         <span className="text-3xl flex-shrink-0 mt-0.5">{destinationEmoji(trip.destination)}</span>
         <div className="flex-1 min-w-0">
-          <p className="text-white font-semibold text-sm leading-snug truncate group-hover:text-secondary transition-colors">
-            {trip.title}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-white font-semibold text-sm leading-snug truncate group-hover:text-secondary transition-colors">
+              {trip.title}
+            </p>
+            {trip.isVerified && <CheckCircle className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" title="V\u00e9rifi\u00e9" />}
+          </div>
           {trip.destination && (
             <p className="text-white/40 text-xs mt-0.5 flex items-center gap-1">
               <MapPin className="h-3 w-3" /> {trip.destination}
             </p>
           )}
         </div>
-        <ChevronRight className="h-4 w-4 text-white/20 group-hover:text-secondary/60 transition-colors flex-shrink-0" />
+        <button
+          onClick={(e) => onToggleFavorite(e, trip.id)}
+          className={`flex-shrink-0 p-1 rounded-lg transition-all ${trip.isFavorite ? 'text-amber-400' : 'text-white/20 hover:text-amber-400/60'}`}
+          title={trip.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+        >
+          <Heart className="h-4 w-4" fill={trip.isFavorite ? 'currentColor' : 'none'} />
+        </button>
       </div>
 
       {/* Infos */}
@@ -326,27 +356,83 @@ function TripCard({ trip, onClick }: { trip: TripSummary; onClick: () => void })
         )}
       </div>
 
-      {/* Status badge */}
-      <div className="flex items-center justify-between">
-        <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium ${statusCfg.bg} ${statusCfg.color}`}>
-          {trip.status === 'confirmed' && '✓ '}
-          {statusCfg.label}
-        </span>
+      {/* Visibility + stats + status */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium ${statusCfg.bg} ${statusCfg.color}`}>
+            {trip.status === 'confirmed' && '\u2713 '}
+            {statusCfg.label}
+          </span>
+          {visibilityBadge()}
+          {trip.visibility === 'public' && (
+            <span className="flex items-center gap-2 text-white/30 text-xs">
+              <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{trip.viewCount ?? 0}</span>
+              <span className="flex items-center gap-0.5"><GitFork className="h-3 w-3" />{trip.forkCount ?? 0}</span>
+            </span>
+          )}
+        </div>
         <span className="text-white/20 text-xs">
           {new Date(trip.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
         </span>
       </div>
-    </button>
+
+      {/* Action bar */}
+      <div className="flex items-center gap-1.5 pt-1 border-t border-white/5">
+        <button
+          onClick={(e) => onShare(e, trip.id)}
+          className="flex items-center gap-1 px-2 py-1 text-xs text-white/40 hover:text-secondary rounded-md hover:bg-white/5 transition-all"
+        >
+          <Share2 className="h-3 w-3" />
+          {shareMsg === trip.id ? 'Lien copi\u00e9 !' : 'Partager'}
+        </button>
+        <div className="relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); setVisDropdown(!visDropdown); }}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-white/40 hover:text-secondary rounded-md hover:bg-white/5 transition-all"
+          >
+            <Globe className="h-3 w-3" /> Visibilit{'\u00e9'}
+          </button>
+          {visDropdown && (
+            <div className="absolute bottom-full left-0 mb-1 bg-slate-800 border border-white/15 rounded-lg shadow-xl py-1 z-20 min-w-[130px]">
+              {VISIBILITY_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={(e) => { onVisibilityChange(e, trip.id, opt.value); setVisDropdown(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/8 transition-colors ${
+                    trip.visibility === opt.value ? 'text-secondary' : 'text-white/60'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 
+const TAB_FILTERS = [
+  { value: 'all',       label: 'Tous' },
+  { value: 'favorites', label: '\u2B50 Favoris' },
+  { value: 'public',    label: '\uD83C\uDF0D Publics' },
+  { value: 'verified',  label: '\u2705 V\u00e9rifi\u00e9s' },
+];
+
 const FILTERS = [
   { value: '',           label: 'Tous' },
-  { value: 'planning',   label: 'En préparation' },
-  { value: 'confirmed',  label: 'Confirmés' },
-  { value: 'past',       label: 'Passés' },
+  { value: 'planning',   label: 'En pr\u00e9paration' },
+  { value: 'confirmed',  label: 'Confirm\u00e9s' },
+  { value: 'past',       label: 'Pass\u00e9s' },
+];
+
+const VISIBILITY_OPTIONS = [
+  { value: 'private', label: '\uD83D\uDD12 Priv\u00e9',   short: '\uD83D\uDD12 Priv\u00e9' },
+  { value: 'friends', label: '\uD83D\uDC65 Proches', short: '\uD83D\uDC65 Proches' },
+  { value: 'public',  label: '\uD83C\uDF0D Public',  short: '\uD83C\uDF0D Public' },
 ];
 
 export default function TripsPage() {
@@ -355,8 +441,10 @@ export default function TripsPage() {
   const [trips, setTrips] = useState<TripSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [tabFilter, setTabFilter] = useState('all');
   const [selectedTrip, setSelectedTrip] = useState<TripFull | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) navigate('/auth?returnTo=/voyages');
@@ -398,6 +486,36 @@ export default function TripsPage() {
     setSelectedTrip(null);
   };
 
+  const handleToggleFavorite = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/trips/${id}/favorite`, { method: 'PATCH', headers: authHeaders() });
+      const data = await res.json();
+      setTrips(prev => prev.map(t => t.id === id ? { ...t, isFavorite: data.isFavorite ?? !t.isFavorite } : t));
+    } catch {}
+  };
+
+  const handleVisibilityChange = async (e: React.MouseEvent, id: string, visibility: string) => {
+    e.stopPropagation();
+    try {
+      await fetch(`/api/trips/${id}/visibility`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ visibility }),
+      });
+      setTrips(prev => prev.map(t => t.id === id ? { ...t, visibility: visibility as any } : t));
+    } catch {}
+  };
+
+  const handleShare = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/voyages/${id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShareMsg(id);
+      setTimeout(() => setShareMsg(null), 2000);
+    }).catch(() => {});
+  };
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -406,7 +524,12 @@ export default function TripsPage() {
     );
   }
 
-  const displayed = trips; // already filtered server-side
+  const displayed = trips.filter(t => {
+    if (tabFilter === 'favorites') return t.isFavorite;
+    if (tabFilter === 'public') return t.visibility === 'public';
+    if (tabFilter === 'verified') return t.isVerified;
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
@@ -435,7 +558,24 @@ export default function TripsPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
 
-        {/* Filtres */}
+        {/* Tab filters */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {TAB_FILTERS.map(f => (
+            <button
+              key={f.value}
+              onClick={() => setTabFilter(f.value)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                tabFilter === f.value
+                  ? 'bg-secondary text-black'
+                  : 'bg-white/6 border border-white/10 text-white/50 hover:text-white hover:border-white/25'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Status filters */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {FILTERS.map(f => (
             <button
@@ -443,8 +583,8 @@ export default function TripsPage() {
               onClick={() => setFilter(f.value)}
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 filter === f.value
-                  ? 'bg-secondary text-black'
-                  : 'bg-white/6 border border-white/10 text-white/50 hover:text-white hover:border-white/25'
+                  ? 'bg-white/15 text-white border border-white/25'
+                  : 'bg-white/4 border border-white/8 text-white/35 hover:text-white/60 hover:border-white/15'
               }`}
             >
               {f.label}
@@ -462,7 +602,15 @@ export default function TripsPage() {
         ) : displayed.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {displayed.map(trip => (
-              <TripCard key={trip.id} trip={trip} onClick={() => openTrip(trip.id)} />
+              <TripCard
+                key={trip.id}
+                trip={trip}
+                onClick={() => openTrip(trip.id)}
+                onToggleFavorite={handleToggleFavorite}
+                onVisibilityChange={handleVisibilityChange}
+                onShare={handleShare}
+                shareMsg={shareMsg}
+              />
             ))}
           </div>
         ) : (

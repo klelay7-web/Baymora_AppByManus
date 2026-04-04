@@ -67,6 +67,7 @@ model User {
   tripShares         TripShare[]
   prestataire        Prestataire?
   collections        Collection[]
+  notifications      Notification[]
 
   @@index([email])
   @@index([circle])
@@ -793,4 +794,23 @@ model OffMarketItem {
   @@index([city, status])
   @@index([country, status])
   @@map("offmarket_items")
+}
+
+// ─── Notifications In-App ────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // points_earned|trip_copied|trip_verified|contribution_accepted|cashout_processed|system
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications_inbox")
 }
