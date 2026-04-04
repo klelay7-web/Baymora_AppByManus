@@ -392,4 +392,214 @@ router.get('/my-shares', requireUser, async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISIBILITÉ — Privé / Proches / Public
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// PATCH /api/trips/:id/visibility — Changer la visibilité
+router.patch('/:id/visibility', requireUser, async (req: any, res) => {
+  try {
+    const { visibility } = req.body; // private | friends | public
+    if (!['private', 'friends', 'public'].includes(visibility)) {
+      res.status(400).json({ error: 'Visibilité invalide (private/friends/public)' }); return;
+    }
+
+    const trip = await prisma.trip.findFirst({ where: { id: req.params.id, userId: req.baymoraUser.id } });
+    if (!trip) { res.status(404).json({ error: 'Voyage non trouvé' }); return; }
+
+    // Générer un shareCode et seoSlug si première mise en public
+    const updates: any = { visibility, isPublic: visibility !== 'private' };
+    if (visibility !== 'private' && !trip.shareCode) {
+      const code = `${(trip.destination || 'TRIP').toUpperCase().replace(/\s+/g, '-').substring(0, 15)}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+      updates.shareCode = code;
+    }
+    if (visibility === 'public' && !trip.seoSlug) {
+      const slug = `${(trip.destination || 'voyage').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${(trip.duration || '').replace(/\s/g, '')}-${Date.now().toString(36)}`;
+      updates.seoSlug = slug;
+    }
+
+    const updated = await prisma.trip.update({ where: { id: req.params.id }, data: updates });
+
+    // Points pour partage public
+    if (visibility === 'public' && trip.visibility !== 'public') {
+      await addPoints(req.baymoraUser.id, 'trip_published', 50, 'Parcours publié publiquement');
+    }
+
+    console.log(`[TRIPS] Visibilité changée: ${trip.title} → ${visibility}`);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur mise à jour visibilité' });
+  }
+});
+
+// PATCH /api/trips/:id/favorite — Toggle favoris
+router.patch('/:id/favorite', requireUser, async (req: any, res) => {
+  try {
+    const trip = await prisma.trip.findFirst({ where: { id: req.params.id, userId: req.baymoraUser.id } });
+    if (!trip) { res.status(404).json({ error: 'Voyage non trouvé' }); return; }
+    const updated = await prisma.trip.update({ where: { id: req.params.id }, data: { isFavorite: !trip.isFavorite } });
+    res.json({ isFavorite: updated.isFavorite });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur favoris' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VÉRIFICATION — Le créateur a vécu le parcours
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// POST /api/trips/:id/verify — Documenter/vérifier un parcours
+router.post('/:id/verify', requireUser, async (req: any, res) => {
+  try {
+    const { notes, photos } = req.body;
+    const trip = await prisma.trip.findFirst({ where: { id: req.params.id, userId: req.baymoraUser.id } });
+    if (!trip) { res.status(404).json({ error: 'Voyage non trouvé' }); return; }
+
+    const updated = await prisma.trip.update({
+      where: { id: req.params.id },
+      data: {
+        isVerified: true,
+        verifiedAt: new Date(),
+        verifiedNotes: notes || null,
+        verifiedPhotos: photos || [],
+        status: 'verified',
+      },
+    });
+
+    // Récompense pour vérification
+    await addPoints(req.baymoraUser.id, 'trip_verified', 200, `Parcours vérifié: ${trip.title}`);
+    await prisma.user.update({ where: { id: req.baymoraUser.id }, data: { creditsLimit: { increment: 50 } } });
+
+    console.log(`[TRIPS] Parcours vérifié: ${trip.title} par ${req.baymoraUser.id}`);
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur vérification' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TURNKEY — Utiliser un parcours "clé en main"
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// POST /api/trips/:id/use-turnkey — Copier un parcours public pour soi
+router.post('/:id/use-turnkey', requireUser, async (req: any, res) => {
+  try {
+    const original = await prisma.trip.findUnique({ where: { id: req.params.id } });
+    if (!original || original.visibility === 'private') {
+      res.status(404).json({ error: 'Parcours non trouvé ou privé' }); return;
+    }
+    if (original.userId === req.baymoraUser.id) {
+      res.status(400).json({ error: 'Vous ne pouvez pas copier votre propre parcours' }); return;
+    }
+
+    // Copier le trip
+    const copy = await prisma.trip.create({
+      data: {
+        userId: req.baymoraUser.id,
+        title: `${original.title} (via Baymora)`,
+        destination: original.destination,
+        dates: null, // le nouveau user choisira ses dates
+        duration: original.duration,
+        travelers: original.travelers,
+        budget: original.budget,
+        planData: original.planData,
+        status: 'planning',
+        forkedFromId: original.id,
+      },
+    });
+
+    // Incrémenter les compteurs sur l'original
+    await prisma.trip.update({
+      where: { id: original.id },
+      data: {
+        forkCount: { increment: 1 },
+        usedAsTurnkey: { increment: 1 },
+      },
+    });
+
+    // Récompenser le créateur original
+    const creatorReward = original.isVerified ? 50 : 30; // plus si vérifié
+    const pointsReward = original.isVerified ? 150 : 100;
+
+    await prisma.user.update({
+      where: { id: original.userId },
+      data: {
+        creditsLimit: { increment: creatorReward },
+        clubPoints: { increment: pointsReward },
+      },
+    });
+
+    await prisma.trip.update({
+      where: { id: original.id },
+      data: {
+        totalCommissionEarned: { increment: creatorReward * 0.075 }, // ~7.5 cents par crédit
+        totalPointsEarned: { increment: pointsReward },
+      },
+    });
+
+    console.log(`[TRIPS] Turnkey utilisé: ${original.title} → copié par ${req.baymoraUser.id}, créateur +${creatorReward} crédits +${pointsReward} pts`);
+    res.json({ trip: copy, message: 'Parcours copié dans vos voyages !' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur copie parcours' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FEED PUBLIC — Parcours publics pour découverte + SEO
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/trips/feed — Parcours publics triés par popularité
+router.get('/feed', async (req, res) => {
+  try {
+    const { destination, verified, limit = '20', offset = '0' } = req.query as Record<string, string>;
+    const where: any = { visibility: 'public' };
+    if (destination) where.destination = { contains: destination, mode: 'insensitive' };
+    if (verified === 'true') where.isVerified = true;
+
+    const trips = await prisma.trip.findMany({
+      where,
+      select: {
+        id: true, title: true, destination: true, duration: true, budget: true,
+        isVerified: true, verifiedPhotos: true, forkCount: true, viewCount: true,
+        usedAsTurnkey: true, shareCode: true, seoSlug: true, createdAt: true,
+        user: { select: { pseudo: true, prenom: true } },
+      },
+      orderBy: [{ isVerified: 'desc' }, { forkCount: 'desc' }, { viewCount: 'desc' }],
+      take: parseInt(limit),
+      skip: parseInt(offset),
+    });
+
+    res.json(trips);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur feed' });
+  }
+});
+
+// GET /api/trips/public/:slug — Page publique d'un parcours (SEO)
+router.get('/public/:slug', async (req, res) => {
+  try {
+    const trip = await prisma.trip.findFirst({
+      where: {
+        OR: [
+          { seoSlug: req.params.slug },
+          { shareCode: req.params.slug },
+        ],
+        visibility: 'public',
+      },
+      include: {
+        user: { select: { pseudo: true, prenom: true, clubPoints: true } },
+      },
+    });
+
+    if (!trip) { res.status(404).json({ error: 'Parcours non trouvé' }); return; }
+
+    // Incrémenter le compteur de vues
+    await prisma.trip.update({ where: { id: trip.id }, data: { viewCount: { increment: 1 } } });
+
+    res.json(trip);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur parcours public' });
+  }
+});
+
 export default router;

@@ -204,13 +204,31 @@ model Trip {
   travelers    Int?
   budget       String?
   planData     Json                           // TripPlan JSON complet
-  status       String   @default("planning") // planning|confirmed|past
+  status       String   @default("planning") // planning|confirmed|past|verified
   sourceConvId String?                        // conversationId d'origine
-  // ─── Partage ──────────────────────────────────────────────────────────────
+  // ─── Visibilité & Partage ─────────────────────────────────────────────────
+  visibility   String   @default("private")  // private|friends|public
   shareCode    String?  @unique              // code unique de partage (ex: "KYOTO-2026-A3K7")
-  isPublic     Boolean  @default(false)      // visible via lien de partage
+  isPublic     Boolean  @default(false)      // visible via lien de partage (compat)
+  isFavorite   Boolean  @default(false)      // épinglé dans le dashboard
   shareCount   Int      @default(0)          // nombre de fois partagé
+  forkCount    Int      @default(0)          // nombre de copies
+  viewCount    Int      @default(0)          // nombre de vues publiques
   forkedFromId String?                       // si copié depuis un autre trip
+  // ─── Vérification & Documentation ─────────────────────────────────────────
+  isVerified   Boolean  @default(false)      // parcours vécu et documenté
+  verifiedAt   DateTime?
+  verifiedPhotos Json   @default("[]")       // photos du parcours vécu
+  verifiedNotes  String? @db.Text            // retour d'expérience
+  // ─── Commissions ──────────────────────────────────────────────────────────
+  totalCommissionEarned Float @default(0)    // total € gagné par le créateur
+  totalPointsEarned     Int   @default(0)    // total points gagnés
+  usedAsTurnkey         Int   @default(0)    // combien ont utilisé ce parcours "clé en main"
+  // ─── SEO ──────────────────────────────────────────────────────────────────
+  seoSlug      String?  @unique              // URL-friendly slug pour page publique
+  seoTitle     String?                       // titre SEO optimisé
+  seoDescription String? @db.Text            // meta description
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -220,6 +238,9 @@ model Trip {
   shares       TripShare[]
 
   @@index([userId, status])
+  @@index([visibility, status])
+  @@index([isPublic, isVerified])
+  @@index([seoSlug])
   @@index([forkedFromId])
   @@map("trips")
 }
