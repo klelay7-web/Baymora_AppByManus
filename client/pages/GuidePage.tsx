@@ -59,7 +59,9 @@ const FALLBACK_PHOTOS: Record<string, string[]> = {
 
 function getPhotoUrl(name: string, type: string, city: string, index: number): string {
   const photos = FALLBACK_PHOTOS[type] || FALLBACK_PHOTOS.restaurant;
-  return photos[index % photos.length];
+  // Hash du nom pour éviter les doublons entre établissements du même type
+  const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return photos[(hash + index) % photos.length];
 }
 
 export default function GuidePage() {
@@ -287,9 +289,9 @@ export default function GuidePage() {
           </div>
         </div>
 
-        {/* ── DROITE : Map sticky (s'affiche quand on clique "Afficher la carte") ── */}
+        {/* ── DROITE : Map sticky + encart fiche établissement ── */}
         {showMap && (
-          <div className="hidden lg:block w-[45%] max-w-[550px] sticky top-[57px] h-[calc(100vh-57px)] border-l border-white/8 animate-in slide-in-from-right duration-300">
+          <div className="hidden lg:block w-[45%] max-w-[550px] sticky top-[57px] h-[calc(100vh-57px)] border-l border-white/8 animate-in slide-in-from-right duration-300 relative">
             <iframe
               src={mapEmbedUrl}
               width="100%" height="100%"
@@ -297,6 +299,47 @@ export default function GuidePage() {
               loading="lazy"
               className="w-full h-full"
             />
+
+            {/* Encart fiche quand un lieu est sélectionné (comme Staycation) */}
+            {selectedItem && expandedItem !== null && (
+              <div className="absolute bottom-4 left-4 right-4 bg-slate-900 border border-white/15 rounded-2xl overflow-hidden shadow-2xl shadow-black/60 animate-in slide-in-from-bottom duration-200">
+                {/* Photo */}
+                <div className="relative h-36 overflow-hidden">
+                  <img
+                    src={selectedItem.photo || getPhotoUrl(selectedItem.name, selectedItem.type || 'restaurant', guide.city || '', expandedItem)}
+                    alt={selectedItem.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 to-transparent" />
+                  <div className="absolute bottom-2 left-3">
+                    <span className="text-white font-bold text-base">{selectedItem.name}</span>
+                  </div>
+                  <button onClick={() => toggleFavorite(expandedItem, selectedItem)}
+                    className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center ${favorites.has(expandedItem) ? 'bg-red-500 text-white' : 'bg-black/50 text-white/70'}`}>
+                    <Heart className={`w-4 h-4 ${favorites.has(expandedItem) ? 'fill-current' : ''}`} />
+                  </button>
+                </div>
+                {/* Infos */}
+                <div className="p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2 text-xs text-white/50">
+                      {selectedItem.address && <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" />{selectedItem.address}</span>}
+                      {selectedItem.rating && <span className="flex items-center gap-0.5 text-amber-400"><Star className="w-3 h-3 fill-current" />{selectedItem.rating}</span>}
+                    </div>
+                    <span className="text-secondary text-xs font-semibold">{selectedItem.price}</span>
+                  </div>
+                  {selectedItem.insiderTip && (
+                    <p className="text-amber-300/60 text-[10px] mt-1"><Sparkles className="w-2.5 h-2.5 inline mr-0.5" />{selectedItem.insiderTip}</p>
+                  )}
+                  <div className="flex gap-2 mt-2">
+                    <Link to={`/chat?prompt=${encodeURIComponent(`Réserver au ${selectedItem.name}${guide.city ? ' à ' + guide.city : ''}`)}`}
+                      className="flex-1 text-center bg-secondary/15 border border-secondary/30 text-secondary text-xs py-1.5 rounded-lg hover:bg-secondary/25">
+                      Organiser avec Baymora
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
