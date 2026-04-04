@@ -272,149 +272,53 @@ export default function Index() {
         )}
       </nav>
 
-      {/* ── Hero ── */}
-      <section className="relative pt-20 pb-16 px-4 text-center">
-        {/* Radial glow */}
+      {/* ── Hero — Barre de recherche (comme Perplexity/Airbnb) ── */}
+      <section className="relative pt-16 pb-12 px-4 text-center">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-secondary/6 rounded-full blur-[80px]" />
         </div>
 
         <div className="relative max-w-2xl mx-auto">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-white/5 border border-white/12 rounded-full px-4 py-1.5 mb-10">
-            <Star className="h-3 w-3 text-secondary flex-shrink-0" />
-            <span className="text-white/50 text-xs tracking-wide whitespace-nowrap">{t.hero.badge}</span>
-          </div>
-
-          {/* Headline */}
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold leading-[1.05] mb-6 tracking-tight">
-            <span style={shimmer}>{t.hero.h1a}</span>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.1] mb-4 tracking-tight">
+            <span style={shimmer}>{lang === 'fr' ? 'Dites ce que vous voulez.' : 'Say what you want.'}</span>
             <br />
-            <span style={gold}>{t.hero.h1b}</span>
-            <br />
-            <span style={shimmer}>{t.hero.h1c}</span>
+            <span style={gold}>{lang === 'fr' ? 'Baymora organise tout.' : 'Baymora handles it all.'}</span>
           </h1>
 
-          <p className="text-white/40 text-base sm:text-lg max-w-xl mx-auto mb-10 leading-relaxed">
-            {t.hero.sub}
+          <p className="text-white/35 text-sm sm:text-base max-w-md mx-auto mb-8">
+            {lang === 'fr' ? 'Voyages, sorties, cadeaux, lifestyle — votre concierge personnel disponible 24/7.' : 'Travel, dining, gifts, lifestyle — your personal concierge available 24/7.'}
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/chat">
-              <button className="bg-secondary text-white font-bold px-8 py-3.5 rounded-full text-sm hover:bg-secondary/90 transition-all flex items-center justify-center gap-2 whitespace-nowrap">
-                {t.hero.cta} <ArrowRight className="h-4 w-4 flex-shrink-0" />
+          {/* Barre de recherche directe */}
+          <form onSubmit={(e) => { e.preventDefault(); const input = (e.target as any).querySelector('input'); if (input?.value?.trim()) window.location.href = `/chat?prompt=${encodeURIComponent(input.value.trim())}`; }} className="max-w-lg mx-auto mb-6">
+            <div className="flex bg-white/5 border border-white/15 rounded-2xl overflow-hidden hover:border-secondary/30 transition-all focus-within:border-secondary/50 focus-within:ring-1 focus-within:ring-secondary/20">
+              <input
+                type="text"
+                placeholder={lang === 'fr' ? 'Week-end romantique à Venise, budget 3000€...' : 'Romantic weekend in Venice, budget $3000...'}
+                className="flex-1 bg-transparent text-white text-sm px-5 py-4 placeholder:text-white/25 focus:outline-none"
+              />
+              <button type="submit" className="bg-secondary hover:bg-secondary/90 text-white font-semibold px-6 text-sm transition-all whitespace-nowrap">
+                {lang === 'fr' ? 'Parler →' : 'Go →'}
               </button>
-            </Link>
-            <a href="#plans">
-              <button className="bg-white/5 border border-white/12 text-white/50 font-medium px-8 py-3.5 rounded-full text-sm hover:bg-white/10 transition-all whitespace-nowrap">
-                {t.hero.ctaSub}
-              </button>
-            </a>
-          </div>
-
-          <p className="text-white/18 text-xs mt-6">{t.hero.fine}</p>
-        </div>
-      </section>
-
-      {/* ── Chat preview ── */}
-      <section className="py-10 px-4">
-        <div className="max-w-md mx-auto">
-          <div className="bg-slate-900/80 border border-white/10 rounded-2xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.5)]">
-            {/* Header */}
-            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/8 bg-black/30">
-              <div className="w-7 h-7 rounded-full bg-secondary/20 border border-secondary/25 flex items-center justify-center">
-                <span className="text-secondary font-bold text-xs">B</span>
-              </div>
-              <div>
-                <p className="text-white font-semibold text-xs">Baymora</p>
-                <p className="text-white/25 text-xs">Conciergerie de voyage</p>
-              </div>
-              <div className="ml-auto flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
-                <span className="text-white/20 text-xs">{lang === "fr" ? "En ligne" : "Online"}</span>
-              </div>
             </div>
-            {/* Messages */}
-            <div className="p-4 space-y-3">
-              {t.how.steps.map((s, i) => (
-                <div key={i} className={`flex ${s.who === "Vous" || s.who === "You" ? "justify-end" : "justify-start"} gap-2`}>
-                  {(s.who === "Baymora") && (
-                    <div className="w-6 h-6 rounded-full bg-secondary/20 border border-secondary/25 flex items-center justify-center flex-shrink-0 mt-auto">
-                      <span className="text-secondary font-bold" style={{ fontSize: 9 }}>B</span>
-                    </div>
-                  )}
-                  <div className={`text-xs px-3.5 py-2.5 rounded-2xl max-w-[80%] leading-relaxed ${
-                    s.who === "Vous" || s.who === "You"
-                      ? "bg-secondary/75 text-white rounded-br-sm"
-                      : "bg-white/8 border border-white/10 text-white/80 rounded-bl-sm"
-                  }`}>
-                    {s.msg}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <p className="text-white/15 text-xs text-center mt-3">
-            {lang === "fr" ? "Exemple de conversation avec Baymora" : "Sample conversation with Baymora"}
-          </p>
-        </div>
-      </section>
+          </form>
 
-      {/* ── Pourquoi ── */}
-      <section className="py-20 px-4 border-t border-white/5">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12" style={shimmer}>{t.why.title}</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {t.why.items.map(f => (
-              <div key={f.title} className="bg-white/3 border border-white/8 rounded-2xl p-5">
-                <div className="text-2xl mb-3">{f.icon}</div>
-                <h3 className="text-white font-semibold text-sm mb-1.5">{f.title}</h3>
-                <p className="text-white/35 text-xs leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
+          <p className="text-white/15 text-xs">{lang === 'fr' ? '15 échanges gratuits · Aucune carte requise' : '15 free exchanges · No card needed'}</p>
+
+          {/* Social proof */}
+          <div className="flex justify-center gap-6 mt-6 text-white/20 text-xs">
+            <span>⭐ 4.8/5</span>
+            <span>🗺️ 1 200+ parcours</span>
+            <span>📍 850+ lieux vérifiés</span>
           </div>
         </div>
       </section>
 
-      {/* ── Packs thématiques ── */}
-      <section className="py-20 px-4 border-t border-white/5">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-2" style={gold}>
-            {lang === 'fr' ? 'Destinations & Expériences' : 'Destinations & Experiences'}
-          </h2>
-          <p className="text-white/30 text-sm text-center mb-10">
-            {lang === 'fr' ? 'Cliquez et partez. L\'IA fait le reste.' : 'Click and go. AI does the rest.'}
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {THEME_PACKS.map(pack => (
-              <Link
-                key={pack.id}
-                to={`/chat?prompt=${encodeURIComponent(pack.prompt)}`}
-                className={`group relative bg-gradient-to-br ${pack.gradient} border border-white/10 rounded-2xl p-5 hover:border-secondary/40 hover:scale-[1.02] transition-all cursor-pointer overflow-hidden`}
-              >
-                <div className="relative z-10">
-                  <span className="text-3xl">{pack.emoji}</span>
-                  <h3 className="text-white font-bold text-xs sm:text-sm mt-2 whitespace-nowrap">{pack.title}</h3>
-                  <p className="text-white/40 text-xs mt-0.5 truncate">{pack.subtitle}</p>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              </Link>
-            ))}
-          </div>
-
-          <p className="text-center text-white/20 text-xs mt-6">
-            {lang === 'fr' ? 'Ou dites simplement ce que vous voulez à l\'IA →' : 'Or just tell the AI what you want →'}
-            {' '}<Link to="/chat" className="text-secondary/60 hover:text-secondary whitespace-nowrap">{'Ouvrir le chat'}</Link>
-          </p>
-        </div>
-      </section>
+      {/* ── Parcours populaires (preuve sociale + SEO) ── */}
+      <ParcoursSection lang={lang} />
 
       {/* ── Guides & Sélections (SEO) ── */}
       <GuidesSection lang={lang} />
-
-      {/* ── Parcours populaires (SEO + conversion) ── */}
-      <ParcoursSection lang={lang} />
 
       {/* ── Plans ── */}
       <section id="plans" className="py-20 px-4 border-t border-white/5">
@@ -461,76 +365,26 @@ export default function Index() {
         </div>
       </section>
 
-      {/* ── Confidentialité ── */}
-      <section className="py-14 px-4 border-t border-white/5">
-        <div className="max-w-xl mx-auto text-center">
-          <div className="w-10 h-10 rounded-full bg-white/5 border border-white/8 flex items-center justify-center mx-auto mb-4">
-            <Lock className="h-4 w-4 text-white/30" />
-          </div>
-          <h2 className="text-xl font-bold mb-3" style={shimmer}>{t.privacy.title}</h2>
-          <p className="text-white/30 text-sm leading-relaxed mb-5">{t.privacy.text}</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {t.privacy.tags.map(tag => (
-              <span key={tag} className="bg-white/4 border border-white/8 rounded-full px-3 py-1 text-white/25 text-xs whitespace-nowrap">{tag}</span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA final ── */}
-      <section className="py-20 px-4 border-t border-white/5">
-        <div className="max-w-lg mx-auto text-center relative">
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-40 bg-secondary/5 rounded-full blur-[60px]" />
-          </div>
-          <h2 className="relative text-4xl sm:text-5xl font-bold mb-4 leading-tight whitespace-pre-line" style={gold}>
-            {t.finalCta.title}
-          </h2>
-          <p className="text-white/25 text-sm mb-8">{t.finalCta.sub}</p>
-          <Link to="/chat">
-            <button className="bg-secondary text-white font-bold px-10 py-4 rounded-full text-base hover:bg-secondary/90 transition-all inline-flex items-center gap-2 whitespace-nowrap">
-              {t.finalCta.btn} <ArrowRight className="h-4 w-4 flex-shrink-0" />
-            </button>
-          </Link>
-        </div>
-      </section>
-
-      {/* ── Affiliés ── */}
-      <section className="py-10 px-4 border-t border-white/5">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white/3 border border-white/8 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Users className="h-3.5 w-3.5 text-secondary/60" />
-                <span className="text-white/60 font-semibold text-sm">{t.affiliate.title}</span>
-              </div>
-              <p className="text-white/25 text-xs">{t.affiliate.desc}</p>
-            </div>
-            <Link to="/partner" className="flex-shrink-0">
-              <button className="bg-white/6 border border-white/12 text-white/45 text-xs font-medium px-4 py-2 rounded-full hover:bg-white/12 transition-all whitespace-nowrap">
-                {t.affiliate.cta}
-              </button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* ── Footer ── */}
-      <footer className="border-t border-white/6 py-8 px-4">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-secondary/20 border border-secondary/20 flex items-center justify-center">
-              <span className="text-secondary font-bold" style={{ fontSize: 10 }}>B</span>
+      <footer className="border-t border-white/6 py-10 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-secondary/20 border border-secondary/20 flex items-center justify-center">
+                <span className="text-secondary font-bold text-xs">B</span>
+              </div>
+              <span className="text-white/50 text-sm font-semibold">Baymora</span>
             </div>
-            <span className="text-white/40 text-sm font-medium">Baymora</span>
-            <span className="text-white/12 text-xs hidden sm:block">— {t.footer.tagline}</span>
+            <div className="flex items-center gap-5 text-white/25 text-xs">
+              <Link to="/chat" className="hover:text-white/50 transition-colors whitespace-nowrap">Concierge IA</Link>
+              <Link to="/boutique" className="hover:text-white/50 transition-colors whitespace-nowrap">Boutique</Link>
+              <Link to="/partner" className="hover:text-white/50 transition-colors whitespace-nowrap">Partenaires</Link>
+              <Link to="/auth" className="hover:text-white/50 transition-colors whitespace-nowrap">Connexion</Link>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-white/20 text-xs">
-            <Link to="/chat" className="hover:text-white/45 transition-colors whitespace-nowrap">{t.footer.links[0]}</Link>
-            <Link to="/auth" className="hover:text-white/45 transition-colors whitespace-nowrap">{t.footer.links[1]}</Link>
-            <Link to="/partner" className="hover:text-white/45 transition-colors whitespace-nowrap">{t.footer.links[2]}</Link>
-            <Link to="/admin" className="hover:text-white/45 transition-colors whitespace-nowrap">{t.footer.links[3]}</Link>
-            <span className="text-white/10 whitespace-nowrap">© 2025</span>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-white/5">
+            <p className="text-white/15 text-[10px]">Données privées · Pseudonyme possible · Hébergé en Europe · © 2026 Baymora</p>
+            <p className="text-white/10 text-[10px]">Propulsé par Claude Opus · L'IA la plus avancée du marché</p>
           </div>
         </div>
       </footer>
