@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, MapPin, Lock, Star, Sparkles, Crown, ExternalLink, Phone, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, MapPin, Lock, Star, Sparkles, Crown, ExternalLink, Phone, Clock, ChevronDown, ChevronUp, Map, X } from "lucide-react";
 
 const gold = { background: "linear-gradient(135deg,#c8a94a 0%,#f5d87a 35%,#e4c057 65%,#f0d070 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" } as const;
 
@@ -8,11 +8,18 @@ const TYPE_EMOJI: Record<string, string> = {
   restaurant: "🍽️", hotel: "🏨", bar: "🍸", spa: "🧖", activity: "🎯", beach: "🏖️", shop: "🛍️", cafe: "☕",
 };
 
+// Photo Unsplash par type de lieu (images réelles HD)
+function getPhotoUrl(name: string, type: string, city: string): string {
+  const query = encodeURIComponent(`${name} ${city} ${type}`);
+  return `https://source.unsplash.com/600x400/?${query}`;
+}
+
 export default function GuidePage() {
   const { slug } = useParams<{ slug: string }>();
   const [guide, setGuide] = useState<any>(null);
   const [error, setError] = useState(false);
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -77,50 +84,94 @@ export default function GuidePage() {
         </div>
       </div>
 
-      {/* Map interactive avec pins */}
-      {mapSrc && (
-        <div className="max-w-3xl mx-auto px-4 mb-6">
-          <div className="rounded-xl overflow-hidden border border-white/10 relative">
-            <img src={mapSrc} alt={`Carte ${guide.city}`} className="w-full h-48 sm:h-56 object-cover" loading="lazy" />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 to-transparent pointer-events-none" />
-            <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm text-secondary text-xs font-bold px-3 py-1 rounded-full">
-              📍 {guide.totalItems} lieux · {guide.city}
+      {/* Bouton "Afficher la carte" (sticky comme Staycation) */}
+      {guide.city && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
+          <button
+            onClick={() => setShowMap(true)}
+            className="flex items-center gap-2 bg-white text-slate-900 font-semibold text-sm px-6 py-3 rounded-full shadow-2xl shadow-black/50 hover:bg-white/90 transition-all"
+          >
+            <Map className="w-4 h-4" /> Afficher la carte
+          </button>
+        </div>
+      )}
+
+      {/* Map plein écran (overlay comme Staycation) */}
+      {showMap && guide.city && (
+        <div className="fixed inset-0 z-50 bg-slate-950">
+          <div className="relative w-full h-full">
+            <iframe
+              src={`https://www.google.com/maps/embed/v1/search?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(guide.items.map((i: any) => i.name).join('|') + ' ' + guide.city)}&zoom=13`}
+              width="100%" height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              className="w-full h-full"
+            />
+            {/* Header avec fermer */}
+            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-slate-950/90 to-transparent p-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-white font-semibold text-sm">{guide.title}</h3>
+                <p className="text-white/50 text-xs">{guide.totalItems} lieux · {guide.city}</p>
+              </div>
+              <button onClick={() => setShowMap(false)} className="bg-white/10 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/20">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Liste des lieux en bas */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-950 to-transparent pt-12 pb-4 px-4">
+              <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+                {guide.items.map((item: any, i: number) => (
+                  <a key={i} href={`https://maps.google.com/?q=${encodeURIComponent(item.name + ' ' + (item.address || guide.city))}`} target="_blank" rel="noopener noreferrer"
+                    className="flex-shrink-0 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-3 w-48 hover:bg-white/20 transition-all">
+                    <p className="text-white font-semibold text-xs truncate">{item.name}</p>
+                    <p className="text-white/50 text-[10px] truncate">{item.address || guide.city}</p>
+                    {item.rating && <p className="text-amber-400 text-[10px] mt-1">⭐ {item.rating}</p>}
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Items — Fiches magazine */}
-      <div className="max-w-3xl mx-auto px-4 py-2 space-y-3">
+      {/* Items — Fiches magazine avec photos */}
+      <div className="max-w-3xl mx-auto px-4 py-2 space-y-4">
         {guide.items.map((item: any, i: number) => {
           const letter = String.fromCharCode(65 + i);
           const isExpanded = expandedItem === i;
+          const photoUrl = item.photo || getPhotoUrl(item.name, item.type || 'place', guide.city || '');
 
           return (
             <div key={i}
-              className={`bg-white/[0.03] border rounded-2xl overflow-hidden transition-all cursor-pointer ${isExpanded ? 'border-secondary/30 bg-secondary/[0.02]' : 'border-white/[0.06] hover:border-white/10'}`}
+              className={`border rounded-2xl overflow-hidden transition-all cursor-pointer ${isExpanded ? 'border-secondary/30' : 'border-white/[0.06] hover:border-white/15'}`}
               onClick={() => setExpandedItem(isExpanded ? null : i)}
             >
-              {/* Header cliquable */}
-              <div className="p-4 flex items-start gap-3">
-                <span className="w-7 h-7 rounded-full bg-secondary text-slate-900 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{letter}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{TYPE_EMOJI[item.type] || "📍"}</span>
-                      <h3 className="font-semibold text-white text-sm">{item.name}</h3>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {item.rating && (
-                        <span className="flex items-center gap-0.5 text-amber-400 text-xs">
-                          <Star className="w-3 h-3 fill-current" />{item.rating}
-                        </span>
-                      )}
-                      {isExpanded ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
-                    </div>
+              {/* Photo + overlay */}
+              <div className="relative h-44 sm:h-52 overflow-hidden">
+                <img src={photoUrl} alt={item.name} className="w-full h-full object-cover" loading="lazy"
+                  onError={(e) => { (e.target as HTMLImageElement).src = `https://source.unsplash.com/600x400/?${encodeURIComponent(item.type || 'travel')}`; }} />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+
+                {/* Badge numéro */}
+                <div className="absolute top-3 left-3">
+                  <span className="w-8 h-8 rounded-full bg-secondary text-slate-900 text-sm font-bold flex items-center justify-center shadow-lg">{letter}</span>
+                </div>
+
+                {/* Rating */}
+                {item.rating && (
+                  <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1">
+                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                    <span className="text-white text-xs font-semibold">{item.rating}</span>
                   </div>
-                  <p className="text-white/40 text-xs mt-1 line-clamp-2">{item.description}</p>
-                  {item.price && <p className="text-secondary/70 text-xs mt-1 font-medium">{item.price}</p>}
+                )}
+
+                {/* Infos sur la photo */}
+                <div className="absolute bottom-3 left-3 right-3">
+                  <h3 className="font-bold text-white text-lg">{item.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    {item.address && <span className="text-white/60 text-xs flex items-center gap-0.5"><MapPin className="w-3 h-3" />{item.address}</span>}
+                    {item.price && <span className="text-secondary text-xs font-semibold">{item.price}</span>}
+                  </div>
                 </div>
               </div>
 
