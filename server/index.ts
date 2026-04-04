@@ -20,6 +20,7 @@ import uploadRouter from "./routes/upload";
 import boutiqueRouter from "./routes/boutique";
 import collectionsRouter from "./routes/collections";
 import offmarketRouter from "./routes/offmarket";
+import creatorRouter from "./routes/creator";
 import googleAuthRouter from "./routes/googleAuth";
 import seoRouter from "./routes/seo";
 import { chatRateLimit, authRateLimit } from "./middleware/rateLimit";
@@ -74,6 +75,7 @@ export function createServer() {
   app.use("/api/boutique", boutiqueRouter);
   app.use("/api/collections", collectionsRouter);
   app.use("/api/offmarket", offmarketRouter);
+  app.use("/api/creator", creatorRouter);
 
   // 404
   app.use("/api/{*path}", (_req, res) => {

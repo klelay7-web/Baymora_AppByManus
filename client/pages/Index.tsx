@@ -633,7 +633,7 @@ function ParcoursSection({ lang }: { lang: 'fr' | 'en' }) {
                   <div className="flex items-center gap-2">
                     {(trip.forkCount || 0) > 0 && <span className="text-white/20 text-[10px]">{trip.forkCount}× utilisé</span>}
                     <span className="text-secondary/60 text-xs font-medium group-hover:text-secondary transition-colors whitespace-nowrap">
-                      Parcours modifiable →
+                      Personnalisable →
                     </span>
                   </div>
                 </div>
@@ -643,7 +643,7 @@ function ParcoursSection({ lang }: { lang: 'fr' | 'en' }) {
         </div>
 
         <p className="text-center text-white/20 text-xs mt-8">
-          {lang === 'fr' ? 'Tous les parcours sont personnalisables par l\'IA selon vos préférences et votre budget.' : 'All itineraries are customizable by AI based on your preferences and budget.'}
+          {lang === 'fr' ? 'Chaque parcours est personnalisable sur mesure selon vos envies et votre budget.' : 'Each itinerary is fully customizable to your preferences and budget.'}
         </p>
       </div>
     </section>
