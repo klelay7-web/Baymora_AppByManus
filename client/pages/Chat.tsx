@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark, X, Mic, MicOff } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark, X, Mic, MicOff, Crown } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT, FREE_CREDITS_LIMIT } from '@/hooks/useAuth';
 import { useVoice } from '@/hooks/useVoice';
@@ -1122,13 +1122,20 @@ export default function Chat() {
         </div>
         <div className="flex items-center gap-2">
           {isAuthenticated && user ? (
-            <Link to="/dashboard">
-              <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1 hover:bg-white/10 transition-colors">
-                <span className="text-secondary text-xs">{circleBadge}</span>
-                <span className="text-white/70 text-xs font-medium">{user.prenom || user.pseudo}</span>
-                {user.mode === 'fantome' && <span className="text-white/30 text-xs">👻</span>}
-              </div>
-            </Link>
+            <>
+              {(user.circle === 'prive' || user.circle === 'fondateur') && (
+                <Link to="/salon" className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 rounded-full px-2.5 py-1 hover:bg-amber-500/20 transition-colors text-amber-300 text-xs">
+                  <Crown className="h-3 w-3" /> Salon
+                </Link>
+              )}
+              <Link to="/dashboard">
+                <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1 hover:bg-white/10 transition-colors">
+                  <span className="text-secondary text-xs">{circleBadge}</span>
+                  <span className="text-white/70 text-xs font-medium">{user.prenom || user.pseudo}</span>
+                  {user.mode === 'fantome' && <span className="text-white/30 text-xs">👻</span>}
+                </div>
+              </Link>
+            </>
           ) : (
             <Link to="/auth?returnTo=/chat">
               <button className="flex items-center gap-1.5 bg-secondary/15 border border-secondary/30 text-secondary text-xs font-medium px-3 py-1.5 rounded-full hover:bg-secondary/25 transition-all">

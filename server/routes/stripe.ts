@@ -1,20 +1,17 @@
 /**
  * STRIPE — Abonnements, packs de crédits & déblocages ponctuels
  *
- * Forfaits mensuels (avec rollover — crédits non utilisés s'additionnent) :
- *   voyageur    →  9.90 €/mois  (100 crédits)
- *   explorateur → 29.00 €/mois  (350 crédits)
- *   prive       → 79.00 €/mois  (1200 crédits)
- *   fondateur   → 199.00 €/mois (4000 crédits)
+ * 3 forfaits mensuels (avec rollover — crédits non utilisés s'additionnent) :
+ *   decouverte →  0.00 €/mois   (15 crédits, gratuit)
+ *   premium    → 14.90 €/mois   (200 crédits)
+ *   prive      → 49.90 €/mois   (illimité, conciergerie VIP)
  *
- * Packs de crédits supplémentaires (one-time) :
- *   pack_50   →  4.90 € (50 crédits)
- *   pack_150  → 12.90 € (150 crédits)
- *   pack_500  → 34.90 € (500 crédits + accès Gold 1 mois)
- *   pack_1000 → 59.90 € (1000 crédits + accès Platinum 1 mois)
+ * Packs de crédits supplémentaires (one-time, adaptés par plan) :
+ *   Premium : 50/150/400 crédits (4.90€ / 12.90€ / 29.90€)
+ *   Privé   : 500/1500/5000 crédits (34.90€ / 89.90€ / 249.90€)
  *
  * Déblocages ponctuels (guest ou abonné, prix volontairement élevés pour pousser vers l'abo) :
- *   unlock_5  →  9.90 € (5 crédits)   ← même prix que Voyageur pour 100 crédits/mois !
+ *   unlock_5  →  9.90 € (5 crédits)   ← vs Premium à 14.90€/mois pour 200 crédits !
  *   unlock_10 → 15.90 € (10 crédits)
  *   unlock_20 → 19.90 € (20 crédits)
  */
@@ -139,11 +136,11 @@ const handleBuyCredits: RequestHandler = async (req, res) => {
 // ─── POST /api/stripe/unlock — Déblocage ponctuel (3 paliers) ───────────────
 //
 // Prix volontairement élevés pour rendre l'abonnement évident :
-//   5 crédits = 9.90€   ← même prix que Voyageur (100 crédits/mois) !
+//   5 crédits = 9.90€   ← vs Premium à 14.90€/mois pour 200 crédits !
 //   10 crédits = 15.90€
 //   20 crédits = 19.90€
 //
-// Le client voit : "Je paie 9.90€ pour 5 crédits, ou 9.90€/mois pour 100 ?"
+// Le client voit : "Je paie 9.90€ pour 5 crédits, ou 14.90€/mois pour 200 ?"
 // → Conversion naturelle vers l'abonnement.
 
 const handleUnlock: RequestHandler = async (req, res) => {

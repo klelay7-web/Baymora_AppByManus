@@ -1114,6 +1114,21 @@ export default function Dashboard() {
           </Link>
         </div>
 
+        {/* ── Quick nav ── */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link to="/collections" className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 hover:bg-white/10 transition-colors text-white/60 hover:text-white/80 text-xs">
+            <Bookmark className="h-3 w-3" /> Collections
+          </Link>
+          <Link to="/boutique" className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 hover:bg-white/10 transition-colors text-white/60 hover:text-white/80 text-xs">
+            <Star className="h-3 w-3" /> Boutique
+          </Link>
+          {(circle === 'prive' || circle === 'fondateur') && (
+            <Link to="/salon" className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1.5 hover:bg-amber-500/20 transition-colors text-amber-300 text-xs">
+              <Crown className="h-3 w-3" /> Salon Privé
+            </Link>
+          )}
+        </div>
+
         {/* ── Stats row ── */}
         <div className="grid grid-cols-3 gap-3">
           {[

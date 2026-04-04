@@ -218,7 +218,7 @@ export function getPacksForPlan(circle: BaymoraCircle): CreditPack[] {
 /**
  * Déblocages ponctuels (guest ou abonné à court de crédits)
  * Prix volontairement élevés pour rendre l'abonnement évident :
- *   5 crédits = 9.90€  vs  Voyageur = 9.90€/mois pour 100 crédits
+ *   5 crédits = 9.90€  vs  Premium = 14.90€/mois pour 200 crédits
  */
 export interface UnlockTier {
   id: string;

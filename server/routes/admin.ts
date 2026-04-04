@@ -1,7 +1,7 @@
 import { Router, RequestHandler } from 'express';
 import { verifyToken } from '../services/auth';
 import { prisma } from '../db';
-import { sendEmail } from '../services/email';
+import { sendEmail, sendBetaInviteEmail } from '../services/email';
 import { generateUserToken } from './users';
 import { PLANS } from '../types';
 import crypto from 'crypto';

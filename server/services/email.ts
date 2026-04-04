@@ -238,3 +238,42 @@ export async function sendBirthdayAlertEmail(
 
   return sendEmail(email, subject, emailTemplate(content));
 }
+
+// ─── Email templates Phase 7 (lancement) ────────────────────────────────────
+
+export async function sendBetaInviteEmail(email: string, prenom?: string, inviteCode?: string): Promise<boolean> {
+  const name = prenom || 'Voyageur';
+  const content = `
+    <h1 style="color:#1a1a2e;font-size:24px;margin-bottom:16px;">Vous êtes invité(e)</h1>
+    <p style="color:#444;font-size:14px;line-height:1.7;">
+      ${name}, vous faites partie des premiers à découvrir <strong>Baymora</strong> — la conciergerie de voyage propulsée par l'IA la plus avancée du marché.
+    </p>
+    <div style="background:#f8f6f0;border:1px solid #e8e4d8;border-radius:12px;padding:20px;margin:24px 0;text-align:center;">
+      <p style="color:#666;font-size:12px;margin:0 0 8px;">Votre accès exclusif</p>
+      <p style="color:#c8a94a;font-size:28px;font-weight:bold;margin:0;letter-spacing:2px;">${inviteCode || 'BETA-VIP'}</p>
+    </div>
+    <a href="https://www.baymora.com/chat" style="display:inline-block;background:#c8a94a;color:#1a1a2e;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:bold;font-size:15px;">
+      Découvrir Baymora
+    </a>
+    <p style="color:#999;font-size:12px;margin-top:20px;">15 échanges gratuits · IA Opus · Aucune carte requise</p>
+  `;
+  return sendEmail(email, `${name}, votre invitation Baymora est arrivée`, emailTemplate(content));
+}
+
+export async function sendPaymentConfirmEmail(email: string, prenom?: string, planName?: string, amount?: string): Promise<boolean> {
+  const name = prenom || 'Membre';
+  const content = `
+    <h1 style="color:#1a1a2e;font-size:24px;margin-bottom:16px;">Paiement confirmé ✓</h1>
+    <p style="color:#444;font-size:14px;line-height:1.7;">
+      ${name}, votre abonnement <strong>Baymora ${planName || 'Premium'}</strong> est actif.
+    </p>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;margin:20px 0;">
+      <p style="color:#166534;font-size:14px;margin:0;"><strong>Montant :</strong> ${amount || '14,90€'}/mois</p>
+      <p style="color:#166534;font-size:14px;margin:4px 0 0;"><strong>Plan :</strong> ${planName || 'Premium'}</p>
+    </div>
+    <a href="https://www.baymora.com/dashboard" style="display:inline-block;background:#c8a94a;color:#1a1a2e;text-decoration:none;padding:12px 32px;border-radius:8px;font-weight:bold;font-size:14px;margin:16px 0;">
+      Mon tableau de bord
+    </a>
+  `;
+  return sendEmail(email, `Paiement confirmé — Baymora ${planName || 'Premium'}`, emailTemplate(content));
+}
