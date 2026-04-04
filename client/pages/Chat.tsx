@@ -258,30 +258,7 @@ function PlacesCarousel({ places }: { places: PlaceItem[] }) {
   );
 }
 
-// ─── Carte géographique embedded ──────────────────────────────────────────────
-
-function MapEmbed({ mapView }: { mapView: MapView }) {
-  const query = encodeURIComponent(mapView.query);
-  const zoom = mapView.zoom || 13;
-  const src = `https://maps.google.com/maps?q=${query}&z=${zoom}&output=embed&hl=fr`;
-  return (
-    <div className="mt-2 rounded-xl overflow-hidden border border-white/10 h-44 relative">
-      <iframe
-        src={src}
-        width="100%"
-        height="100%"
-        style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg) brightness(0.85) contrast(1.1)' }}
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-        title={`Carte ${mapView.query}`}
-        className="w-full h-full"
-      />
-      <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white/70 text-[10px] px-2 py-1 rounded-lg flex items-center gap-1">
-        <MapPin className="h-2.5 w-2.5 text-secondary" /> {mapView.query}
-      </div>
-    </div>
-  );
-}
+// MapEmbed importé depuis ChatCards.tsx (avec pins numérotés)
 
 // ─── Parcours complet ─────────────────────────────────────────────────────────
 
@@ -1292,7 +1269,7 @@ export default function Chat() {
                 {/* Carte géographique */}
                 {msg.role === 'assistant' && parsed && parsed.mapView && (
                   <div className="ml-11 mt-2">
-                    <MapEmbed mapView={parsed.mapView} />
+                    <MapEmbed mapView={parsed.mapView} places={parsed.places} />
                   </div>
                 )}
 

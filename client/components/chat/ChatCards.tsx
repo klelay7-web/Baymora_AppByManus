@@ -147,25 +147,77 @@ export function PlacesCarousel({ places }: { places: PlaceItem[] }) {
   );
 }
 
-// ─── Carte géographique embedded ──────────────────────────────────────────────
+// ─── Carte géographique avec pins numérotés ─────────────────────────────────
 
-export function MapEmbed({ mapView }: { mapView: MapView }) {
-  const query = encodeURIComponent(mapView.query);
+export function MapEmbed({ mapView, places }: { mapView: MapView; places?: PlaceItem[] }) {
   const zoom = mapView.zoom || 13;
-  const src = `https://maps.google.com/maps?q=${query}&z=${zoom}&output=embed&hl=fr`;
+
+  // Construire l'URL avec markers numérotés si on a des lieux
+  let src: string;
+  if (places && places.length > 0) {
+    // Utiliser l'API Static Maps avec markers (plus beau, pins numérotés)
+    const markers = places.map((p, i) => {
+      const label = String.fromCharCode(65 + i); // A, B, C, D...
+      const location = p.address ? `${p.address}, ${p.city}` : `${p.name}, ${p.city}`;
+      return `markers=color:0xc8a94a%7Clabel:${label}%7C${encodeURIComponent(location)}`;
+    }).join('&');
+    src = `https://maps.googleapis.com/maps/api/staticmap?size=600x300&scale=2&maptype=roadmap&style=feature:all|element:geometry|color:0x1a1a2e&style=feature:all|element:labels.text.fill|color:0xcccccc&style=feature:water|color:0x0d1b2a&style=feature:road|color:0x2a2a4e&${markers}&key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8`;
+  } else {
+    // Fallback : iframe embed classique
+    const query = encodeURIComponent(mapView.query);
+    src = `https://maps.google.com/maps?q=${query}&z=${zoom}&output=embed&hl=fr`;
+  }
+
+  const hasPlaces = places && places.length > 0;
+
   return (
-    <div className="mt-2 rounded-xl overflow-hidden border border-white/10 h-44 relative">
-      <iframe
-        src={src}
-        width="100%"
-        height="100%"
-        style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg) brightness(0.85) contrast(1.1)' }}
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-        title={`Carte ${mapView.query}`}
-        className="w-full h-full"
-      />
-      <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white/70 text-[10px] px-2 py-1 rounded-lg flex items-center gap-1">
+    <div className="mt-2 rounded-xl overflow-hidden border border-white/10 relative">
+      {hasPlaces ? (
+        // Static map avec pins (image, plus sexy)
+        <div className="relative">
+          <img
+            src={src}
+            alt={`Carte ${mapView.query}`}
+            className="w-full h-48 object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent pointer-events-none" />
+        </div>
+      ) : (
+        // Iframe embed (fallback)
+        <iframe
+          src={src}
+          width="100%"
+          height="176"
+          style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg) brightness(0.85) contrast(1.1)' }}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          title={`Carte ${mapView.query}`}
+          className="w-full"
+        />
+      )}
+
+      {/* Légende avec pins numérotés */}
+      {hasPlaces && (
+        <div className="bg-slate-900/95 px-3 py-2 space-y-1.5">
+          {places!.map((p, i) => {
+            const letter = String.fromCharCode(65 + i);
+            return (
+              <div key={i} className="flex items-center gap-2 group">
+                <span className="w-5 h-5 rounded-full bg-secondary text-slate-900 text-[10px] font-bold flex items-center justify-center flex-shrink-0">{letter}</span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-white text-xs font-medium truncate block">{p.name}</span>
+                </div>
+                <span className="text-white/30 text-[10px] flex-shrink-0">{p.type}</span>
+                {p.rating && <span className="text-secondary text-[10px] flex-shrink-0">⭐{p.rating}</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Badge localisation */}
+      <div className={`absolute ${hasPlaces ? 'top-2' : 'bottom-2'} right-2 bg-black/60 backdrop-blur-sm text-white/70 text-[10px] px-2 py-1 rounded-lg flex items-center gap-1`}>
         <MapPin className="h-2.5 w-2.5 text-secondary" /> {mapView.query}
       </div>
     </div>
