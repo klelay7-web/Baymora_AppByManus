@@ -25,7 +25,10 @@ export default function GuidePage() {
 
   useEffect(() => {
     if (!slug) return;
-    fetch(`/api/guides/${slug}`)
+    const token = localStorage.getItem('baymora_token');
+    const headers: any = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    fetch(`/api/guides/${slug}`, { headers })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then(setGuide)
       .catch(() => setError(true));

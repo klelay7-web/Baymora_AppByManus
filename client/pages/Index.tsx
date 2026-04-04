@@ -547,7 +547,9 @@ function ParcoursSection({ lang }: { lang: 'fr' | 'en' }) {
               : accessLevel === 'premium' ? 'border-secondary/20 hover:border-secondary/40'
               : 'border-amber-500/20 hover:border-amber-500/30';
 
-            const linkTarget = isBlurred ? '/auth' : `/chat?prompt=${encodeURIComponent(`Je veux faire le même parcours : ${trip.title}`)}`;
+            // Lien vers la page détail du parcours (pas le chat)
+            const slug = trip.seoSlug || trip.shareCode || trip.id;
+            const linkTarget = isBlurred ? '/auth' : `/parcours/${slug}`;
 
             return (
               <Link
