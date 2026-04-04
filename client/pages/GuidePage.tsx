@@ -136,11 +136,10 @@ export default function GuidePage() {
                       )}
                       <div className="flex flex-wrap gap-2">
                         {item.address && (
-                          <a href={`https://maps.google.com/?q=${encodeURIComponent(item.address + ' ' + (guide.city || ''))}`}
-                            target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                          <button onClick={e => { e.stopPropagation(); setShowMapMobile(true); }}
                             className="flex items-center gap-1 text-white/40 hover:text-secondary text-xs transition-colors">
                             <MapPin className="w-3 h-3" /> Voir sur la carte
-                          </a>
+                          </button>
                         )}
                         {item.bookingUrl && (
                           <a href={item.bookingUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
@@ -215,10 +214,12 @@ export default function GuidePage() {
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-950 pt-12 pb-4 px-4">
               <div className="flex gap-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
                 {guide.items.map((item: any, i: number) => (
-                  <div key={i} className="flex-shrink-0 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-3 w-44">
+                  <button key={i} onClick={() => { setShowMapMobile(false); setExpandedItem(i); }}
+                    className="flex-shrink-0 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-3 w-44 text-left hover:bg-white/20 transition-all">
                     <p className="text-white font-semibold text-xs truncate">{item.name}</p>
                     <p className="text-white/50 text-[10px]">{item.price}</p>
-                  </div>
+                    {item.rating && <p className="text-amber-400 text-[10px] mt-0.5">⭐ {item.rating}</p>}
+                  </button>
                 ))}
               </div>
             </div>
