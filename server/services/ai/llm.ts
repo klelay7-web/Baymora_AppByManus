@@ -19,6 +19,7 @@ import type { LLMMessage as PersonaLLMMessage } from './personas';
 import { getCachedApprovedPartners } from '../../routes/partners';
 import { getClubTier } from '../../routes/club';
 import { buildTemporalContext } from '../calendar-events';
+import { orchestrate, formatBriefingForLLM } from './orchestrator';
 
 // ─── Modèles disponibles ──────────────────────────────────────────────────────
 
@@ -796,121 +797,21 @@ export async function callLLM(
     console.error('[LLM] Erreur chargement partenaires:', e);
   }
 
-  // ── Atlas : fiches curatées Baymora (venues + city guide + parcours) ─────
-  let atlasContext = '';
+  // ── ORCHESTRATEUR MULTI-AGENTS ──────────────────────────────────────────
+  // Décide quels agents appeler (Flash/Explore/Excellence),
+  // les lance en parallèle, et retourne un briefing structuré.
+  let agentBriefingContext = '';
   try {
-    // Extraire la ville/destination depuis la conversation
-    const allUserText = messages.filter(m => m.role === 'user').map(m => m.content).join(' ');
-    const cityMatch = allUserText.match(/(?:à|en|pour|vers|de)\s+([A-ZÀ-Ÿ][a-zà-ÿA-ZÀ-Ÿ\s-]{2,25})/);
-    const detectedCity = cityMatch?.[1]?.trim() || userRecord?.preferences?.mentionedDestinations?.[0];
-
-    if (detectedCity) {
-      const { prisma: db } = await import('../../db');
-
-      const [atlasVenues, cityGuide, curatedRoutes] = await Promise.all([
-        db.atlasVenue.findMany({
-          where: { city: { contains: detectedCity, mode: 'insensitive' }, status: 'published' },
-          orderBy: [{ testedByBaymora: 'desc' }, { rating: 'desc' }],
-          take: 10,
-        }),
-        db.atlasCityGuide.findFirst({
-          where: { city: { contains: detectedCity, mode: 'insensitive' }, status: 'published' },
-        }),
-        db.atlasCuratedRoute.findMany({
-          where: { city: { contains: detectedCity, mode: 'insensitive' }, status: 'published' },
-          take: 5,
-        }),
-      ]);
-
-      const lines: string[] = [];
-
-      if (cityGuide) {
-        lines.push(`## 🏙️ Guide Baymora — ${cityGuide.city}`);
-        if (cityGuide.description) lines.push(cityGuide.description);
-        if (cityGuide.secrets) lines.push(`\n**Secrets d'initié :** ${cityGuide.secrets}`);
-        if (cityGuide.localTips) lines.push(`**Tips locaux :** ${cityGuide.localTips}`);
-        if (cityGuide.vipAccess) lines.push(`**Accès VIP :** ${cityGuide.vipAccess}`);
-        if (cityGuide.transitTips) lines.push(`**Transport :** ${cityGuide.transitTips}`);
-        if (cityGuide.dangerZones) lines.push(`**Zones à éviter :** ${cityGuide.dangerZones}`);
-        lines.push('');
-      }
-
-      if (atlasVenues.length > 0) {
-        lines.push(`## 📍 Fiches Baymora — ${detectedCity} (${atlasVenues.length} établissements vérifiés)`);
-        lines.push('Ces établissements ont été curatés et vérifiés par Baymora. **PRIORISE ces fiches** dans tes recommandations.');
-        lines.push('');
-        for (const v of atlasVenues) {
-          const badge = v.testedByBaymora ? '✅ Testé Baymora' : '📋 Fiche curatée';
-          lines.push(`**${badge} — ${v.name}** (${v.type})`);
-          if (v.description) lines.push(`  ${v.description}`);
-          if (v.insiderTips) lines.push(`  💡 *Insider :* ${v.insiderTips}`);
-          if (v.ambiance) lines.push(`  Ambiance : ${v.ambiance}`);
-          if (v.priceFrom) lines.push(`  À partir de ${v.priceFrom}${v.currency || '€'}`);
-          if (v.rating) lines.push(`  ⭐ ${v.rating}/5`);
-          if (v.address) lines.push(`  📍 ${v.address}`);
-          if (v.phone) lines.push(`  📞 ${v.phone}`);
-          if (v.affiliateUrl) lines.push(`  🔗 Lien : ${v.affiliateUrl}`);
-          const tags = v.tags as string[];
-          if (tags && tags.length > 0) lines.push(`  Tags : ${tags.join(', ')}`);
-          if (v.seasonalNotes) lines.push(`  📅 ${v.seasonalNotes}`);
-          lines.push('');
-        }
-      }
-
-      if (curatedRoutes.length > 0) {
-        lines.push(`## 🗺️ Parcours Baymora — ${detectedCity}`);
-        for (const r of curatedRoutes) {
-          lines.push(`**${r.name}** (${r.theme}) — ${r.duration || 'durée variable'} · Budget ${r.budgetLevel}/4`);
-          if (r.description) lines.push(`  ${r.description}`);
-          const stops = r.stops as any[];
-          if (stops && stops.length > 0) {
-            lines.push(`  ${stops.length} étapes : ${stops.map((s: any) => s.notes || `Étape ${s.order}`).join(' → ')}`);
-          }
-          if (r.totalEstimatedCost) lines.push(`  💰 ~${r.totalEstimatedCost}${r.currency || '€'}`);
-          lines.push('');
-        }
-      }
-
-      if (lines.length > 0) {
-        atlasContext = lines.join('\n');
-        console.log(`[LLM] Atlas injecté: ${atlasVenues.length} venues, ${cityGuide ? 1 : 0} guide, ${curatedRoutes.length} parcours pour ${detectedCity}`);
-      }
-    }
+    const briefing = await orchestrate({
+      messages,
+      userId,
+      userRecord,
+      lastMessage,
+    });
+    agentBriefingContext = formatBriefingForLLM(briefing);
+    console.log(`[LLM] Orchestrateur: ${briefing.scenario} | city: ${briefing.detectedCity || 'N/A'} | agents: ${briefing.atlasVenues.length} venues, ${briefing.scoutResults ? 'scout' : '-'}, ${briefing.offMarketItems.length} offmarket`);
   } catch (e) {
-    console.error('[LLM] Erreur chargement Atlas:', e);
-  }
-
-  // ── Boutique : produits affiliés si cadeau/anniversaire détecté ─────────
-  let boutiqueContext = '';
-  if (/cadeau|offrir|anniversaire|anniv|fleurs|cigare|whisky|montre|parfum|bijou|surprise pour|idée.*pour/i.test(lastMessage)) {
-    try {
-      const { prisma: db } = await import('../../db');
-      const boutiqueItems = await db.boutiqueItem.findMany({
-        where: { status: 'published' },
-        orderBy: [{ featured: 'desc' }, { priceEur: 'asc' }],
-        take: 8,
-      });
-      if (boutiqueItems.length > 0) {
-        const lines = [
-          '## 🎁 Boutique Baymora — Produits cadeaux disponibles',
-          'Quand le client cherche un cadeau, propose ces produits EN PRIORITÉ (Baymora gagne une commission).',
-          'Inclus le lien d\'achat dans ta réponse.',
-          '',
-        ];
-        for (const item of boutiqueItems) {
-          lines.push(`**${item.name}** (${item.category})${item.brand ? ` · ${item.brand}` : ''}`);
-          lines.push(`  ${item.priceEur}€${item.deliveryInfo ? ` · ${item.deliveryInfo}` : ''}`);
-          if (item.description) lines.push(`  ${item.description}`);
-          if (item.giftSuggestion) lines.push(`  💡 ${item.giftSuggestion}`);
-          if (item.affiliateUrl) lines.push(`  🔗 ${item.affiliateUrl}`);
-          lines.push('');
-        }
-        boutiqueContext = lines.join('\n');
-        console.log(`[LLM] Boutique injectée: ${boutiqueItems.length} produits (cadeau détecté)`);
-      }
-    } catch (e) {
-      console.error('[LLM] Erreur boutique:', e);
-    }
+    console.error('[LLM] Erreur orchestrateur:', e);
   }
 
   try {
@@ -926,8 +827,8 @@ export async function callLLM(
       systemPrompt = `${contextParts.join('\n\n')}\n\n---\n\n${systemPrompt}`;
       console.log(`[LLM] Contextes injectés: ${contextParts.map(c => c.split('\n')[0]).join(' | ')}`);
     }
-    // Temporal + Atlas + Boutique + Persona + partenaires + conversion hint appendés en fin de system prompt
-    systemPrompt = `${systemPrompt}\n\n${temporalCtx.dateTimeBlock}${atlasContext ? '\n\n' + atlasContext : ''}${boutiqueContext ? '\n\n' + boutiqueContext : ''}\n\n${personaContext}${partnerContext ? '\n\n' + partnerContext : ''}${conversionHint}`;
+    // Temporal + Agent Briefing + Persona + partenaires + conversion hint
+    systemPrompt = `${systemPrompt}\n\n${temporalCtx.dateTimeBlock}${agentBriefingContext ? '\n\n' + agentBriefingContext : ''}\n\n${personaContext}${partnerContext ? '\n\n' + partnerContext : ''}${conversionHint}`;
 
     // Opus: réponses longues (plans complets). Sonnet: réponses courtes (conversation).
     const maxTokens = modelKey === 'opus' ? 1800 : 800;

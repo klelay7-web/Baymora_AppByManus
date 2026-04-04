@@ -651,3 +651,77 @@ model BoutiqueItem {
   @@index([status, featured])
   @@map("boutique_items")
 }
+
+// ─── Multi-Agent Pipeline — Résultats et tâches des agents IA ───────────────
+
+model AgentResult {
+  id          String   @id @default(uuid())
+  agentType   String   // scout|veille|data|plume|gardien|booking|affiliate|offmarket
+  query       String   @db.Text
+  queryHash   String   // hash de la requête pour cache lookup rapide
+  results     Json     @default("{}")
+  confidence  Float    @default(0.8)
+  source      String?  // manus|perplexity|atlas|internal
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([queryHash, agentType])
+  @@index([agentType, createdAt])
+  @@index([expiresAt])
+  @@map("agent_results")
+}
+
+model AgentTask {
+  id             String    @id @default(uuid())
+  type           String    // scout_search|veille_trends|data_analysis|plume_content|gardien_check|booking_reserve|affiliate_scan|offmarket_discover
+  status         String    @default("pending") // pending|running|completed|failed
+  priority       Int       @default(5) // 1=urgent 10=background
+  input          Json      @default("{}")
+  output         Json?
+  agentProfile   String?   // manus-1.6-lite|manus-1.6|claude-opus|claude-haiku|perplexity
+  triggeredBy    String?   // userId ou "cron" ou "orchestrator"
+  startedAt      DateTime?
+  completedAt    DateTime?
+  durationMs     Int?
+  creditsUsed    Float?
+  error          String?   @db.Text
+  createdAt      DateTime  @default(now())
+
+  @@index([status, priority])
+  @@index([type, status])
+  @@index([triggeredBy, createdAt])
+  @@map("agent_tasks")
+}
+
+// ─── Off-Market — Pépites secrètes, lieux cachés, produits rares ────────────
+
+model OffMarketItem {
+  id            String   @id @default(uuid())
+  name          String
+  type          String   // lieu|produit|experience|service|acces|evenement
+  city          String?
+  country       String   @default("FR")
+  description   String?  @db.Text
+  whySpecial    String?  @db.Text  // ce qui le rend unique/secret
+  howToAccess   String?  @db.Text  // comment y accéder (mot de passe, contact, etc.)
+  priceRange    String?            // "500-2000€" ou "Sur demande"
+  photos        Json     @default("[]")
+  tags          Json     @default("[]")
+  source        String?            // comment on l'a trouvé
+  verifiedBy    String?            // qui l'a vérifié
+  verifiedAt    DateTime?
+  minPlan       String   @default("prive") // prive = inclus, premium = déblocable
+  pointsCost    Int?               // coût en points pour y accéder (premium)
+  affiliateUrl  String?
+  commissionPercent Float?
+
+  status        String   @default("draft")
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([type, status])
+  @@index([city, status])
+  @@index([country, status])
+  @@map("offmarket_items")
+}
