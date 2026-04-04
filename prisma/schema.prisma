@@ -796,6 +796,50 @@ model OffMarketItem {
   @@map("offmarket_items")
 }
 
+// ─── Guides SEO — Listes curatées ("Top 10 restos Paris") ───────────────────
+
+model SeoGuide {
+  id            String   @id @default(uuid())
+  slug          String   @unique                    // top-10-restaurants-paris
+  title         String                              // "Les 10 meilleurs restaurants à tester à Paris"
+  subtitle      String?                             // "Sélection Baymora — testés et approuvés"
+  city          String?
+  country       String   @default("FR")
+  category      String                              // restaurants|hotels|activites|bars|spas|parcours|bons-plans
+  coverEmoji    String?  @default("🍽️")
+  coverPhoto    String?                             // URL photo de couverture
+  description   String?  @db.Text                   // intro SEO (visible publiquement)
+  items         Json     @default("[]")             // [{name, type, address, description, insiderTip, price, rating, photo, bookingUrl, baymoraPrice?, discount?}]
+  itemCount     Int      @default(0)
+
+  // ─── Gating (qui peut voir quoi) ──────────────────────────────────────────
+  previewCount  Int      @default(3)                // nombre d'items visibles sans compte
+  freeAccess    Boolean  @default(false)            // gratuit pour les inscrits ?
+  unlockPrice   Int?                                // prix en cents pour débloquer (ex: 490 = 4.90€)
+  unlockPoints  Int?                                // prix en points Club
+  minPlan       String   @default("premium")        // plan minimum pour accès inclus
+
+  // ─── Stats ────────────────────────────────────────────────────────────────
+  viewCount     Int      @default(0)
+  unlockCount   Int      @default(0)
+  shareCount    Int      @default(0)
+
+  // ─── SEO ──────────────────────────────────────────────────────────────────
+  metaTitle     String?
+  metaDescription String? @db.Text
+  tags          Json     @default("[]")
+
+  status        String   @default("draft")
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([slug])
+  @@index([city, category, status])
+  @@index([status])
+  @@map("seo_guides")
+}
+
 // ─── Notifications In-App ────────────────────────────────────────────────────
 
 model Notification {

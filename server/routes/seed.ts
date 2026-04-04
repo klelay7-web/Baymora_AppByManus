@@ -226,6 +226,70 @@ router.post('/', requireSecret, async (req, res) => {
       results.venues = { created: created.length, details: created };
     }
 
+    // ── Seed SEO guides ────────────────────────────────────────────────────
+    if (action === 'guides' || action === 'all') {
+      const SEED_GUIDES = [
+        {
+          slug: 'top-10-restaurants-paris', title: 'Les 10 meilleurs restaurants à Paris', subtitle: 'Sélection Baymora — testés et approuvés',
+          city: 'Paris', country: 'FR', category: 'restaurants', coverEmoji: '🍽️', previewCount: 3, unlockPrice: 490, unlockPoints: 500, minPlan: 'premium',
+          metaTitle: 'Top 10 restaurants Paris 2026 — Sélection Baymora', metaDescription: 'Découvrez les 10 meilleurs restaurants de Paris sélectionnés par les experts Baymora. Étoilés, bistrots, tables cachées.',
+          description: 'De la table étoilée au bistrot confidentiel, voici notre sélection des 10 restaurants incontournables de Paris. Chaque adresse a été testée et approuvée par l\'équipe Baymora.',
+          tags: ['Paris', 'restaurants', 'gastronomie', 'étoilé', 'bistrot'],
+          items: [
+            { name: 'Le Cinq', type: 'restaurant', address: '31 Avenue George V', description: '3 étoiles au Four Seasons. Cuisine française sublimée par le chef Christian Le Squer.', insiderTip: 'Menu déjeuner à 145€ — même qualité que le soir à 350€.', price: '145-350€/pers', rating: 4.9 },
+            { name: 'Septime', type: 'restaurant', address: '80 Rue de Charonne', description: 'Le temple du néo-bistrot parisien. Menu unique, produits exceptionnels.', insiderTip: 'Réservation en ligne exactement 3 semaines avant à midi.', price: '95€ menu', rating: 4.7 },
+            { name: 'Clover Grill', type: 'restaurant', address: '6 Rue Bailleul', description: 'Le grill de Jean-François Piège. Viandes d\'exception, ambiance décontractée.', insiderTip: 'La côte de bœuf pour 2 est le plat signature. Arrivez à 19h30.', price: '60-90€/pers', rating: 4.6 },
+            { name: 'L\'Ami Jean', type: 'restaurant', address: '27 Rue Malar', description: 'Cuisine basque généreuse dans le 7e. Le riz au lait est légendaire.', insiderTip: 'Venez affamé. Les portions sont énormes.', price: '45-70€/pers', rating: 4.5, baymoraPrice: '40€/pers' },
+            { name: 'Pink Mamma', type: 'restaurant', address: '20bis Rue de Douai', description: 'La trattoria la plus instagrammable de Paris. 4 étages de folie italienne.', insiderTip: 'File d\'attente toujours, mais le 4e étage est le plus beau.', price: '25-40€/pers', rating: 4.3 },
+            { name: 'Le Baratin', type: 'restaurant', address: '3 Rue Jouye-Rouve', description: 'Bistrot nature à Belleville. La chef Raquel Carena est une institution.', insiderTip: 'Pas de réservation. Venez à 19h tapantes.', price: '35-55€/pers', rating: 4.5 },
+            { name: 'Frenchie', type: 'restaurant', address: '5-6 Rue du Nil', description: 'Gregory Marchand a créé un empire : resto, bar à vins, take-away.', insiderTip: 'Le bar à vins en face accepte les sans-résa.', price: '78€ menu', rating: 4.6 },
+            { name: 'Chez Janou', type: 'restaurant', address: '2 Rue Roger Verlomme', description: 'La plus grande carte de pastis de Paris + mousse au chocolat légendaire.', insiderTip: 'La mousse au chocolat est servie dans un saladier. Commandez-la.', price: '30-45€/pers', rating: 4.4 },
+            { name: 'Le Comptoir du Panthéon', type: 'restaurant', address: '5 Rue Soufflot', description: 'Brasserie parisienne classique face au Panthéon. Terrasse exceptionnelle.', insiderTip: 'La terrasse été avec vue Panthéon = spot parfait.', price: '25-50€/pers', rating: 4.3 },
+            { name: 'Le Grand Véfour', type: 'restaurant', address: '17 Rue du Beaujolais', description: '2 étoiles dans le Palais-Royal. L\'un des plus beaux décors de Paris (1784).', insiderTip: 'Demandez la table de Napoléon. Menu déjeuner à 115€.', price: '115-310€/pers', rating: 4.8 },
+          ],
+        },
+        {
+          slug: 'best-beach-clubs-saint-tropez', title: 'Les meilleurs beach clubs de Saint-Tropez', subtitle: 'Été 2026 — La sélection Baymora',
+          city: 'Saint-Tropez', country: 'FR', category: 'bars', coverEmoji: '🏖️', previewCount: 2, unlockPrice: 490, unlockPoints: 500, minPlan: 'premium',
+          metaTitle: 'Meilleurs beach clubs Saint-Tropez 2026 — Sélection Baymora', metaDescription: 'Les beach clubs incontournables de Saint-Tropez pour l\'été 2026. Club 55, Nikki Beach, Bagatelle et plus.',
+          description: 'De Pampelonne à la Ponche, voici les beach clubs qui comptent à Saint-Tropez cet été.',
+          tags: ['Saint-Tropez', 'beach club', 'été', 'plage', 'Côte d\'Azur'],
+          items: [
+            { name: 'Club 55', type: 'beach', address: 'Plage de Pampelonne', description: 'L\'original depuis 1955. Ambiance décontractée-chic, salade niçoise mythique.', insiderTip: 'Arrivez avant 12h. Réservez 1 semaine avant en juillet-août.', price: '80-150€/pers', rating: 4.5 },
+            { name: 'Nikki Beach', type: 'beach', address: 'Plage de Pampelonne', description: 'Le plus international. DJ, champagne, et beautiful people.', insiderTip: 'Le brunch du dimanche est le meilleur de la côte.', price: '100-250€/pers', rating: 4.3 },
+            { name: 'Bagatelle', type: 'beach', address: 'Plage de Pampelonne', description: 'Déjeuner qui se transforme en fête. Ambiance Ibiza sur la Riviera.', insiderTip: 'Après 14h ça devient un dancefloor.', price: '80-200€/pers', rating: 4.2 },
+            { name: 'Indie Beach', type: 'beach', address: 'Plage de Pampelonne', description: 'Le plus cool et décontracté. Musique live, cocktails artisanaux.', insiderTip: 'Le meilleur spot pour le coucher de soleil.', price: '50-100€/pers', rating: 4.4 },
+            { name: 'La Réserve à la Plage', type: 'beach', address: 'Plage de Pampelonne', description: 'L\'extension plage du mythique hôtel La Réserve. Ultra-raffiné.', insiderTip: 'Le plus exclusif. Service palace sur le sable.', price: '150-300€/pers', rating: 4.7 },
+          ],
+        },
+        {
+          slug: 'top-rooftops-new-york', title: 'Top 8 rooftops à New York', subtitle: 'Les plus belles vues de Manhattan',
+          city: 'New York', country: 'US', category: 'bars', coverEmoji: '🗽', previewCount: 3, unlockPrice: 490, unlockPoints: 500, minPlan: 'premium',
+          metaTitle: 'Meilleurs rooftops New York 2026 — Sélection Baymora', metaDescription: 'Les 8 rooftops avec les plus belles vues de NYC. Cocktails, skyline, et spots secrets.',
+          description: 'Manhattan vu d\'en haut. Notre sélection des rooftops qui valent le détour — du classique au secret.',
+          tags: ['New York', 'rooftop', 'cocktails', 'vue', 'Manhattan'],
+          items: [
+            { name: 'The Edge Hudson Yards', type: 'bar', address: '30 Hudson Yards', description: 'La plus haute terrasse extérieure de l\'hémisphère ouest. Vue 360° époustouflante.', insiderTip: 'Venez au coucher du soleil. Le bar est moins cher que l\'entrée observatoire.', price: '20-40$/cocktail', rating: 4.6 },
+            { name: 'Westlight', type: 'bar', address: '111 N 12th St, Brooklyn', description: 'Au sommet du William Vale Hotel. Vue panoramique sur Manhattan depuis Brooklyn.', insiderTip: 'Mardi-mercredi = pas de queue. La vue est la même.', price: '18-25$/cocktail', rating: 4.5 },
+            { name: 'The Roof at Public', type: 'bar', address: '215 Chrystie St', description: 'Caché au-dessus du Public Hotel d\'Ian Schrager. Ambiance exclusive.', insiderTip: 'Pas d\'enseigne. Dites au concierge que vous montez au Roof.', price: '22-35$/cocktail', rating: 4.4 },
+            { name: 'Le Bain at The Standard', type: 'bar', address: '848 Washington St', description: 'Pool party + DJ + vue sur l\'Hudson. L\'adresse nightlife iconique.', insiderTip: 'Venez avant 23h sinon file d\'attente massive. Dress code strict.', price: '20-30$/cocktail', rating: 4.3 },
+            { name: '230 Fifth', type: 'bar', address: '230 5th Ave', description: 'Vue directe sur l\'Empire State Building. Le plus grand rooftop de NYC.', insiderTip: 'En hiver ils fournissent des peignoirs. Photos incroyables.', price: '15-25$/cocktail', rating: 4.2 },
+          ],
+        },
+      ];
+
+      const guidesCreated: string[] = [];
+      for (const g of SEED_GUIDES) {
+        const exists = await prisma.seoGuide.findUnique({ where: { slug: g.slug } });
+        if (exists) { guidesCreated.push(`${g.slug} (existait)`); continue; }
+        await prisma.seoGuide.create({
+          data: { ...g, itemCount: g.items.length, status: 'published', createdBy: 'seed', viewCount: Math.floor(Math.random() * 800) + 100, unlockCount: Math.floor(Math.random() * 50) },
+        });
+        guidesCreated.push(g.slug);
+      }
+      results.guides = { created: guidesCreated.length, details: guidesCreated };
+    }
+
     console.log('[SEED] Données créées:', JSON.stringify(results, null, 2));
     res.json({ success: true, results });
   } catch (error) {

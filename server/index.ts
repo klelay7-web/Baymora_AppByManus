@@ -22,6 +22,7 @@ import collectionsRouter from "./routes/collections";
 import offmarketRouter from "./routes/offmarket";
 import creatorRouter from "./routes/creator";
 import seedRouter from "./routes/seed";
+import seoGuidesRouter from "./routes/seoGuides";
 import notificationsInboxRouter from "./routes/notificationsInbox";
 import googleAuthRouter from "./routes/googleAuth";
 import seoRouter from "./routes/seo";
@@ -79,6 +80,7 @@ export function createServer() {
   app.use("/api/offmarket", offmarketRouter);
   app.use("/api/creator", creatorRouter);
   app.use("/api/admin/seed", seedRouter);
+  app.use("/api/guides", seoGuidesRouter);
   app.use("/api/inbox", notificationsInboxRouter);
 
   // 404

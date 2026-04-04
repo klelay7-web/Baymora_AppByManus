@@ -410,6 +410,9 @@ export default function Index() {
         </div>
       </section>
 
+      {/* ── Guides & Sélections (SEO) ── */}
+      <GuidesSection lang={lang} />
+
       {/* ── Parcours populaires (SEO + conversion) ── */}
       <ParcoursSection lang={lang} />
 
@@ -537,6 +540,80 @@ export default function Index() {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PARCOURS POPULAIRES — Section landing avec trips publics
+// ═══════════════════════════════════════════════════════════════════════════════
+// GuidesSection — Guides & Sélections curatées
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const GUIDE_CAT: Record<string, { label: string; emoji: string }> = {
+  restaurants: { label: "Restaurants", emoji: "🍽️" }, hotels: { label: "Hôtels", emoji: "🏨" },
+  activites: { label: "Activités", emoji: "🎯" }, bars: { label: "Bars", emoji: "🍸" },
+  spas: { label: "Spas", emoji: "🧖" }, parcours: { label: "Parcours", emoji: "🗺️" },
+  "bons-plans": { label: "Bons plans", emoji: "💎" },
+};
+
+function GuidesSection({ lang }: { lang: 'fr' | 'en' }) {
+  const [guides, setGuides] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/guides?limit=6')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setGuides(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || guides.length === 0) return null;
+
+  return (
+    <section className="py-20 px-4 border-t border-white/5">
+      <div className="max-w-5xl mx-auto">
+        <h2 className="text-3xl font-bold text-center mb-2" style={{
+          background: "linear-gradient(135deg,#c8a94a 0%,#f5d87a 35%,#e4c057 65%,#f0d070 100%)",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+        }}>
+          {lang === 'fr' ? 'Guides & Sélections' : 'Curated Guides'}
+        </h2>
+        <p className="text-white/30 text-sm text-center mb-10">
+          {lang === 'fr' ? 'Nos meilleures adresses, testées et approuvées.' : 'Our best addresses, tested and approved.'}
+        </p>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {guides.map((g: any) => {
+            const cat = GUIDE_CAT[g.category] || { label: g.category, emoji: "📌" };
+            const visible = g.previewCount || 3;
+            const total = g.itemCount || 0;
+            return (
+              <Link
+                key={g.slug}
+                to={`/guide/${g.slug}`}
+                className="group bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 hover:border-white/12 hover:bg-white/[0.05] transition-all"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-2xl">{g.coverEmoji || cat.emoji}</span>
+                  <span className="bg-white/5 border border-white/10 text-[10px] text-white/50 px-2 py-0.5 rounded-full">{cat.label}</span>
+                </div>
+                <h3 className="font-semibold text-white text-sm mb-1 group-hover:text-amber-200 transition-colors line-clamp-2">{g.title}</h3>
+                {g.city && (
+                  <p className="flex items-center gap-1 text-white/30 text-xs mb-3">
+                    <MapPin className="w-3 h-3" />{g.city}
+                  </p>
+                )}
+                <div className="flex items-center justify-between mt-auto">
+                  <span className="text-[11px] text-white/25">{visible} visibles sur {total}</span>
+                  <span className="text-xs text-secondary/70 group-hover:text-secondary transition-colors">
+                    Voir la sélection →
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const BUDGET_TIERS = [
