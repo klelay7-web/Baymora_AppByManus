@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark, X, Mic, MicOff, Crown } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Trash2, User, MapPin, ChevronRight, Star, ExternalLink, Mail, Download, Bookmark, X, Mic, MicOff, Crown, Share2, Copy, Check } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import { useAuth, getGuestMessageCount, incrementGuestMessageCount, FREE_MESSAGES_LIMIT, FREE_CREDITS_LIMIT } from '@/hooks/useAuth';
 import { useVoice } from '@/hooks/useVoice';
@@ -856,8 +856,14 @@ export default function Chat() {
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
   const [allPlaces, setAllPlaces] = useState<PlaceItem[]>([]);
   const [showPlanMobile, setShowPlanMobile] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [shareType, setShareType] = useState<'assistant' | 'concierge' | 'proche' | null>(null);
+  const [shareSending, setShareSending] = useState(false);
+  const [shareMsg, setShareMsg] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
 
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { messages, isLoading, error, conversationId, startChat, sendMessage, deleteConversation, credits, creditsExhausted, upgradeOptions, resetCreditsGate } = useChat();
@@ -991,6 +997,38 @@ export default function Chat() {
   const hasPlan = tripPlan && (tripPlan.destination || tripPlan.hotels?.length || tripPlan.flights?.length || tripPlan.activities?.length || tripPlan.restaurants?.length);
   const hasResults = hasPlan || allPlaces.length > 0;
   const mapQuery = tripPlan?.destination || allPlaces[0]?.city || allPlaces[0]?.name;
+
+  // ── Share / Partager parcours ─────────────────────────────────────────────
+  const handleShareSend = async () => {
+    if (!shareEmail || !tripPlan || !shareType) return;
+    setShareSending(true);
+    setShareMsg('');
+    try {
+      const res = await fetch('/api/chat/export-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: shareEmail, plan: tripPlan, type: shareType }),
+      });
+      if (res.ok) {
+        setShareMsg('✓ Envoyé !');
+        setTimeout(() => { setShareMsg(''); setShareType(null); setShareEmail(''); }, 3000);
+      } else {
+        setShareMsg('✗ Erreur envoi');
+        setTimeout(() => setShareMsg(''), 4000);
+      }
+    } catch {
+      setShareMsg('✗ Erreur réseau');
+      setTimeout(() => setShareMsg(''), 4000);
+    }
+    setShareSending(false);
+  };
+
+  const handleShareCopyLink = async () => {
+    const url = `${window.location.origin}/chat${conversationId ? `?id=${conversationId}` : ''}`;
+    await navigator.clipboard.writeText(url);
+    setShareMsg('✓ Lien copié !');
+    setTimeout(() => { setShareMsg(''); setShowShareMenu(false); }, 2000);
+  };
 
   return (
     <div className="flex h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden max-w-full">
@@ -1395,6 +1433,90 @@ export default function Chat() {
           >
             <Send className="h-4 w-4" />
           </Button>
+          {hasPlan && (
+            <div className="relative" ref={shareMenuRef}>
+              <Button
+                onClick={() => { setShowShareMenu(!showShareMenu); setShareType(null); setShareMsg(''); }}
+                size="sm"
+                variant="ghost"
+                className="text-white/40 hover:text-secondary border border-slate-600 px-3"
+                title="Partager le parcours"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+
+              {showShareMenu && (
+                <div className="absolute bottom-full right-0 mb-2 w-72 bg-slate-800 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between">
+                    <span className="text-white/70 text-xs font-semibold uppercase tracking-wider">Partager le parcours</span>
+                    <button onClick={() => { setShowShareMenu(false); setShareType(null); }} className="text-white/30 hover:text-white/60"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+
+                  {shareMsg && (
+                    <div className={`text-xs px-3 py-2 ${shareMsg.startsWith('✓') ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {shareMsg}
+                    </div>
+                  )}
+
+                  {!shareType ? (
+                    <div className="p-1.5 space-y-0.5">
+                      {[
+                        { key: 'assistant' as const, icon: '👤', label: 'Envoyer à mon assistant(e)' },
+                        { key: 'concierge' as const, icon: '🏨', label: 'Envoyer à ma conciergerie' },
+                        { key: 'proche' as const, icon: '👥', label: 'Envoyer à un proche' },
+                      ].map(opt => (
+                        <button
+                          key={opt.key}
+                          onClick={() => setShareType(opt.key)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors text-left"
+                        >
+                          <span>{opt.icon}</span> {opt.label}
+                        </button>
+                      ))}
+                      <button
+                        onClick={handleShareCopyLink}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors text-left"
+                      >
+                        <span>📋</span> Copier le lien
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-3 space-y-2">
+                      <p className="text-xs text-white/50">
+                        {shareType === 'assistant' && '📧 Envoyer à votre assistant(e)'}
+                        {shareType === 'concierge' && '📧 Envoyer à votre conciergerie'}
+                        {shareType === 'proche' && '📧 Envoyer à un proche'}
+                      </p>
+                      <input
+                        type="email"
+                        placeholder="Adresse email"
+                        value={shareEmail}
+                        onChange={e => setShareEmail(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleShareSend()}
+                        autoFocus
+                        className="w-full h-9 rounded-lg border border-slate-600 bg-slate-900 px-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-secondary/60"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setShareType(null); setShareEmail(''); }}
+                          className="flex-1 h-8 rounded-lg text-xs text-white/50 hover:text-white/80 border border-white/10 transition-colors"
+                        >
+                          Retour
+                        </button>
+                        <button
+                          onClick={handleShareSend}
+                          disabled={shareSending || !shareEmail.trim()}
+                          className="flex-1 h-8 rounded-lg text-xs bg-secondary hover:bg-secondary/90 text-white font-medium disabled:opacity-40 transition-colors"
+                        >
+                          {shareSending ? 'Envoi...' : 'Envoyer'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <p className="text-center text-white/20 text-xs mt-2">Baymora — Votre conciergerie de voyage privée</p>
       </div>

@@ -326,3 +326,108 @@ export function BookingCard({ booking }: { booking: BookingOption }) {
     </div>
   );
 }
+
+// ─── Vue Map par Jour (GPS interactif) ──────────────────────────────────────
+
+import { useState } from 'react';
+
+interface DayStop {
+  name: string;
+  type?: string;
+  address?: string;
+  time?: string;
+  description?: string;
+  rating?: number;
+  bookingUrl?: string;
+  transport?: string;
+  duration?: string;
+}
+
+export interface DayPlan {
+  day: number;
+  title: string;
+  stops: DayStop[];
+}
+
+export function DayMapView({ days, city }: { days: DayPlan[]; city: string }) {
+  const [activeDay, setActiveDay] = useState(0);
+  const [selectedStop, setSelectedStop] = useState<number | null>(null);
+
+  if (!days || days.length === 0) return null;
+  const currentDay = days[activeDay];
+  if (!currentDay) return null;
+
+  const markers = currentDay.stops.map((stop, i) => {
+    const label = String.fromCharCode(65 + i);
+    const location = stop.address ? `${stop.address}, ${city}` : `${stop.name}, ${city}`;
+    return `markers=color:0xc8a94a%7Clabel:${label}%7C${encodeURIComponent(location)}`;
+  }).join('&');
+
+  const mapSrc = `https://maps.googleapis.com/maps/api/staticmap?size=600x250&scale=2&maptype=roadmap&style=feature:all|element:geometry|color:0x1a1a2e&style=feature:all|element:labels.text.fill|color:0xcccccc&style=feature:water|color:0x0d1b2a&style=feature:road|color:0x2a2a4e&${markers}&key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8`;
+
+  const selected = selectedStop !== null ? currentDay.stops[selectedStop] : null;
+
+  return (
+    <div className="mt-3 rounded-xl overflow-hidden border border-white/10 bg-slate-900">
+      {/* Tabs jours */}
+      <div className="flex overflow-x-auto border-b border-white/10 bg-slate-950/50" style={{ scrollbarWidth: 'none' }}>
+        {days.map((day, i) => (
+          <button key={i} onClick={() => { setActiveDay(i); setSelectedStop(null); }}
+            className={`px-4 py-2 text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${i === activeDay ? 'text-secondary border-b-2 border-secondary bg-secondary/5' : 'text-white/40 hover:text-white/70'}`}>
+            Jour {day.day} · {day.title}
+          </button>
+        ))}
+      </div>
+
+      {/* Map */}
+      <div className="relative">
+        <img src={mapSrc} alt={`Jour ${currentDay.day}`} className="w-full h-48 object-cover" loading="lazy" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 to-transparent pointer-events-none" />
+        <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-secondary text-xs font-bold px-3 py-1 rounded-full">
+          Jour {currentDay.day} · {currentDay.stops.length} étapes
+        </div>
+      </div>
+
+      {/* Timeline du jour */}
+      <div className="px-3 py-2 space-y-0.5">
+        {currentDay.stops.map((stop, i) => {
+          const letter = String.fromCharCode(65 + i);
+          const isSelected = selectedStop === i;
+          return (
+            <div key={i}>
+              <button onClick={() => setSelectedStop(isSelected ? null : i)}
+                className={`w-full flex items-center gap-2.5 p-2 rounded-lg text-left transition-all ${isSelected ? 'bg-secondary/10 border border-secondary/30' : 'hover:bg-white/5'}`}>
+                <span className="w-6 h-6 rounded-full bg-secondary text-slate-900 text-[10px] font-bold flex items-center justify-center flex-shrink-0">{letter}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white text-xs font-medium truncate">{stop.name}</span>
+                    {stop.time && <span className="text-white/30 text-[10px] flex-shrink-0">{stop.time}</span>}
+                  </div>
+                  {stop.type && <span className="text-white/30 text-[10px]">{stop.type}</span>}
+                </div>
+                {stop.rating && <span className="text-secondary text-[10px] flex-shrink-0">⭐{stop.rating}</span>}
+              </button>
+              {isSelected && selected && (
+                <div className="ml-8 mt-1 mb-2 bg-white/5 border border-white/10 rounded-lg p-3 space-y-2">
+                  {selected.description && <p className="text-white/60 text-xs leading-relaxed">{selected.description}</p>}
+                  {selected.address && <p className="text-white/30 text-[10px] flex items-center gap-1"><MapPin className="h-2.5 w-2.5" /> {selected.address}</p>}
+                  {selected.bookingUrl && (
+                    <a href={selected.bookingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-secondary text-xs hover:text-secondary/80">
+                      <ExternalLink className="h-3 w-3" /> Réserver
+                    </a>
+                  )}
+                </div>
+              )}
+              {i < currentDay.stops.length - 1 && stop.transport && (
+                <div className="ml-8 flex items-center gap-1.5 text-white/20 text-[10px] py-0.5">
+                  <div className="w-px h-3 bg-white/10" />
+                  <Navigation className="h-2.5 w-2.5 rotate-90" /> {stop.transport}{stop.duration ? ` · ${stop.duration}` : ''}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

@@ -13,6 +13,7 @@ import {
   checkUserPerplexity, checkGuestPerplexity,
   checkGuestIPLimit,
 } from '../services/credits';
+import { trackRecommendedVenues } from '../services/affiliateTracker';
 
 const router = Router();
 
@@ -215,6 +216,13 @@ export const handleSendMessage: RequestHandler = async (req, res) => {
       const assistantMsg = await prisma.message.create({
         data: { conversationId, role: 'assistant', content: llmResult.content },
       });
+
+      // ── Auto-track recommended venues as potential affiliates ──────────
+      if (baymoraUser?.id) {
+        trackRecommendedVenues(llmResult.content, baymoraUser.id).catch(e =>
+          console.error('[AFFILIATE_TRACKER] Background tracking failed:', e),
+        );
+      }
 
       // Extraction silencieuse du profil
       const allMessages = [
@@ -555,14 +563,28 @@ ${plan.notes?.length ? `<h2>📋 Notes</h2>${plan.notes.map((n: string) => `<div
 
 export const handleExportPlan: RequestHandler = async (req, res) => {
   try {
-    const { email, plan } = req.body;
+    const { email, plan, type } = req.body;
     if (!email || !plan) {
       res.status(400).json({ error: 'email et plan requis' });
       return;
     }
     const destination = plan.destination || 'Voyage';
     const html = buildPlanEmailHtml(plan);
-    const ok = await sendEmail(email, `Votre plan Baymora — ${destination}`, html);
+    let subject: string;
+    switch (type) {
+      case 'assistant':
+        subject = `Baymora — Parcours pour votre client`;
+        break;
+      case 'concierge':
+        subject = `Baymora — Demande de conciergerie`;
+        break;
+      case 'proche':
+        subject = `Un proche vous partage son parcours Baymora`;
+        break;
+      default:
+        subject = `Votre plan Baymora — ${destination}`;
+    }
+    const ok = await sendEmail(email, subject, html);
     res.json({ success: ok });
   } catch (error) {
     console.error('Erreur export plan:', error);
