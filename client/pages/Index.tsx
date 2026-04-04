@@ -165,9 +165,9 @@ const gold = {
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 export default function Index() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const [lang, setLang] = useState<Lang>("fr");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const t = T[lang];
 
   return (
@@ -176,6 +176,7 @@ export default function Index() {
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-50 border-b border-white/8 bg-[#080c14]/85 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          {/* Logo */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-secondary/40 to-secondary/10 border border-secondary/20 flex items-center justify-center">
               <span className="text-secondary font-bold text-sm">B</span>
@@ -183,10 +184,10 @@ export default function Index() {
             <span className="font-bold text-white text-base tracking-tight">Baymora</span>
           </div>
 
-          {/* Desktop nav */}
-          <div className="hidden sm:flex items-center gap-2">
+          {/* Right: lang switcher + hamburger */}
+          <div className="flex items-center gap-2">
             {/* Lang switcher */}
-            <div className="flex bg-white/5 border border-white/10 rounded-full p-0.5 mr-2">
+            <div className="flex bg-white/5 border border-white/10 rounded-full p-0.5">
               {(["fr","en"] as Lang[]).map(l => (
                 <button
                   key={l}
@@ -198,78 +199,114 @@ export default function Index() {
               ))}
             </div>
 
-            <Link to="/partner" className="text-white/30 hover:text-white/60 text-xs transition-colors whitespace-nowrap">
-              {t.nav.partners}
-            </Link>
-
-            {isAuthenticated ? (
-              <Link to="/dashboard">
-                <button className="bg-white/6 border border-white/12 text-white/70 text-xs px-3.5 py-1.5 rounded-full hover:bg-white/12 transition-all whitespace-nowrap">
-                  {t.nav.mySpace}
-                </button>
-              </Link>
-            ) : (
-              <Link to="/auth">
-                <button className="bg-white/6 border border-white/12 text-white/70 text-xs px-3.5 py-1.5 rounded-full hover:bg-white/12 transition-all whitespace-nowrap">
-                  {t.nav.login}
-                </button>
-              </Link>
-            )}
-
-            <Link to="/chat">
-              <button className="bg-secondary text-white text-xs font-semibold px-4 py-1.5 rounded-full hover:bg-secondary/90 transition-all flex items-center gap-1.5 whitespace-nowrap">
-                {t.nav.start} <ArrowRight className="h-3 w-3" />
+            {/* Hamburger toggle */}
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-2 text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                aria-label="Menu"
+              >
+                {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
-            </Link>
-          </div>
 
-          {/* Mobile nav: lang switcher + CTA + hamburger */}
-          <div className="flex sm:hidden items-center gap-2">
-            <div className="flex bg-white/5 border border-white/10 rounded-full p-0.5">
-              {(["fr","en"] as Lang[]).map(l => (
-                <button
-                  key={l}
-                  onClick={() => setLang(l)}
-                  className={`px-2 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${lang === l ? "bg-white/15 text-white" : "text-white/30 hover:text-white/60"}`}
-                >
-                  {l.toUpperCase()}
-                </button>
-              ))}
+              {/* Dropdown panel */}
+              {menuOpen && (
+                <>
+                  {/* Backdrop */}
+                  <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+
+                  <div className="absolute right-0 top-full mt-2 z-50 w-64 bg-slate-900 border border-white/10 rounded-xl shadow-2xl shadow-black/50 py-2 overflow-hidden">
+                    {isAuthenticated ? (
+                      <>
+                        {/* Logged-in user header */}
+                        {user && (
+                          <div className="px-4 py-2.5 border-b border-white/10 mb-1">
+                            <p className="text-white text-sm font-medium truncate">{user.prenom || user.pseudo}</p>
+                            <p className="text-white/30 text-xs capitalize">{user.circle}</p>
+                          </div>
+                        )}
+
+                        <Link to="/chat" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>💬</span> <span>{lang === 'fr' ? 'Concierge IA' : 'AI Concierge'}</span>
+                        </Link>
+                        <Link to="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>📋</span> <span>{lang === 'fr' ? 'Mon dashboard' : 'My dashboard'}</span>
+                        </Link>
+                        <Link to="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>🗺️</span> <span>{lang === 'fr' ? 'Mes voyages' : 'My trips'}</span>
+                        </Link>
+                        <Link to="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>❤️</span> <span>{lang === 'fr' ? 'Mes collections' : 'My collections'}</span>
+                        </Link>
+                        <Link to="/boutique" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>🛍️</span> <span>Boutique</span>
+                        </Link>
+
+                        {/* Salon Prive - only for prive/fondateur */}
+                        {user && (user.circle === 'prive' || user.circle === 'fondateur') && (
+                          <Link to="/salon" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                            <span>👑</span> <span>{lang === 'fr' ? 'Salon Privé' : 'Private Lounge'}</span>
+                          </Link>
+                        )}
+
+                        <a href="#guides" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>📚</span> <span>Guides</span>
+                        </a>
+                        <Link to="/partner" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>🤝</span> <span>{lang === 'fr' ? 'Partenaires' : 'Partners'}</span>
+                        </Link>
+
+                        {/* Admin - only for team role */}
+                        {user?.preferences?.role === 'team' && (
+                          <Link to="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                            <span>⚙️</span> <span>Admin</span>
+                          </Link>
+                        )}
+
+                        {/* Separator */}
+                        <div className="my-1.5 border-t border-white/10" />
+
+                        <button
+                          onClick={() => { logout(); setMenuOpen(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400/80 hover:text-red-400 hover:bg-white/5 transition-colors"
+                        >
+                          <span>{lang === 'fr' ? 'Déconnexion' : 'Log out'}</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link to="/chat" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>💬</span> <span>{lang === 'fr' ? 'Concierge IA' : 'AI Concierge'}</span>
+                        </Link>
+                        <a href="#guides" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>📚</span> <span>Guides</span>
+                        </a>
+                        <Link to="/boutique" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>🛍️</span> <span>Boutique</span>
+                        </Link>
+                        <Link to="/partner" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>🤝</span> <span>{lang === 'fr' ? 'Partenaires' : 'Partners'}</span>
+                        </Link>
+
+                        {/* Separator */}
+                        <div className="my-1.5 border-t border-white/10" />
+
+                        <Link to="/auth" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
+                          <span>{lang === 'fr' ? 'Se connecter' : 'Log in'}</span>
+                        </Link>
+                        <div className="px-3 pb-2 pt-1">
+                          <Link to="/chat" onClick={() => setMenuOpen(false)} className="block text-center text-sm font-semibold px-4 py-2 rounded-lg bg-secondary text-white hover:bg-secondary/90 transition-colors">
+                            {lang === 'fr' ? 'Commencer gratuitement' : 'Start for free'}
+                          </Link>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
-
-            <Link to="/chat">
-              <button className="bg-secondary text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-secondary/90 transition-all flex items-center gap-1 whitespace-nowrap">
-                {t.nav.start} <ArrowRight className="h-3 w-3" />
-              </button>
-            </Link>
-
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-1.5 text-white/50 hover:text-white/80 transition-colors"
-              aria-label="Menu"
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
           </div>
         </div>
-
-        {/* Mobile dropdown */}
-        {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-white/8 bg-[#080c14]/95 backdrop-blur-md px-4 py-3 space-y-2">
-            {isAuthenticated ? (
-              <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="block text-white/60 text-sm py-2 whitespace-nowrap">
-                {t.nav.mySpace}
-              </Link>
-            ) : (
-              <Link to="/auth" onClick={() => setMobileMenuOpen(false)} className="block text-white/60 text-sm py-2 whitespace-nowrap">
-                {t.nav.login}
-              </Link>
-            )}
-            <Link to="/partner" onClick={() => setMobileMenuOpen(false)} className="block text-white/30 text-sm py-2 whitespace-nowrap">
-              {t.nav.partners}
-            </Link>
-          </div>
-        )}
       </nav>
 
       {/* ── Hero — Barre de recherche (comme Perplexity/Airbnb) ── */}

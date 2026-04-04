@@ -468,10 +468,10 @@ export function startManusCron(): void {
     return;
   }
 
-  // Lancer les missions toutes les 6h
-  setInterval(runAllManusMissions, 6 * 60 * 60 * 1000);
-  // Premier run après 5 minutes
-  setTimeout(runAllManusMissions, 5 * 60 * 1000);
+  // Mode SEO continu : missions toutes les 2h (au lieu de 6h)
+  setInterval(runAllManusMissions, 2 * 60 * 60 * 1000);
+  // Premier run après 3 minutes
+  setTimeout(runAllManusMissions, 3 * 60 * 1000);
 
-  console.log('[MANUS] Cron programmé: missions toutes les 6h');
+  console.log('[MANUS] 🔥 Mode SEO continu : missions toutes les 2h');
 }

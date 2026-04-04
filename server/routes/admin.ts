@@ -405,4 +405,108 @@ router.post('/run-agents', async (req, res) => {
   }
 });
 
+// ─── GET /api/admin/agents — Monitoring temps réel des agents ────────────────
+
+router.get('/agents', requireOwner, async (_req, res) => {
+  try {
+    const now = new Date();
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const lastHour = new Date(Date.now() - 60 * 60 * 1000);
+
+    const [totalTasks, recentTasks, hourlyTasks, tasksByType, lastTask] = await Promise.all([
+      prisma.agentTask.count(),
+      prisma.agentTask.count({ where: { createdAt: { gte: last24h } } }),
+      prisma.agentTask.count({ where: { createdAt: { gte: lastHour } } }),
+      prisma.agentTask.groupBy({ by: ['type'], _count: { id: true }, where: { createdAt: { gte: last24h } }, orderBy: { _count: { id: 'desc' } } }),
+      prisma.agentTask.findFirst({ orderBy: { createdAt: 'desc' } }),
+    ]);
+
+    const recentHistory = await prisma.agentTask.findMany({
+      where: { createdAt: { gte: last24h } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { id: true, type: true, status: true, input: true, output: true, agentProfile: true, createdAt: true, completedAt: true },
+    });
+
+    // Stats Atlas
+    const [totalVenues, publishedVenues, draftVenues, totalGuides] = await Promise.all([
+      prisma.atlasVenue.count(),
+      prisma.atlasVenue.count({ where: { status: 'published' } }),
+      prisma.atlasVenue.count({ where: { status: 'draft' } }),
+      prisma.seoGuide.count({ where: { status: 'published' } }),
+    ]);
+
+    res.json({
+      agents: {
+        total: 15,
+        active: hourlyTasks > 0 ? 'En cours' : 'En attente',
+        lastRun: lastTask?.createdAt || null,
+        nextRun: '~2h (mode SEO continu)',
+      },
+      tasks: {
+        total: totalTasks,
+        last24h: recentTasks,
+        lastHour: hourlyTasks,
+        byType: tasksByType.reduce((acc: any, t) => { acc[t.type] = t._count.id; return acc; }, {}),
+      },
+      atlas: {
+        totalVenues,
+        published: publishedVenues,
+        drafts: draftVenues,
+        guides: totalGuides,
+      },
+      history: recentHistory,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur monitoring agents' });
+  }
+});
+
+// ─── GET /api/admin/user/:id — Voir/gérer un compte client ──────────────────
+
+router.get('/user/:id', requireOwner, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      include: {
+        companions: true,
+        dates: true,
+        conversations: { take: 10, orderBy: { updatedAt: 'desc' } },
+        trips: { take: 10, orderBy: { createdAt: 'desc' } },
+        collections: { include: { items: true } },
+        creditPurchases: { take: 10, orderBy: { createdAt: 'desc' } },
+        pointHistory: { take: 20, orderBy: { createdAt: 'desc' } },
+      },
+    });
+    if (!user) { res.status(404).json({ error: 'Utilisateur non trouvé' }); return; }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur chargement utilisateur' });
+  }
+});
+
+// ─── PATCH /api/admin/user/:id — Modifier un compte client ───────────────────
+
+router.patch('/user/:id', requireOwner, async (req, res) => {
+  try {
+    const { circle, creditsLimit, creditsUsed, clubPoints, preferences } = req.body;
+    const data: any = {};
+    if (circle) data.circle = circle;
+    if (creditsLimit !== undefined) data.creditsLimit = creditsLimit;
+    if (creditsUsed !== undefined) data.creditsUsed = creditsUsed;
+    if (clubPoints !== undefined) data.clubPoints = clubPoints;
+    if (preferences) data.preferences = preferences;
+
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data,
+      select: { id: true, pseudo: true, email: true, circle: true, creditsLimit: true, creditsUsed: true, clubPoints: true },
+    });
+    console.log(`[ADMIN] User modifié: ${user.pseudo} (${user.id}) → ${JSON.stringify(data)}`);
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur modification utilisateur' });
+  }
+});
+
 export default router;
