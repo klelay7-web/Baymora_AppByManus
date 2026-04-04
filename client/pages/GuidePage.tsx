@@ -97,8 +97,14 @@ export default function GuidePage() {
     </div>
   );
 
-  const mapQuery = guide.items.map((i: any) => i.name).join(', ') + ', ' + (guide.city || '');
-  const mapEmbedUrl = `https://www.google.com/maps/embed/v1/search?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(mapQuery)}&zoom=13`;
+  // Map dynamique : change quand on clique sur un lieu
+  const selectedItem = expandedItem !== null ? guide.items[expandedItem] : null;
+  const mapQuery = selectedItem
+    ? `${selectedItem.name}, ${selectedItem.address || ''}, ${guide.city || ''}`
+    : guide.items.map((i: any) => i.name).join(', ') + ', ' + (guide.city || '');
+  const mapZoom = selectedItem ? 16 : 13;
+  const mapMode = selectedItem ? 'place' : 'search';
+  const mapEmbedUrl = `https://www.google.com/maps/embed/v1/${mapMode}?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(mapQuery)}&zoom=${mapZoom}`;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
