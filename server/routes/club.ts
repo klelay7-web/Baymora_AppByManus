@@ -309,5 +309,156 @@ router.post('/admin/grant', requireOwner, async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// DÉPENSE DE POINTS — Ce que les points permettent
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const POINT_REWARDS = [
+  { id: 'upgrade_1month',    name: 'Upgrade Premium 1 mois',        points: 2000, type: 'upgrade',  value: 'premium_1month' },
+  { id: 'credits_50',        name: '+50 crédits',                   points: 500,  type: 'credits',  value: 50 },
+  { id: 'credits_200',       name: '+200 crédits',                  points: 1500, type: 'credits',  value: 200 },
+  { id: 'feature_vip_30d',   name: 'Expériences VIP (30 jours)',    points: 1500, type: 'feature',  value: 'experiences_vip' },
+  { id: 'feature_concierge', name: 'Conciergerie humaine (7 jours)',points: 2000, type: 'feature',  value: 'human_concierge' },
+  { id: 'boutique_access',   name: 'Boutique premium (30 jours)',   points: 2000, type: 'feature',  value: 'boutique_premium' },
+  { id: 'priority_ai',       name: 'IA prioritaire (7 jours)',      points: 500,  type: 'feature',  value: 'priority_ai' },
+  { id: 'offmarket_access',  name: 'Off-Market (30 jours)',         points: 3000, type: 'feature',  value: 'offmarket_30d' },
+];
+
+// GET /api/club/rewards — Liste des récompenses disponibles
+router.get('/rewards', async (_req, res) => {
+  res.json(POINT_REWARDS);
+});
+
+// POST /api/club/redeem — Dépenser des points
+router.post('/redeem', async (req, res) => {
+  try {
+    const baymoraUser = (req as any).baymoraUser;
+    if (!baymoraUser?.id) { res.status(401).json({ error: 'Non authentifié' }); return; }
+
+    const { rewardId } = req.body;
+    const reward = POINT_REWARDS.find(r => r.id === rewardId);
+    if (!reward) { res.status(400).json({ error: 'Récompense invalide' }); return; }
+
+    // Vérifier le solde
+    const user = await prisma.user.findUnique({ where: { id: baymoraUser.id }, select: { clubPoints: true } });
+    if (!user || user.clubPoints < reward.points) {
+      res.status(403).json({ error: `Points insuffisants (${user?.clubPoints || 0}/${reward.points})` }); return;
+    }
+
+    // Déduire les points
+    await prisma.user.update({
+      where: { id: baymoraUser.id },
+      data: { clubPoints: { decrement: reward.points } },
+    });
+
+    // Appliquer la récompense
+    if (reward.type === 'credits') {
+      await prisma.user.update({ where: { id: baymoraUser.id }, data: { creditsLimit: { increment: reward.value as number } } });
+    }
+    // Les features et upgrades sont gérés côté frontend (stockage dans preferences)
+
+    await addPoints(baymoraUser.id, 'redeem', -reward.points, `Échange: ${reward.name}`);
+    console.log(`[CLUB] Points échangés: ${baymoraUser.id} → ${reward.name} (-${reward.points} pts)`);
+    res.json({ success: true, reward: reward.name, pointsSpent: reward.points });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur échange points' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONTRIBUTIONS CLIENT — Apporteur de bons plans, événements, off-market
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// POST /api/club/contribute — Soumettre une contribution
+router.post('/contribute', async (req, res) => {
+  try {
+    const baymoraUser = (req as any).baymoraUser;
+    if (!baymoraUser?.id) { res.status(401).json({ error: 'Non authentifié' }); return; }
+
+    const { type, title, city, description, details } = req.body;
+    // type: bon_plan | evenement | offmarket | lieu_secret | astuce
+
+    if (!type || !title) { res.status(400).json({ error: 'Type et titre requis' }); return; }
+
+    // Stocker comme AgentTask pour review par l'équipe
+    const task = await prisma.agentTask.create({
+      data: {
+        type: `contribution_${type}`,
+        status: 'pending',
+        priority: 3,
+        input: { title, city, description, details, contributorId: baymoraUser.id, contributorPseudo: baymoraUser.pseudo },
+        triggeredBy: baymoraUser.id,
+        startedAt: new Date(),
+      },
+    });
+
+    // Points immédiat pour la soumission
+    await addPoints(baymoraUser.id, 'contribution_submit', 25, `Contribution soumise: ${title}`);
+
+    console.log(`[CLUB] Contribution: ${type} — "${title}" par ${baymoraUser.pseudo}`);
+    res.json({ success: true, contributionId: task.id, pointsEarned: 25, message: 'Merci ! Votre contribution sera examinée par l\'équipe.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur soumission contribution' });
+  }
+});
+
+// GET /api/club/my-contributions — Mes contributions
+router.get('/my-contributions', async (req, res) => {
+  try {
+    const baymoraUser = (req as any).baymoraUser;
+    if (!baymoraUser?.id) { res.status(401).json({ error: 'Non authentifié' }); return; }
+
+    const contributions = await prisma.agentTask.findMany({
+      where: { triggeredBy: baymoraUser.id, type: { startsWith: 'contribution_' } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    // Stats
+    const totalSubmitted = contributions.length;
+    const accepted = contributions.filter(c => c.status === 'completed').length;
+    const pending = contributions.filter(c => c.status === 'pending').length;
+
+    res.json({ contributions, stats: { totalSubmitted, accepted, pending } });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur contributions' });
+  }
+});
+
+// GET /api/club/contribution-stats — Stats pour le dashboard contributeur
+router.get('/contribution-stats', async (req, res) => {
+  try {
+    const baymoraUser = (req as any).baymoraUser;
+    if (!baymoraUser?.id) { res.status(401).json({ error: 'Non authentifié' }); return; }
+
+    const [user, publicTrips, verifiedTrips, contributions] = await Promise.all([
+      prisma.user.findUnique({ where: { id: baymoraUser.id }, select: { clubPoints: true } }),
+      prisma.trip.count({ where: { userId: baymoraUser.id, visibility: 'public' } }),
+      prisma.trip.count({ where: { userId: baymoraUser.id, isVerified: true } }),
+      prisma.agentTask.count({ where: { triggeredBy: baymoraUser.id, type: { startsWith: 'contribution_' } } }),
+    ]);
+
+    const tripsWithEarnings = await prisma.trip.findMany({
+      where: { userId: baymoraUser.id, visibility: 'public' },
+      select: { totalCommissionEarned: true, totalPointsEarned: true, usedAsTurnkey: true, forkCount: true, viewCount: true },
+    });
+
+    const totalEarnings = tripsWithEarnings.reduce((sum, t) => sum + (t.totalCommissionEarned || 0), 0);
+    const totalPointsEarned = tripsWithEarnings.reduce((sum, t) => sum + (t.totalPointsEarned || 0), 0);
+    const totalTurnkeys = tripsWithEarnings.reduce((sum, t) => sum + (t.usedAsTurnkey || 0), 0);
+    const totalViews = tripsWithEarnings.reduce((sum, t) => sum + (t.viewCount || 0), 0);
+
+    res.json({
+      points: user?.clubPoints || 0,
+      tier: getClubTier(user?.clubPoints || 0),
+      trips: { public: publicTrips, verified: verifiedTrips },
+      contributions,
+      earnings: { total: totalEarnings, points: totalPointsEarned, turnkeys: totalTurnkeys, views: totalViews },
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur stats contribution' });
+  }
+});
+
 export { addPoints, generateInviteCode };
 export default router;
