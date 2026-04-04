@@ -8,8 +8,20 @@ const TYPE_EMOJI: Record<string, string> = {
   restaurant: "🍽️", hotel: "🏨", bar: "🍸", spa: "🧖", activity: "🎯", beach: "🏖️", shop: "🛍️",
 };
 
+// Gradients par type de lieu (quand pas de photo)
+const TYPE_GRADIENTS: Record<string, string> = {
+  restaurant: 'from-orange-900/80 to-amber-800/40',
+  hotel: 'from-blue-900/80 to-indigo-800/40',
+  bar: 'from-purple-900/80 to-pink-800/40',
+  beach: 'from-cyan-900/80 to-blue-700/40',
+  spa: 'from-emerald-900/80 to-teal-800/40',
+  activity: 'from-red-900/80 to-orange-800/40',
+};
+
+// Photo satellite Google Maps du lieu (vue aérienne réelle)
 function getPhotoUrl(name: string, type: string, city: string): string {
-  return `https://source.unsplash.com/600x400/?${encodeURIComponent(`${name} ${city} ${type}`)}`;
+  const query = encodeURIComponent(`${name}, ${city}`);
+  return `https://maps.googleapis.com/maps/api/staticmap?center=${query}&zoom=18&size=600x400&maptype=satellite&key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8`;
 }
 
 export default function GuidePage() {
@@ -83,16 +95,22 @@ export default function GuidePage() {
               const letter = String.fromCharCode(65 + i);
               const isExpanded = expandedItem === i;
               const photoUrl = item.photo || getPhotoUrl(item.name, item.type || 'place', guide.city || '');
+              const grad = TYPE_GRADIENTS[item.type] || 'from-slate-800/80 to-slate-700/40';
+              const emoji = TYPE_EMOJI[item.type] || '📍';
 
               return (
                 <div key={i} className={`rounded-2xl overflow-hidden border transition-all cursor-pointer ${isExpanded ? 'border-secondary/30 sm:col-span-2' : 'border-white/[0.06] hover:border-white/15'}`}
                   onClick={() => setExpandedItem(isExpanded ? null : i)}>
 
-                  {/* Photo */}
-                  <div className="relative h-48 overflow-hidden">
-                    <img src={photoUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).src = `https://source.unsplash.com/600x400/?${encodeURIComponent(item.type || 'travel')}`; }} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
+                  {/* Photo avec gradient fallback */}
+                  <div className={`relative h-48 overflow-hidden bg-gradient-to-br ${grad}`}>
+                    <img src={photoUrl} alt={item.name} className="w-full h-full object-cover" loading="lazy"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    {/* Emoji fallback visible si image ne charge pas */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="text-6xl opacity-20">{emoji}</span>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
 
                     <div className="absolute top-3 left-3">
                       <span className="w-7 h-7 rounded-full bg-secondary text-slate-900 text-xs font-bold flex items-center justify-center shadow-lg">{letter}</span>
