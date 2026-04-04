@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell, Home, Plane, CheckCircle2, Circle, Save, Smartphone, Bookmark, Trash2, Share2, Plus, Star, X, MapPin } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Users, Calendar, Sparkles, ChevronRight, LogOut, Crown, Edit3, Bell, Home, Plane, CheckCircle2, Circle, Save, Smartphone, Bookmark, Trash2, Share2, Plus, Star, X, MapPin, Trophy, Eye, Send, Camera } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1323,6 +1323,9 @@ export default function Dashboard() {
         {/* ── Mes Collections ── */}
         <CollectionsSection circle={circle} />
 
+        {/* ── Mes contributions (Créateur) ── */}
+        <CreatorSection authHeader={authHeader} />
+
         {/* ── Préférences & Profil complet ── */}
         <ProfilePreferences user={user} authHeader={authHeader} onUpdate={() => window.location.reload()} />
 
@@ -1686,6 +1689,196 @@ function CollectionsSection({ circle }: { circle: string }) {
             </div>
           )}
         </>
+      )}
+    </section>
+  );
+}
+
+// ─── Creator Section ─────────────────────────────────────────────────────────
+
+const VENUE_TYPES = ['restaurant', 'bar', 'cafe', 'hotel', 'musee', 'boutique', 'plage', 'parc', 'spa', 'autre'];
+const CONTRIBUTE_TYPES = [
+  { key: 'bon_plan', label: 'Signaler un bon plan', icon: Star },
+  { key: 'evenement', label: 'Proposer un événement', icon: Calendar },
+  { key: 'offmarket', label: 'Proposer un off-market', icon: MapPin },
+] as const;
+
+function CreatorSection({ authHeader }: { authHeader: () => any }) {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showVenueForm, setShowVenueForm] = useState(false);
+  const [venueForm, setVenueForm] = useState({ name: '', type: 'restaurant', city: '', description: '', insiderTips: '' });
+  const [venueMsg, setVenueMsg] = useState('');
+  const [verifyId, setVerifyId] = useState<string | null>(null);
+  const [verifyNotes, setVerifyNotes] = useState('');
+  const [verifyPhotos, setVerifyPhotos] = useState('');
+  const [contributeType, setContributeType] = useState<string | null>(null);
+  const [contributeForm, setContributeForm] = useState({ title: '', city: '', description: '' });
+  const [contributeMsg, setContributeMsg] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/creator/stats', { headers: authHeader() as any })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setStats(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return null;
+  if (!stats || (stats.stats.publicTrips === 0 && stats.stats.venuesSubmitted === 0)) return null;
+
+  const s = stats.stats;
+
+  const submitVenue = async () => {
+    if (!venueForm.name || !venueForm.city) return;
+    setSubmitting(true);
+    try {
+      const r = await fetch('/api/creator/submit-venue', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() }, body: JSON.stringify(venueForm) });
+      const d = await r.json();
+      if (r.ok) { setVenueMsg(`+${d.pointsEarned} pts — ${d.message}`); setVenueForm({ name: '', type: 'restaurant', city: '', description: '', insiderTips: '' }); }
+      else setVenueMsg(d.error || 'Erreur');
+    } catch { setVenueMsg('Erreur réseau'); }
+    setSubmitting(false);
+  };
+
+  const submitVerify = async (tripId: string) => {
+    if (!verifyPhotos.trim()) return;
+    setSubmitting(true);
+    try {
+      const photos = verifyPhotos.split(',').map(u => u.trim()).filter(Boolean);
+      const r = await fetch(`/api/creator/verify-trip/${tripId}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() }, body: JSON.stringify({ notes: verifyNotes, photos }) });
+      if (r.ok) { setVerifyId(null); setVerifyNotes(''); setVerifyPhotos(''); setStats({ ...stats, trips: stats.trips.map((t: any) => t.id === tripId ? { ...t, isVerified: true } : t) }); }
+    } catch {}
+    setSubmitting(false);
+  };
+
+  const submitContribution = async () => {
+    if (!contributeType || !contributeForm.title) return;
+    setSubmitting(true);
+    try {
+      const r = await fetch('/api/club/contribute', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeader() }, body: JSON.stringify({ type: contributeType, ...contributeForm }) });
+      const d = await r.json();
+      if (r.ok) { setContributeMsg(`+${d.pointsEarned} pts — ${d.message}`); setContributeForm({ title: '', city: '', description: '' }); setContributeType(null); }
+      else setContributeMsg(d.error || 'Erreur');
+    } catch { setContributeMsg('Erreur réseau'); }
+    setSubmitting(false);
+  };
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-white/80 font-semibold text-sm flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-secondary/70" /> Mes contributions
+        </h2>
+        <span className="text-secondary/60 text-xs">{stats.points} pts</span>
+      </div>
+
+      {/* Summary card */}
+      <div className="bg-white/4 border border-white/10 rounded-xl p-4 mb-3">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-white text-lg font-bold">{stats.points} <span className="text-white/40 text-xs font-normal">points</span></p>
+            <p className="text-secondary/70 text-sm">{stats.cashoutBalance}€ disponible</p>
+          </div>
+          {stats.cashoutBalance >= 10 && (
+            <button className="bg-secondary/20 text-secondary text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-secondary/30 transition-colors">
+              Retirer {stats.cashoutBalance}€
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {[
+            { v: s.publicTrips, l: 'Parcours' },
+            { v: s.verifiedTrips, l: 'Vérifiés' },
+            { v: s.venuesSubmitted, l: 'Fiches' },
+            { v: s.totalViews, l: 'Vues' },
+            { v: s.totalTurnkeys, l: 'Turnkeys' },
+            { v: `${(s.totalCommission || 0).toFixed(1)}€`, l: 'Commission' },
+          ].map(({ v, l }) => (
+            <div key={l} className="bg-white/3 rounded-lg py-1.5">
+              <p className="text-white text-sm font-semibold">{v}</p>
+              <p className="text-white/30 text-[10px]">{l}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Venue form */}
+      <button onClick={() => { setShowVenueForm(!showVenueForm); setVenueMsg(''); }} className="w-full bg-white/4 border border-white/10 rounded-xl px-4 py-2.5 flex items-center justify-between hover:bg-white/6 transition-all mb-2">
+        <span className="text-white/70 text-sm flex items-center gap-2"><Plus className="h-3.5 w-3.5" /> Soumettre un lieu</span>
+        <ChevronRight className={`h-4 w-4 text-white/20 transition-transform ${showVenueForm ? 'rotate-90' : ''}`} />
+      </button>
+      {showVenueForm && (
+        <div className="bg-white/4 border border-white/10 rounded-xl p-3 mb-2 space-y-2">
+          <Input placeholder="Nom du lieu" value={venueForm.name} onChange={e => setVenueForm({ ...venueForm, name: e.target.value })} className="bg-white/5 border-white/10 text-white text-sm h-9" />
+          <select value={venueForm.type} onChange={e => setVenueForm({ ...venueForm, type: e.target.value })} className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2">
+            {VENUE_TYPES.map(t => <option key={t} value={t} className="bg-[#1a1a2e]">{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+          </select>
+          <Input placeholder="Ville" value={venueForm.city} onChange={e => setVenueForm({ ...venueForm, city: e.target.value })} className="bg-white/5 border-white/10 text-white text-sm h-9" />
+          <textarea placeholder="Description" value={venueForm.description} onChange={e => setVenueForm({ ...venueForm, description: e.target.value })} className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 resize-none h-16" />
+          <textarea placeholder="Tips insider (optionnel)" value={venueForm.insiderTips} onChange={e => setVenueForm({ ...venueForm, insiderTips: e.target.value })} className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 resize-none h-16" />
+          <Button onClick={submitVenue} disabled={submitting || !venueForm.name || !venueForm.city} className="w-full bg-secondary/20 text-secondary hover:bg-secondary/30 text-sm h-9">
+            <Send className="h-3.5 w-3.5 mr-1.5" /> Soumettre (+25 pts)
+          </Button>
+          {venueMsg && <p className="text-secondary/80 text-xs text-center">{venueMsg}</p>}
+        </div>
+      )}
+
+      {/* Published trips */}
+      {stats.trips.length > 0 && (
+        <div className="space-y-1.5 mb-2">
+          <p className="text-white/40 text-xs font-medium px-1">Mes parcours publiés</p>
+          {stats.trips.map((t: any) => (
+            <div key={t.id} className="bg-white/4 border border-white/10 rounded-xl px-3 py-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-white/80 text-sm font-medium truncate flex items-center gap-1.5">
+                    {t.title} {t.isVerified && <CheckCircle2 className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />}
+                  </p>
+                  <div className="flex items-center gap-3 mt-0.5 text-white/30 text-xs">
+                    <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" /> {t.views || 0}</span>
+                    <span>{t.turnkeys || 0} turnkeys</span>
+                    <span>{((t.commission || 0)).toFixed(1)}€</span>
+                  </div>
+                </div>
+                {!t.isVerified && (
+                  <button onClick={() => { setVerifyId(verifyId === t.id ? null : t.id); setVerifyNotes(''); setVerifyPhotos(''); }} className="text-secondary/60 text-xs hover:text-secondary transition-colors flex items-center gap-1">
+                    <Camera className="h-3.5 w-3.5" /> Vérifier
+                  </button>
+                )}
+              </div>
+              {verifyId === t.id && (
+                <div className="mt-2 space-y-2 border-t border-white/5 pt-2">
+                  <Input placeholder="URLs photos (séparées par des virgules)" value={verifyPhotos} onChange={e => setVerifyPhotos(e.target.value)} className="bg-white/5 border-white/10 text-white text-sm h-9" />
+                  <Input placeholder="Notes d'expérience (optionnel)" value={verifyNotes} onChange={e => setVerifyNotes(e.target.value)} className="bg-white/5 border-white/10 text-white text-sm h-9" />
+                  <Button onClick={() => submitVerify(t.id)} disabled={submitting || !verifyPhotos.trim()} className="w-full bg-green-500/20 text-green-400 hover:bg-green-500/30 text-sm h-8">
+                    Valider la vérification (+200 pts)
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Quick actions */}
+      <div className="flex gap-2 flex-wrap">
+        {CONTRIBUTE_TYPES.map(({ key, label, icon: Icon }) => (
+          <button key={key} onClick={() => { setContributeType(contributeType === key ? null : key); setContributeMsg(''); }} className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all ${contributeType === key ? 'bg-secondary/20 border-secondary/40 text-secondary' : 'bg-white/4 border-white/10 text-white/50 hover:text-white/70'}`}>
+            <Icon className="h-3.5 w-3.5" /> {label}
+          </button>
+        ))}
+      </div>
+      {contributeType && (
+        <div className="bg-white/4 border border-white/10 rounded-xl p-3 mt-2 space-y-2">
+          <Input placeholder="Titre" value={contributeForm.title} onChange={e => setContributeForm({ ...contributeForm, title: e.target.value })} className="bg-white/5 border-white/10 text-white text-sm h-9" />
+          <Input placeholder="Ville (optionnel)" value={contributeForm.city} onChange={e => setContributeForm({ ...contributeForm, city: e.target.value })} className="bg-white/5 border-white/10 text-white text-sm h-9" />
+          <textarea placeholder="Description" value={contributeForm.description} onChange={e => setContributeForm({ ...contributeForm, description: e.target.value })} className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 resize-none h-16" />
+          <Button onClick={submitContribution} disabled={submitting || !contributeForm.title} className="w-full bg-secondary/20 text-secondary hover:bg-secondary/30 text-sm h-9">
+            <Send className="h-3.5 w-3.5 mr-1.5" /> Envoyer (+25 pts)
+          </Button>
+          {contributeMsg && <p className="text-secondary/80 text-xs text-center">{contributeMsg}</p>}
+        </div>
       )}
     </section>
   );
