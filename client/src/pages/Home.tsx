@@ -104,43 +104,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#080c14] text-white overflow-x-hidden">
 
-      {/* ═══════════════════════════════════════════════
-          NAVIGATION
-      ═══════════════════════════════════════════════ */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#080c14]/80 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <img src={LOGO} alt="Maison Baymora" className="h-10 w-10 rounded-full object-contain" />
-            <span className="font-['Playfair_Display'] text-lg tracking-wide text-[#c8a94a]">
-              Maison Baymora
-            </span>
-          </Link>
-          <div className="hidden md:flex items-center gap-8 text-sm font-light tracking-wider">
-            <Link href="/discover" className="text-white/60 hover:text-[#c8a94a] transition-colors">
-              Explorer
-            </Link>
-            <Link href="/pricing" className="text-white/60 hover:text-[#c8a94a] transition-colors">
-              Forfaits
-            </Link>
-            <a href="#bundles" className="text-white/60 hover:text-[#c8a94a] transition-colors">
-              Inspirations
-            </a>
-            {isAuthenticated ? (
-              <Link href="/chat">
-                <Button size="sm" className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] font-medium rounded-none px-6">
-                  Mon Assistant
-                </Button>
-              </Link>
-            ) : (
-              <a href={getLoginUrl()}>
-                <Button size="sm" className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] font-medium rounded-none px-6">
-                  Accéder
-                </Button>
-              </a>
-            )}
-          </div>
-        </div>
-      </nav>
+      {/* Navigation is now handled globally by Navbar component in App.tsx */}
 
       {/* ═══════════════════════════════════════════════
           HERO — Plein écran cinématographique
@@ -194,8 +158,18 @@ export default function Home() {
           </motion.p>
 
           <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href={isAuthenticated ? "/chat" : ""}>
-              <a href={isAuthenticated ? undefined : getLoginUrl()}>
+            {isAuthenticated ? (
+              <Link href="/chat">
+                <Button
+                  size="lg"
+                  className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] font-medium rounded-none px-10 py-6 text-base tracking-wider"
+                >
+                  <MessageCircle className="mr-2 h-5 w-5" />
+                  Parlez à votre assistant
+                </Button>
+              </Link>
+            ) : (
+              <a href={getLoginUrl()}>
                 <Button
                   size="lg"
                   className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] font-medium rounded-none px-10 py-6 text-base tracking-wider"
@@ -204,7 +178,7 @@ export default function Home() {
                   Parlez à votre assistant
                 </Button>
               </a>
-            </Link>
+            )}
             <Link href="/discover">
               <Button
                 size="lg"

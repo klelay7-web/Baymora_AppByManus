@@ -10,10 +10,13 @@ import Discover from "./pages/Discover";
 import CardDetail from "./pages/CardDetail";
 import Profile from "./pages/Profile";
 import Pricing from "./pages/Pricing";
-import AdminDashboard from "./pages/AdminDashboard";
 import TripPlan from "./pages/TripPlan";
 import EstablishmentDetail from "./pages/EstablishmentDetail";
-import MobileNav from "./components/MobileNav";
+import Navbar from "./components/Navbar";
+import { lazy, Suspense } from "react";
+
+// Lazy load admin dashboard (only for admins)
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 
 function Router() {
   return (
@@ -27,7 +30,19 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/trip/:id" component={TripPlan} />
       <Route path="/establishment/:id" component={EstablishmentDetail} />
-      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin">
+        {() => (
+          <Suspense
+            fallback={
+              <div className="min-h-screen bg-[#080c14] flex items-center justify-center">
+                <div className="text-[#c8a94a] text-sm tracking-wider">Chargement...</div>
+              </div>
+            }
+          >
+            <AdminDashboard />
+          </Suspense>
+        )}
+      </Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -40,9 +55,9 @@ function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
-          <div className="min-h-screen bg-background text-foreground pb-20 md:pb-0">
+          <div className="min-h-screen bg-background text-foreground">
+            <Navbar />
             <Router />
-            <MobileNav />
           </div>
         </TooltipProvider>
       </ThemeProvider>

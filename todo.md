@@ -147,3 +147,17 @@
 - [x] Section prestataires B2B
 - [x] Section crédits one-shot
 - [x] CTA final + footer complet
+
+## Phase 12 : Navigation Quintessentially & Points d'Entrée Multiples
+- [x] Menu desktop avec dropdowns élégants (Nos Services ▾, Destinations ▾, À Propos ▾)
+- [x] Sous-menus structurés : Services (Assistant IA, Parcours Voyage, Bundles, Off-Market)
+- [x] Sous-menus : Destinations (Par Continent, Par Expérience, Secrets, Tendances)
+- [x] Sous-menus : À Propos (Notre Histoire, Comment ça marche, Devenir Ambassadeur, Prestataires)
+- [x] CTA "Demander un accès" ou "Parlez à votre assistant" en haut à droite
+- [x] Bouton Login séparé
+- [x] Points d'entrée multiples : pas uniquement IA, aussi destinations, bundles, services directs
+- [x] Positionnement limpide dès le premier regard
+- [x] Menu mobile hamburger avec même structure
+- [ ] Push sur GitHub
+- [x] Corriger double logo : "B" compact dans navbar, logo complet dans hero uniquement
+- [x] Corriger l'erreur affichée sur la page (nested anchor fix + lazy AdminDashboard)
