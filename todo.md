@@ -287,3 +287,73 @@
 - [ ] Centre de données interne avec équipe IA analytique
 - [ ] Salle de réunion IA : vérifier accès et affichage correct
 - [ ] Checkpoint et livraison
+
+## Phase 20 — Secrets, Tarifs, Claude complet, Pilotage Admin
+- [ ] Configurer STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET
+- [ ] Configurer RESEND_API_KEY (emails transactionnels)
+- [ ] Configurer GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET
+- [ ] Ajouter Stripe au projet (webdev_add_feature)
+- [ ] Refonte tarifs : Découverte (gratuit, 15 crédits) / Premium (14.90€, 200 crédits) / Privé (49.90€, illimité)
+- [ ] Système crédits : Opus=3, Sonnet=1, Perplexity=+1, rollover cap 3x
+- [ ] Feature unlocks : VIP 14.90€/30j, Conciergerie humaine 19.90€/7j, Off-Market 9.90€/30j
+- [ ] Programme créateur : points + cash-out (100 pts = 1€, min 1000 pts)
+- [ ] Migration DB nouveaux champs crédits/points/rollover
+- [ ] Remplacer seoGenerator.ts + agentBus.ts + concierge.ts par Claude
+- [ ] Créer bouton "Pilotage" navbar (owner/admin uniquement)
+- [ ] Page /pilotage unifiée avec toutes les sections admin
+
+## Phase 21 — Système Email Complet (Resend + Claude)
+- [ ] Corriger erreurs TypeScript webhook.ts (credits → credits, elite)
+- [ ] Appliquer migration DB 0006 (elite, points, featureExpiry)
+- [ ] Service emailService.ts avec Resend + Claude rédacteur
+- [ ] Template bienvenue (inscription)
+- [ ] Template confirmation abonnement Premium/Privé
+- [ ] Template relance abonnement (J+3, J+7 après expiration)
+- [ ] Template bons plans hebdomadaires (marketing)
+- [ ] Template prospection partenaires B2B
+- [ ] Template affiliations (nouveaux partenaires)
+- [ ] Template suivi client (J+30 après inscription)
+- [ ] Template rapport équipe (hebdo interne)
+- [ ] Router tRPC email : sendWelcome, sendSubscription, sendWeeklyPlans, sendProspection
+- [ ] Triggers automatiques (inscription → welcome, paiement → confirmation)
+- [ ] Page admin /admin/emails (Email Center avec historique + envoi manuel)
+- [ ] Bouton "Pilotage" navbar (owner/admin uniquement)
+- [ ] Page /pilotage unifiée avec toutes les sections admin
+- [ ] Refonte page Pricing (3 plans + feature unlocks + programme créateur)
+- [ ] Stripe Checkout pour Premium et Privé
+
+## Phase 22 — Pilotage Complet (IA DG + Dashboard Unifié)
+- [ ] Service pilotageService.ts : IA DG Claude Opus avec mémoire persistante owner-only
+- [ ] System prompt DG : chef de toutes les équipes, donne ordres à Manus/équipes
+- [ ] Table pilotage_messages en DB pour mémoire persistante
+- [ ] Router tRPC pilotage : chat DG, stats consolidées, dépenses, facturation
+- [ ] Refonte page Pilotage : layout 2 colonnes (chat DG gauche + dashboard droite)
+- [ ] Dashboard : stats globales (membres, CA, conversations, fiches)
+- [ ] Dashboard : revenus et dépenses (Stripe, API costs, équipe)
+- [ ] Dashboard : échanges clients récents (conversations live)
+- [ ] Dashboard : campagnes email (historique, taux ouverture)
+- [ ] Dashboard : équipes (statut, tâches en cours, rapports)
+- [ ] Dashboard : créatives (posts sociaux, fiches, SEO)
+- [ ] Actions rapides : modifier n'importe quelle section depuis Pilotage
+- [ ] Refonte Pricing (3 plans corrects : 0€ / 14.90€ / 49.90€)
+- [ ] Migration DB : appliquer 0006 (elite, points, featureExpiry)
+
+## Phase 22 — ARIA DG + Pilotage Complet
+- [x] Service ARIA DG (dgService.ts) : system prompt DG complète, carnet de bord, rapports, alertes, organigramme 7 équipes
+- [x] Router tRPC pilotage : chat, dailyReport, history, carnetsDebord, organigramme, strategie, budget, stats
+- [x] Migration DB : table pilotageMessages pour mémoire ARIA
+- [x] Page Pilotage complète : chat ARIA DG (gauche) + dashboard 6 onglets (Vue Générale, Équipes, Stratégie, Budget, Carnet de Bord, Tâches)
+- [x] Bouton Pilotage dans navbar (owner only)
+- [x] Stratégie 30/60/90 jours détaillée
+- [x] Budget mensuel avec seuil de rentabilité (15 abonnés = 222€)
+- [x] 41/41 tests Vitest passent
+
+## Phase 23 — Secrets & Intégrations
+- [x] ANTHROPIC_API_KEY configurée (Claude Opus)
+- [x] RESEND_API_KEY configurée (emails)
+- [x] GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET configurés
+- [x] STRIPE_WEBHOOK_SECRET configuré
+- [x] Service email Resend + Claude (emailService.ts)
+- [x] Router email tRPC (send, preview, triggers automatiques)
+- [ ] Stripe Checkout fonctionnel (produits à créer dans dashboard Stripe)
+- [ ] Page Pricing refondée avec 3 plans corrects

@@ -8,9 +8,14 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin", "team"]).default("user").notNull(),
-  subscriptionTier: mysqlEnum("subscriptionTier", ["free", "premium"]).default("free").notNull(),
-  credits: int("credits").default(3).notNull(),
+  subscriptionTier: mysqlEnum("subscriptionTier", ["free", "premium", "elite"]).default("free").notNull(),
+  credits: int("credits").default(15).notNull(),
   creditsRollover: int("creditsRollover").default(0).notNull(),
+  points: int("points").default(0).notNull(),
+  pointsLifetime: int("pointsLifetime").default(0).notNull(),
+  featureVipExpiry: timestamp("featureVipExpiry"),
+  featureConciergeExpiry: timestamp("featureConciergeExpiry"),
+  featureOffMarketExpiry: timestamp("featureOffMarketExpiry"),
   freeMessagesUsed: int("freeMessagesUsed").default(0).notNull(),
   stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
@@ -683,6 +688,21 @@ export const fieldReportJourney = mysqlTable("fieldReportJourney", {
   // Notes
   notes: text("notes"),
   photoUrl: text("photoUrl"), // photo of this step
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Pilotage Messages (Conversation Privée Owner ↔ IA DG) ───────────
+export const pilotageMessages = mysqlTable("pilotageMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  role: mysqlEnum("role", ["user", "assistant", "system"]).notNull(),
+  content: text("content").notNull(),
+  // Métadonnées de la DG
+  actionType: mysqlEnum("actionType", [
+    "chat", "order_team", "modify_app", "analyze", "report", "alert"
+  ]).default("chat"),
+  targetDepartment: varchar("targetDepartment", { length: 64 }), // "seo", "email", "equipe", "all"
+  orderStatus: mysqlEnum("orderStatus", ["pending", "in_progress", "done", "cancelled"]).default("pending"),
+  metadata: text("metadata"), // JSON : actions déclenchées, résultats
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

@@ -29,6 +29,8 @@ const AdminSeoFiches = lazy(() => import("./pages/AdminSeoFiches"));
 const AdminContentSocial = lazy(() => import("./pages/AdminContentSocial"));
 const AdminPartnersCommissions = lazy(() => import("./pages/AdminPartnersCommissions"));
 const TeamDashboard = lazy(() => import("./pages/TeamDashboard"));
+const Pilotage = lazy(() => import("./pages/Pilotage"));
+const AdminEmailCenter = lazy(() => import("./pages/AdminEmailCenter"));
 
 function LazyPage({ Component }: { Component: React.LazyExoticComponent<any> }) {
   return (
@@ -75,6 +77,10 @@ function Router() {
       <Route path="/admin/seo-fiches">{() => <LazyPage Component={AdminSeoFiches} />}</Route>
       <Route path="/admin/content-social">{() => <LazyPage Component={AdminContentSocial} />}</Route>
       <Route path="/admin/partners-commissions">{() => <LazyPage Component={AdminPartnersCommissions} />}</Route>
+
+      {/* Pilotage Owner */}
+      <Route path="/pilotage">{() => <LazyPage Component={Pilotage} />}</Route>
+      <Route path="/admin/emails">{() => <LazyPage Component={AdminEmailCenter} />}</Route>
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

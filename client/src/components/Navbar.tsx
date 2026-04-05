@@ -404,6 +404,15 @@ export default function Navbar() {
                         Salle de Réunion
                       </Button>
                     </Link>
+                    <Link href="/pilotage">
+                      <Button
+                        size="sm"
+                        className="bg-[#c8a94a]/15 text-[#c8a94a] hover:bg-[#c8a94a]/25 gap-2 rounded-none font-semibold text-[13px] border border-[#c8a94a]/40 px-4 uppercase tracking-wider"
+                      >
+                        <Shield className="h-3.5 w-3.5" />
+                        Pilotage
+                      </Button>
+                    </Link>
                   </>
                 )}
                 <Link href="/mon-espace">

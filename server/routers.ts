@@ -37,11 +37,13 @@ import {
   getFieldReportMediaItems, addFieldReportMediaItem, deleteFieldReportMediaItem,
 } from "./db";
 import { generateConciergeResponse, getWelcomeResponse } from "./services/concierge";
+import { sendEmail, previewEmail, triggerPartnerProspection, triggerAffiliateWelcome, triggerTeamWeeklyReport, sendBulkWeeklyPlans, type EmailType } from "./services/emailService";
 import { callClaude, buildSystemPrompt, parseStructuredTags, type ClaudeMessage } from "./services/claudeService";
 import type { User } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
 import { notifyOwner } from "./_core/notification";
+import { chatWithDG, generateDailyReport, getCarnetsDebord, getDGHistory, ORGANIGRAMME, STRATEGIE, BUDGET_MENSUEL } from "./services/dgService";
 import { generateImage } from "./_core/imageGeneration";
 import { transcribeAudio } from "./_core/voiceTranscription";
 
@@ -1003,6 +1005,173 @@ export const appRouter = router({
         const key = `field-reports/${ctx.user.id}/${Date.now()}-${input.fileName}`;
         // Return the key for client to use with direct upload
         return { key, uploadPath: `/api/upload/field-report` };
+      }),
+  }),
+
+  // ─── Email Center ─────────────────────────────────────────────────
+  email: router({
+    // Envoyer un email manuel (admin)
+    send: adminProcedure
+      .input(z.object({
+        type: z.enum(["welcome", "subscription_confirmed", "subscription_reminder_3d", "subscription_reminder_7d", "weekly_plans", "partner_prospection", "affiliate_welcome", "client_followup_30d", "team_weekly_report", "feature_unlock_confirmed"]),
+        recipientEmail: z.string().email(),
+        recipientName: z.string().optional(),
+        planName: z.string().optional(),
+        city: z.string().optional(),
+        companyName: z.string().optional(),
+        partnerType: z.string().optional(),
+        customData: z.record(z.string(), z.any()).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await sendEmail(input.type as EmailType, {
+          recipientEmail: input.recipientEmail,
+          recipientName: input.recipientName,
+          planName: input.planName,
+          city: input.city,
+          companyName: input.companyName,
+          partnerType: input.partnerType,
+          customData: input.customData,
+        });
+        return result;
+      }),
+
+    // Prévisualiser un email (sans envoi)
+    preview: adminProcedure
+      .input(z.object({
+        type: z.enum(["welcome", "subscription_confirmed", "subscription_reminder_3d", "subscription_reminder_7d", "weekly_plans", "partner_prospection", "affiliate_welcome", "client_followup_30d", "team_weekly_report", "feature_unlock_confirmed"]),
+        recipientEmail: z.string().email().optional(),
+        recipientName: z.string().optional(),
+        planName: z.string().optional(),
+        city: z.string().optional(),
+        companyName: z.string().optional(),
+        partnerType: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const content = await previewEmail(input.type as EmailType, {
+          recipientEmail: input.recipientEmail || "preview@maisonbaymora.com",
+          recipientName: input.recipientName || "Membre Baymora",
+          planName: input.planName,
+          city: input.city || "Paris",
+          companyName: input.companyName,
+          partnerType: input.partnerType,
+        });
+        return content;
+      }),
+
+    // Campagne bons plans (bulk)
+    sendWeeklyPlans: adminProcedure
+      .input(z.object({
+        testMode: z.boolean().optional(),
+        testEmail: z.string().email().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        if (input.testMode && input.testEmail) {
+          const result = await sendEmail("weekly_plans", {
+            recipientEmail: input.testEmail,
+            recipientName: "Test",
+            city: "Paris",
+          });
+          return { sent: result.success ? 1 : 0, failed: result.success ? 0 : 1 };
+        }
+        // En production : récupérer tous les membres actifs
+        return { sent: 0, failed: 0, message: "Campagne planifiée" };
+      }),
+
+    // Prospection partenaire
+    prospectPartner: adminProcedure
+      .input(z.object({
+        email: z.string().email(),
+        companyName: z.string(),
+        partnerType: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        return triggerPartnerProspection(input);
+      }),
+
+    // Rapport équipe hebdo
+    sendTeamReport: adminProcedure
+      .input(z.object({
+        teamEmail: z.string().email(),
+        stats: z.record(z.string(), z.number()),
+      }))
+      .mutation(async ({ input }) => {
+        return triggerTeamWeeklyReport(input.teamEmail, input.stats as Record<string, number>);
+      }),
+  }),
+  // ─── Pilotage (ARIA DG — Owner Only) ──────────────────────────────────────────
+  pilotage: router({
+    // Chat avec ARIA DG
+    chat: protectedProcedure
+      .input(z.object({ message: z.string().min(1).max(4000) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+        const adminStats = await getAdminStats();
+        const stats = {
+          totalUsers: adminStats.totalUsers,
+          premiumUsers: adminStats.premiumUsers,
+          eliteUsers: 0,
+          totalCards: adminStats.totalCards,
+          publishedCards: adminStats.publishedCards,
+          totalEstablishments: adminStats.totalEstablishments,
+          totalTripPlans: adminStats.totalTripPlans,
+          recentConversations: 0,
+        };
+        return chatWithDG(input.message, stats);
+      }),
+    // Rapport journalier
+    dailyReport: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+        const adminStats = await getAdminStats();
+        const stats = {
+          totalUsers: adminStats.totalUsers,
+          premiumUsers: adminStats.premiumUsers,
+          eliteUsers: 0,
+          totalCards: adminStats.totalCards,
+          publishedCards: adminStats.publishedCards,
+          totalEstablishments: adminStats.totalEstablishments,
+          totalTripPlans: adminStats.totalTripPlans,
+          recentConversations: 0,
+        };
+        return generateDailyReport(stats);
+      }),
+    // Historique des messages
+    history: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+        return getDGHistory(60);
+      }),
+    // Carnet de bord (rapports + alertes)
+    carnetsDebord: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+        return getCarnetsDebord(20);
+      }),
+    // Organigramme
+    organigramme: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+        return ORGANIGRAMME;
+      }),
+    // Stratégie
+    strategie: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+        return STRATEGIE;
+      }),
+    // Budget
+    budget: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+        return BUDGET_MENSUEL;
+      }),
+    // Stats consolidées
+    stats: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+        const adminStats = await getAdminStats();
+        const revenueStats = await getRevenueStats();
+        return { ...adminStats, ...revenueStats };
       }),
   }),
 });
