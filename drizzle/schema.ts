@@ -928,3 +928,31 @@ export const destinationSaves = mysqlTable("destinationSaves", {
   destinationId: int("destinationId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+// ─── ARIA Missions (Directives 24h du fondateur) ─────────────────────────────
+export const ariaMissions = mysqlTable("ariaMissions", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 256 }).notNull(),
+  content: text("content").notNull(),
+  status: mysqlEnum("status", ["active", "completed", "cancelled", "expired"]).default("active").notNull(),
+  priority: mysqlEnum("priority", ["normal", "high", "urgent"]).default("normal").notNull(),
+  authorId: int("authorId").notNull(),
+  startsAt: timestamp("startsAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  completedAt: timestamp("completedAt"),
+  ariaAck: text("ariaAck"),           // Accusé de réception ARIA (résumé compréhension)
+  ariaAckAt: timestamp("ariaAckAt"),
+  progressNotes: text("progressNotes"), // JSON array de notes de progression
+  // Compte-rendu final
+  finalReport: text("finalReport"),     // Rapport de clôture rédigé par ARIA
+  finalReportAt: timestamp("finalReportAt"),
+  successScore: int("successScore"),    // Score 0-100 calculé par ARIA
+  completedTasks: int("completedTasks").default(0),
+  totalTasks: int("totalTasks").default(0),
+  // Méta
+  durationHours: int("durationHours").default(24), // Durée de la mission (défaut 24h)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type AriaMission = typeof ariaMissions.$inferSelect;
+export type InsertAriaMission = typeof ariaMissions.$inferInsert;

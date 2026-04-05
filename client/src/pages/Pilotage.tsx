@@ -186,6 +186,18 @@ export default function Pilotage() {
   const reportMutation = trpc.pilotage.dailyReport.useMutation();
   const updateRoleMutation = trpc.pilotage.updateUserRole.useMutation();
 
+  // ─── Missions 24h ─────────────────────────────────────────────────────
+  const [missionTitle, setMissionTitle] = useState("");
+  const [missionContent, setMissionContent] = useState("");
+  const [missionPriority, setMissionPriority] = useState<"normal"|"high"|"urgent">("normal");
+  const [missionDuration, setMissionDuration] = useState(24);
+  const [missionView, setMissionView] = useState<"create"|"active"|"history">("active");
+  const [selectedHistoryMission, setSelectedHistoryMission] = useState<number|null>(null);
+  const { data: activeMission, refetch: refetchActiveMission } = trpc.pilotage.activeMission.useQuery(undefined, { refetchInterval: 60000 });
+  const { data: missionHistory, refetch: refetchMissionHistory } = trpc.pilotage.missionHistory.useQuery({ limit: 20 });
+  const createMissionMutation = trpc.pilotage.createMission.useMutation();
+  const closeMissionMutation = trpc.pilotage.closeMission.useMutation();
+
   useEffect(() => {
     if (history && history.length > 0 && messages.length === 0) {
       setMessages(history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content, timestamp: new Date() })));
@@ -426,6 +438,7 @@ export default function Pilotage() {
                   { value: "comms",       label: "📣 Comms" },
                   { value: "affiliation", label: "🤝 Affiliation" },
                   { value: "carnet",      label: "📔 Carnet de Bord" },
+                  { value: "missions",    label: "🎯 Missions" },
                   { value: "acces",       label: "🔑 Accès" },
                 ].map((tab) => (
                   <TabsTrigger key={tab.value} value={tab.value}
@@ -824,7 +837,48 @@ export default function Pilotage() {
                 )}
               </TabsContent>
 
-              {/* ── ACCÈS ─────────────────────────────────────────────── */}
+              {/* ── MISSIONS 24H ─────────────────────────────────────────────── */}
+              <TabsContent value="missions" className="mt-0 h-full">
+                <MissionsPanel
+                  activeMission={activeMission ?? null}
+                  missionHistory={missionHistory ?? []}
+                  missionView={missionView}
+                  setMissionView={setMissionView}
+                  missionTitle={missionTitle}
+                  setMissionTitle={setMissionTitle}
+                  missionContent={missionContent}
+                  setMissionContent={setMissionContent}
+                  missionPriority={missionPriority}
+                  setMissionPriority={setMissionPriority}
+                  missionDuration={missionDuration}
+                  setMissionDuration={setMissionDuration}
+                  selectedHistoryMission={selectedHistoryMission}
+                  setSelectedHistoryMission={setSelectedHistoryMission}
+                  onCreateMission={async () => {
+                    if (!missionTitle.trim() || !missionContent.trim()) { toast.error("Titre et contenu requis"); return; }
+                    try {
+                      const res = await createMissionMutation.mutateAsync({ title: missionTitle, content: missionContent, priority: missionPriority, durationHours: missionDuration });
+                      toast.success("🎯 Mission lancée ! ARIA a pris connaissance.");
+                      setMissionTitle(""); setMissionContent(""); setMissionView("active");
+                      await refetchActiveMission(); await refetchMissionHistory();
+                      // Afficher l'accusé de réception dans le chat ARIA
+                      if (res.ariaAck) setMessages(prev => [...prev, { role: "assistant", content: res.ariaAck, actionType: "mission", timestamp: new Date() }]);
+                    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erreur"); }
+                  }}
+                  onCloseMission={async (id, status) => {
+                    try {
+                      const res = await closeMissionMutation.mutateAsync({ missionId: id, status });
+                      toast.success(status === "completed" ? "✅ Mission clôturée avec compte-rendu" : "❌ Mission annulée");
+                      await refetchActiveMission(); await refetchMissionHistory();
+                      if (res.report) setMessages(prev => [...prev, { role: "assistant", content: res.report, actionType: "report", timestamp: new Date() }]);
+                    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erreur"); }
+                  }}
+                  isCreating={createMissionMutation.isPending}
+                  isClosing={closeMissionMutation.isPending}
+                />
+              </TabsContent>
+
+              {/* ── ACCÈS ───────────────────────────────────────────────────── */}
               <TabsContent value="acces" className="mt-0 space-y-4">
                 <div>
                   <h2 className="text-lg font-bold text-white">Gestion des Accès</h2>
@@ -1487,6 +1541,427 @@ function AffiliationPanel() {
             <div className="bg-black/40 border border-white/10 rounded-lg p-3 max-h-64 overflow-auto">
               <pre className="text-xs text-white/70 whitespace-pre-wrap">{result}</pre>
             </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MissionsPanel — Système de missions 24h ─────────────────────────────────
+interface MissionRecord {
+  id: number;
+  title: string;
+  content: string;
+  status: "active" | "completed" | "cancelled" | "expired";
+  priority: "normal" | "high" | "urgent";
+  startsAt: Date;
+  expiresAt: Date;
+  completedAt: Date | null;
+  ariaAck: string | null;
+  ariaAckAt: Date | null;
+  progressNotes: string | null;
+  finalReport: string | null;
+  finalReportAt: Date | null;
+  successScore: number | null;
+  completedTasks: number | null;
+  totalTasks: number | null;
+  durationHours: number | null;
+  createdAt: Date;
+}
+
+interface MissionsPanelProps {
+  activeMission: MissionRecord | null;
+  missionHistory: MissionRecord[];
+  missionView: "create" | "active" | "history";
+  setMissionView: (v: "create" | "active" | "history") => void;
+  missionTitle: string;
+  setMissionTitle: (v: string) => void;
+  missionContent: string;
+  setMissionContent: (v: string) => void;
+  missionPriority: "normal" | "high" | "urgent";
+  setMissionPriority: (v: "normal" | "high" | "urgent") => void;
+  missionDuration: number;
+  setMissionDuration: (v: number) => void;
+  selectedHistoryMission: number | null;
+  setSelectedHistoryMission: (v: number | null) => void;
+  onCreateMission: () => Promise<void>;
+  onCloseMission: (id: number, status: "completed" | "cancelled") => Promise<void>;
+  isCreating: boolean;
+  isClosing: boolean;
+}
+
+function MissionsPanel({
+  activeMission, missionHistory, missionView, setMissionView,
+  missionTitle, setMissionTitle, missionContent, setMissionContent,
+  missionPriority, setMissionPriority, missionDuration, setMissionDuration,
+  selectedHistoryMission, setSelectedHistoryMission,
+  onCreateMission, onCloseMission, isCreating, isClosing,
+}: MissionsPanelProps) {
+  const priorityConfig = {
+    normal: { label: "Normal", color: "text-white/60", bg: "bg-white/10 border-white/20" },
+    high: { label: "Haute", color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/30" },
+    urgent: { label: "Urgente", color: "text-red-400", bg: "bg-red-500/10 border-red-500/30" },
+  };
+
+  const statusConfig = {
+    active: { label: "Active", color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" },
+    completed: { label: "Terminée", color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/30" },
+    cancelled: { label: "Annulée", color: "text-red-400", bg: "bg-red-500/10 border-red-500/30" },
+    expired: { label: "Expirée", color: "text-white/40", bg: "bg-white/5 border-white/10" },
+  };
+
+  function getRemainingTime(expiresAt: Date): string {
+    const remaining = new Date(expiresAt).getTime() - Date.now();
+    if (remaining <= 0) return "Expirée";
+    const h = Math.floor(remaining / (1000 * 60 * 60));
+    const m = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    return `${h}h ${m}m restants`;
+  }
+
+  function getElapsedPercent(startsAt: Date, expiresAt: Date): number {
+    const total = new Date(expiresAt).getTime() - new Date(startsAt).getTime();
+    const elapsed = Date.now() - new Date(startsAt).getTime();
+    return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
+  }
+
+  function getScoreColor(score: number): string {
+    if (score >= 80) return "text-emerald-400";
+    if (score >= 60) return "text-amber-400";
+    if (score >= 40) return "text-orange-400";
+    return "text-red-400";
+  }
+
+  const historyMission = selectedHistoryMission
+    ? missionHistory.find(m => m.id === selectedHistoryMission) ?? null
+    : null;
+
+  return (
+    <div className="flex flex-col h-full space-y-4">
+      {/* Header + Navigation */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-white">🎯 Missions ARIA</h2>
+          <p className="text-xs text-white/50">Directives 24h · ARIA les intègre automatiquement</p>
+        </div>
+        <div className="flex gap-1">
+          {(["active", "create", "history"] as const).map(v => (
+            <button key={v} onClick={() => setMissionView(v)}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${missionView === v ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"}`}
+            >
+              {v === "active" ? "🟢 Active" : v === "create" ? "✏️ Nouvelle" : "📋 Historique"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── VUE : MISSION ACTIVE ─── */}
+      {missionView === "active" && (
+        <div className="space-y-4">
+          {activeMission ? (
+            <>
+              {/* Carte mission active */}
+              <div className={`border rounded-xl p-4 ${priorityConfig[activeMission.priority].bg}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${priorityConfig[activeMission.priority].bg} ${priorityConfig[activeMission.priority].color}`}>
+                        {priorityConfig[activeMission.priority].label}
+                      </span>
+                      <span className="text-xs text-emerald-400 font-semibold">● EN COURS</span>
+                    </div>
+                    <h3 className="text-white font-bold text-base">{activeMission.title}</h3>
+                    <p className="text-xs text-white/50 mt-1">
+                      Lancée le {new Date(activeMission.startsAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-amber-400 font-bold text-sm">{getRemainingTime(activeMission.expiresAt)}</p>
+                    <p className="text-xs text-white/40">{activeMission.durationHours ?? 24}h total</p>
+                  </div>
+                </div>
+
+                {/* Barre de progression temporelle */}
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs text-white/40 mb-1">
+                    <span>Progression</span>
+                    <span>{getElapsedPercent(activeMission.startsAt, activeMission.expiresAt)}%</span>
+                  </div>
+                  <div className="w-full bg-white/10 rounded-full h-1.5">
+                    <div
+                      className="bg-amber-400 h-1.5 rounded-full transition-all"
+                      style={{ width: `${getElapsedPercent(activeMission.startsAt, activeMission.expiresAt)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Tâches */}
+                {(activeMission.totalTasks ?? 0) > 0 && (
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs text-white/40 mb-1">
+                      <span>Tâches</span>
+                      <span>{activeMission.completedTasks ?? 0}/{activeMission.totalTasks}</span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-1.5">
+                      <div
+                        className="bg-emerald-400 h-1.5 rounded-full"
+                        style={{ width: `${Math.round(((activeMission.completedTasks ?? 0) / (activeMission.totalTasks ?? 1)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Accusé de réception ARIA */}
+                {activeMission.ariaAck && (
+                  <div className="bg-black/30 border border-amber-500/20 rounded-lg p-3 mb-3">
+                    <p className="text-xs text-amber-400 font-semibold mb-1">✅ Accusé de réception ARIA</p>
+                    <div className="prose prose-invert prose-xs max-w-none text-white/70 text-xs">
+                      <ReactMarkdown>{activeMission.ariaAck}</ReactMarkdown>
+                    </div>
+                  </div>
+                )}
+
+                {/* Directive (collapsible) */}
+                <details className="group">
+                  <summary className="text-xs text-white/40 cursor-pointer hover:text-white/60 select-none">
+                    📄 Voir la directive complète
+                  </summary>
+                  <div className="mt-2 bg-black/20 border border-white/10 rounded-lg p-3 max-h-48 overflow-auto">
+                    <pre className="text-xs text-white/60 whitespace-pre-wrap font-mono">{activeMission.content}</pre>
+                  </div>
+                </details>
+
+                {/* Actions */}
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => onCloseMission(activeMission.id, "completed")}
+                    disabled={isClosing}
+                    className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg py-2 text-xs font-semibold transition-all disabled:opacity-50"
+                  >
+                    {isClosing ? "Génération compte-rendu..." : "✅ Clôturer avec compte-rendu"}
+                  </button>
+                  <button
+                    onClick={() => onCloseMission(activeMission.id, "cancelled")}
+                    disabled={isClosing}
+                    className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg px-3 py-2 text-xs transition-all disabled:opacity-50"
+                  >
+                    ✕ Annuler
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                <p className="text-xs text-white/40">ARIA intègre cette mission dans chaque réponse automatiquement.</p>
+                <p className="text-xs text-white/30 mt-0.5">Pour lancer une nouvelle mission, clôturez d'abord celle-ci.</p>
+              </div>
+            </>
+          ) : (
+            <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
+              <p className="text-4xl mb-3">🎯</p>
+              <p className="text-white/60 text-sm font-semibold">Aucune mission active</p>
+              <p className="text-white/40 text-xs mt-1 mb-4">Créez une directive pour qu'ARIA et toute l'équipe travaillent dessus pendant 24h.</p>
+              <button onClick={() => setMissionView("create")}
+                className="bg-amber-500 hover:bg-amber-400 text-black font-bold px-4 py-2 rounded-lg text-sm"
+              >
+                ✏️ Créer une mission
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── VUE : CRÉER UNE MISSION ─── */}
+      {missionView === "create" && (
+        <div className="space-y-4">
+          {activeMission && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex items-center gap-2">
+              <span className="text-amber-400 text-sm">⚠️</span>
+              <p className="text-xs text-amber-300">Une mission est déjà active. La créer en remplacera une nouvelle et expirera l'ancienne.</p>
+            </div>
+          )}
+
+          {/* Titre */}
+          <div>
+            <label className="text-xs text-white/50 mb-1 block">Titre de la mission</label>
+            <input
+              value={missionTitle}
+              onChange={e => setMissionTitle(e.target.value)}
+              placeholder="Ex: Mission SEO Paris — 24h"
+              className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/30 rounded-lg px-3 py-2 text-sm focus:border-amber-400/50 focus:outline-none"
+            />
+          </div>
+
+          {/* Priorité + Durée */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-xs text-white/50 mb-1 block">Priorité</label>
+              <div className="flex gap-1">
+                {(["normal", "high", "urgent"] as const).map(p => (
+                  <button key={p} onClick={() => setMissionPriority(p)}
+                    className={`flex-1 text-xs py-1.5 rounded-lg border transition-all ${missionPriority === p ? priorityConfig[p].bg + " " + priorityConfig[p].color : "bg-white/5 text-white/40 border-white/10"}`}
+                  >
+                    {priorityConfig[p].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="w-32">
+              <label className="text-xs text-white/50 mb-1 block">Durée (heures)</label>
+              <input
+                type="number"
+                min={1} max={168}
+                value={missionDuration}
+                onChange={e => setMissionDuration(parseInt(e.target.value) || 24)}
+                className="w-full bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 text-sm focus:border-amber-400/50 focus:outline-none text-center"
+              />
+            </div>
+          </div>
+
+          {/* Contenu — zone principale */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-white/50">Directive complète</label>
+              <span className="text-xs text-white/30">{missionContent.length} caractères</span>
+            </div>
+            <textarea
+              value={missionContent}
+              onChange={e => setMissionContent(e.target.value)}
+              placeholder="Collez ici votre directive complète pour ARIA et les agents...&#10;&#10;Exemple :&#10;MISSION : Créer 15 fiches SEO Paris ce soir&#10;AGENTS : LÉNA, MANUS&#10;OBJECTIFS : ...&#10;DEADLINES : ..."
+              rows={14}
+              className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/30 rounded-lg px-3 py-2 text-sm focus:border-amber-400/50 focus:outline-none resize-none font-mono"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={onCreateMission}
+              disabled={isCreating || !missionTitle.trim() || !missionContent.trim()}
+              className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg text-sm disabled:opacity-50 transition-all"
+            >
+              {isCreating ? "🔄 ARIA prend connaissance..." : "🚀 Lancer la mission"}
+            </button>
+            <button onClick={() => setMissionView("active")}
+              className="bg-white/5 hover:bg-white/10 text-white/60 border border-white/10 rounded-lg px-4 py-2 text-sm"
+            >
+              Annuler
+            </button>
+          </div>
+
+          <p className="text-xs text-white/30 text-center">
+            ARIA génèrera un accusé de réception et intégrera cette directive dans toutes ses réponses pendant {missionDuration}h.
+          </p>
+        </div>
+      )}
+
+      {/* ── VUE : HISTORIQUE ─── */}
+      {missionView === "history" && (
+        <div className="space-y-3">
+          {historyMission ? (
+            // Détail d'une mission
+            <div className="space-y-3">
+              <button onClick={() => setSelectedHistoryMission(null)}
+                className="text-xs text-white/50 hover:text-white flex items-center gap-1"
+              >
+                ← Retour à l'historique
+              </button>
+              <div className={`border rounded-xl p-4 ${statusConfig[historyMission.status].bg}`}>
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="text-white font-bold">{historyMission.title}</h3>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${statusConfig[historyMission.status].bg} ${statusConfig[historyMission.status].color}`}>
+                    {statusConfig[historyMission.status].label}
+                  </span>
+                </div>
+                <p className="text-xs text-white/40 mb-3">
+                  {new Date(historyMission.startsAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                  {" · "}{historyMission.durationHours ?? 24}h
+                </p>
+
+                {/* Score de succès */}
+                {historyMission.successScore !== null && (
+                  <div className="bg-black/30 border border-white/10 rounded-lg p-3 mb-3 flex items-center gap-3">
+                    <div className={`text-3xl font-black ${getScoreColor(historyMission.successScore)}`}>
+                      {historyMission.successScore}/100
+                    </div>
+                    <div>
+                      <p className="text-xs text-white/60 font-semibold">Score de succès ARIA</p>
+                      {(historyMission.totalTasks ?? 0) > 0 && (
+                        <p className="text-xs text-white/40">{historyMission.completedTasks ?? 0}/{historyMission.totalTasks} tâches</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Compte-rendu final */}
+                {historyMission.finalReport && (
+                  <div className="bg-black/20 border border-white/10 rounded-lg p-3 mb-3">
+                    <p className="text-xs text-white/60 font-semibold mb-2">📊 Compte-rendu ARIA</p>
+                    <div className="prose prose-invert prose-xs max-w-none text-white/70 text-xs max-h-64 overflow-auto">
+                      <ReactMarkdown>{historyMission.finalReport}</ReactMarkdown>
+                    </div>
+                  </div>
+                )}
+
+                {/* Directive originale */}
+                <details>
+                  <summary className="text-xs text-white/40 cursor-pointer hover:text-white/60 select-none">
+                    📄 Directive originale
+                  </summary>
+                  <div className="mt-2 bg-black/20 border border-white/10 rounded-lg p-3 max-h-40 overflow-auto">
+                    <pre className="text-xs text-white/50 whitespace-pre-wrap font-mono">{historyMission.content}</pre>
+                  </div>
+                </details>
+              </div>
+            </div>
+          ) : (
+            // Liste des missions
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-white/60">{missionHistory.length} mission{missionHistory.length > 1 ? "s" : ""} au total</p>
+                <div className="flex items-center gap-3 text-xs text-white/30">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />Terminée</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white/20 inline-block" />Expirée</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />Annulée</span>
+                </div>
+              </div>
+
+              {missionHistory.length === 0 ? (
+                <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
+                  <p className="text-3xl mb-2">📋</p>
+                  <p className="text-white/50 text-sm">Aucune mission dans l'historique</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {missionHistory.map(m => (
+                    <button key={m.id} onClick={() => setSelectedHistoryMission(m.id)}
+                      className="w-full text-left bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl p-3 transition-all"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${m.status === "completed" ? "bg-emerald-400" : m.status === "active" ? "bg-amber-400 animate-pulse" : m.status === "cancelled" ? "bg-red-400" : "bg-white/20"}`} />
+                            <span className="text-white text-sm font-semibold truncate">{m.title}</span>
+                          </div>
+                          <p className="text-xs text-white/40 ml-4">
+                            {new Date(m.startsAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                            {" · "}{m.durationHours ?? 24}h
+                            {m.completedAt && ` · Clôturée ${new Date(m.completedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}`}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                          {m.successScore !== null && (
+                            <span className={`text-sm font-black ${getScoreColor(m.successScore)}`}>{m.successScore}%</span>
+                          )}
+                          <span className={`text-xs px-2 py-0.5 rounded-full border ${statusConfig[m.status].bg} ${statusConfig[m.status].color}`}>
+                            {statusConfig[m.status].label}
+                          </span>
+                          <span className="text-white/30 text-xs">→</span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

@@ -74,6 +74,7 @@ import type { ManusMessage } from "./services/ai/manusAgent";
 import { genererArticleBlog, genererPostSocial, genererCalendrierEditorial, rechercherVideoVirale } from "./services/ai/creativeAgent";
 import { genererEmail, repondreCommentaire, gererMessagePrive, genererEmailProspection } from "./services/ai/communicationAgent";
 import { rechercherPrestataires, genererStrategieAffiliation, analyserPartenaire, PROGRAMMES_AFFILIATION } from "./services/ai/affiliationAgent";
+import { createMission, getActiveMission, getMissionHistory, addMissionProgress, closeMission, buildMissionContext } from "./services/missionService";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux administrateurs" });
@@ -1171,7 +1172,12 @@ export const appRouter = router({
           totalTripPlans: adminStats.totalTripPlans,
           recentConversations: 0,
         };
-        return chatWithDG(input.message, stats);
+        // Injecter le contexte de la mission active dans le message
+        const missionCtx = await buildMissionContext();
+        const enrichedMessage = missionCtx
+          ? `${missionCtx}\n\n---\n\nMessage du fondateur : ${input.message}`
+          : input.message;
+        return chatWithDG(enrichedMessage, stats);
       }),
     // Rapport journalier
     dailyReport: ownerProcedure
@@ -1218,6 +1224,46 @@ export const appRouter = router({
     updateUserRole: ownerProcedure
       .input(z.object({ userId: z.number(), role: z.enum(["user", "team", "admin"]) }))
       .mutation(async ({ input }) => updateUserRoleById(input.userId, input.role)),
+
+    // ─── Missions 24h ────────────────────────────────────────────────────
+    // Créer une nouvelle mission
+    createMission: ownerProcedure
+      .input(z.object({
+        title: z.string().min(1).max(256),
+        content: z.string().min(10),
+        priority: z.enum(["normal", "high", "urgent"]).default("normal"),
+        durationHours: z.number().min(1).max(168).default(24),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return createMission({ ...input, authorId: ctx.user.id });
+      }),
+    // Mission active
+    activeMission: ownerProcedure
+      .query(async () => getActiveMission()),
+    // Historique des missions
+    missionHistory: ownerProcedure
+      .input(z.object({ limit: z.number().default(20) }).optional())
+      .query(async ({ input }) => getMissionHistory(input?.limit ?? 20)),
+    // Ajouter une note de progression
+    addMissionProgress: ownerProcedure
+      .input(z.object({
+        missionId: z.number(),
+        note: z.string().min(1),
+        agent: z.string().optional(),
+        completedTasks: z.number().optional(),
+        totalTasks: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await addMissionProgress(input.missionId, input.note, input.agent, input.completedTasks, input.totalTasks);
+        return { success: true };
+      }),
+    // Clôturer une mission avec compte-rendu ARIA
+    closeMission: ownerProcedure
+      .input(z.object({
+        missionId: z.number(),
+        status: z.enum(["completed", "cancelled"]).default("completed"),
+      }))
+      .mutation(async ({ input }) => closeMission(input.missionId, input.status)),
   }),
 
   // ─── LÉNA — Assistante Terrain IA ──────────────────────────────────────────
