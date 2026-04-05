@@ -10,8 +10,9 @@ import {
   Utensils, Hotel, Camera, ShoppingBag, Sparkles, Eye, ExternalLink,
   Play, Instagram, Music, Quote, Info, AlertCircle, DollarSign
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+
 
 const categoryIcons: Record<string, any> = {
   restaurant: Utensils, hotel: Hotel, bar: Utensils, spa: Sparkles,
@@ -34,6 +35,14 @@ export default function EstablishmentDetail() {
     { slug: params.slug || "" },
     { enabled: !!params.slug }
   );
+
+  // Update document title for SEO - must be before early returns
+  useEffect(() => {
+    if (establishment?.metaTitle) {
+      document.title = establishment.metaTitle;
+    }
+    return () => { document.title = "Maison Baymora"; };
+  }, [establishment?.metaTitle]);
 
   if (isLoading) {
     return (
@@ -60,6 +69,7 @@ export default function EstablishmentDetail() {
   }
 
   const CategoryIcon = categoryIcons[establishment.category] || MapPin;
+  const schemaOrgData = establishment.schemaOrg ? JSON.parse(establishment.schemaOrg) : null;
   const photos = establishment.media?.filter((m: any) => m.type === "photo") || [];
   const videos = establishment.media?.filter((m: any) => ["video", "tiktok", "instagram_reel"].includes(m.type)) || [];
   const anecdotes = establishment.anecdotes ? JSON.parse(establishment.anecdotes) : [];
@@ -71,6 +81,24 @@ export default function EstablishmentDetail() {
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
+      {/* Schema.org JSON-LD for SEO */}
+      {schemaOrgData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrgData) }}
+        />
+      )}
+      {/* Meta tags for SEO */}
+      {establishment.metaTitle && (
+        <>
+          <meta name="title" content={establishment.metaTitle} />
+          <meta name="description" content={establishment.metaDescription || establishment.shortDescription || ''} />
+          <meta property="og:title" content={establishment.metaTitle} />
+          <meta property="og:description" content={establishment.metaDescription || establishment.shortDescription || ''} />
+          {establishment.heroImageUrl && <meta property="og:image" content={establishment.heroImageUrl} />}
+          <meta property="og:type" content="place" />
+        </>
+      )}
       {/* Hero Section */}
       <div className="relative h-[50vh] md:h-[60vh] overflow-hidden">
         {establishment.heroImageUrl ? (
@@ -163,13 +191,33 @@ export default function EstablishmentDetail() {
         <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-3"
         >
-          {establishment.openingHours && (
-            <div className="bg-white/[0.03] rounded-lg p-3 border border-white/5">
-              <Clock className="w-4 h-4 text-gold mb-1" />
-              <p className="text-xs text-white/40">Horaires</p>
-              <p className="text-sm text-white/80">{establishment.openingHours}</p>
-            </div>
-          )}
+          {establishment.openingHours && (() => {
+            const dayLabels: Record<string, string> = { lun: "Lun", mar: "Mar", mer: "Mer", jeu: "Jeu", ven: "Ven", sam: "Sam", dim: "Dim", reception: "Réception" };
+            try {
+              const hours = JSON.parse(establishment.openingHours);
+              return (
+                <div className="bg-white/[0.03] rounded-lg p-3 border border-white/5">
+                  <Clock className="w-4 h-4 text-gold mb-1" />
+                  <p className="text-xs text-white/40 mb-1">Horaires</p>
+                  <div className="space-y-0.5">
+                    {Object.entries(hours).map(([day, time]) => (
+                      <p key={day} className="text-xs text-white/70">
+                        <span className="font-medium text-white/90">{dayLabels[day] || day}</span> {String(time)}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              );
+            } catch {
+              return (
+                <div className="bg-white/[0.03] rounded-lg p-3 border border-white/5">
+                  <Clock className="w-4 h-4 text-gold mb-1" />
+                  <p className="text-xs text-white/40">Horaires</p>
+                  <p className="text-sm text-white/80">{establishment.openingHours}</p>
+                </div>
+              );
+            }
+          })()}
           {establishment.phone && (
             <div className="bg-white/[0.03] rounded-lg p-3 border border-white/5">
               <Phone className="w-4 h-4 text-gold mb-1" />

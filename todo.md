@@ -213,3 +213,15 @@
 - [x] Options transport (Uber, chauffeur, métro, à pied)
 - [x] Itinéraires tracés entre les étapes
 - [x] Popup fiche établissement au clic sur un pin
+
+## Phase 16 — Alimentation Fiches SEO avec Contenu Réel
+- [x] Seed DB avec 24 établissements réels (restaurants, hôtels, bars, spas, expériences) dans 6 villes (Paris, Marrakech, Santorini, Tokyo, New York, Bali)
+- [x] Descriptions IA riches et SEO-friendly pour chaque établissement
+- [x] 24 photos IA générées et uploadées sur CDN pour chaque établissement
+- [x] Métadonnées SEO Schema.org (Restaurant, Hotel, BarOrPub, Museum, TouristAttraction, HealthAndBeautyBusiness) dans les fiches
+- [x] 6 bundles pré-remplis avec des sélections curatées (Paris romantique, Marrakech immersion, Santorini luxe, Tokyo secret, NY insider, Bali transformation)
+- [x] Formatage horaires d'ouverture lisible (au lieu de JSON brut)
+- [x] Rendu Schema.org JSON-LD dans les pages d'établissement
+- [x] Meta tags OG (Open Graph) pour partage social
+- [x] Tester le rendu des fiches avec contenu réel — 24/24 fiches vérifiées
+- [ ] Pousser sur GitHub
