@@ -266,4 +266,24 @@
 - [x] Badges type (PHOTO/VIDÉO) + taille fichier (Mo) sur chaque miniature
 - [x] Blocage du bouton Suivant si fichiers en attente d'envoi
 - [x] 29 tests vitest passants (4 fichiers)
+- [x] Checkpoint ccebbd88 et livraison
+
+## Phase 20 — Refonte visuelle & UX complète
+
+- [ ] "Voir tout" cliquable sur page Destinations (blocs continents)
+- [ ] Hover CTA lisible (texte visible au survol de la souris)
+- [ ] Bouton retour arrière sur toutes les sous-pages
+- [ ] Bundles "Prêts à Vivre" → vrais parcours détaillés (pas IA chat)
+- [ ] Top 10 → liens vers fiches établissements réelles
+- [ ] Hero images sur page Destinations avec photos de couverture par continent
+- [ ] Hero images sur page Bundles avec visuels de couverture par bundle
+- [ ] Hero images sur page Discover/Inspirations
+- [ ] Blocs cliquables avec photos de couverture vivantes partout
+- [ ] Mode Fantôme : refonte page avec 3 niveaux distincts (données non revendues / anonymat app / anonymat vie réelle)
+- [ ] Ton humain : revoir les textes IA pour rester proche des humains (histoire de Kévin, fondateur)
+- [ ] Verrouiller forfait Élite avec badge "En cours de création"
+- [ ] Verrouiller Accès Off-Market avec badge "Bientôt disponible"
+- [ ] Dashboard owner : courbes revenus/dépenses/inscrits, coûts IA par requête, rentabilité
+- [ ] Centre de données interne avec équipe IA analytique
+- [ ] Salle de réunion IA : vérifier accès et affichage correct
 - [ ] Checkpoint et livraison

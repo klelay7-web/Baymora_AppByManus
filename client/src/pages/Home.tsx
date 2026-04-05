@@ -82,7 +82,8 @@ const plans = [
   {
     name: "Élite",
     price: "89,90",
-    tagline: "Le privilège absolu",
+    tagline: "Le privilège absolu — Bientôt disponible",
+    comingSoon: true,
     features: [
       "Tout Premium inclus",
       "Recommandations proactives",
@@ -231,7 +232,7 @@ export default function Home() {
             {[
               { icon: Sparkles, title: "IA Proactive", desc: "Recommandations personnalisées avant même votre demande" },
               { icon: MapPin, title: "Parcours GPS", desc: "Itinéraires jour par jour avec carte interactive en temps réel" },
-              { icon: Shield, title: "Anonymat Total", desc: "Mode Fantôme : réservations sous pseudonyme, discrétion absolue" },
+              { icon: Shield, title: "Discrétion & Confidentialité", desc: "Vos données ne sont jamais revendues. Vous pouvez rester anonyme dans l'app et, sur demande, dans la vraie vie." },
               { icon: Globe, title: "Accès Mondial", desc: "Hôtels, restaurants, expériences, transports dans le monde entier" },
             ].map((item, i) => (
               <motion.div
@@ -328,42 +329,43 @@ export default function Home() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {bundles.map((bundle, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="group cursor-pointer"
-                onClick={() => setActiveBundle(i)}
-              >
-                <div className="relative overflow-hidden aspect-[3/4] mb-4">
-                  <img
-                    src={bundle.img}
-                    alt={bundle.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#080c14]/90 via-transparent to-transparent" />
-                  <div className="absolute top-4 left-4">
-                    <span className="text-[10px] tracking-[0.2em] uppercase text-[#c8a94a] bg-[#080c14]/60 backdrop-blur-sm px-3 py-1">
-                      {bundle.tag}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h3 className="font-['Playfair_Display'] text-xl mb-1">{bundle.title}</h3>
-                    <p className="text-white/40 text-sm flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> {bundle.subtitle}
-                    </p>
-                  </div>
-                  {/* Voile teaser */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-[#080c14]/60 backdrop-blur-sm">
-                    <div className="text-center">
-                      <Lock className="h-6 w-6 text-[#c8a94a] mx-auto mb-2" />
-                      <p className="text-sm text-white/80">Découvrir la sélection</p>
+              <Link key={i} href="/inspirations">
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="group cursor-pointer"
+                >
+                  <div className="relative overflow-hidden aspect-[3/4] mb-4">
+                    <img
+                      src={bundle.img}
+                      alt={bundle.title}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#080c14]/90 via-transparent to-transparent" />
+                    <div className="absolute top-4 left-4">
+                      <span className="text-[10px] tracking-[0.2em] uppercase text-[#c8a94a] bg-[#080c14]/60 backdrop-blur-sm px-3 py-1">
+                        {bundle.tag}
+                      </span>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-6">
+                      <h3 className="font-['Playfair_Display'] text-xl mb-1">{bundle.title}</h3>
+                      <p className="text-white/40 text-sm flex items-center gap-1">
+                        <MapPin className="h-3 w-3" /> {bundle.subtitle}
+                      </p>
+                    </div>
+                    {/* Voile teaser au hover — texte lisible sur fond sombre */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-[#080c14]/75">
+                      <div className="text-center">
+                        <ArrowRight className="h-6 w-6 text-[#c8a94a] mx-auto mb-2" />
+                        <p className="text-sm text-white font-medium">Voir la sélection</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              </Link>
             ))}
           </div>
 
@@ -462,6 +464,8 @@ export default function Home() {
                 className={`relative p-8 border transition-all duration-500 ${
                   plan.accent
                     ? "border-[#c8a94a]/50 bg-[#c8a94a]/5"
+                    : (plan as any).comingSoon
+                    ? "border-white/5 opacity-60"
                     : "border-white/5 hover:border-white/10"
                 }`}
               >
@@ -469,6 +473,13 @@ export default function Home() {
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="bg-[#c8a94a] text-[#080c14] text-[10px] tracking-[0.15em] uppercase font-semibold px-4 py-1">
                       {plan.badge}
+                    </span>
+                  </div>
+                )}
+                {(plan as any).comingSoon && (
+                  <div className="absolute top-4 right-4">
+                    <span className="bg-purple-500/20 text-purple-300 border border-purple-400/30 text-[9px] tracking-[0.1em] uppercase px-2 py-1">
+                      En cours de création
                     </span>
                   </div>
                 )}
@@ -493,14 +504,17 @@ export default function Home() {
 
                 <Button
                   asChild
+                  disabled={(plan as any).comingSoon}
                   className={`w-full rounded-none py-5 tracking-wider ${
                     plan.accent
                       ? "bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a]"
+                      : (plan as any).comingSoon
+                      ? "bg-white/5 text-white/30 border border-white/5 cursor-not-allowed"
                       : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
                   }`}
                 >
-                  <a href={isAuthenticated ? "/pricing" : getLoginUrl()}>
-                    {plan.cta}
+                  <a href={(plan as any).comingSoon ? "#" : (isAuthenticated ? "/pricing" : getLoginUrl())}>
+                    {(plan as any).comingSoon ? "Bientôt disponible" : plan.cta}
                   </a>
                 </Button>
               </motion.div>

@@ -13,7 +13,7 @@ import {
   updateUserCredits, getCreditHistory, incrementFreeMessages,
   getUserItineraries, createItinerary,
   getSocialPosts, createSocialPost,
-  getAdminStats, getUserById, updateUser,
+  getAdminStats, getRevenueStats, getUserById, updateUser,
   getPublishedEstablishments, getEstablishmentBySlug, getEstablishmentById, getAllEstablishments,
   createEstablishment, updateEstablishment, incrementEstablishmentViews,
   getEstablishmentMedia, addEstablishmentMedia,
@@ -478,6 +478,7 @@ export const appRouter = router({
   // ─── Admin Dashboard ──────────────────────────────────────────────
   admin: router({
     getStats: adminProcedure.query(() => getAdminStats()),
+    getRevenueStats: adminProcedure.query(() => getRevenueStats()),
     notifyOwner: adminProcedure
       .input(z.object({ title: z.string(), content: z.string() }))
       .mutation(async ({ input }) => {
