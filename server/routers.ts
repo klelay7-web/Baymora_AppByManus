@@ -64,6 +64,11 @@ import { extractProfileFromMessage } from "./services/profileExtractor";
 import { transcribeAudio } from "./_core/voiceTranscription";
 import { chatWithLena, generateFicheWithLena } from "./services/ai/lenaService";
 import type { LenaMessage, LenaSession } from "./services/ai/lenaService";
+import { chatWithManus, delibererAriaEtManus, creerMission, MANUS_PROFILE, STRATEGIE_LANCEMENT } from "./services/ai/manusAgent";
+import type { ManusMessage } from "./services/ai/manusAgent";
+import { genererArticleBlog, genererPostSocial, genererCalendrierEditorial, rechercherVideoVirale } from "./services/ai/creativeAgent";
+import { genererEmail, repondreCommentaire, gererMessagePrive, genererEmailProspection } from "./services/ai/communicationAgent";
+import { rechercherPrestataires, genererStrategieAffiliation, analyserPartenaire, PROGRAMMES_AFFILIATION } from "./services/ai/affiliationAgent";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux administrateurs" });
@@ -72,6 +77,17 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 const teamProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "team" && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux membres de l'équipe" });
+  return next({ ctx });
+});
+
+// Owner procedure — accepte role admin OU ownerOpenId (robuste même si OWNER_OPEN_ID est vide)
+const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const isOwner = ENV.ownerOpenId && ctx.user.openId === ENV.ownerOpenId;
+  const isAdmin = ctx.user.role === "admin";
+  if (!isOwner && !isAdmin) {
+    console.log("[ARIA] Access denied - user.openId:", ctx.user.openId, "ownerOpenId:", ENV.ownerOpenId, "role:", ctx.user.role);
+    throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé au propriétaire" });
+  }
   return next({ ctx });
 });
 
@@ -1130,10 +1146,9 @@ export const appRouter = router({
   // ─── Pilotage (ARIA DG — Owner Only) ──────────────────────────────────────────
   pilotage: router({
     // Chat avec ARIA DG
-    chat: protectedProcedure
+    chat: ownerProcedure
       .input(z.object({ message: z.string().min(1).max(4000) }))
-      .mutation(async ({ input, ctx }) => {
-        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+      .mutation(async ({ input }) => {
         const adminStats = await getAdminStats();
         const stats = {
           totalUsers: adminStats.totalUsers,
@@ -1148,9 +1163,8 @@ export const appRouter = router({
         return chatWithDG(input.message, stats);
       }),
     // Rapport journalier
-    dailyReport: protectedProcedure
-      .mutation(async ({ ctx }) => {
-        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+    dailyReport: ownerProcedure
+      .mutation(async () => {
         const adminStats = await getAdminStats();
         const stats = {
           totalUsers: adminStats.totalUsers,
@@ -1165,56 +1179,34 @@ export const appRouter = router({
         return generateDailyReport(stats);
       }),
     // Historique des messages
-    history: protectedProcedure
-      .query(async ({ ctx }) => {
-        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
-        return getDGHistory(60);
-      }),
+    history: ownerProcedure
+      .query(async () => getDGHistory(60)),
     // Carnet de bord (rapports + alertes)
-    carnetsDebord: protectedProcedure
-      .query(async ({ ctx }) => {
-        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
-        return getCarnetsDebord(20);
-      }),
+    carnetsDebord: ownerProcedure
+      .query(async () => getCarnetsDebord(20)),
     // Organigramme
-    organigramme: protectedProcedure
-      .query(async ({ ctx }) => {
-        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
-        return ORGANIGRAMME;
-      }),
+    organigramme: ownerProcedure
+      .query(async () => ORGANIGRAMME),
     // Stratégie
-    strategie: protectedProcedure
-      .query(async ({ ctx }) => {
-        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
-        return STRATEGIE;
-      }),
+    strategie: ownerProcedure
+      .query(async () => STRATEGIE),
     // Budget
-    budget: protectedProcedure
-      .query(async ({ ctx }) => {
-        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
-        return BUDGET_MENSUEL;
-      }),
+    budget: ownerProcedure
+      .query(async () => BUDGET_MENSUEL),
     // Stats consolidées
-    stats: protectedProcedure
-      .query(async ({ ctx }) => {
-        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+    stats: ownerProcedure
+      .query(async () => {
         const adminStats = await getAdminStats();
         const revenueStats = await getRevenueStats();
         return { ...adminStats, ...revenueStats };
       }),
     // Liste tous les utilisateurs
-    listUsers: protectedProcedure
-      .query(async ({ ctx }) => {
-        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
-        return getAllUsers();
-      }),
+    listUsers: ownerProcedure
+      .query(async () => getAllUsers()),
     // Mettre à jour le rôle d'un utilisateur
-    updateUserRole: protectedProcedure
+    updateUserRole: ownerProcedure
       .input(z.object({ userId: z.number(), role: z.enum(["user", "team", "admin"]) }))
-      .mutation(async ({ input, ctx }) => {
-        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
-        return updateUserRoleById(input.userId, input.role);
-      }),
+      .mutation(async ({ input }) => updateUserRoleById(input.userId, input.role)),
   }),
 
   // ─── LÉNA — Assistante Terrain IA ──────────────────────────────────────────
@@ -1605,6 +1597,151 @@ export const appRouter = router({
         await saveDestinationForUser(ctx.user.id, input.destinationId);
         return { success: true };
       }),
+  }),
+
+  // ─── MANUS — Agent Directeur Technique (binôme ARIA) ─────────────────────────
+  manus: router({
+    // Chat avec MANUS
+    chat: ownerProcedure
+      .input(z.object({
+        message: z.string().min(1).max(4000),
+        history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).default([]),
+      }))
+      .mutation(async ({ input }) => {
+        const stats = await getAdminStats();
+        return chatWithManus(input.message, input.history as ManusMessage[], {
+          totalUsers: stats.totalUsers,
+          totalFiches: stats.totalCards,
+          totalBundles: 0,
+          totalParcours: stats.totalTripPlans,
+        });
+      }),
+    // Délibération ARIA+MANUS
+    deliberer: ownerProcedure
+      .input(z.object({
+        sujet: z.string().min(1),
+        contexte: z.string().default(""),
+      }))
+      .mutation(async ({ input }) => {
+        const stats = await getAdminStats();
+        return delibererAriaEtManus(input.sujet, input.contexte, {
+          totalUsers: stats.totalUsers,
+          totalCards: stats.totalCards,
+        });
+      }),
+    // Profil MANUS
+    profil: ownerProcedure.query(() => MANUS_PROFILE),
+    // Stratégie de lancement
+    strategie: ownerProcedure.query(() => STRATEGIE_LANCEMENT),
+    // Créer une mission
+    creerMission: ownerProcedure
+      .input(z.object({
+        titre: z.string(),
+        agent: z.string(),
+        type: z.enum(["scraping", "design", "seo", "social", "affiliation", "creative", "communication", "recherche"]),
+        description: z.string(),
+        priorite: z.enum(["critique", "haute", "normale", "basse"]).default("normale"),
+      }))
+      .mutation(async ({ input }) => creerMission(input.titre, input.agent, input.type, input.description, input.priorite)),
+  }),
+
+  // ─── MAYA — Agente Creative ────────────────────────────────────────────────
+  maya: router({
+    // Générer un article de blog
+    genererBlog: ownerProcedure
+      .input(z.object({
+        sujet: z.string().min(1),
+        motsCles: z.array(z.string()).optional(),
+      }))
+      .mutation(async ({ input }) => genererArticleBlog(input.sujet, undefined, input.motsCles)),
+    // Générer un post social
+    genererPost: ownerProcedure
+      .input(z.object({
+        sujet: z.string().min(1),
+        plateforme: z.enum(["instagram", "tiktok", "linkedin", "facebook", "twitter"]),
+        type: z.enum(["carrousel", "reel", "story", "post", "editorial"]),
+        ficheNom: z.string().optional(),
+        ficheVille: z.string().optional(),
+        ficheDescription: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => genererPostSocial(
+        input.sujet,
+        input.plateforme,
+        input.type,
+        input.ficheNom ? { nom: input.ficheNom, ville: input.ficheVille ?? "", description: input.ficheDescription ?? "" } : undefined
+      )),
+    // Générer un calendrier éditorial
+    genererCalendrier: ownerProcedure
+      .input(z.object({ dureeJours: z.number().default(30) }))
+      .mutation(async ({ input }) => genererCalendrierEditorial(input.dureeJours)),
+    // Rechercher vidéos virales
+    rechercherVideos: ownerProcedure
+      .input(z.object({ etablissement: z.string(), ville: z.string() }))
+      .mutation(async ({ input }) => rechercherVideoVirale(input.etablissement, input.ville)),
+  }),
+
+  // ─── NOVA — Agente Communication ──────────────────────────────────────────
+  nova: router({
+    // Générer un email
+    genererEmail: ownerProcedure
+      .input(z.object({
+        type: z.enum(["bienvenue", "newsletter", "relance", "prospection", "confirmation", "rapport"]),
+        prenom: z.string(),
+        email: z.string(),
+        tier: z.string().optional(),
+        contexte: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => genererEmail(
+        input.type,
+        { prenom: input.prenom, email: input.email, tier: input.tier },
+        input.contexte
+      )),
+    // Répondre à un commentaire
+    repondreCommentaire: ownerProcedure
+      .input(z.object({
+        commentaire: z.string(),
+        plateforme: z.string(),
+        etablissement: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => repondreCommentaire(input.commentaire, input.plateforme, input.etablissement)),
+    // Gérer un message privé
+    gererMessage: ownerProcedure
+      .input(z.object({ expediteur: z.string(), message: z.string() }))
+      .mutation(async ({ input }) => gererMessagePrive(input.expediteur, input.message)),
+    // Email prospection partenaire
+    emailProspection: ownerProcedure
+      .input(z.object({
+        nom: z.string(),
+        type: z.string(),
+        ville: z.string(),
+        contexte: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => genererEmailProspection(
+        { nom: input.nom, type: input.type, ville: input.ville },
+        input.contexte
+      )),
+  }),
+
+  // ─── ATLAS — Agent Affiliation & Partenariats ──────────────────────────────
+  atlas: router({
+    // Programmes d'affiliation disponibles
+    programmes: ownerProcedure.query(() => PROGRAMMES_AFFILIATION),
+    // Rechercher des prestataires
+    rechercherPrestataires: ownerProcedure
+      .input(z.object({
+        type: z.enum(["staycation", "restaurant", "chauffeur", "location_voiture", "location_voiture_luxe", "avion", "train", "hotel", "spa", "activite", "yacht", "jet_prive", "villa", "experience", "guide", "photographe"]),
+        ville: z.string(),
+        pays: z.string().default("France"),
+      }))
+      .mutation(async ({ input }) => rechercherPrestataires(input.type, input.ville, input.pays)),
+    // Stratégie d'affiliation
+    strategie: ownerProcedure
+      .input(z.object({ budget: z.number().default(0), priorites: z.array(z.string()).default([]) }))
+      .mutation(async ({ input }) => genererStrategieAffiliation(input.budget, input.priorites)),
+    // Analyser un partenaire
+    analyserPartenaire: ownerProcedure
+      .input(z.object({ nom: z.string(), type: z.string(), siteWeb: z.string() }))
+      .mutation(async ({ input }) => analyserPartenaire(input.nom, input.type, input.siteWeb)),
   }),
 
 });

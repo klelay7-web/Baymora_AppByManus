@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
-import { Shield, ExternalLink, Users, ChevronRight } from "lucide-react";
+import { Shield, ExternalLink, Users, ChevronRight, Zap, Megaphone, Mail, Globe } from "lucide-react";
 import { Link } from "wouter";
 
 interface Message {
@@ -418,11 +418,15 @@ export default function Pilotage() {
             <div className="border-b border-white/10 bg-[#0d0d14] px-4 flex-shrink-0">
               <TabsList className="bg-transparent border-0 h-12 gap-1">
                 {[
-                  { value: "dashboard", label: "📊 Dashboard" },
-                  { value: "salle",     label: "🧠 Salle de Réunion" },
-                  { value: "terrain",   label: "📍 Terrain" },
-                  { value: "carnet",    label: "📔 Carnet de Bord" },
-                  { value: "acces",     label: "🔑 Accès" },
+                  { value: "dashboard",   label: "📊 Dashboard" },
+                  { value: "salle",       label: "🧠 Salle de Réunion" },
+                  { value: "manus",       label: "⚡ MANUS DG" },
+                  { value: "terrain",     label: "📍 Terrain" },
+                  { value: "creative",    label: "🎨 Creative" },
+                  { value: "comms",       label: "📣 Comms" },
+                  { value: "affiliation", label: "🤝 Affiliation" },
+                  { value: "carnet",      label: "📔 Carnet de Bord" },
+                  { value: "acces",       label: "🔑 Accès" },
                 ].map((tab) => (
                   <TabsTrigger key={tab.value} value={tab.value}
                     className="text-xs data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-300 data-[state=active]:border-amber-500/30 text-white/50 hover:text-white/80 border border-transparent rounded-lg px-3 h-8"
@@ -764,8 +768,27 @@ export default function Pilotage() {
                 </div>
               </TabsContent>
 
-              {/* ── CARNET DE BORD ────────────────────────────────────── */}
-              <TabsContent value="carnet" className="mt-0 space-y-4">
+              {/* ── MANUS DG ───────────────────────────────────────────────────────────── */}
+              <TabsContent value="manus" className="mt-0 space-y-5">
+                <ManusPanel setInput={setInput} />
+              </TabsContent>
+
+              {/* ── CREATIVE (MAYA) ──────────────────────────────────────────────── */}
+              <TabsContent value="creative" className="mt-0 space-y-5">
+                <CreativePanel />
+              </TabsContent>
+
+              {/* ── COMMS (NOVA) ───────────────────────────────────────────────────────────── */}
+              <TabsContent value="comms" className="mt-0 space-y-5">
+                <CommsPanel />
+              </TabsContent>
+
+              {/* ── AFFILIATION (ATLAS) ──────────────────────────────────────────────────── */}
+              <TabsContent value="affiliation" className="mt-0 space-y-5">
+                <AffiliationPanel />
+              </TabsContent>
+
+              {/* ── CARNET DE BORD ──────────────────────────────────────────────────────── */}           <TabsContent value="carnet" className="mt-0 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-white">Carnet de Bord ARIA</h2>
@@ -877,6 +900,596 @@ export default function Pilotage() {
           </Tabs>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── MANUS DG Panel ───────────────────────────────────────────────────────────
+function ManusPanel({ setInput }: { setInput: (v: string) => void }) {
+  const [manusHistory, setManusHistory] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [manusInput, setManusInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeManusTab, setActiveManusTab] = useState<"chat" | "strategie" | "missions">("chat");
+  const manusChatMutation = trpc.manus.chat.useMutation();
+  const manusDelibererMutation = trpc.manus.deliberer.useMutation();
+  const { data: strategie } = trpc.manus.strategie.useQuery();
+
+  const sendToManus = async () => {
+    if (!manusInput.trim() || isLoading) return;
+    const msg = manusInput.trim();
+    setManusInput("");
+    setManusHistory((prev) => [...prev, { role: "user", content: msg }]);
+    setIsLoading(true);
+    try {
+      const res = await manusChatMutation.mutateAsync({ message: msg, history: manusHistory });
+      setManusHistory((prev) => [...prev, { role: "assistant", content: res.content }]);
+    } catch (err: unknown) {
+      toast.error("Erreur MANUS : " + (err instanceof Error ? err.message : "Inconnue"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deliberer = async () => {
+    setIsLoading(true);
+    try {
+      const res = await manusDelibererMutation.mutateAsync({
+        sujet: "Prochaines priorités de Maison Baymora",
+        contexte: "Analyser l'état actuel et proposer les 3 actions les plus urgentes",
+      });
+      const summary = `**Délibération ARIA+MANUS**\n\n**ARIA :** ${res.analyseAria}\n\n**MANUS :** ${res.analyseManus}\n\n**Décision commune :** ${res.decision}\n\n**Actions ARIA :** ${res.actionsAria.join(", ")}\n\n**Actions MANUS :** ${res.actionsManus.join(", ")}\n\n**Délai :** ${res.delai}`;
+      setManusHistory((prev) => [...prev, { role: "assistant", content: summary }]);
+      setActiveManusTab("chat");
+      if (res.messageFoundateur) {
+        setInput(`ARIA, MANUS dit : ${res.messageFoundateur}`);
+      }
+    } catch (err: unknown) {
+      toast.error("Erreur délibération : " + (err instanceof Error ? err.message : "Inconnue"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Zap size={18} className="text-yellow-400" />
+            MANUS — Agent Directeur Technique
+          </h2>
+          <p className="text-sm text-white/50">Binôme d'ARIA · Décisions partagées · Accès total</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveManusTab("chat")}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${activeManusTab === "chat" ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"}`}
+          >💬 Chat</button>
+          <button
+            onClick={() => setActiveManusTab("strategie")}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${activeManusTab === "strategie" ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"}`}
+          >🗺️ Stratégie</button>
+          <button
+            onClick={deliberer}
+            disabled={isLoading}
+            className="text-xs px-3 py-1.5 rounded-lg border bg-yellow-500/20 text-yellow-300 border-yellow-500/30 hover:bg-yellow-500/30 disabled:opacity-50"
+          >⚡ Délibérer ARIA+MANUS</button>
+        </div>
+      </div>
+
+      {/* Profil MANUS */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Design UI/UX", desc: "Niveau magazine luxe", icon: "🎨", color: "text-pink-400" },
+          { label: "Web Scraping", desc: "TripAdvisor, Maps, Instagram", icon: "🔍", color: "text-blue-400" },
+          { label: "Orchestration", desc: "Agents, missions, code", icon: "⚙️", color: "text-yellow-400" },
+        ].map((c) => (
+          <div key={c.label} className="bg-white/5 border border-white/10 rounded-xl p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">{c.icon}</span>
+              <span className={`text-xs font-semibold ${c.color}`}>{c.label}</span>
+            </div>
+            <p className="text-xs text-white/50">{c.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {activeManusTab === "chat" && (
+        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-xs font-bold text-black">M</div>
+            <span className="text-sm font-semibold text-yellow-400">MANUS</span>
+            <span className="text-xs text-white/30">Agent Directeur Technique</span>
+          </div>
+          <div className="h-64 overflow-auto p-4 space-y-3">
+            {manusHistory.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-white/40 text-sm">Parlez directement à MANUS</p>
+                <p className="text-white/25 text-xs mt-1">Il vous répond depuis son angle technique et opérationnel</p>
+              </div>
+            )}
+            {manusHistory.map((m, i) => (
+              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "bg-yellow-500/20 text-white border border-yellow-500/30" : "bg-white/5 text-white/90 border border-white/10"}`}>
+                  <div className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                    <ReactMarkdown>{m.content}</ReactMarkdown>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 flex gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="px-4 py-3 border-t border-white/10 flex gap-2">
+            <input
+              value={manusInput}
+              onChange={(e) => setManusInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") sendToManus(); }}
+              placeholder="Parlez à MANUS..."
+              className="flex-1 bg-white/5 border border-white/20 text-white placeholder:text-white/30 rounded-lg px-3 py-2 text-sm focus:border-yellow-400/50 focus:outline-none"
+            />
+            <button onClick={sendToManus} disabled={isLoading || !manusInput.trim()}
+              className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-3 py-2 rounded-lg disabled:opacity-50 text-sm"
+            >↑</button>
+          </div>
+        </div>
+      )}
+
+      {activeManusTab === "strategie" && strategie && (
+        <div className="space-y-4">
+          {Object.entries(strategie).map(([key, phase]) => {
+            const p = phase as { titre: string; objectif: string; agents: string[]; actions: string[] };
+            return (
+              <div key={key} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-yellow-400">{p.titre}</h3>
+                  <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-500/30 text-xs">{p.objectif}</Badge>
+                </div>
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {p.agents.map((a) => <span key={a} className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/60">{a}</span>)}
+                </div>
+                <ul className="space-y-1">
+                  {p.actions.map((action, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-white/60">
+                      <ChevronRight size={10} className="mt-0.5 flex-shrink-0 text-yellow-400" />
+                      <span>{action}</span>
+                      <button onClick={() => setInput(`ARIA, lance cette action : ${action}`)} className="ml-auto text-yellow-400/50 hover:text-yellow-400 flex-shrink-0">→ ARIA</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── CREATIVE Panel (MAYA) ────────────────────────────────────────────────────
+function CreativePanel() {
+  const [sujet, setSujet] = useState("");
+  const [plateforme, setPlateforme] = useState<"instagram" | "tiktok" | "linkedin">("instagram");
+  const [type, setType] = useState<"post" | "carrousel" | "reel">("post");
+  const [result, setResult] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"post" | "blog" | "calendrier">("post");
+  const genererPostMutation = trpc.maya.genererPost.useMutation();
+  const genererBlogMutation = trpc.maya.genererBlog.useMutation();
+  const genererCalendrierMutation = trpc.maya.genererCalendrier.useMutation();
+
+  const genererPost = async () => {
+    if (!sujet.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await genererPostMutation.mutateAsync({ sujet, plateforme, type });
+      setResult(JSON.stringify(res, null, 2));
+      toast.success("Post généré par MAYA !");
+    } catch (err: unknown) {
+      toast.error("Erreur MAYA : " + (err instanceof Error ? err.message : "Inconnue"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const genererBlog = async () => {
+    if (!sujet.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await genererBlogMutation.mutateAsync({ sujet });
+      setResult(JSON.stringify(res, null, 2));
+      toast.success("Article blog généré par MAYA !");
+    } catch (err: unknown) {
+      toast.error("Erreur MAYA : " + (err instanceof Error ? err.message : "Inconnue"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const genererCalendrier = async () => {
+    setIsLoading(true);
+    try {
+      const res = await genererCalendrierMutation.mutateAsync({ dureeJours: 30 });
+      setResult(JSON.stringify(res, null, 2));
+      toast.success("Calendrier éditorial 30 jours généré !");
+    } catch (err: unknown) {
+      toast.error("Erreur MAYA : " + (err instanceof Error ? err.message : "Inconnue"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <Megaphone size={18} className="text-purple-400" />
+          MAYA — Agente Creative
+        </h2>
+        <p className="text-sm text-white/50">Blog SEO · Réseaux sociaux · Carrousels · Réels · Calendrier éditorial</p>
+      </div>
+
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { label: "Blog SEO", desc: "Articles premium", icon: "✍️", color: "text-purple-400" },
+          { label: "Instagram", desc: "Posts & Carrousels", icon: "📸", color: "text-pink-400" },
+          { label: "TikTok", desc: "Scripts Réels", icon: "🎬", color: "text-red-400" },
+          { label: "Calendrier", desc: "30 jours planifiés", icon: "📅", color: "text-blue-400" },
+        ].map((c) => (
+          <div key={c.label} className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+            <span className="text-2xl">{c.icon}</span>
+            <p className={`text-xs font-semibold ${c.color} mt-1`}>{c.label}</p>
+            <p className="text-xs text-white/40">{c.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        {(["post", "blog", "calendrier"] as const).map((t) => (
+          <button key={t} onClick={() => setActiveTab(t)}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${activeTab === t ? "bg-purple-500/20 text-purple-300 border-purple-500/30" : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"}`}
+          >{t === "post" ? "📱 Post Social" : t === "blog" ? "✍️ Article Blog" : "📅 Calendrier"}</button>
+        ))}
+      </div>
+
+      {activeTab !== "calendrier" && (
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+          <input
+            value={sujet}
+            onChange={(e) => setSujet(e.target.value)}
+            placeholder={activeTab === "post" ? "Sujet du post (ex: Staycation romantique à Paris)" : "Sujet de l'article (ex: Les meilleurs hôtels boutique de Lyon)"}
+            className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/30 rounded-lg px-3 py-2 text-sm focus:border-purple-400/50 focus:outline-none"
+          />
+          {activeTab === "post" && (
+            <div className="flex gap-2">
+              <select value={plateforme} onChange={(e) => setPlateforme(e.target.value as typeof plateforme)}
+                className="flex-1 bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 text-sm focus:outline-none">
+                <option value="instagram">Instagram</option>
+                <option value="tiktok">TikTok</option>
+                <option value="linkedin">LinkedIn</option>
+              </select>
+              <select value={type} onChange={(e) => setType(e.target.value as typeof type)}
+                className="flex-1 bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 text-sm focus:outline-none">
+                <option value="post">Post</option>
+                <option value="carrousel">Carrousel</option>
+                <option value="reel">Réel</option>
+              </select>
+            </div>
+          )}
+          <button onClick={activeTab === "post" ? genererPost : genererBlog} disabled={isLoading || !sujet.trim()}
+            className="w-full bg-purple-500 hover:bg-purple-400 text-white font-semibold py-2 rounded-lg text-sm disabled:opacity-50"
+          >{isLoading ? "Génération en cours..." : activeTab === "post" ? "🎨 Générer le post" : "✍️ Générer l'article"}</button>
+        </div>
+      )}
+
+      {activeTab === "calendrier" && (
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <p className="text-sm text-white/60 mb-3">Génère un calendrier éditorial complet de 30 jours avec 3 posts/jour sur Instagram, TikTok et LinkedIn.</p>
+          <button onClick={genererCalendrier} disabled={isLoading}
+            className="w-full bg-purple-500 hover:bg-purple-400 text-white font-semibold py-2 rounded-lg text-sm disabled:opacity-50"
+          >{isLoading ? "Génération en cours..." : "📅 Générer le calendrier 30 jours"}</button>
+        </div>
+      )}
+
+      {result && (
+        <div className="bg-black/40 border border-white/10 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-purple-400">Résultat MAYA</span>
+            <button onClick={() => { navigator.clipboard.writeText(result); toast.success("Copié !"); }}
+              className="text-xs text-white/40 hover:text-white/70">📋 Copier</button>
+          </div>
+          <pre className="text-xs text-white/70 overflow-auto max-h-64 whitespace-pre-wrap">{result}</pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── COMMS Panel (NOVA) ───────────────────────────────────────────────────────
+function CommsPanel() {
+  const [commentaire, setCommentaire] = useState("");
+  const [plateforme, setPlateforme] = useState("Instagram");
+  const [result, setResult] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"commentaires" | "email" | "message">("commentaires");
+  const repondreCommentaireMutation = trpc.nova.repondreCommentaire.useMutation();
+  const genererEmailMutation = trpc.nova.genererEmail.useMutation();
+  const gererMessageMutation = trpc.nova.gererMessage.useMutation();
+
+  const repondre = async () => {
+    if (!commentaire.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await repondreCommentaireMutation.mutateAsync({ commentaire, plateforme });
+      setResult(res.reponse);
+      toast.success("Réponse générée par NOVA !");
+    } catch (err: unknown) {
+      toast.error("Erreur NOVA : " + (err instanceof Error ? err.message : "Inconnue"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <Mail size={18} className="text-green-400" />
+          NOVA — Agente Communication
+        </h2>
+        <p className="text-sm text-white/50">Emails · Commentaires · Messages privés · CRM · Newsletter</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Commentaires", desc: "Instagram, TikTok, Google", icon: "💬", color: "text-green-400" },
+          { label: "Emails", desc: "Bienvenue, relance, promo", icon: "📧", color: "text-blue-400" },
+          { label: "Messages privés", desc: "DM, WhatsApp, email", icon: "📩", color: "text-purple-400" },
+        ].map((c) => (
+          <div key={c.label} className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+            <span className="text-2xl">{c.icon}</span>
+            <p className={`text-xs font-semibold ${c.color} mt-1`}>{c.label}</p>
+            <p className="text-xs text-white/40">{c.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        {(["commentaires", "email", "message"] as const).map((t) => (
+          <button key={t} onClick={() => setActiveTab(t)}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${activeTab === t ? "bg-green-500/20 text-green-300 border-green-500/30" : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"}`}
+          >{t === "commentaires" ? "💬 Commentaires" : t === "email" ? "📧 Emails" : "📩 Messages"}</button>
+        ))}
+      </div>
+
+      {activeTab === "commentaires" && (
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+          <select value={plateforme} onChange={(e) => setPlateforme(e.target.value)}
+            className="w-full bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 text-sm focus:outline-none">
+            <option>Instagram</option>
+            <option>TikTok</option>
+            <option>Google</option>
+            <option>Site web</option>
+          </select>
+          <textarea
+            value={commentaire}
+            onChange={(e) => setCommentaire(e.target.value)}
+            placeholder="Collez le commentaire à traiter..."
+            rows={3}
+            className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/30 rounded-lg px-3 py-2 text-sm focus:border-green-400/50 focus:outline-none resize-none"
+          />
+          <button onClick={repondre} disabled={isLoading || !commentaire.trim()}
+            className="w-full bg-green-500 hover:bg-green-400 text-white font-semibold py-2 rounded-lg text-sm disabled:opacity-50"
+          >{isLoading ? "Génération..." : "💬 Générer la réponse"}</button>
+          {result && (
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+              <p className="text-xs font-semibold text-green-400 mb-1">Réponse NOVA :</p>
+              <p className="text-sm text-white/80">{result}</p>
+              <button onClick={() => { navigator.clipboard.writeText(result); toast.success("Copié !"); }}
+                className="text-xs text-green-400 hover:text-green-300 mt-2">📋 Copier</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "email" && (
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+          <p className="text-sm text-white/60 mb-3">Génération d'emails automatiques via NOVA. Configurez les triggers dans les paramètres.</p>
+          <div className="space-y-2">
+            {["bienvenue", "newsletter", "relance", "prospection"].map((type) => (
+              <div key={type} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                <div>
+                  <p className="text-sm text-white capitalize">{type}</p>
+                  <p className="text-xs text-white/40">{type === "bienvenue" ? "À l'inscription" : type === "newsletter" ? "Hebdomadaire" : type === "relance" ? "J+3, J+7" : "Partenaires"}</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    setIsLoading(true);
+                    try {
+                      const res = await genererEmailMutation.mutateAsync({ type: type as "bienvenue" | "newsletter" | "relance" | "prospection" | "confirmation" | "rapport", prenom: "Client", email: "client@example.com" });
+                      setResult(res.corps);
+                      toast.success(`Email ${type} généré !`);
+                    } catch { toast.error("Erreur"); } finally { setIsLoading(false); }
+                  }}
+                  disabled={isLoading}
+                  className="text-xs px-2 py-1 rounded-lg bg-green-500/20 text-green-300 border border-green-500/30 hover:bg-green-500/30 disabled:opacity-50"
+                >Générer</button>
+              </div>
+            ))}
+          </div>
+          {result && (
+            <div className="mt-3 bg-black/40 border border-white/10 rounded-lg p-3 max-h-48 overflow-auto">
+              <p className="text-xs text-white/70 whitespace-pre-wrap">{result}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "message" && (
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+          <textarea
+            placeholder="Collez le message privé reçu..."
+            rows={4}
+            onChange={(e) => setCommentaire(e.target.value)}
+            className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/30 rounded-lg px-3 py-2 text-sm focus:border-green-400/50 focus:outline-none resize-none"
+          />
+          <button
+            onClick={async () => {
+              if (!commentaire.trim()) return;
+              setIsLoading(true);
+              try {
+                const res = await gererMessageMutation.mutateAsync({ expediteur: "Client", message: commentaire });
+                setResult(res.reponse);
+                toast.success("Réponse générée !");
+              } catch { toast.error("Erreur"); } finally { setIsLoading(false); }
+            }}
+            disabled={isLoading || !commentaire.trim()}
+            className="w-full bg-green-500 hover:bg-green-400 text-white font-semibold py-2 rounded-lg text-sm disabled:opacity-50"
+          >{isLoading ? "Génération..." : "📩 Générer la réponse"}</button>
+          {result && (
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+              <p className="text-sm text-white/80">{result}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AFFILIATION Panel (ATLAS) ────────────────────────────────────────────────
+function AffiliationPanel() {
+  const [type, setType] = useState<"staycation" | "restaurant" | "chauffeur" | "location_voiture_luxe" | "spa" | "activite" | "avion" | "train">("staycation");
+  const [ville, setVille] = useState("");
+  const [result, setResult] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"programmes" | "prestataires" | "strategie">("programmes");
+  const { data: programmes } = trpc.atlas.programmes.useQuery();
+  const rechercherMutation = trpc.atlas.rechercherPrestataires.useMutation();
+  const strategieMutation = trpc.atlas.strategie.useMutation();
+
+  const rechercher = async () => {
+    if (!ville.trim()) return;
+    setIsLoading(true);
+    try {
+      const res = await rechercherMutation.mutateAsync({ type, ville });
+      setResult(JSON.stringify(res, null, 2));
+      toast.success(`${res.length} prestataires trouvés !`);
+    } catch (err: unknown) {
+      toast.error("Erreur ATLAS : " + (err instanceof Error ? err.message : "Inconnue"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const genererStrategie = async () => {
+    setIsLoading(true);
+    try {
+      const res = await strategieMutation.mutateAsync({ budget: 0, priorites: [] });
+      setResult(JSON.stringify(res, null, 2));
+      toast.success("Stratégie d'affiliation générée !");
+    } catch (err: unknown) {
+      toast.error("Erreur : " + (err instanceof Error ? err.message : "Inconnue"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <Globe size={18} className="text-cyan-400" />
+          ATLAS — Agent Affiliation & Partenariats
+        </h2>
+        <p className="text-sm text-white/50">Staycation · Restaurants · Chauffeurs · Location voiture · Avions · Trains · Spas</p>
+      </div>
+
+      <div className="flex gap-2">
+        {(["programmes", "prestataires", "strategie"] as const).map((t) => (
+          <button key={t} onClick={() => setActiveTab(t)}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${activeTab === t ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"}`}
+          >{t === "programmes" ? "🔗 Programmes" : t === "prestataires" ? "🔍 Prestataires" : "📊 Stratégie"}</button>
+        ))}
+      </div>
+
+      {activeTab === "programmes" && programmes && (
+        <div className="space-y-3">
+          {programmes.map((p) => (
+            <div key={p.nom} className="bg-white/5 border border-white/10 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-semibold text-white">{p.nom}</p>
+                  <p className="text-xs text-white/40">{p.plateforme}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-semibold text-cyan-400">{p.commission}</p>
+                  <p className="text-xs text-white/40">Cookie : {p.cookie}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {p.categories.map((c) => <span key={c} className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400">{c}</span>)}
+              </div>
+              <p className="text-xs text-white/50">{p.notes}</p>
+              <a href={p.url} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 mt-2">
+                <ExternalLink size={10} /> S'inscrire au programme
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab === "prestataires" && (
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+          <div className="flex gap-2">
+            <select value={type} onChange={(e) => setType(e.target.value as typeof type)}
+              className="flex-1 bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 text-sm focus:outline-none">
+              <option value="staycation">Staycation</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="chauffeur">Chauffeur VTC</option>
+              <option value="location_voiture_luxe">Location voiture luxe</option>
+              <option value="spa">Spa & Bien-être</option>
+              <option value="activite">Activité & Expérience</option>
+              <option value="avion">Avion</option>
+              <option value="train">Train</option>
+            </select>
+            <input value={ville} onChange={(e) => setVille(e.target.value)}
+              placeholder="Ville (ex: Paris)"
+              className="flex-1 bg-white/5 border border-white/20 text-white placeholder:text-white/30 rounded-lg px-3 py-2 text-sm focus:border-cyan-400/50 focus:outline-none"
+            />
+          </div>
+          <button onClick={rechercher} disabled={isLoading || !ville.trim()}
+            className="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-semibold py-2 rounded-lg text-sm disabled:opacity-50"
+          >{isLoading ? "Recherche en cours..." : "🔍 Rechercher des prestataires"}</button>
+          {result && (
+            <div className="bg-black/40 border border-white/10 rounded-lg p-3 max-h-64 overflow-auto">
+              <pre className="text-xs text-white/70 whitespace-pre-wrap">{result}</pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "strategie" && (
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+          <p className="text-sm text-white/60">Génère une stratégie d'affiliation complète avec les programmes recommandés, le plan d'action et les revenus estimés.</p>
+          <button onClick={genererStrategie} disabled={isLoading}
+            className="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-semibold py-2 rounded-lg text-sm disabled:opacity-50"
+          >{isLoading ? "Génération..." : "📊 Générer la stratégie"}</button>
+          {result && (
+            <div className="bg-black/40 border border-white/10 rounded-lg p-3 max-h-64 overflow-auto">
+              <pre className="text-xs text-white/70 whitespace-pre-wrap">{result}</pre>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
