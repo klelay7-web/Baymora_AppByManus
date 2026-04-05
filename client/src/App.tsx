@@ -24,6 +24,7 @@ const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const DashboardClient = lazy(() => import("./pages/DashboardClient"));
 const DashboardAmbassador = lazy(() => import("./pages/DashboardAmbassador"));
 const AdminCommandCenter = lazy(() => import("./pages/AdminCommandCenter"));
+const CommandCenter = lazy(() => import("./pages/CommandCenter"));
 const AdminSeoFiches = lazy(() => import("./pages/AdminSeoFiches"));
 const AdminContentSocial = lazy(() => import("./pages/AdminContentSocial"));
 const AdminPartnersCommissions = lazy(() => import("./pages/AdminPartnersCommissions"));
@@ -70,7 +71,7 @@ function Router() {
 
       {/* Admin Dashboards */}
       <Route path="/admin">{() => <LazyPage Component={AdminDashboard} />}</Route>
-      <Route path="/admin/command-center">{() => <LazyPage Component={AdminCommandCenter} />}</Route>
+      <Route path="/admin/command-center">{() => <LazyPage Component={CommandCenter} />}</Route>
       <Route path="/admin/seo-fiches">{() => <LazyPage Component={AdminSeoFiches} />}</Route>
       <Route path="/admin/content-social">{() => <LazyPage Component={AdminContentSocial} />}</Route>
       <Route path="/admin/partners-commissions">{() => <LazyPage Component={AdminPartnersCommissions} />}</Route>

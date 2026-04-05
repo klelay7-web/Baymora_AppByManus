@@ -41,6 +41,8 @@ import {
   Heart,
   ChevronRight,
   UserCircle,
+  LayoutDashboard,
+  BrainCircuit,
 } from "lucide-react";
 
 
@@ -380,6 +382,30 @@ export default function Navbar() {
                     </Button>
                   </Link>
                 )}
+                {user?.role === "admin" && (
+                  <>
+                    <Link href="/admin">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white/50 hover:text-[#c8a94a] hover:bg-transparent gap-2 rounded-none font-light text-[13px]"
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Link href="/admin/command-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-[#c8a94a]/70 hover:text-[#c8a94a] hover:bg-[#c8a94a]/5 gap-2 rounded-none font-light text-[13px] border border-[#c8a94a]/20 px-3"
+                      >
+                        <BrainCircuit className="h-4 w-4" />
+                        Salle de Réunion
+                      </Button>
+                    </Link>
+                  </>
+                )}
                 <Link href="/mon-espace">
                   <Button
                     variant="ghost"
@@ -538,6 +564,20 @@ export default function Navbar() {
                             >
                               <Building2 className="h-4 w-4 mr-2" />
                               Espace Terrain
+                            </Button>
+                          </Link>
+                        )}
+                        {user?.role === "admin" && (
+                          <Link
+                            href="/admin/command-center"
+                            onClick={() => setMobileOpen(false)}
+                          >
+                            <Button
+                              variant="outline"
+                              className="w-full border-[#c8a94a]/30 text-[#c8a94a] hover:text-[#c8a94a] hover:border-[#c8a94a]/60 rounded-none py-5 tracking-wider uppercase text-sm mt-2"
+                            >
+                              <BrainCircuit className="h-4 w-4 mr-2" />
+                              Salle de Réunion IA
                             </Button>
                           </Link>
                         )}

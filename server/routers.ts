@@ -37,6 +37,7 @@ import {
   getFieldReportMediaItems, addFieldReportMediaItem, deleteFieldReportMediaItem,
 } from "./db";
 import { generateConciergeResponse, getWelcomeResponse } from "./services/concierge";
+import { callClaude, buildSystemPrompt, parseStructuredTags, type ClaudeMessage } from "./services/claudeService";
 import type { User } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
@@ -102,13 +103,76 @@ export const appRouter = router({
           }
           await incrementFreeMessages(ctx.user.id);
         }
+
+        // Ajouter le message utilisateur
         await addMessage(input.conversationId, "user", input.content, undefined, input.isVoice);
-        const history = await getConversationMessages(input.conversationId, 20);
-        const formattedHistory = history.map(m => ({ role: m.role, content: m.content }));
-        const aiResponse = await generateConciergeResponse(ctx.user.id, formattedHistory, input.content);
-        // Store the full JSON as the message content
-        await addMessage(input.conversationId, "assistant", JSON.stringify(aiResponse));
-        return aiResponse;
+
+        // Récupérer l'historique complet
+        const history = await getConversationMessages(input.conversationId, 30);
+        const messageIndex = history.filter(m => m.role === "user").length;
+
+        // Construire le profil client pour le system prompt
+        const [preferences, companions] = await Promise.all([
+          getUserPreferences(ctx.user.id),
+          getUserCompanions(ctx.user.id),
+        ]);
+        const clientProfile = {
+          name: ctx.user.name?.split(" ")[0],
+          preferences: preferences.map(p => ({ category: p.category, key: p.key, value: p.value })),
+          companions: companions.map(c => ({ name: c.name, relationship: c.relationship || undefined, dietaryRestrictions: c.dietaryRestrictions || undefined })),
+          homeCity: ctx.user.homeCity || undefined,
+          homeCountry: ctx.user.homeCountry || undefined,
+        };
+
+        // Construire le system prompt dynamique avec profil client
+        const systemPrompt = buildSystemPrompt(clientProfile);
+
+        // Formater l'historique pour Claude (exclure le dernier message user déjà ajouté)
+        const claudeMessages: ClaudeMessage[] = history
+          .slice(0, -1) // Exclure le message qu'on vient d'ajouter
+          .map(m => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          }));
+        claudeMessages.push({ role: "user", content: input.content });
+
+        // Appel Claude avec routing Opus/Sonnet intelligent
+        const claudeResponse = await callClaude(claudeMessages, systemPrompt, messageIndex, input.content);
+
+        // Parser les tags structurés dans la réponse
+        const parsed = parseStructuredTags(claudeResponse.content);
+
+        // Stocker la réponse complète (avec tags) pour le frontend
+        await addMessage(input.conversationId, "assistant", claudeResponse.content);
+
+        // Retourner la réponse parsée au frontend
+        return {
+          rawContent: claudeResponse.content,
+          cleanMessage: parsed.cleanMessage,
+          places: parsed.places || [],
+          map: parsed.map || null,
+          journey: parsed.journey || null,
+          gcal: parsed.gcal || [],
+          booking: parsed.booking || [],
+          quickReplies: parsed.qr || [],
+          plan: parsed.plan || null,
+          model: claudeResponse.model,
+          // Legacy compatibility
+          message: parsed.cleanMessage,
+          establishments: (parsed.places || []).map((p: any) => ({
+            name: p.name,
+            type: p.type,
+            city: p.city,
+            country: p.country,
+            description: p.description,
+            priceRange: p.priceRange,
+            rating: p.rating,
+            coordinates: p.coordinates,
+            imageUrl: p.imageUrl,
+          })),
+          tripSuggestion: null,
+          action: null,
+        };
       }),
 
     transcribeVoice: protectedProcedure
