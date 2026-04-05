@@ -161,3 +161,19 @@
 - [ ] Push sur GitHub
 - [x] Corriger double logo : "B" compact dans navbar, logo complet dans hero uniquement
 - [x] Corriger l'erreur affichée sur la page (nested anchor fix + lazy AdminDashboard)
+
+## Phase 13 — Implémentation Vision Complète (Dashboards + Landing Refondée)
+- [ ] Pousser descriptifs stratégiques + visuels complets sur GitHub
+- [ ] Mettre à jour schéma DB (favoris, collections, commissions ambassadeurs, directives IA, fiches prestataires)
+- [ ] Refondre la landing page (hero cinématographique, sections conversion, bundles, pricing 3 colonnes)
+- [ ] Dashboard Client (Mon Espace) — sidebar, parcours, favoris, conversations, crédits
+- [ ] Dashboard Client Affilié (Programme Ambassadeur) — stats, filleuls, commissions, tiers
+- [ ] Dashboard Admin SEO & Fiches — gestion fiches, score SEO, aperçu Google, bulk actions
+- [ ] Dashboard IA SEO — agents autonomes 24/7, logs temps réel, métriques
+- [ ] Dashboard Contenu & Social Media — calendrier éditorial, générateur split-view, publication
+- [ ] Dashboard Affiliations & Partenaires — prestataires, réservations, contrats
+- [ ] Dashboard Commissions — flux financiers, entrantes/sortantes, paiements
+- [ ] Salle de Réunion IA (QG) — conversation départements, KPIs, directives, compte-rendu
+- [ ] Connecter et interconnecter tous les dashboards, routes, navigation, permissions
+- [ ] Tester et sauvegarder checkpoint
+- [ ] Pousser tout sur GitHub
