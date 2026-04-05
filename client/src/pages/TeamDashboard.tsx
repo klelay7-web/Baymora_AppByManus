@@ -737,24 +737,74 @@ function StepContacts({ contacts, setContacts, onNext, onPrev, isLoading }: any)
   );
 }
 
-// ─── Step 5: Media Upload ─────────────────────────────────────────────
+// ─── Step 5: Media Upload (avec prévisualisation) ─────────────────────
 function StepMedia({ items, setItems, onUpload, onNext, onPrev, isLoading }: any) {
   const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState({ done: 0, total: 0 });
+  const [pendingFiles, setPendingFiles] = useState<{ file: File; previewUrl: string; type: "photo" | "video"; caption: string; category: string }[]>([]);
+  const [lightbox, setLightbox] = useState<{ url: string; type: "photo" | "video"; caption: string } | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
-  const handleFiles = async (files: FileList) => {
-    setUploading(true);
-    for (const file of Array.from(files)) {
+  // Créer une prévisualisation locale pour chaque fichier sélectionné
+  const addPendingFiles = (files: FileList) => {
+    const newPending = Array.from(files).map(file => {
       const isVideo = file.type.startsWith("video/");
-      const url = await onUpload(file);
-      if (url) {
-        setItems((prev: any[]) => [...prev, {
-          type: isVideo ? "video" : "photo",
-          url,
-          caption: file.name.replace(/\.[^.]+$/, ""),
-          category: "autre",
-        }]);
+      const previewUrl = URL.createObjectURL(file);
+      return {
+        file,
+        previewUrl,
+        type: (isVideo ? "video" : "photo") as "photo" | "video",
+        caption: file.name.replace(/\.[^.]+$/, ""),
+        category: "autre",
+      };
+    });
+    setPendingFiles(prev => [...prev, ...newPending]);
+  };
+
+  const updatePending = (i: number, key: string, value: string) => {
+    setPendingFiles(prev => {
+      const updated = [...prev];
+      updated[i] = { ...updated[i], [key]: value };
+      return updated;
+    });
+  };
+
+  const removePending = (i: number) => {
+    setPendingFiles(prev => {
+      const removed = prev[i];
+      URL.revokeObjectURL(removed.previewUrl);
+      return prev.filter((_, idx) => idx !== i);
+    });
+  };
+
+  // Upload tous les fichiers en attente vers S3
+  const handleUploadAll = async () => {
+    if (pendingFiles.length === 0) return;
+    setUploading(true);
+    setUploadCount({ done: 0, total: pendingFiles.length });
+    const successfulItems: any[] = [];
+    for (let i = 0; i < pendingFiles.length; i++) {
+      const pf = pendingFiles[i];
+      try {
+        const url = await onUpload(pf.file);
+        if (url) {
+          successfulItems.push({
+            type: pf.type,
+            url,
+            caption: pf.caption,
+            category: pf.category,
+          });
+        }
+      } catch {
+        // skip failed
       }
+      setUploadCount(prev => ({ ...prev, done: i + 1 }));
     }
+    setItems((prev: any[]) => [...prev, ...successfulItems]);
+    // Nettoyer les prévisualisations
+    pendingFiles.forEach(pf => URL.revokeObjectURL(pf.previewUrl));
+    setPendingFiles([]);
+    setUploadCount({ done: 0, total: 0 });
     setUploading(false);
   };
 
@@ -766,70 +816,227 @@ function StepMedia({ items, setItems, onUpload, onNext, onPrev, isLoading }: any
 
   const removeItem = (i: number) => setItems(items.filter((_: any, idx: number) => idx !== i));
 
+  // Drag & Drop handlers
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true); };
+  const handleDragLeave = () => setDragOver(false);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files.length > 0) addPendingFiles(e.dataTransfer.files);
+  };
+
+  const totalPending = pendingFiles.length;
+  const totalUploaded = items.length;
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-serif text-foreground mb-1">Photos & Vidéos</h2>
-        <p className="text-sm text-muted-foreground">Uploadez vos photos et vidéos du lieu, des prestations, du parcours</p>
+        <p className="text-sm text-muted-foreground">Sélectionnez vos fichiers, prévisualisez-les, puis envoyez-les en une seule fois</p>
       </div>
 
-      {/* Upload zone */}
-      <label className="block border-2 border-dashed border-border/50 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors">
+      {/* Drop zone */}
+      <label
+        className={`block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+          dragOver
+            ? "border-primary bg-primary/5 scale-[1.01]"
+            : "border-border/50 hover:border-primary/50"
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <input
           type="file"
           multiple
           accept="image/*,video/*"
           className="hidden"
-          onChange={e => e.target.files && handleFiles(e.target.files)}
+          onChange={e => { if (e.target.files) addPendingFiles(e.target.files); e.target.value = ""; }}
         />
-        {uploading ? (
-          <div className="flex items-center justify-center gap-2 text-primary">
-            <Loader2 className="w-6 h-6 animate-spin" />
-            <span>Upload en cours...</span>
-          </div>
-        ) : (
-          <>
-            <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Cliquez ou glissez vos fichiers ici</p>
-            <p className="text-xs text-muted-foreground mt-1">Photos et vidéos acceptées</p>
-          </>
-        )}
+        <Upload className={`w-8 h-8 mx-auto mb-2 transition-colors ${dragOver ? "text-primary" : "text-muted-foreground"}`} />
+        <p className="text-sm text-muted-foreground">
+          {dragOver ? "Relâchez pour ajouter" : "Cliquez ou glissez vos fichiers ici"}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">Photos (JPG, PNG, WebP) et vidéos (MP4, MOV) acceptées</p>
       </label>
 
-      {/* Media grid */}
-      {items.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {items.map((item: any, i: number) => (
-            <div key={i} className="bg-background/50 border border-border/30 rounded-lg overflow-hidden">
-              {item.type === "photo" ? (
-                <img src={item.url} alt={item.caption} className="w-full h-32 object-cover" />
-              ) : (
-                <div className="w-full h-32 bg-card flex items-center justify-center">
-                  <Camera className="w-8 h-8 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground ml-2">Vidéo</span>
-                </div>
-              )}
-              <div className="p-2 space-y-1">
-                <Input value={item.caption} onChange={e => updateItem(i, "caption", e.target.value)} placeholder="Légende" className="text-xs h-8" />
-                <div className="flex items-center gap-1">
-                  <select value={item.category} onChange={e => updateItem(i, "category", e.target.value)} className="flex-1 h-7 px-1 rounded border border-border bg-background text-xs text-foreground">
-                    {MEDIA_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                  <button onClick={() => removeItem(i)} className="text-muted-foreground hover:text-red-400 p-1">
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
+      {/* Pending files - prévisualisation avant envoi */}
+      {pendingFiles.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Eye className="w-4 h-4 text-primary" />
+              Prévisualisation ({totalPending} fichier{totalPending > 1 ? "s" : ""} en attente)
+            </h3>
+            <Button
+              onClick={handleUploadAll}
+              disabled={uploading}
+              size="sm"
+              className="gap-2 bg-primary hover:bg-primary/90"
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {uploading ? "Envoi en cours..." : `Envoyer ${totalPending} fichier${totalPending > 1 ? "s" : ""}`}
+            </Button>
+          </div>
+
+          {/* Upload progress bar */}
+          {uploading && uploadCount.total > 0 && (
+            <div className="bg-background/50 border border-border/30 rounded-lg p-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                <span>Progression de l'envoi</span>
+                <span>{uploadCount.done} / {uploadCount.total}</span>
+              </div>
+              <div className="w-full h-2 bg-card rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${(uploadCount.done / uploadCount.total) * 100}%` }}
+                />
               </div>
             </div>
-          ))}
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {pendingFiles.map((pf, i) => (
+              <div key={i} className="bg-background/50 border border-border/30 rounded-lg overflow-hidden group relative">
+                {/* Prévisualisation */}
+                <div
+                  className="relative w-full h-40 cursor-pointer"
+                  onClick={() => setLightbox({ url: pf.previewUrl, type: pf.type, caption: pf.caption })}
+                >
+                  {pf.type === "photo" ? (
+                    <img src={pf.previewUrl} alt={pf.caption} className="w-full h-full object-cover" />
+                  ) : (
+                    <video src={pf.previewUrl} className="w-full h-full object-cover" muted />
+                  )}
+                  {/* Overlay au hover */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                    <Eye className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  {/* Badge type */}
+                  <span className={`absolute top-2 left-2 text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                    pf.type === "video" ? "bg-purple-500/80 text-white" : "bg-blue-500/80 text-white"
+                  }`}>
+                    {pf.type === "video" ? "VIDÉO" : "PHOTO"}
+                  </span>
+                  {/* Taille du fichier */}
+                  <span className="absolute bottom-2 right-2 text-[10px] px-1.5 py-0.5 rounded bg-black/60 text-white">
+                    {(pf.file.size / 1024 / 1024).toFixed(1)} Mo
+                  </span>
+                </div>
+
+                {/* Bouton supprimer */}
+                <button
+                  onClick={() => removePending(i)}
+                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+
+                {/* Métadonnées */}
+                <div className="p-2 space-y-1">
+                  <Input
+                    value={pf.caption}
+                    onChange={e => updatePending(i, "caption", e.target.value)}
+                    placeholder="Légende"
+                    className="text-xs h-7"
+                  />
+                  <select
+                    value={pf.category}
+                    onChange={e => updatePending(i, "category", e.target.value)}
+                    className="w-full h-7 px-1 rounded border border-border bg-background text-xs text-foreground"
+                  >
+                    {MEDIA_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Fichiers déjà uploadés */}
+      {items.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-green-400" />
+            Envoyés ({totalUploaded} fichier{totalUploaded > 1 ? "s" : ""})
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {items.map((item: any, i: number) => (
+              <div key={i} className="bg-background/50 border border-green-500/20 rounded-lg overflow-hidden group relative">
+                <div
+                  className="relative w-full h-36 cursor-pointer"
+                  onClick={() => setLightbox({ url: item.url, type: item.type, caption: item.caption })}
+                >
+                  {item.type === "photo" ? (
+                    <img src={item.url} alt={item.caption} className="w-full h-full object-cover" />
+                  ) : (
+                    <video src={item.url} className="w-full h-full object-cover" muted />
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                    <Eye className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <span className="absolute top-2 left-2 text-[10px] px-1.5 py-0.5 rounded bg-green-500/80 text-white font-medium flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Envoyé
+                  </span>
+                </div>
+                <button
+                  onClick={() => removeItem(i)}
+                  className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+                <div className="p-2 space-y-1">
+                  <Input value={item.caption} onChange={e => updateItem(i, "caption", e.target.value)} placeholder="Légende" className="text-xs h-7" />
+                  <select value={item.category} onChange={e => updateItem(i, "category", e.target.value)} className="w-full h-7 px-1 rounded border border-border bg-background text-xs text-foreground">
+                    {MEDIA_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox plein écran */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors z-10"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="max-w-5xl max-h-[90vh] w-full" onClick={e => e.stopPropagation()}>
+            {lightbox.type === "photo" ? (
+              <img src={lightbox.url} alt={lightbox.caption} className="w-full h-full object-contain max-h-[85vh] rounded-lg" />
+            ) : (
+              <video src={lightbox.url} controls autoPlay className="w-full max-h-[85vh] rounded-lg" />
+            )}
+            {lightbox.caption && (
+              <p className="text-center text-white/80 text-sm mt-3">{lightbox.caption}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Compteur récapitulatif */}
+      {(items.length > 0 || pendingFiles.length > 0) && (
+        <div className="flex items-center gap-4 text-xs text-muted-foreground bg-background/50 border border-border/30 rounded-lg px-4 py-2">
+          <span className="flex items-center gap-1"><Camera className="w-3 h-3" /> {items.filter((m: any) => m.type === "photo").length + pendingFiles.filter(p => p.type === "photo").length} photos</span>
+          <span className="flex items-center gap-1"><Camera className="w-3 h-3" /> {items.filter((m: any) => m.type === "video").length + pendingFiles.filter(p => p.type === "video").length} vidéos</span>
+          {pendingFiles.length > 0 && <span className="text-orange-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {pendingFiles.length} en attente d'envoi</span>}
         </div>
       )}
 
       <div className="flex justify-between">
         <Button variant="outline" onClick={onPrev} className="gap-2"><ChevronLeft className="w-4 h-4" /> Retour</Button>
-        <Button onClick={onNext} disabled={isLoading} className="gap-2 bg-primary hover:bg-primary/90">
+        <Button onClick={onNext} disabled={isLoading || pendingFiles.length > 0} className="gap-2 bg-primary hover:bg-primary/90">
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
-          Suivant : Conseils
+          {pendingFiles.length > 0 ? "Envoyez d'abord les fichiers" : "Suivant : Conseils"}
         </Button>
       </div>
     </div>

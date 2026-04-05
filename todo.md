@@ -254,3 +254,16 @@
 - [x] Lien navbar desktop + mobile "Terrain" pour team + admin
 - [x] 11 tests vitest (fieldReports.test.ts) — 29 tests totaux passants
 - [x] Checkpoint ba47d35a et livraison
+
+## Phase 19 — Prévisualisation Médias dans Formulaire Terrain
+- [x] Prévisualisation locale des images avant upload (URL.createObjectURL)
+- [x] Prévisualisation locale des vidéos avant upload (balise video inline)
+- [x] Lightbox plein écran pour agrandir photos et vidéos (clic sur miniature)
+- [x] Barre de progression d'upload (compteur fichiers envoyés / total)
+- [x] Drag & drop amélioré avec zone visuelle (bordure + fond + texte dynamique)
+- [x] Suppression d'un média avant envoi (bouton X au hover)
+- [x] Séparation visuelle : section "Prévisualisation" (en attente) vs "Envoyés" (badge vert)
+- [x] Badges type (PHOTO/VIDÉO) + taille fichier (Mo) sur chaque miniature
+- [x] Blocage du bouton Suivant si fichiers en attente d'envoi
+- [x] 29 tests vitest passants (4 fichiers)
+- [ ] Checkpoint et livraison
