@@ -118,7 +118,7 @@ const membershipItems = [
   {
     title: "Programme Ambassadeur",
     description: "Parrainez et gagnez jusqu'à 22% de commissions",
-    href: "/pricing",
+    href: "/ambassadeur",
     icon: Users,
   },
   {
@@ -368,14 +368,14 @@ export default function Navbar() {
             {/* Desktop CTA */}
             {isAuthenticated ? (
               <div className="hidden lg:flex items-center gap-3">
-                <Link href="/profile">
+                <Link href="/mon-espace">
                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-white/50 hover:text-[#c8a94a] hover:bg-transparent gap-2 rounded-none font-light text-[13px]"
                   >
                     <UserCircle className="h-4 w-4" />
-                    {user?.name?.split(" ")[0] || "Profil"}
+                    {user?.name?.split(" ")[0] || "Mon Espace"}
                   </Button>
                 </Link>
                 <Link href="/chat">
@@ -504,7 +504,7 @@ export default function Navbar() {
                           </Button>
                         </Link>
                         <Link
-                          href="/profile"
+                          href="/mon-espace"
                           onClick={() => setMobileOpen(false)}
                         >
                           <Button
@@ -512,7 +512,7 @@ export default function Navbar() {
                             className="w-full border-white/10 text-white/60 hover:text-[#c8a94a] hover:border-[#c8a94a]/30 rounded-none py-5 tracking-wider uppercase text-sm mt-2"
                           >
                             <UserCircle className="h-4 w-4 mr-2" />
-                            Mon Profil
+                            Mon Espace
                           </Button>
                         </Link>
                       </>

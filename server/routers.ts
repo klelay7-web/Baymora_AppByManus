@@ -18,6 +18,16 @@ import {
   getEstablishmentMedia, addEstablishmentMedia,
   getUserTripPlans, getTripPlanById, createTripPlan, updateTripPlan,
   getTripDays, createTripDay, getTripSteps, createTripStep, updateTripStep,
+  getUserFavorites, addFavorite, removeFavorite,
+  getUserCollections, createCollection, updateCollection,
+  getAmbassadorByUserId, createAmbassador, updateAmbassador, getAllAmbassadors,
+  getReferralsByAmbassador, createReferral,
+  getCommissionPayments, createCommissionPayment, getAllCommissionStats,
+  getServiceProviders, createServiceProvider, updateServiceProvider,
+  getAiDirectives, createAiDirective, updateAiDirective,
+  getAiDepartmentReports, createAiDepartmentReport,
+  getPublishedBundles, getAllBundles, createBundle, updateBundle,
+  getContentCalendar, createContentCalendarItem, updateContentCalendarItem,
 } from "./db";
 import { generateConciergeResponse } from "./services/concierge";
 import type { User } from "../drizzle/schema";
@@ -423,7 +433,211 @@ export const appRouter = router({
         const success = await notifyOwner(input);
         return { success };
       }),
+   }),
+
+  // ─── Favorites & Collections ────────────────────────────────────────
+  favorites: router({
+    list: protectedProcedure.query(({ ctx }) => getUserFavorites(ctx.user.id)),
+    add: protectedProcedure
+      .input(z.object({ targetType: z.enum(["establishment", "seoCard", "tripPlan", "bundle"]), targetId: z.number(), collectionId: z.number().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await addFavorite(ctx.user.id, input.targetType, input.targetId, input.collectionId);
+        return { id };
+      }),
+    remove: protectedProcedure
+      .input(z.object({ targetType: z.enum(["establishment", "seoCard", "tripPlan", "bundle"]), targetId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await removeFavorite(ctx.user.id, input.targetType, input.targetId);
+        return { success: true };
+      }),
+  }),
+
+  collections: router({
+    list: protectedProcedure.query(({ ctx }) => getUserCollections(ctx.user.id)),
+    create: protectedProcedure
+      .input(z.object({ name: z.string(), description: z.string().optional(), coverImageUrl: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await createCollection(ctx.user.id, input.name, input.description, input.coverImageUrl);
+        return { id };
+      }),
+    update: protectedProcedure
+      .input(z.object({ id: z.number(), name: z.string().optional(), description: z.string().optional(), coverImageUrl: z.string().optional(), isPublic: z.boolean().optional() }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await updateCollection(id, data);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Ambassador Program ─────────────────────────────────────────────
+  ambassador: router({
+    me: protectedProcedure.query(({ ctx }) => getAmbassadorByUserId(ctx.user.id)),
+    join: protectedProcedure.mutation(async ({ ctx }) => {
+      const existing = await getAmbassadorByUserId(ctx.user.id);
+      if (existing) throw new TRPCError({ code: "CONFLICT", message: "Déjà ambassadeur" });
+      const code = `BAY-${ctx.user.id}-${Date.now().toString(36).toUpperCase()}`;
+      const id = await createAmbassador(ctx.user.id, code);
+      return { id, referralCode: code };
+    }),
+    referrals: protectedProcedure.query(async ({ ctx }) => {
+      const amb = await getAmbassadorByUserId(ctx.user.id);
+      if (!amb) return [];
+      return getReferralsByAmbassador(amb.id);
+    }),
+    commissions: protectedProcedure.query(async ({ ctx }) => {
+      const amb = await getAmbassadorByUserId(ctx.user.id);
+      if (!amb) return [];
+      return getCommissionPayments(amb.id, "ambassador");
+    }),
+    updatePayment: protectedProcedure
+      .input(z.object({ paypalEmail: z.string().optional(), iban: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const amb = await getAmbassadorByUserId(ctx.user.id);
+        if (!amb) throw new TRPCError({ code: "NOT_FOUND" });
+        await updateAmbassador(amb.id, input);
+        return { success: true };
+      }),
+    // Admin
+    all: adminProcedure.query(() => getAllAmbassadors()),
+  }),
+
+  // ─── Commissions (Admin) ────────────────────────────────────────────
+  commissions: router({
+    list: adminProcedure
+      .input(z.object({ recipientId: z.number().optional(), recipientType: z.string().optional() }).optional())
+      .query(({ input }) => getCommissionPayments(input?.recipientId, input?.recipientType)),
+    stats: adminProcedure.query(() => getAllCommissionStats()),
+    create: adminProcedure
+      .input(z.object({
+        recipientType: z.enum(["ambassador", "partner", "influencer", "concierge"]),
+        recipientId: z.number(), recipientName: z.string().optional(),
+        sourceType: z.enum(["referral", "booking", "affiliation", "subscription"]),
+        sourceId: z.number().optional(), amount: z.string(), currency: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await createCommissionPayment(input);
+        return { id };
+      }),
+  }),
+
+  // ─── Service Providers (Prestataires) ───────────────────────────────
+  providers: router({
+    list: adminProcedure
+      .input(z.object({ status: z.enum(["active", "pending", "suspended", "rejected"]).optional() }).optional())
+      .query(({ input }) => getServiceProviders(input?.status)),
+    create: adminProcedure
+      .input(z.object({
+        name: z.string(), slug: z.string(),
+        category: z.enum(["hotel", "restaurant", "yacht", "chauffeur", "spa", "concierge_local", "concierge_international", "real_estate", "luxury_goods", "experience", "transport"]),
+        contactName: z.string().optional(), contactEmail: z.string().optional(), contactPhone: z.string().optional(),
+        city: z.string().optional(), country: z.string().optional(), website: z.string().optional(),
+        description: z.string().optional(), commissionRate: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await createServiceProvider(input);
+        return { id };
+      }),
+    update: adminProcedure
+      .input(z.object({ id: z.number(), data: z.record(z.string(), z.any()) }))
+      .mutation(async ({ input }) => {
+        await updateServiceProvider(input.id, input.data);
+        return { success: true };
+      }),
+  }),
+
+  // ─── AI Command Center (Salle de Réunion) ──────────────────────────
+  aiCommand: router({
+    directives: adminProcedure
+      .input(z.object({ department: z.string().optional() }).optional())
+      .query(({ input }) => getAiDirectives(input?.department)),
+    createDirective: adminProcedure
+      .input(z.object({
+        department: z.enum(["seo", "content", "acquisition", "concierge", "analytics", "all"]),
+        directive: z.string(),
+        priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await createAiDirective({ ...input, authorId: ctx.user.id });
+        return { id };
+      }),
+    updateDirective: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(["active", "completed", "cancelled", "expired"]).optional(),
+        aiResponse: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await updateAiDirective(id, data);
+        return { success: true };
+      }),
+    reports: adminProcedure
+      .input(z.object({ department: z.enum(["seo", "content", "acquisition", "concierge", "analytics"]).optional() }).optional())
+      .query(({ input }) => getAiDepartmentReports(input?.department)),
+    createReport: adminProcedure
+      .input(z.object({
+        department: z.enum(["seo", "content", "acquisition", "concierge", "analytics"]),
+        reportDate: z.string(), summary: z.string(),
+        metrics: z.string().optional(), alerts: z.string().optional(),
+        status: z.enum(["healthy", "attention", "critical"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await createAiDepartmentReport(input);
+        return { id };
+      }),
+  }),
+
+  // ─── Bundles ────────────────────────────────────────────────────────
+  bundles: router({
+    published: publicProcedure.query(() => getPublishedBundles()),
+    all: adminProcedure.query(() => getAllBundles()),
+    create: adminProcedure
+      .input(z.object({
+        slug: z.string(), title: z.string(), subtitle: z.string().optional(),
+        description: z.string(), coverImageUrl: z.string().optional(),
+        category: z.enum(["weekend", "honeymoon", "gastronomie", "aventure", "wellness", "culture", "business", "family", "seasonal"]),
+        destination: z.string().optional(), duration: z.string().optional(),
+        priceFrom: z.string().optional(), priceTo: z.string().optional(),
+        includes: z.string().optional(), establishmentIds: z.string().optional(),
+        accessLevel: z.enum(["free", "explorer", "premium", "elite"]).optional(),
+        isVip: z.boolean().optional(), isFeatured: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await createBundle({ ...input, status: "draft" });
+        return { id };
+      }),
+    update: adminProcedure
+      .input(z.object({ id: z.number(), data: z.record(z.string(), z.any()) }))
+      .mutation(async ({ input }) => {
+        await updateBundle(input.id, input.data);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Content Calendar ──────────────────────────────────────────────
+  content: router({
+    calendar: adminProcedure
+      .input(z.object({ status: z.enum(["idea", "generating", "review", "approved", "scheduled", "published", "failed"]).optional() }).optional())
+      .query(({ input }) => getContentCalendar(input?.status)),
+    create: adminProcedure
+      .input(z.object({
+        title: z.string(),
+        contentType: z.enum(["blog_article", "instagram_post", "instagram_reel", "tiktok_video", "linkedin_post", "youtube_video", "twitter_post"]),
+        platform: z.enum(["instagram", "tiktok", "linkedin", "twitter", "youtube", "blog"]),
+        topic: z.string().optional(), brief: z.string().optional(),
+        scheduledDate: z.string(), scheduledTime: z.string().optional(),
+        status: z.enum(["idea", "generating", "review", "approved", "scheduled", "published", "failed"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await createContentCalendarItem(input);
+        return { id };
+      }),
+    update: adminProcedure
+      .input(z.object({ id: z.number(), data: z.record(z.string(), z.any()) }))
+      .mutation(async ({ input }) => {
+        await updateContentCalendarItem(input.id, input.data);
+        return { success: true };
+      }),
   }),
 });
-
 export type AppRouter = typeof appRouter;

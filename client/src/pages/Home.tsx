@@ -158,37 +158,27 @@ export default function Home() {
           </motion.p>
 
           <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center">
-            {isAuthenticated ? (
-              <Link href="/chat">
-                <Button
-                  size="lg"
-                  className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] font-medium rounded-none px-10 py-6 text-base tracking-wider"
-                >
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Parlez à votre assistant
-                </Button>
-              </Link>
-            ) : (
-              <a href={getLoginUrl()}>
-                <Button
-                  size="lg"
-                  className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] font-medium rounded-none px-10 py-6 text-base tracking-wider"
-                >
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Parlez à votre assistant
-                </Button>
+            <Button
+              asChild
+              size="lg"
+              className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] font-medium rounded-none px-10 py-6 text-base tracking-wider"
+            >
+              <a href={isAuthenticated ? "/chat" : getLoginUrl()}>
+                <MessageCircle className="mr-2 h-5 w-5" />
+                Parlez à votre assistant
               </a>
-            )}
-            <Link href="/discover">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/5 rounded-none px-10 py-6 text-base tracking-wider"
-              >
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-white/20 text-white hover:bg-white/5 rounded-none px-10 py-6 text-base tracking-wider"
+            >
+              <a href="/discover">
                 Explorer les destinations
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+              </a>
+            </Button>
           </motion.div>
 
           {/* Teaser gratuit */}
@@ -378,15 +368,16 @@ export default function Home() {
           </div>
 
           <div className="text-center mt-10">
-            <Link href="/discover">
-              <Button
-                variant="outline"
-                className="border-[#c8a94a]/30 text-[#c8a94a] hover:bg-[#c8a94a]/10 rounded-none px-8 py-5 tracking-wider"
-              >
+            <Button
+              asChild
+              variant="outline"
+              className="border-[#c8a94a]/30 text-[#c8a94a] hover:bg-[#c8a94a]/10 rounded-none px-8 py-5 tracking-wider"
+            >
+              <a href="/discover">
                 Voir toutes les inspirations
                 <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+              </a>
+            </Button>
           </div>
         </div>
       </section>
@@ -500,17 +491,18 @@ export default function Home() {
                   ))}
                 </ul>
 
-                <a href={isAuthenticated ? "/pricing" : getLoginUrl()}>
-                  <Button
-                    className={`w-full rounded-none py-5 tracking-wider ${
-                      plan.accent
-                        ? "bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a]"
-                        : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
-                    }`}
-                  >
+                <Button
+                  asChild
+                  className={`w-full rounded-none py-5 tracking-wider ${
+                    plan.accent
+                      ? "bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a]"
+                      : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
+                  }`}
+                >
+                  <a href={isAuthenticated ? "/pricing" : getLoginUrl()}>
                     {plan.cta}
-                  </Button>
-                </a>
+                  </a>
+                </Button>
               </motion.div>
             ))}
           </div>
@@ -669,15 +661,16 @@ export default function Home() {
               peut faire pour sublimer chaque instant de votre vie.
             </motion.p>
             <motion.div variants={fadeUp}>
-              <a href={isAuthenticated ? "/chat" : getLoginUrl()}>
-                <Button
-                  size="lg"
-                  className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none px-12 py-6 text-base tracking-wider"
-                >
+              <Button
+                asChild
+                size="lg"
+                className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none px-12 py-6 text-base tracking-wider"
+              >
+                <a href={isAuthenticated ? "/chat" : getLoginUrl()}>
                   <MessageCircle className="mr-2 h-5 w-5" />
                   Parlez à votre assistant
-                </Button>
-              </a>
+                </a>
+              </Button>
             </motion.div>
           </motion.div>
         </div>
@@ -711,8 +704,8 @@ export default function Home() {
               <h4 className="text-[#c8a94a] text-xs tracking-[0.2em] uppercase mb-4">Maison Baymora</h4>
               <ul className="space-y-2 text-sm text-white/30">
                 <li><Link href="/pricing" className="hover:text-white/60 transition-colors">Forfaits</Link></li>
-                <li><a href="#" className="hover:text-white/60 transition-colors">Programme Ambassadeur</a></li>
-                <li><a href="#" className="hover:text-white/60 transition-colors">Prestataires</a></li>
+                <li><Link href="/ambassadeur" className="hover:text-white/60 transition-colors">Programme Ambassadeur</Link></li>
+                <li><Link href="/#b2b" className="hover:text-white/60 transition-colors">Prestataires</Link></li>
               </ul>
             </div>
             <div>

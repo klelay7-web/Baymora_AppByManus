@@ -386,3 +386,176 @@ export const travelItineraries = mysqlTable("travelItineraries", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+// ─── Favorites (Favoris Utilisateur) ───────────────────────────────
+export const favorites = mysqlTable("favorites", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  targetType: mysqlEnum("targetType", ["establishment", "seoCard", "tripPlan", "bundle"]).notNull(),
+  targetId: int("targetId").notNull(),
+  collectionId: int("collectionId"), // optional grouping
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Collections (Groupes de Favoris) ──────────────────────────────
+export const collections = mysqlTable("collections", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 128 }).notNull(),
+  description: text("description"),
+  coverImageUrl: text("coverImageUrl"),
+  isPublic: boolean("isPublic").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Ambassador Program (Programme Ambassadeur) ────────────────────
+export const ambassadors = mysqlTable("ambassadors", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  referralCode: varchar("referralCode", { length: 32 }).notNull().unique(),
+  tier: mysqlEnum("tier", ["bronze", "silver", "gold", "platinum"]).default("bronze").notNull(),
+  totalReferrals: int("totalReferrals").default(0),
+  activeReferrals: int("activeReferrals").default(0),
+  totalEarnings: decimal("totalEarnings", { precision: 10, scale: 2 }).default("0.00"),
+  pendingEarnings: decimal("pendingEarnings", { precision: 10, scale: 2 }).default("0.00"),
+  commissionRate: decimal("commissionRate", { precision: 5, scale: 2 }).default("10.00"), // %
+  paypalEmail: varchar("paypalEmail", { length: 320 }),
+  iban: varchar("iban", { length: 64 }),
+  status: mysqlEnum("status", ["active", "suspended", "pending"]).default("pending").notNull(),
+  activatedAt: timestamp("activatedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Referrals (Parrainages) ───────────────────────────────────────
+export const referrals = mysqlTable("referrals", {
+  id: int("id").autoincrement().primaryKey(),
+  ambassadorId: int("ambassadorId").notNull(),
+  referredUserId: int("referredUserId").notNull(),
+  referralCode: varchar("referralCode", { length: 32 }).notNull(),
+  status: mysqlEnum("status", ["signed_up", "subscribed", "churned"]).default("signed_up").notNull(),
+  subscriptionTier: varchar("subscriptionTier", { length: 32 }),
+  commissionEarned: decimal("commissionEarned", { precision: 10, scale: 2 }).default("0.00"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  convertedAt: timestamp("convertedAt"),
+});
+
+// ─── Commission Payments (Paiements de Commissions) ────────────────
+export const commissionPayments = mysqlTable("commissionPayments", {
+  id: int("id").autoincrement().primaryKey(),
+  recipientType: mysqlEnum("recipientType", ["ambassador", "partner", "influencer", "concierge"]).notNull(),
+  recipientId: int("recipientId").notNull(),
+  recipientName: varchar("recipientName", { length: 256 }),
+  sourceType: mysqlEnum("sourceType", ["referral", "booking", "affiliation", "subscription"]).notNull(),
+  sourceId: int("sourceId"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).default("EUR"),
+  status: mysqlEnum("status", ["pending", "processing", "paid", "failed", "cancelled"]).default("pending").notNull(),
+  paymentMethod: varchar("paymentMethod", { length: 64 }),
+  transactionRef: varchar("transactionRef", { length: 256 }),
+  paidAt: timestamp("paidAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Service Providers (Prestataires Enrichis) ─────────────────────
+export const serviceProviders = mysqlTable("serviceProviders", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  slug: varchar("slug", { length: 256 }).notNull().unique(),
+  category: mysqlEnum("category", [
+    "hotel", "restaurant", "yacht", "chauffeur", "spa", "concierge_local",
+    "concierge_international", "real_estate", "luxury_goods", "experience", "transport"
+  ]).notNull(),
+  contactName: varchar("contactName", { length: 256 }),
+  contactEmail: varchar("contactEmail", { length: 320 }),
+  contactPhone: varchar("contactPhone", { length: 32 }),
+  city: varchar("city", { length: 128 }),
+  country: varchar("country", { length: 128 }),
+  website: text("website"),
+  logoUrl: text("logoUrl"),
+  description: text("description"),
+  commissionRate: decimal("commissionRate", { precision: 5, scale: 2 }).default("10.00"),
+  contractType: mysqlEnum("contractType", ["standard", "premium", "exclusive"]).default("standard"),
+  contractExpiry: varchar("contractExpiry", { length: 10 }),
+  totalReservations: int("totalReservations").default(0),
+  totalRevenue: decimal("totalRevenue", { precision: 10, scale: 2 }).default("0.00"),
+  rating: decimal("rating", { precision: 2, scale: 1 }),
+  linkedEstablishments: int("linkedEstablishments").default(0),
+  status: mysqlEnum("status", ["active", "pending", "suspended", "rejected"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── AI Directives (Directives pour les Départements IA) ───────────
+export const aiDirectives = mysqlTable("aiDirectives", {
+  id: int("id").autoincrement().primaryKey(),
+  authorId: int("authorId").notNull(), // admin who issued the directive
+  department: mysqlEnum("department", ["seo", "content", "acquisition", "concierge", "analytics", "all"]).notNull(),
+  directive: text("directive").notNull(),
+  priority: mysqlEnum("priority", ["low", "normal", "high", "urgent"]).default("normal").notNull(),
+  status: mysqlEnum("status", ["active", "completed", "cancelled", "expired"]).default("active").notNull(),
+  completedTasks: int("completedTasks").default(0),
+  totalTasks: int("totalTasks").default(0),
+  aiResponse: text("aiResponse"), // AI's acknowledgment / execution plan
+  completedAt: timestamp("completedAt"),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── AI Department Reports (Compte-Rendus Quotidiens IA) ───────────
+export const aiDepartmentReports = mysqlTable("aiDepartmentReports", {
+  id: int("id").autoincrement().primaryKey(),
+  department: mysqlEnum("department", ["seo", "content", "acquisition", "concierge", "analytics"]).notNull(),
+  reportDate: varchar("reportDate", { length: 10 }).notNull(), // "2026-04-05"
+  summary: text("summary").notNull(),
+  metrics: text("metrics"), // JSON { tasksCompleted, errors, kpis... }
+  alerts: text("alerts"), // JSON array of alerts
+  status: mysqlEnum("status", ["healthy", "attention", "critical"]).default("healthy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Bundles (Collections Curatées) ────────────────────────────────
+export const bundles = mysqlTable("bundles", {
+  id: int("id").autoincrement().primaryKey(),
+  slug: varchar("slug", { length: 256 }).notNull().unique(),
+  title: varchar("title", { length: 256 }).notNull(),
+  subtitle: varchar("subtitle", { length: 256 }),
+  description: text("description").notNull(),
+  coverImageUrl: text("coverImageUrl"),
+  category: mysqlEnum("category", ["weekend", "honeymoon", "gastronomie", "aventure", "wellness", "culture", "business", "family", "seasonal"]).notNull(),
+  destination: varchar("destination", { length: 256 }),
+  duration: varchar("duration", { length: 64 }), // "3 jours / 2 nuits"
+  priceFrom: decimal("priceFrom", { precision: 10, scale: 2 }),
+  priceTo: decimal("priceTo", { precision: 10, scale: 2 }),
+  currency: varchar("currency", { length: 3 }).default("EUR"),
+  includes: text("includes"), // JSON array of what's included
+  establishmentIds: text("establishmentIds"), // JSON array of linked establishment IDs
+  accessLevel: mysqlEnum("accessLevel", ["free", "explorer", "premium", "elite"]).default("explorer").notNull(),
+  isVip: boolean("isVip").default(false),
+  isFeatured: boolean("isFeatured").default(false),
+  status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
+  viewCount: int("viewCount").default(0),
+  bookingCount: int("bookingCount").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Content Calendar (Calendrier Éditorial) ───────────────────────
+export const contentCalendar = mysqlTable("contentCalendar", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 256 }).notNull(),
+  contentType: mysqlEnum("contentType", ["blog_article", "instagram_post", "instagram_reel", "tiktok_video", "linkedin_post", "youtube_video", "twitter_post"]).notNull(),
+  topic: text("topic"),
+  brief: text("brief"),
+  generatedContent: text("generatedContent"),
+  generatedMediaUrls: text("generatedMediaUrls"), // JSON array
+  scheduledDate: varchar("scheduledDate", { length: 10 }).notNull(),
+  scheduledTime: varchar("scheduledTime", { length: 5 }),
+  platform: mysqlEnum("platform", ["instagram", "tiktok", "linkedin", "twitter", "youtube", "blog"]).notNull(),
+  status: mysqlEnum("status", ["idea", "generating", "review", "approved", "scheduled", "published", "failed"]).default("idea").notNull(),
+  performance: text("performance"), // JSON { impressions, likes, shares, comments }
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});

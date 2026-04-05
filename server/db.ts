@@ -6,7 +6,9 @@ import {
   seoCards, userPreferences, travelCompanions,
   affiliatePartners, affiliateClicks, affiliateConversions,
   creditTransactions, agentTasks, socialMediaPosts, travelItineraries,
-  establishments, establishmentMedia, tripPlans, tripDays, tripSteps
+  establishments, establishmentMedia, tripPlans, tripDays, tripSteps,
+  favorites, collections, ambassadors, referrals, commissionPayments,
+  serviceProviders, aiDirectives, aiDepartmentReports, bundles, contentCalendar
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -369,4 +371,174 @@ export async function getAdminStats() {
     totalTasks: taskStats?.total || 0, totalEstablishments: estabStats?.total || 0,
     totalTripPlans: tripStats?.total || 0,
   };
+}
+
+// ─── Favorites ─────────────────────────────────────────────────────
+export async function getUserFavorites(userId: number) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(favorites).where(eq(favorites.userId, userId)).orderBy(desc(favorites.createdAt));
+}
+export async function addFavorite(userId: number, targetType: "establishment" | "seoCard" | "tripPlan" | "bundle", targetId: number, collectionId?: number) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(favorites).values({ userId, targetType, targetId, collectionId });
+  return result[0].insertId;
+}
+export async function removeFavorite(userId: number, targetType: "establishment" | "seoCard" | "tripPlan" | "bundle", targetId: number) {
+  const db = await getDb(); if (!db) return;
+  await db.delete(favorites).where(and(eq(favorites.userId, userId), eq(favorites.targetType, targetType), eq(favorites.targetId, targetId)));
+}
+
+// ─── Collections ───────────────────────────────────────────────────
+export async function getUserCollections(userId: number) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(collections).where(eq(collections.userId, userId)).orderBy(desc(collections.createdAt));
+}
+export async function createCollection(userId: number, name: string, description?: string, coverImageUrl?: string) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(collections).values({ userId, name, description, coverImageUrl });
+  return result[0].insertId;
+}
+export async function updateCollection(id: number, data: { name?: string; description?: string; coverImageUrl?: string; isPublic?: boolean }) {
+  const db = await getDb(); if (!db) return;
+  await db.update(collections).set(data).where(eq(collections.id, id));
+}
+
+// ─── Ambassadors ───────────────────────────────────────────────────
+export async function getAmbassadorByUserId(userId: number) {
+  const db = await getDb(); if (!db) return null;
+  const rows = await db.select().from(ambassadors).where(eq(ambassadors.userId, userId)).limit(1);
+  return rows[0] || null;
+}
+export async function createAmbassador(userId: number, referralCode: string) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(ambassadors).values({ userId, referralCode, status: "pending", tier: "bronze" });
+  return result[0].insertId;
+}
+export async function updateAmbassador(id: number, data: Partial<{ tier: "bronze" | "silver" | "gold" | "platinum"; totalReferrals: number; totalEarnings: string; pendingEarnings: string; status: "active" | "suspended" | "pending"; paypalEmail: string; iban: string }>) {
+  const db = await getDb(); if (!db) return;
+  await db.update(ambassadors).set(data).where(eq(ambassadors.id, id));
+}
+export async function getAllAmbassadors() {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(ambassadors).orderBy(desc(ambassadors.totalEarnings));
+}
+
+// ─── Referrals ─────────────────────────────────────────────────────
+export async function getReferralsByAmbassador(ambassadorId: number) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(referrals).where(eq(referrals.ambassadorId, ambassadorId)).orderBy(desc(referrals.createdAt));
+}
+export async function createReferral(ambassadorId: number, referredUserId: number, referralCode: string) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(referrals).values({ ambassadorId, referredUserId, referralCode, status: "signed_up" });
+  return result[0].insertId;
+}
+
+// ─── Commission Payments ───────────────────────────────────────────
+export async function getCommissionPayments(recipientId?: number, recipientType?: string, limit = 50) {
+  const db = await getDb(); if (!db) return [];
+  if (recipientId && recipientType) {
+    return db.select().from(commissionPayments).where(and(eq(commissionPayments.recipientId, recipientId), eq(commissionPayments.recipientType, recipientType as any))).orderBy(desc(commissionPayments.createdAt)).limit(limit);
+  }
+  return db.select().from(commissionPayments).orderBy(desc(commissionPayments.createdAt)).limit(limit);
+}
+export async function createCommissionPayment(data: { recipientType: "ambassador" | "partner" | "influencer" | "concierge"; recipientId: number; recipientName?: string; sourceType: "referral" | "booking" | "affiliation" | "subscription"; sourceId?: number; amount: string; currency?: string }) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(commissionPayments).values({ ...data, status: "pending" });
+  return result[0].insertId;
+}
+export async function getAllCommissionStats() {
+  const db = await getDb(); if (!db) return { totalPaid: 0, totalPending: 0, totalAmbassadors: 0, totalProviders: 0 };
+  const [paid] = await db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(10,2))), 0)` }).from(commissionPayments).where(eq(commissionPayments.status, "paid"));
+  const [pending] = await db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL(10,2))), 0)` }).from(commissionPayments).where(eq(commissionPayments.status, "pending"));
+  const [ambCount] = await db.select({ total: sql<number>`count(*)` }).from(ambassadors);
+  const [provCount] = await db.select({ total: sql<number>`count(*)` }).from(serviceProviders);
+  return { totalPaid: paid?.total || 0, totalPending: pending?.total || 0, totalAmbassadors: ambCount?.total || 0, totalProviders: provCount?.total || 0 };
+}
+
+// ─── Service Providers ─────────────────────────────────────────────
+export async function getServiceProviders(status?: "active" | "pending" | "suspended" | "rejected", limit = 50) {
+  const db = await getDb(); if (!db) return [];
+  if (status) {
+    return db.select().from(serviceProviders).where(eq(serviceProviders.status, status)).orderBy(desc(serviceProviders.createdAt)).limit(limit);
+  }
+  return db.select().from(serviceProviders).orderBy(desc(serviceProviders.createdAt)).limit(limit);
+}
+export async function createServiceProvider(data: { name: string; slug: string; category: "hotel" | "restaurant" | "yacht" | "chauffeur" | "spa" | "concierge_local" | "concierge_international" | "real_estate" | "luxury_goods" | "experience" | "transport"; contactName?: string; contactEmail?: string; contactPhone?: string; city?: string; country?: string; website?: string; description?: string; commissionRate?: string }) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(serviceProviders).values({ ...data, status: "pending" });
+  return result[0].insertId;
+}
+export async function updateServiceProvider(id: number, data: any) {
+  const db = await getDb(); if (!db) return;
+  await db.update(serviceProviders).set({ ...data, updatedAt: new Date() }).where(eq(serviceProviders.id, id));
+}
+
+// ─── AI Directives ─────────────────────────────────────────────────
+export async function getAiDirectives(department?: string) {
+  const db = await getDb(); if (!db) return [];
+  if (department) {
+    return db.select().from(aiDirectives).where(and(eq(aiDirectives.department, department as any), eq(aiDirectives.status, "active"))).orderBy(desc(aiDirectives.priority));
+  }
+  return db.select().from(aiDirectives).where(eq(aiDirectives.status, "active")).orderBy(desc(aiDirectives.priority));
+}
+export async function createAiDirective(data: { department: "seo" | "content" | "acquisition" | "concierge" | "analytics" | "all"; directive: string; priority?: "low" | "normal" | "high" | "urgent"; authorId: number }) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(aiDirectives).values({ ...data, status: "active" });
+  return result[0].insertId;
+}
+export async function updateAiDirective(id: number, data: { directive?: string; priority?: "low" | "normal" | "high" | "urgent"; status?: "active" | "completed" | "cancelled" | "expired"; aiResponse?: string; completedTasks?: number; totalTasks?: number }) {
+  const db = await getDb(); if (!db) return;
+  await db.update(aiDirectives).set(data).where(eq(aiDirectives.id, id));
+}
+
+// ─── AI Department Reports ─────────────────────────────────────────
+export async function getAiDepartmentReports(department?: "seo" | "content" | "acquisition" | "concierge" | "analytics", limit = 20) {
+  const db = await getDb(); if (!db) return [];
+  if (department) {
+    return db.select().from(aiDepartmentReports).where(eq(aiDepartmentReports.department, department)).orderBy(desc(aiDepartmentReports.createdAt)).limit(limit);
+  }
+  return db.select().from(aiDepartmentReports).orderBy(desc(aiDepartmentReports.createdAt)).limit(limit);
+}
+export async function createAiDepartmentReport(data: { department: "seo" | "content" | "acquisition" | "concierge" | "analytics"; reportDate: string; summary: string; metrics?: string; alerts?: string; status?: "healthy" | "attention" | "critical" }) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(aiDepartmentReports).values(data);
+  return result[0].insertId;
+}
+
+// ─── Bundles ───────────────────────────────────────────────────────
+export async function getPublishedBundles(limit = 20) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(bundles).where(eq(bundles.status, "published")).orderBy(desc(bundles.createdAt)).limit(limit);
+}
+export async function getAllBundles() {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(bundles).orderBy(desc(bundles.createdAt));
+}
+export async function createBundle(data: any) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(bundles).values(data);
+  return result[0].insertId;
+}
+export async function updateBundle(id: number, data: any) {
+  const db = await getDb(); if (!db) return;
+  await db.update(bundles).set({ ...data, updatedAt: new Date() }).where(eq(bundles.id, id));
+}
+
+// ─── Content Calendar ──────────────────────────────────────────────
+export async function getContentCalendar(status?: "idea" | "generating" | "review" | "approved" | "scheduled" | "published" | "failed", limit = 50) {
+  const db = await getDb(); if (!db) return [];
+  if (status) {
+    return db.select().from(contentCalendar).where(eq(contentCalendar.status, status)).orderBy(desc(contentCalendar.scheduledDate)).limit(limit);
+  }
+  return db.select().from(contentCalendar).orderBy(desc(contentCalendar.scheduledDate)).limit(limit);
+}
+export async function createContentCalendarItem(data: { title: string; contentType: "blog_article" | "instagram_post" | "instagram_reel" | "tiktok_video" | "linkedin_post" | "youtube_video" | "twitter_post"; platform: "instagram" | "tiktok" | "linkedin" | "twitter" | "youtube" | "blog"; topic?: string; brief?: string; generatedContent?: string; scheduledDate: string; scheduledTime?: string; status?: "idea" | "generating" | "review" | "approved" | "scheduled" | "published" | "failed" }) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(contentCalendar).values({ ...data, status: data.status || "idea" });
+  return result[0].insertId;
+}
+export async function updateContentCalendarItem(id: number, data: any) {
+  const db = await getDb(); if (!db) return;
+  await db.update(contentCalendar).set({ ...data, updatedAt: new Date() }).where(eq(contentCalendar.id, id));
 }

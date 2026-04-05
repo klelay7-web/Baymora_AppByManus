@@ -15,34 +15,54 @@ import EstablishmentDetail from "./pages/EstablishmentDetail";
 import Navbar from "./components/Navbar";
 import { lazy, Suspense } from "react";
 
-// Lazy load admin dashboard (only for admins)
+// Lazy load dashboards
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const DashboardClient = lazy(() => import("./pages/DashboardClient"));
+const DashboardAmbassador = lazy(() => import("./pages/DashboardAmbassador"));
+const AdminCommandCenter = lazy(() => import("./pages/AdminCommandCenter"));
+const AdminSeoFiches = lazy(() => import("./pages/AdminSeoFiches"));
+const AdminContentSocial = lazy(() => import("./pages/AdminContentSocial"));
+const AdminPartnersCommissions = lazy(() => import("./pages/AdminPartnersCommissions"));
+
+function LazyPage({ Component }: { Component: React.LazyExoticComponent<any> }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-primary text-sm tracking-wider animate-pulse">Chargement...</div>
+        </div>
+      }
+    >
+      <Component />
+    </Suspense>
+  );
+}
 
 function Router() {
   return (
     <Switch>
+      {/* Public */}
       <Route path="/" component={Home} />
       <Route path="/chat" component={Chat} />
       <Route path="/chat/:id" component={Chat} />
       <Route path="/discover" component={Discover} />
       <Route path="/discover/:slug" component={CardDetail} />
-      <Route path="/profile" component={Profile} />
       <Route path="/pricing" component={Pricing} />
       <Route path="/trip/:id" component={TripPlan} />
       <Route path="/establishment/:id" component={EstablishmentDetail} />
-      <Route path="/admin">
-        {() => (
-          <Suspense
-            fallback={
-              <div className="min-h-screen bg-[#080c14] flex items-center justify-center">
-                <div className="text-[#c8a94a] text-sm tracking-wider">Chargement...</div>
-              </div>
-            }
-          >
-            <AdminDashboard />
-          </Suspense>
-        )}
-      </Route>
+
+      {/* Client Dashboards */}
+      <Route path="/profile" component={Profile} />
+      <Route path="/mon-espace">{() => <LazyPage Component={DashboardClient} />}</Route>
+      <Route path="/ambassadeur">{() => <LazyPage Component={DashboardAmbassador} />}</Route>
+
+      {/* Admin Dashboards */}
+      <Route path="/admin">{() => <LazyPage Component={AdminDashboard} />}</Route>
+      <Route path="/admin/command-center">{() => <LazyPage Component={AdminCommandCenter} />}</Route>
+      <Route path="/admin/seo-fiches">{() => <LazyPage Component={AdminSeoFiches} />}</Route>
+      <Route path="/admin/content-social">{() => <LazyPage Component={AdminContentSocial} />}</Route>
+      <Route path="/admin/partners-commissions">{() => <LazyPage Component={AdminPartnersCommissions} />}</Route>
+
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -158,22 +158,22 @@
 - [x] Points d'entrée multiples : pas uniquement IA, aussi destinations, bundles, services directs
 - [x] Positionnement limpide dès le premier regard
 - [x] Menu mobile hamburger avec même structure
-- [ ] Push sur GitHub
+- [x] Push sur GitHub
 - [x] Corriger double logo : "B" compact dans navbar, logo complet dans hero uniquement
 - [x] Corriger l'erreur affichée sur la page (nested anchor fix + lazy AdminDashboard)
 
 ## Phase 13 — Implémentation Vision Complète (Dashboards + Landing Refondée)
-- [ ] Pousser descriptifs stratégiques + visuels complets sur GitHub
-- [ ] Mettre à jour schéma DB (favoris, collections, commissions ambassadeurs, directives IA, fiches prestataires)
-- [ ] Refondre la landing page (hero cinématographique, sections conversion, bundles, pricing 3 colonnes)
-- [ ] Dashboard Client (Mon Espace) — sidebar, parcours, favoris, conversations, crédits
-- [ ] Dashboard Client Affilié (Programme Ambassadeur) — stats, filleuls, commissions, tiers
-- [ ] Dashboard Admin SEO & Fiches — gestion fiches, score SEO, aperçu Google, bulk actions
-- [ ] Dashboard IA SEO — agents autonomes 24/7, logs temps réel, métriques
-- [ ] Dashboard Contenu & Social Media — calendrier éditorial, générateur split-view, publication
-- [ ] Dashboard Affiliations & Partenaires — prestataires, réservations, contrats
-- [ ] Dashboard Commissions — flux financiers, entrantes/sortantes, paiements
-- [ ] Salle de Réunion IA (QG) — conversation départements, KPIs, directives, compte-rendu
-- [ ] Connecter et interconnecter tous les dashboards, routes, navigation, permissions
-- [ ] Tester et sauvegarder checkpoint
+- [x] Pousser descriptifs stratégiques + visuels complets sur GitHub
+- [x] Mettre à jour schéma DB (favoris, collections, commissions ambassadeurs, directives IA, fiches prestataires)
+- [x] Refondre la landing page (hero cinématographique, sections conversion, bundles, pricing 3 colonnes)
+- [x] Dashboard Client (Mon Espace) — sidebar, parcours, favoris, conversations, crédits
+- [x] Dashboard Client Affilié (Programme Ambassadeur) — stats, filleuls, commissions, tiers
+- [x] Dashboard Admin SEO & Fiches — gestion fiches, score SEO, aperçu Google, bulk actions
+- [x] Dashboard IA SEO — agents autonomes 24/7, logs temps réel, métriques
+- [x] Dashboard Contenu & Social Media — calendrier éditorial, générateur split-view, publication
+- [x] Dashboard Affiliations & Partenaires — prestataires, réservations, contrats
+- [x] Dashboard Commissions — flux financiers, entrantes/sortantes, paiements
+- [x] Salle de Réunion IA (QG) — conversation départements, KPIs, directives, compte-rendu
+- [x] Connecter et interconnecter tous les dashboards, routes, navigation, permissions
+- [x] Tester et sauvegarder checkpoint
 - [ ] Pousser tout sur GitHub
