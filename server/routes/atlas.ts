@@ -323,6 +323,27 @@ router.get('/public/venues', async (req, res) => {
   }
 });
 
+// GET /api/atlas/public/venues/:id — Détail public d'une venue publiée
+router.get('/public/venues/:id', async (req, res) => {
+  try {
+    const venue = await prisma.atlasVenue.findFirst({
+      where: { id: req.params.id, status: 'published' },
+      select: {
+        id: true, name: true, type: true, city: true, country: true, address: true,
+        phone: true, website: true, socialLinks: true, photos: true, videos: true,
+        description: true, insiderTips: true, testedByBaymora: true, rating: true,
+        priceLevel: true, priceFrom: true, currency: true, tags: true, ambiance: true,
+        openingHours: true, seasonalNotes: true, affiliateType: true, affiliateUrl: true,
+        isPartner: true,
+      },
+    });
+    if (!venue) { res.status(404).json({ error: 'Venue non trouvée' }); return; }
+    res.json(venue);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur détail venue publique' });
+  }
+});
+
 // GET /api/atlas/public/city-guide?city=... — Guide ville pour l'IA
 router.get('/public/city-guide', async (req, res) => {
   try {
