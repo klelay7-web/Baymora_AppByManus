@@ -11,6 +11,8 @@ import CardDetail from "./pages/CardDetail";
 import Profile from "./pages/Profile";
 import Pricing from "./pages/Pricing";
 import AdminDashboard from "./pages/AdminDashboard";
+import TripPlan from "./pages/TripPlan";
+import EstablishmentDetail from "./pages/EstablishmentDetail";
 import MobileNav from "./components/MobileNav";
 
 function Router() {
@@ -23,6 +25,8 @@ function Router() {
       <Route path="/discover/:slug" component={CardDetail} />
       <Route path="/profile" component={Profile} />
       <Route path="/pricing" component={Pricing} />
+      <Route path="/trip/:id" component={TripPlan} />
+      <Route path="/establishment/:id" component={EstablishmentDetail} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

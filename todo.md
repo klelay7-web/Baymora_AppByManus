@@ -96,3 +96,31 @@
 - [ ] Table tripSteps (étapes individuelles avec géolocalisation)
 - [ ] Table establishmentMedia (photos, vidéos par établissement)
 - [ ] Enrichissement table userPreferences (cercle proche, type voyage)
+
+## Phase 7 : Écosystème d'Affiliation Client & Marketplace B2B
+- [ ] Programme d'affiliation client multi-niveaux (commissions sur commissions)
+- [ ] Système de parcours vérifiés par les clients (UGC approuvé par IA)
+- [ ] Contenu UGC : vidéos TikTok/Instagram des clients intégrées aux fiches
+- [ ] Marketplace B2B : fabricants de luxe, agences immobilières, yachts, off-market
+- [ ] Accès off-market réservé aux clients Élite (villas, yachts, appartements)
+- [ ] Cercle vertueux d'auto-gestion et mutualisme
+- [ ] Prospection automatisée des prestataires B2B par agents IA
+- [ ] Dashboard client ambassadeur (suivi commissions, parrainages, contenus)
+
+## Phase 8 : Personas Ultra-Riches & Parcours Exclusifs
+- [ ] Système de personas client (détection automatique par l'IA)
+- [ ] Parcours adaptés par persona (Mogul, Héritier, Discret, Déconnecté, etc.)
+- [ ] Stratégie agents espions pour lieux secrets, sécurisés, select
+- [ ] Mode "Vitrine" vs mode "Fantôme" pour les clients riches
+- [ ] Parcours sécurité/sérénité (lieux zen, privés, sans intrusion)
+- [ ] Intelligence comportementale IA (analyse des patterns de consommation)
+
+## Phase 9 : Stratégie Social Media & Protection Juridique
+- [ ] Calendrier éditorial IA (5-10 publications/jour)
+- [ ] Répartition % des types de contenu (fiches SEO, bundles, tutos, engagement)
+- [ ] Formats viraux : carrousels texte, vidéos IA, "5 destinations...", tutos app
+- [ ] Mécanique de conversion : commentaire → lien → teaser voilé → paywall
+- [ ] Agent Community Manager (réponses commentaires, DM, closing)
+- [ ] Publication multi-plateforme (Instagram, TikTok, YouTube)
+- [ ] Vidéos IA réalistes (luxe, ski, hôtels, restaurants, fêtes)
+- [ ] Protection juridique (brevets, marques, CGU, NDA, anti-copie)
