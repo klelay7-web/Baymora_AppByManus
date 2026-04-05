@@ -90,12 +90,12 @@
 - [ ] Liens d'affiliation intégrés pour réservation directe
 
 ### 6.6 Schéma DB enrichi
-- [ ] Table establishments (fiches établissements détaillées)
-- [ ] Table tripPlans (plans de voyage complets)
-- [ ] Table tripDays (jours de voyage avec étapes)
-- [ ] Table tripSteps (étapes individuelles avec géolocalisation)
-- [ ] Table establishmentMedia (photos, vidéos par établissement)
-- [ ] Enrichissement table userPreferences (cercle proche, type voyage)
+- [x] Table establishments (fiches établissements détaillées)
+- [x] Table tripPlans (plans de voyage complets)
+- [x] Table tripDays (jours de voyage avec étapes)
+- [x] Table tripSteps (étapes individuelles avec géolocalisation)
+- [x] Table establishmentMedia (photos, vidéos par établissement)
+- [x] Enrichissement table userPreferences (cercle proche, type voyage)
 
 ## Phase 7 : Écosystème d'Affiliation Client & Marketplace B2B
 - [ ] Programme d'affiliation client multi-niveaux (commissions sur commissions)
@@ -124,3 +124,26 @@
 - [ ] Publication multi-plateforme (Instagram, TikTok, YouTube)
 - [ ] Vidéos IA réalistes (luxe, ski, hôtels, restaurants, fêtes)
 - [ ] Protection juridique (brevets, marques, CGU, NDA, anti-copie)
+
+## Phase 10 : Branding & CTA
+- [x] Intégrer le logo Baymora (rond typographique) dans la navbar
+- [x] Intégrer le favicon.ico
+- [x] Intégrer les icônes PWA (192px + 512px)
+- [x] Remplacer "Parler au Concierge" par formulation assistant premium
+- [x] Remplacer toutes les mentions "concierge" par "assistant" dans le frontend
+
+## Phase 11 : Refonte Landing Page + Branding
+- [x] Analyser Quintessentially.com pour inspiration design
+- [x] Décider naming : Maison Baymora
+- [x] Intégrer logo rond typographique dans la navbar
+- [x] Intégrer favicon.ico
+- [x] Remplacer "Parler au Concierge" par "Parlez à votre assistant"
+- [x] Refondre la landing page : Hero premium, offre claire, prix, packs SEO
+- [x] Afficher les 3 forfaits (Explorer 9,90€ / Premium 29,90€ / Élite 89,90€) sur la landing
+- [x] Afficher les bundles/packs SEO visibles sur la landing
+- [x] Design inspiré Quintessentially (fullscreen, élégant, immersif)
+- [x] Visuels IA générés (yacht, gastro, ski, rooftop, spa)
+- [x] Section programme ambassadeur
+- [x] Section prestataires B2B
+- [x] Section crédits one-shot
+- [x] CTA final + footer complet
