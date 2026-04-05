@@ -149,8 +149,12 @@ async function agentScout(query: string, city: string): Promise<any> {
   let results: any = null;
 
   if (manusKey) {
-    // Manus API
+    // Essayer Manus, fallback Perplexity si échec
     results = await callManus(query, city, manusKey);
+    if (!results && perplexityKey) {
+      console.log('[SCOUT] Manus failed → fallback Perplexity');
+      results = await callPerplexityForScout(query, city, perplexityKey);
+    }
   } else if (perplexityKey) {
     // Fallback Perplexity
     results = await callPerplexityForScout(query, city, perplexityKey);
@@ -166,8 +170,11 @@ async function agentScout(query: string, city: string): Promise<any> {
 
 async function callManus(query: string, city: string, apiKey: string): Promise<any> {
   try {
-    // 1. Créer la tâche
+    // 1. Créer la tâche (timeout court pour ne pas bloquer le chat)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10s max
     const createRes = await fetch('https://api.manus.im/v2/tasks', {
+      signal: controller.signal,
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -181,6 +188,8 @@ Concentre-toi sur la qualité et la pertinence. Langue: français.`,
         mode: 'agent',
       }),
     });
+
+    clearTimeout(timeout);
 
     if (!createRes.ok) {
       console.error(`[SCOUT/MANUS] Create failed: ${createRes.status}`);
