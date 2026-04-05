@@ -559,3 +559,29 @@ export const contentCalendar = mysqlTable("contentCalendar", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+// ─── Establishment Comments (Commentaires IA Engagement) ──────────
+export const establishmentComments = mysqlTable("establishmentComments", {
+  id: int("id").autoincrement().primaryKey(),
+  establishmentId: int("establishmentId").notNull(),
+  // Persona IA
+  authorName: varchar("authorName", { length: 128 }).notNull(),
+  authorAvatar: varchar("authorAvatar", { length: 16 }), // emoji avatar
+  authorCountry: varchar("authorCountry", { length: 64 }),
+  authorTravelStyle: varchar("authorTravelStyle", { length: 64 }), // "couple", "solo", "famille", "business"
+  // Content
+  rating: int("rating").notNull(), // 1-5
+  title: varchar("title", { length: 256 }),
+  content: text("content").notNull(),
+  visitDate: varchar("visitDate", { length: 32 }), // "Mars 2026", "Décembre 2025"
+  // Engagement
+  helpfulCount: int("helpfulCount").default(0),
+  replyCount: int("replyCount").default(0),
+  // Metadata
+  isAiGenerated: boolean("isAiGenerated").default(true),
+  isVerified: boolean("isVerified").default(false),
+  language: varchar("language", { length: 8 }).default("fr"),
+  status: mysqlEnum("status", ["published", "hidden", "flagged"]).default("published").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});

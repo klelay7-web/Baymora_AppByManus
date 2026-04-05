@@ -8,7 +8,8 @@ import {
   creditTransactions, agentTasks, socialMediaPosts, travelItineraries,
   establishments, establishmentMedia, tripPlans, tripDays, tripSteps,
   favorites, collections, ambassadors, referrals, commissionPayments,
-  serviceProviders, aiDirectives, aiDepartmentReports, bundles, contentCalendar
+  serviceProviders, aiDirectives, aiDepartmentReports, bundles, contentCalendar,
+  establishmentComments
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -541,4 +542,49 @@ export async function createContentCalendarItem(data: { title: string; contentTy
 export async function updateContentCalendarItem(id: number, data: any) {
   const db = await getDb(); if (!db) return;
   await db.update(contentCalendar).set({ ...data, updatedAt: new Date() }).where(eq(contentCalendar.id, id));
+}
+
+
+// ─── Establishment Comments ─────────────────────────────────────────
+export async function getEstablishmentComments(establishmentId: number, limit = 20) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(establishmentComments)
+    .where(and(eq(establishmentComments.establishmentId, establishmentId), eq(establishmentComments.status, "published")))
+    .orderBy(desc(establishmentComments.helpfulCount), desc(establishmentComments.createdAt))
+    .limit(limit);
+}
+
+export async function createEstablishmentComment(data: {
+  establishmentId: number;
+  authorName: string;
+  authorAvatar?: string;
+  authorCountry?: string;
+  authorTravelStyle?: string;
+  rating: number;
+  title?: string;
+  content: string;
+  visitDate?: string;
+  isAiGenerated?: boolean;
+  isVerified?: boolean;
+  language?: string;
+}) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(establishmentComments).values({
+    ...data,
+    isAiGenerated: data.isAiGenerated ?? true,
+    status: "published",
+  });
+  return result[0].insertId;
+}
+
+export async function incrementCommentHelpful(commentId: number) {
+  const db = await getDb(); if (!db) return;
+  await db.execute(sql`UPDATE establishmentComments SET helpfulCount = helpfulCount + 1 WHERE id = ${commentId}`);
+}
+
+export async function getEstablishmentCommentCount(establishmentId: number) {
+  const db = await getDb(); if (!db) return 0;
+  const result = await db.select({ count: sql<number>`COUNT(*)` }).from(establishmentComments)
+    .where(and(eq(establishmentComments.establishmentId, establishmentId), eq(establishmentComments.status, "published")));
+  return result[0]?.count || 0;
 }

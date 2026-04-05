@@ -224,4 +224,14 @@
 - [x] Rendu Schema.org JSON-LD dans les pages d'établissement
 - [x] Meta tags OG (Open Graph) pour partage social
 - [x] Tester le rendu des fiches avec contenu réel — 24/24 fiches vérifiées
-- [ ] Pousser sur GitHub
+- [x] Pousser sur GitHub (checkpoint f0204442)
+
+## Phase 17 — Commentaires IA Engagement sur Fiches Établissements
+- [x] Créer table `establishmentComments` (DB + migration 0004)
+- [x] Router tRPC : getByEstablishment, getCount, markHelpful, generateAI
+- [x] Service IA : commentGenerator.ts avec invokeLLM + JSON schema strict
+- [x] Composant frontend CommentsSection : note moyenne, distribution, avatars, badges vérifiés, boutons Utile/Signaler
+- [x] Seed 120 commentaires IA (5 par établissement x 24) avec contenu spécifique par slug
+- [x] Interactions : bouton Utile avec compteur optimiste, Signaler avec toast
+- [x] 7 tests vitest (comments.test.ts) — 18 tests totaux passants
+- [ ] Checkpoint et livraison

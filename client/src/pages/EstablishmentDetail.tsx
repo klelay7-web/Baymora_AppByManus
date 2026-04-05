@@ -8,9 +8,10 @@ import { motion } from "framer-motion";
 import {
   MapPin, Clock, Phone, Globe, Star, ChevronLeft, Heart, Share2,
   Utensils, Hotel, Camera, ShoppingBag, Sparkles, Eye, ExternalLink,
-  Play, Instagram, Music, Quote, Info, AlertCircle, DollarSign
+  Play, Instagram, Music, Quote, Info, AlertCircle, DollarSign,
+  ThumbsUp, MessageCircle, Flag, Shield, Users, ChevronDown
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 
 
@@ -373,30 +374,8 @@ export default function EstablishmentDetail() {
           </motion.section>
         )}
 
-        {/* Reviews */}
-        {reviews.length > 0 && (
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-            <h2 className="text-lg font-playfair font-semibold text-white mb-3 flex items-center gap-2">
-              <Star className="w-5 h-5 text-amber-400" /> Avis clients
-            </h2>
-            <div className="space-y-3">
-              {reviews.map((r: any, i: number) => (
-                <div key={i} className="bg-white/[0.03] rounded-lg p-4 border border-white/5">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-white/80">{r.author}</span>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: r.rating || 5 }).map((_, j) => (
-                        <Star key={j} className="w-3 h-3 text-amber-400 fill-current" />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-white/60">{r.text}</p>
-                  {r.source && <p className="text-xs text-white/30 mt-2">— {r.source}</p>}
-                </div>
-              ))}
-            </div>
-          </motion.section>
-        )}
+        {/* AI-Generated Community Comments */}
+        <CommentsSection establishmentId={establishment.id} establishmentName={establishment.name} />
 
         {/* Affiliate CTA */}
         {affiliateLinks.length > 0 && (
@@ -534,5 +513,169 @@ export default function EstablishmentDetail() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Comments Section Component ─────────────────────────────────────
+function CommentsSection({ establishmentId, establishmentName }: { establishmentId: number; establishmentName: string }) {
+  const [showAll, setShowAll] = useState(false);
+  const [helpedIds, setHelpedIds] = useState<Set<number>>(new Set());
+
+  const { data: comments, isLoading } = trpc.comments.getByEstablishment.useQuery(
+    { establishmentId, limit: 20 },
+    { enabled: !!establishmentId }
+  );
+
+  const markHelpful = trpc.comments.markHelpful.useMutation({
+    onSuccess: (_, vars) => {
+      setHelpedIds(prev => new Set(prev).add(vars.commentId));
+      toast.success("Merci pour votre retour !");
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white/[0.03] rounded-lg p-4 border border-white/5 animate-pulse">
+              <div className="h-4 bg-white/10 rounded w-1/3 mb-2" />
+              <div className="h-3 bg-white/5 rounded w-full mb-1" />
+              <div className="h-3 bg-white/5 rounded w-2/3" />
+            </div>
+          ))}
+        </div>
+      </motion.section>
+    );
+  }
+
+  if (!comments || comments.length === 0) return null;
+
+  const displayComments = showAll ? comments : comments.slice(0, 3);
+  const avgRating = comments.reduce((sum, c) => sum + c.rating, 0) / comments.length;
+  const ratingDistribution = [5, 4, 3, 2, 1].map(r => ({
+    stars: r,
+    count: comments.filter(c => c.rating === r).length,
+    pct: Math.round((comments.filter(c => c.rating === r).length / comments.length) * 100),
+  }));
+
+  const travelStyleLabels: Record<string, string> = {
+    couple: "\u{1F491} Couple", solo: "\u{1F9D1} Solo", famille: "\u{1F46A} Famille",
+    business: "\u{1F4BC} Business", amis: "\u{1F389} Amis",
+  };
+
+  return (
+    <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+      {/* Header with stats */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-playfair font-semibold text-white flex items-center gap-2">
+          <MessageCircle className="w-5 h-5 text-gold" /> Avis de la communauté
+        </h2>
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-bold text-gold">{avgRating.toFixed(1)}</span>
+          <div className="flex items-center">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star key={i} className={`w-3.5 h-3.5 ${i < Math.round(avgRating) ? "text-amber-400 fill-current" : "text-white/20"}`} />
+            ))}
+          </div>
+          <span className="text-xs text-white/40">({comments.length} avis)</span>
+        </div>
+      </div>
+
+      {/* Rating distribution bar */}
+      <div className="bg-white/[0.02] rounded-lg p-3 border border-white/5 mb-4">
+        <div className="space-y-1">
+          {ratingDistribution.map(r => (
+            <div key={r.stars} className="flex items-center gap-2 text-xs">
+              <span className="text-white/50 w-3">{r.stars}</span>
+              <Star className="w-3 h-3 text-amber-400 fill-current" />
+              <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full bg-amber-400/70 rounded-full transition-all" style={{ width: `${r.pct}%` }} />
+              </div>
+              <span className="text-white/30 w-8 text-right">{r.count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Comments list */}
+      <div className="space-y-3">
+        {displayComments.map((comment) => (
+          <div key={comment.id} className="bg-white/[0.03] rounded-lg p-4 border border-white/5 hover:border-white/10 transition-colors">
+            {/* Author row */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{comment.authorAvatar || "\u{1F464}"}</span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium text-white/90">{comment.authorName}</span>
+                    {comment.isVerified && (
+                      <Shield className="w-3.5 h-3.5 text-blue-400" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-white/40">
+                    {comment.authorCountry && <span>{comment.authorCountry}</span>}
+                    {comment.authorTravelStyle && (
+                      <span>{travelStyleLabels[comment.authorTravelStyle] || comment.authorTravelStyle}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-0.5">
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <Star key={j} className={`w-3 h-3 ${j < comment.rating ? "text-amber-400 fill-current" : "text-white/15"}`} />
+                  ))}
+                </div>
+                {comment.visitDate && (
+                  <span className="text-[10px] text-white/30">{comment.visitDate}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Title */}
+            {comment.title && (
+              <p className="text-sm font-medium text-white/85 mb-1">{comment.title}</p>
+            )}
+
+            {/* Content */}
+            <p className="text-sm text-white/60 leading-relaxed">{comment.content}</p>
+
+            {/* Actions */}
+            <div className="flex items-center gap-4 mt-3 pt-2 border-t border-white/5">
+              <button
+                className={`flex items-center gap-1 text-xs transition-colors ${
+                  helpedIds.has(comment.id) ? "text-gold" : "text-white/30 hover:text-white/60"
+                }`}
+                onClick={() => !helpedIds.has(comment.id) && markHelpful.mutate({ commentId: comment.id })}
+                disabled={helpedIds.has(comment.id)}
+              >
+                <ThumbsUp className="w-3.5 h-3.5" />
+                Utile {(comment.helpfulCount || 0) + (helpedIds.has(comment.id) ? 1 : 0) > 0 && (
+                  <span>({(comment.helpfulCount || 0) + (helpedIds.has(comment.id) ? 1 : 0)})</span>
+                )}
+              </button>
+              <button
+                className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60 transition-colors"
+                onClick={() => toast.info("Fonctionnalité bientôt disponible")}
+              >
+                <Flag className="w-3.5 h-3.5" /> Signaler
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Show more button */}
+      {comments.length > 3 && !showAll && (
+        <button
+          className="w-full mt-3 py-2.5 text-sm text-gold hover:text-gold/80 flex items-center justify-center gap-1 border border-white/5 rounded-lg hover:border-gold/20 transition-colors"
+          onClick={() => setShowAll(true)}
+        >
+          <ChevronDown className="w-4 h-4" />
+          Voir les {comments.length - 3} autres avis
+        </button>
+      )}
+    </motion.section>
   );
 }

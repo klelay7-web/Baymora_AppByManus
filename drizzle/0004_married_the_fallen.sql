@@ -1,0 +1,21 @@
+CREATE TABLE `establishmentComments` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`establishmentId` int NOT NULL,
+	`authorName` varchar(128) NOT NULL,
+	`authorAvatar` varchar(16),
+	`authorCountry` varchar(64),
+	`authorTravelStyle` varchar(64),
+	`rating` int NOT NULL,
+	`title` varchar(256),
+	`content` text NOT NULL,
+	`visitDate` varchar(32),
+	`helpfulCount` int DEFAULT 0,
+	`replyCount` int DEFAULT 0,
+	`isAiGenerated` boolean DEFAULT true,
+	`isVerified` boolean DEFAULT false,
+	`language` varchar(8) DEFAULT 'fr',
+	`status` enum('published','hidden','flagged') NOT NULL DEFAULT 'published',
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `establishmentComments_id` PRIMARY KEY(`id`)
+);

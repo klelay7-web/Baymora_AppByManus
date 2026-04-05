@@ -28,6 +28,7 @@ import {
   getAiDepartmentReports, createAiDepartmentReport,
   getPublishedBundles, getAllBundles, createBundle, updateBundle,
   getContentCalendar, createContentCalendarItem, updateContentCalendarItem,
+  getEstablishmentComments, createEstablishmentComment, incrementCommentHelpful, getEstablishmentCommentCount,
 } from "./db";
 import { generateConciergeResponse, getWelcomeResponse } from "./services/concierge";
 import type { User } from "../drizzle/schema";
@@ -208,6 +209,39 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await updateEstablishment(input.id, { status: "published", publishedAt: new Date() });
         return { success: true };
+      }),
+  }),
+
+  // ─── Establishment Comments (Engagement IA) ─────────────────────
+  comments: router({
+    getByEstablishment: publicProcedure
+      .input(z.object({ establishmentId: z.number(), limit: z.number().default(20) }))
+      .query(({ input }) => getEstablishmentComments(input.establishmentId, input.limit)),
+
+    getCount: publicProcedure
+      .input(z.object({ establishmentId: z.number() }))
+      .query(({ input }) => getEstablishmentCommentCount(input.establishmentId)),
+
+    markHelpful: publicProcedure
+      .input(z.object({ commentId: z.number() }))
+      .mutation(async ({ input }) => {
+        await incrementCommentHelpful(input.commentId);
+        return { success: true };
+      }),
+
+    generateAI: adminProcedure
+      .input(z.object({ establishmentId: z.number(), count: z.number().default(5) }))
+      .mutation(async ({ input }) => {
+        const estab = await getEstablishmentById(input.establishmentId);
+        if (!estab) throw new TRPCError({ code: "NOT_FOUND", message: "Établissement non trouvé" });
+        const { generateAIComments } = await import("./services/commentGenerator");
+        const comments = await generateAIComments(estab, input.count);
+        const ids: number[] = [];
+        for (const comment of comments) {
+          const id = await createEstablishmentComment({ ...comment, establishmentId: estab.id });
+          if (id) ids.push(id);
+        }
+        return { generated: ids.length, ids };
       }),
   }),
 
