@@ -2,7 +2,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { Link } from "wouter";
-import { Heart, FolderOpen, MessageSquare, MapPin, CreditCard, Crown, ArrowRight, Star, Sparkles, Plus, ChevronRight } from "lucide-react";
+import { Heart, FolderOpen, MessageSquare, MapPin, CreditCard, Crown, ArrowRight, Star, Sparkles, Plus, ChevronRight, Route, Bookmark, ShieldCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
@@ -67,6 +68,7 @@ export default function DashboardClient() {
             <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
             <TabsTrigger value="favorites">Favoris</TabsTrigger>
             <TabsTrigger value="trips">Mes Parcours</TabsTrigger>
+            <TabsTrigger value="saved">Enregistrements</TabsTrigger>
             <TabsTrigger value="conversations">Conversations</TabsTrigger>
           </TabsList>
 
@@ -78,6 +80,9 @@ export default function DashboardClient() {
           </TabsContent>
           <TabsContent value="trips">
             <TripsTab />
+          </TabsContent>
+          <TabsContent value="saved">
+            <SavedParcoursTab />
           </TabsContent>
           <TabsContent value="conversations">
             <ConversationsTab />
@@ -348,6 +353,152 @@ function ConversationsTab() {
           </div>
         </Link>
       ))}
+    </div>
+  );
+}
+
+// ─── Onglet Enregistrements — Parcours sauvegardés depuis le chat IA ─────────
+
+function SavedParcoursTab() {
+  const { data: myParcours, isLoading: loadingMine } = trpc.lena.myParcours.useQuery();
+  const { data: savedParcours, isLoading: loadingSaved } = trpc.lena.savedParcours.useQuery();
+  const toggleSave = trpc.lena.toggleSave.useMutation();
+  const [activeSection, setActiveSection] = useState<"mine" | "saved">("mine");
+
+  const isLoading = loadingMine || loadingSaved;
+
+  if (isLoading) return <div className="text-muted-foreground text-sm animate-pulse">Chargement de vos enregistrements...</div>;
+
+  const tripTypeLabel: Record<string, string> = {
+    leisure: "Loisirs", business: "Business", romantic: "Romantique",
+    family: "Famille", staycation: "Staycation", adventure: "Aventure", wellness: "Bien-être",
+  };
+  const budgetLabel: Record<string, string> = {
+    economique: "Économique", confort: "Confort", premium: "Premium", luxe: "Luxe",
+  };
+
+  const renderParcours = (items: any[], showUnsave = false) => {
+    if (!items || items.length === 0) {
+      return (
+        <div className="text-center py-12 bg-card/20 rounded-lg border border-border/30">
+          <Route className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground">Aucun parcours ici</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {showUnsave ? "Enregistrez des parcours depuis le chat pour les retrouver ici" : "Demandez à votre assistant de créer un parcours"}
+          </p>
+          <Link href="/chat">
+            <Button variant="outline" className="mt-4 border-primary/30 text-primary hover:bg-primary/10">
+              Créer un parcours
+            </Button>
+          </Link>
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {items.map((p: any) => (
+          <div key={p.id} className="bg-card/30 border border-border/30 rounded-lg p-5 hover:border-primary/30 transition-all">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <p className="font-medium text-foreground truncate">{p.title}</p>
+                  {p.isVerified && (
+                    <Badge className="bg-emerald-600/20 text-emerald-400 border-emerald-600/30 text-xs gap-1">
+                      <ShieldCheck className="w-3 h-3" />Vérifié
+                    </Badge>
+                  )}
+                  {p.isLenaGenerated && (
+                    <Badge className="bg-violet-600/20 text-violet-400 border-violet-600/30 text-xs">
+                      ✦ LÉNA
+                    </Badge>
+                  )}
+                </div>
+                {p.destination && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                    <MapPin className="w-3 h-3" />{p.destination}{p.country ? `, ${p.country}` : ""}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  {p.tripType && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                      {tripTypeLabel[p.tripType] || p.tripType}
+                    </span>
+                  )}
+                  {p.budget && (
+                    <span className="text-xs bg-secondary/50 text-muted-foreground px-2 py-0.5 rounded">
+                      {budgetLabel[p.budget] || p.budget}
+                    </span>
+                  )}
+                  {p.duration && (
+                    <span className="text-xs text-muted-foreground">{p.duration} jour{p.duration > 1 ? "s" : ""}</span>
+                  )}
+                </div>
+                {p.description && (
+                  <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{p.description}</p>
+                )}
+                <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                  <span>{new Date(p.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</span>
+                  {(p.saveCount || 0) > 0 && (
+                    <span className="text-primary">⭐ {p.saveCount} enregistrement{p.saveCount > 1 ? "s" : ""}</span>
+                  )}
+                </div>
+              </div>
+              {showUnsave && (
+                <button
+                  onClick={() => toggleSave.mutate({ destinationId: p.id, save: false })}
+                  className="text-primary hover:text-primary/70 transition-colors shrink-0 mt-1"
+                  title="Retirer des enregistrements"
+                >
+                  <Bookmark className="w-4 h-4 fill-current" />
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Section switcher */}
+      <div className="flex gap-3">
+        <Button
+          size="sm"
+          variant={activeSection === "mine" ? "default" : "outline"}
+          onClick={() => setActiveSection("mine")}
+          className={activeSection === "mine" ? "bg-primary text-primary-foreground" : "border-border/50"}
+        >
+          <Route className="w-4 h-4 mr-2" />
+          Mes parcours ({myParcours?.length || 0})
+        </Button>
+        <Button
+          size="sm"
+          variant={activeSection === "saved" ? "default" : "outline"}
+          onClick={() => setActiveSection("saved")}
+          className={activeSection === "saved" ? "bg-primary text-primary-foreground" : "border-border/50"}
+        >
+          <Bookmark className="w-4 h-4 mr-2" />
+          Enregistrés ({savedParcours?.length || 0})
+        </Button>
+      </div>
+
+      {/* Info banner */}
+      <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 text-sm text-muted-foreground">
+        <p className="flex items-start gap-2">
+          <Star className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <span>
+            {activeSection === "mine"
+              ? "Vos parcours créés avec l'assistant IA. Ceux marqués ✦ LÉNA ont été enrichis par notre équipe éditoriale."
+              : "Parcours que vous avez enregistrés. Ils restent disponibles même si leur créateur les modifie."}
+          </span>
+        </p>
+      </div>
+
+      {/* Parcours list */}
+      {activeSection === "mine"
+        ? renderParcours(myParcours || [], false)
+        : renderParcours(savedParcours || [], true)}
     </div>
   );
 }

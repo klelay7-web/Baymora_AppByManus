@@ -276,7 +276,12 @@ export const seoCards = mysqlTable("seoCards", {
   tags: text("tags"),
   status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
   viewCount: int("viewCount").default(0),
-  generatedBy: mysqlEnum("generatedBy", ["ai", "manual"]).default("ai").notNull(),
+  generatedBy: mysqlEnum("generatedBy", ["ai", "manual", "lena"]).default("ai").notNull(),
+  // LÉNA enrichment
+  isVerified: boolean("isVerified").default(false).notNull(),
+  lenaCreated: boolean("lenaCreated").default(false).notNull(),
+  fieldReportId: int("fieldReportId"), // linked field report
+  sourceType: mysqlEnum("sourceType", ["manual", "lena_chat", "lena_generate", "field_report", "ai_auto"]).default("manual"),
   publishedAt: timestamp("publishedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -543,6 +548,12 @@ export const bundles = mysqlTable("bundles", {
   status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
   viewCount: int("viewCount").default(0),
   bookingCount: int("bookingCount").default(0),
+  // LÉNA enrichment
+  isVerified: boolean("isVerified").default(false).notNull(),
+  lenaCreated: boolean("lenaCreated").default(false).notNull(),
+  seoCardIds: text("seoCardIds"), // JSON array of linked seoCard IDs
+  fieldReportIds: text("fieldReportIds"), // JSON array of linked field report IDs
+  sourceType: mysqlEnum("sourceType", ["manual", "lena_chat", "lena_generate", "field_report", "ai_auto"]).default("manual"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -874,6 +885,15 @@ export const userDestinations = mysqlTable("userDestinations", {
   saveCount: int("saveCount").default(0),
   likeCount: int("likeCount").default(0),
 
+  // LÉNA / IA source
+  isLenaGenerated: boolean("isLenaGenerated").default(false).notNull(),
+  lenaSessionId: varchar("lenaSessionId", { length: 64 }), // LÉNA session reference
+  sourceFieldReportId: int("sourceFieldReportId"), // linked field report
+  sourceConversationId: int("sourceConversationId"), // linked chat conversation
+  // Décision LÉNA
+  lenaDecision: mysqlEnum("lenaDecision", ["pending", "keep", "delete", "convert_bundle", "convert_seocard"]).default("pending"),
+  lenaDecisionAt: timestamp("lenaDecisionAt"),
+  lenaDecisionNotes: text("lenaDecisionNotes"),
   // Méta
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

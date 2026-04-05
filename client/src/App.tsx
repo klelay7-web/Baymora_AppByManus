@@ -31,6 +31,7 @@ const AdminPartnersCommissions = lazy(() => import("./pages/AdminPartnersCommiss
 const TeamDashboard = lazy(() => import("./pages/TeamDashboard"));
 const Pilotage = lazy(() => import("./pages/Pilotage"));
 const AdminEmailCenter = lazy(() => import("./pages/AdminEmailCenter"));
+const LenaWorkspace = lazy(() => import("./pages/LenaWorkspace"));
 
 function LazyPage({ Component }: { Component: React.LazyExoticComponent<any> }) {
   return (
@@ -81,6 +82,7 @@ function Router() {
       {/* Pilotage Owner */}
       <Route path="/pilotage">{() => <LazyPage Component={Pilotage} />}</Route>
       <Route path="/admin/emails">{() => <LazyPage Component={AdminEmailCenter} />}</Route>
+      <Route path="/lena-workspace">{() => <LazyPage Component={LenaWorkspace} />}</Route>
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

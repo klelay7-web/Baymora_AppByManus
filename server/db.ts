@@ -10,7 +10,8 @@ import {
   favorites, collections, ambassadors, referrals, commissionPayments,
   serviceProviders, aiDirectives, aiDepartmentReports, bundles, contentCalendar,
   establishmentComments,
-  fieldReports, fieldReportServices, fieldReportJourney, fieldReportContacts, fieldReportMedia
+  fieldReports, fieldReportServices, fieldReportJourney, fieldReportContacts, fieldReportMedia,
+  userDestinations, destinationSaves, clientProfiles, companions, pilotageMessages
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -818,4 +819,234 @@ export async function updateUserRoleById(userId: number, role: "user" | "team" |
   if (!db) throw new Error("Database not available");
   await db.update(users).set({ role }).where(eq(users.id, userId));
   return { success: true };
+}
+
+// ─── LÉNA Workspace — Fiches SEO, Bundles, Parcours ─────────────────────────
+
+export async function getAllSeoCardsAdmin() {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(seoCards).orderBy(desc(seoCards.createdAt));
+}
+
+export async function createSeoCardFromLena(data: {
+  slug: string; title: string; subtitle?: string;
+  category: "restaurant" | "hotel" | "activity" | "bar" | "spa" | "guide" | "experience";
+  city: string; country: string; region?: string;
+  description: string; highlights?: string; practicalInfo?: string;
+  metaTitle?: string; metaDescription?: string; tags?: string;
+  rating?: string; imageUrl?: string; affiliateLinks?: string;
+  fieldReportId?: number; sourceType?: string;
+}) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(seoCards).values({
+    ...data,
+    status: "draft",
+    generatedBy: "lena",
+    lenaCreated: true,
+    sourceType: (data.sourceType || "lena_generate") as any,
+  });
+  return result[0].insertId;
+}
+
+export async function updateSeoCardLenaDecision(id: number, data: {
+  isVerified?: boolean; status?: "draft" | "published" | "archived"; fieldReportId?: number;
+}) {
+  const db = await getDb(); if (!db) return;
+  await db.update(seoCards).set({ ...data, updatedAt: new Date() }).where(eq(seoCards.id, id));
+}
+
+export async function createBundleFromLena(data: {
+  slug: string; title: string; subtitle?: string; description: string;
+  category: "weekend" | "honeymoon" | "gastronomie" | "aventure" | "wellness" | "culture" | "business" | "family" | "seasonal";
+  destination?: string; duration?: string; priceFrom?: string; priceTo?: string;
+  includes?: string; establishmentIds?: string; seoCardIds?: string; fieldReportIds?: string;
+  accessLevel?: "free" | "explorer" | "premium" | "elite";
+  coverImageUrl?: string; sourceType?: string;
+}) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(bundles).values({
+    ...data,
+    status: "draft",
+    lenaCreated: true,
+    sourceType: (data.sourceType || "lena_generate") as any,
+    priceFrom: data.priceFrom as any,
+    priceTo: data.priceTo as any,
+  });
+  return result[0].insertId;
+}
+
+export async function updateBundleLenaDecision(id: number, data: {
+  isVerified?: boolean; status?: "draft" | "published" | "archived";
+  seoCardIds?: string; fieldReportIds?: string;
+}) {
+  const db = await getDb(); if (!db) return;
+  await db.update(bundles).set({ ...data, updatedAt: new Date() }).where(eq(bundles.id, id));
+}
+
+export async function getAllBundlesAdmin() {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(bundles).orderBy(desc(bundles.createdAt));
+}
+
+// ─── Parcours (userDestinations) ─────────────────────────────────────────────
+
+export async function createDestinationFromChat(userId: number, data: {
+  title: string; description?: string; destination?: string; country?: string;
+  tripType?: "leisure" | "business" | "romantic" | "family" | "staycation" | "adventure" | "wellness";
+  budget?: "economique" | "confort" | "premium" | "luxe";
+  duration?: number; steps?: string; highlights?: string; tips?: string;
+  coverImageUrl?: string; tags?: string;
+  sourceConversationId?: number; isLenaGenerated?: boolean; lenaSessionId?: string;
+}) {
+  const db = await getDb(); if (!db) return null;
+  const result = await db.insert(userDestinations).values({
+    userId,
+    ...data,
+    visibility: "private",
+    isLenaGenerated: data.isLenaGenerated ?? false,
+    lenaDecision: "pending",
+  });
+  return result[0].insertId;
+}
+
+export async function getUserDestinations(userId: number) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(userDestinations).where(eq(userDestinations.userId, userId)).orderBy(desc(userDestinations.createdAt));
+}
+
+export async function getDestinationById(id: number) {
+  const db = await getDb(); if (!db) return undefined;
+  const result = await db.select().from(userDestinations).where(eq(userDestinations.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function deleteDestination(id: number, userId: number) {
+  const db = await getDb(); if (!db) return;
+  await db.delete(userDestinations).where(and(eq(userDestinations.id, id), eq(userDestinations.userId, userId)));
+}
+
+export async function updateDestinationLenaDecision(id: number, decision: {
+  lenaDecision: "pending" | "keep" | "delete" | "convert_bundle" | "convert_seocard";
+  lenaDecisionNotes?: string; isVerified?: boolean;
+}) {
+  const db = await getDb(); if (!db) return;
+  await db.update(userDestinations).set({
+    ...decision,
+    lenaDecisionAt: new Date(),
+    updatedAt: new Date(),
+  }).where(eq(userDestinations.id, id));
+}
+
+export async function getAllDestinationsAdmin(limit = 100) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(userDestinations).orderBy(desc(userDestinations.createdAt)).limit(limit);
+}
+
+export async function getDestinationSavesAdmin() {
+  const db = await getDb(); if (!db) return [];
+  return db.select({
+    id: destinationSaves.id,
+    userId: destinationSaves.userId,
+    destinationId: destinationSaves.destinationId,
+    createdAt: destinationSaves.createdAt,
+  }).from(destinationSaves).orderBy(desc(destinationSaves.createdAt));
+}
+
+export async function saveDestination(userId: number, destinationId: number) {
+  const db = await getDb(); if (!db) throw new Error("Database not available");
+  // Check if already saved
+  const existing = await db.select().from(destinationSaves)
+    .where(and(eq(destinationSaves.userId, userId), eq(destinationSaves.destinationId, destinationId))).limit(1);
+  if (existing.length > 0) return existing[0].id;
+  const result = await db.insert(destinationSaves).values({ userId, destinationId });
+  // Increment saveCount
+  await db.update(userDestinations).set({ saveCount: sql`${userDestinations.saveCount} + 1` }).where(eq(userDestinations.id, destinationId));
+  return result[0].insertId;
+}
+
+export async function unsaveDestination(userId: number, destinationId: number) {
+  const db = await getDb(); if (!db) return;
+  await db.delete(destinationSaves).where(and(eq(destinationSaves.userId, userId), eq(destinationSaves.destinationId, destinationId)));
+  await db.update(userDestinations).set({ saveCount: sql`GREATEST(${userDestinations.saveCount} - 1, 0)` }).where(eq(userDestinations.id, destinationId));
+}
+
+export async function getUserSavedDestinations(userId: number) {
+  const db = await getDb(); if (!db) return [];
+  const saves = await db.select().from(destinationSaves).where(eq(destinationSaves.userId, userId));
+  if (saves.length === 0) return [];
+  const ids = saves.map(s => s.destinationId);
+  return db.select().from(userDestinations).where(inArray(userDestinations.id, ids)).orderBy(desc(userDestinations.createdAt));
+}
+
+export async function getLenaCreatedContent() {
+  const db = await getDb(); if (!db) return { fiches: [], bundles: [], parcours: [] };
+  const [fiches, bundlesData, parcours] = await Promise.all([
+    db.select().from(seoCards).where(eq(seoCards.lenaCreated, true)).orderBy(desc(seoCards.createdAt)),
+    db.select().from(bundles).where(eq(bundles.lenaCreated, true)).orderBy(desc(bundles.createdAt)),
+    db.select().from(userDestinations).where(eq(userDestinations.isLenaGenerated, true)).orderBy(desc(userDestinations.createdAt)),
+  ]);
+  return { fiches, bundles: bundlesData, parcours };
+}
+
+// ─── Client Profiles & Companions ────────────────────────────────────────────
+
+export async function getClientProfile(userId: number) {
+  const db = await getDb(); if (!db) return undefined;
+  const result = await db.select().from(clientProfiles).where(eq(clientProfiles.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function upsertClientProfile(userId: number, data: any) {
+  const db = await getDb(); if (!db) throw new Error("Database not available");
+  const existing = await db.select().from(clientProfiles).where(eq(clientProfiles.userId, userId)).limit(1);
+  if (existing.length > 0) {
+    await db.update(clientProfiles).set({ ...data, updatedAt: new Date() }).where(eq(clientProfiles.userId, userId));
+  } else {
+    await db.insert(clientProfiles).values({ userId, ...data });
+  }
+}
+
+export async function getCompanions(userId: number) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(companions).where(and(eq(companions.userId, userId), eq(companions.isActive, true)));
+}
+
+export async function createCompanion(userId: number, data: any) {
+  const db = await getDb(); if (!db) throw new Error("Database not available");
+  const result = await db.insert(companions).values({ userId, ...data });
+  return result[0].insertId;
+}
+
+export async function updateCompanion(id: number, userId: number, data: any) {
+  const db = await getDb(); if (!db) throw new Error("Database not available");
+  await db.update(companions).set({ ...data, updatedAt: new Date() }).where(and(eq(companions.id, id), eq(companions.userId, userId)));
+}
+
+export async function deleteCompanion(id: number, userId: number) {
+  const db = await getDb(); if (!db) return;
+  await db.update(companions).set({ isActive: false, updatedAt: new Date() }).where(and(eq(companions.id, id), eq(companions.userId, userId)));
+}
+
+// ─── Pilotage Messages ────────────────────────────────────────────────────────
+
+export async function getPilotageMessages(limit = 100) {
+  const db = await getDb(); if (!db) return [];
+  return db.select().from(pilotageMessages).orderBy(asc(pilotageMessages.createdAt)).limit(limit);
+}
+
+export async function addPilotageMessage(data: {
+  role: "user" | "assistant" | "system";
+  content: string;
+  actionType?: "chat" | "order_team" | "modify_app" | "analyze" | "report" | "alert";
+  targetDepartment?: string;
+  metadata?: string;
+}) {
+  const db = await getDb(); if (!db) throw new Error("Database not available");
+  await db.insert(pilotageMessages).values({
+    role: data.role,
+    content: data.content,
+    actionType: data.actionType || "chat",
+    targetDepartment: data.targetDepartment,
+    metadata: data.metadata,
+  });
 }

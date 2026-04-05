@@ -36,6 +36,13 @@ import {
   getFieldReportContacts, addFieldReportContact, deleteFieldReportContact,
   getFieldReportMediaItems, addFieldReportMediaItem, deleteFieldReportMediaItem,
   getAllUsers, updateUserRoleById,
+  // LÉNA Workspace
+  getAllSeoCardsAdmin, createSeoCardFromLena, updateSeoCardLenaDecision,
+  createBundleFromLena, updateBundleLenaDecision, getAllBundlesAdmin,
+  createDestinationFromChat, getUserDestinations, getDestinationById,
+  updateDestinationLenaDecision, getAllDestinationsAdmin, getDestinationSavesAdmin,
+  saveDestination, unsaveDestination, getUserSavedDestinations, getLenaCreatedContent,
+  getPilotageMessages, addPilotageMessage,
 } from "./db";
 import { generateConciergeResponse, getWelcomeResponse } from "./services/concierge";
 import { sendEmail, previewEmail, triggerPartnerProspection, triggerAffiliateWelcome, triggerTeamWeeklyReport, sendBulkWeeklyPlans } from "./services/emailService";
@@ -1263,9 +1270,161 @@ export const appRouter = router({
         if ('error' in result) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: result.error });
         return { text: result.text };
       }),
-  }),
 
-  // ─── Profile Enrichi ─────────────────────────────────────────────────────────
+    // ─── Sauvegarder une fiche SEO créée par LÉNA
+    saveFiche: teamProcedure
+      .input(z.object({
+        slug: z.string().min(1),
+        title: z.string().min(1),
+        subtitle: z.string().optional(),
+        category: z.enum(["restaurant", "hotel", "activity", "bar", "spa", "guide", "experience"]),
+        city: z.string().min(1),
+        country: z.string().min(1),
+        region: z.string().optional(),
+        description: z.string().min(1),
+        highlights: z.string().optional(),
+        practicalInfo: z.string().optional(),
+        metaTitle: z.string().optional(),
+        metaDescription: z.string().optional(),
+        tags: z.string().optional(),
+        rating: z.string().optional(),
+        imageUrl: z.string().optional(),
+        affiliateLinks: z.string().optional(),
+        fieldReportId: z.number().optional(),
+        sourceType: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await createSeoCardFromLena(input);
+        return { success: true, id };
+      }),
+
+    // ─── Décision LÉNA sur une fiche (vérifier, publier, archiver)
+    decideFiche: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        isVerified: z.boolean().optional(),
+        status: z.enum(["draft", "published", "archived"]).optional(),
+        fieldReportId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await updateSeoCardLenaDecision(id, data);
+        return { success: true };
+      }),
+
+    // ─── Sauvegarder un bundle créé par LÉNA
+    saveBundle: teamProcedure
+      .input(z.object({
+        slug: z.string().min(1),
+        title: z.string().min(1),
+        subtitle: z.string().optional(),
+        description: z.string().min(1),
+        category: z.enum(["weekend", "honeymoon", "gastronomie", "aventure", "wellness", "culture", "business", "family", "seasonal"]),
+        destination: z.string().optional(),
+        duration: z.string().optional(),
+        priceFrom: z.string().optional(),
+        priceTo: z.string().optional(),
+        includes: z.string().optional(),
+        establishmentIds: z.string().optional(),
+        seoCardIds: z.string().optional(),
+        fieldReportIds: z.string().optional(),
+        accessLevel: z.enum(["free", "explorer", "premium", "elite"]).optional(),
+        coverImageUrl: z.string().optional(),
+        sourceType: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await createBundleFromLena(input);
+        return { success: true, id };
+      }),
+
+    // ─── Décision LÉNA sur un bundle
+    decideBundle: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        isVerified: z.boolean().optional(),
+        status: z.enum(["draft", "published", "archived"]).optional(),
+        seoCardIds: z.string().optional(),
+        fieldReportIds: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await updateBundleLenaDecision(id, data);
+        return { success: true };
+      }),
+
+    // ─── Sauvegarder un parcours depuis le chat IA
+    saveParcours: protectedProcedure
+      .input(z.object({
+        title: z.string().min(1),
+        description: z.string().optional(),
+        destination: z.string().optional(),
+        country: z.string().optional(),
+        tripType: z.enum(["leisure", "business", "romantic", "family", "staycation", "adventure", "wellness"]).optional(),
+        budget: z.enum(["economique", "confort", "premium", "luxe"]).optional(),
+        duration: z.number().optional(),
+        steps: z.string().optional(),
+        highlights: z.string().optional(),
+        tips: z.string().optional(),
+        coverImageUrl: z.string().optional(),
+        tags: z.string().optional(),
+        sourceConversationId: z.number().optional(),
+        isLenaGenerated: z.boolean().optional(),
+        lenaSessionId: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await createDestinationFromChat(ctx.user.id, input);
+        return { success: true, id };
+      }),
+
+    // ─── Mes parcours sauvegardés
+    myParcours: protectedProcedure.query(async ({ ctx }) => {
+      return getUserDestinations(ctx.user.id);
+    }),
+
+    // ─── Parcours sauvegardés par d'autres (enregistrements)
+    savedParcours: protectedProcedure.query(async ({ ctx }) => {
+      return getUserSavedDestinations(ctx.user.id);
+    }),
+
+    // ─── Enregistrer / désenregistrer un parcours
+    toggleSave: protectedProcedure
+      .input(z.object({ destinationId: z.number(), save: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.save) {
+          await saveDestination(ctx.user.id, input.destinationId);
+        } else {
+          await unsaveDestination(ctx.user.id, input.destinationId);
+        }
+        return { success: true };
+      }),
+
+    // ─── Décision LÉNA sur un parcours (garder, supprimer, convertir)
+    decideParcours: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        lenaDecision: z.enum(["pending", "keep", "delete", "convert_bundle", "convert_seocard"]),
+        lenaDecisionNotes: z.string().optional(),
+        isVerified: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...decision } = input;
+        await updateDestinationLenaDecision(id, decision);
+        return { success: true };
+      }),
+
+    // ─── Vue admin : tout le contenu LÉNA
+    adminContent: adminProcedure.query(async () => {
+      const [lenaContent, allFiches, allBundles, allParcours, saves] = await Promise.all([
+        getLenaCreatedContent(),
+        getAllSeoCardsAdmin(),
+        getAllBundlesAdmin(),
+        getAllDestinationsAdmin(),
+        getDestinationSavesAdmin(),
+      ]);
+      return { lenaContent, allFiches, allBundles, allParcours, saves };
+    }),
+  }),
+  // ─── Profile Enrichii ─────────────────────────────────────────────────────────
   profileEnriched: router({
     get: protectedProcedure.query(async ({ ctx }) => {
       return getClientProfile(ctx.user.id);

@@ -294,13 +294,30 @@ function QuickReplies({ replies, onSelect }: { replies: string[]; onSelect: (r: 
       })}
     </motion.div>
   );
-}
+}// ─── Plan Panel ──────────────────────────────────────────────────────
+function PlanPanel({ plan, conversationId }: { plan: PlanData; conversationId?: number }) {
+  const { user } = useAuth();
+  const [saved, setSaved] = useState(false);
+  const saveParcours = trpc.lena.saveParcours.useMutation({
+    onSuccess: () => setSaved(true),
+  });
 
-// ─── Plan Panel ───────────────────────────────────────────────────
-function PlanPanel({ plan }: { plan: PlanData }) {
+  const handleSave = () => {
+    if (!user) { window.location.href = "/mon-espace"; return; }
+    saveParcours.mutate({
+      title: plan.destination || "Mon parcours",
+      description: plan.style ? `Style : ${plan.style}` : undefined,
+      destination: plan.destination,
+      tripType: "leisure",
+      budget: plan.style?.toLowerCase().includes("luxe") ? "luxe" : plan.style?.toLowerCase().includes("premium") ? "premium" : undefined,
+      highlights: [...(plan.hotels || []).map((h: any) => h.name), ...(plan.restaurants || []).map((r: any) => r.name)].slice(0, 5).join(", ") || undefined,
+      sourceConversationId: conversationId,
+      isLenaGenerated: false,
+    });
+  };
+
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center gap-2 pb-3 border-b border-white/10">
+    <div className="p-4 space-y-4">      <div className="flex items-center gap-2 pb-3 border-b border-white/10">
         <MapPin size={16} className="text-[#c8a94a]" />
         <div>
           <h3 className="font-serif text-sm font-bold">{plan.destination}</h3>
@@ -370,8 +387,17 @@ function PlanPanel({ plan }: { plan: PlanData }) {
       )}
 
       <div className="space-y-2 pt-2">
-        <Button className="w-full bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none text-xs">
-          <Bookmark className="mr-2 h-3 w-3" /> Enregistrer ce plan
+        <Button
+          onClick={handleSave}
+          disabled={saveParcours.isPending || saved}
+          className={`w-full rounded-none text-xs transition-all ${
+            saved
+              ? "bg-emerald-600 text-white hover:bg-emerald-600"
+              : "bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a]"
+          }`}
+        >
+          <Bookmark className="mr-2 h-3 w-3" />
+          {saved ? "✓ Parcours enregistré" : saveParcours.isPending ? "Enregistrement..." : "Enregistrer ce plan"}
         </Button>
         <Button variant="outline" className="w-full border-white/20 text-white rounded-none text-xs">
           <Calendar className="mr-2 h-3 w-3" /> Sync Google Calendrier
