@@ -158,6 +158,6 @@
 - [x] Points d'entrée multiples : pas uniquement IA, aussi destinations, bundles, services directs
 - [x] Positionnement limpide dès le premier regard
 - [x] Menu mobile hamburger avec même structure
-- [x] Push sur GitHub
+- [ ] Push sur GitHub
 - [x] Corriger double logo : "B" compact dans navbar, logo complet dans hero uniquement
 - [x] Corriger l'erreur affichée sur la page (nested anchor fix + lazy AdminDashboard)
