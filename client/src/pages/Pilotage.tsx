@@ -670,7 +670,7 @@ export default function Pilotage() {
                 </div>
 
                 {/* Stats terrain */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-3">
                   <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
                     <p className="text-2xl font-bold text-blue-400">{stats?.totalEstablishments ?? 0}</p>
                     <p className="text-xs text-white/50 mt-1">Établissements créés</p>
@@ -680,8 +680,12 @@ export default function Pilotage() {
                     <p className="text-xs text-white/50 mt-1">Fiches publiées</p>
                   </div>
                   <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-amber-400">0</p>
-                    <p className="text-xs text-white/50 mt-1">Sessions LÉNA actives</p>
+                    <p className="text-2xl font-bold text-amber-400">{allUsers?.filter((u) => u.role === "team").length ?? 0}</p>
+                    <p className="text-xs text-white/50 mt-1">Membres terrain</p>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-purple-400">{stats?.totalCards ?? 0}</p>
+                    <p className="text-xs text-white/50 mt-1">Fiches en cours</p>
                   </div>
                 </div>
 
@@ -689,23 +693,74 @@ export default function Pilotage() {
                 <div className="bg-white/5 border border-white/10 rounded-xl p-4">
                   <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
                     <Users size={14} />
-                    Membres avec accès Terrain
+                    Membres avec accès Terrain (LÉNA)
                   </h3>
                   {allUsers?.filter((u) => u.role === "team").length === 0 ? (
-                    <p className="text-xs text-white/40">Aucun membre terrain pour l'instant. Ajoutez-en dans l'onglet Accès.</p>
+                    <div className="text-center py-4">
+                      <p className="text-xs text-white/40 mb-2">Aucun membre terrain pour l'instant.</p>
+                      <p className="text-xs text-white/30">Ajoutez des membres dans l'onglet Accès pour qu'ils puissent utiliser LÉNA.</p>
+                    </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {allUsers?.filter((u) => u.role === "team").map((u) => (
-                        <div key={u.id} className="flex items-center justify-between text-xs">
-                          <span className="text-white/70">{u.name || u.email}</span>
-                          <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-xs">Terrain</Badge>
+                        <div key={u.id} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xs font-bold text-amber-400">
+                              {(u.name || u.email || "?").charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-sm text-white font-medium">{u.name || u.email}</p>
+                              <p className="text-xs text-white/40">Accès LÉNA actif</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs">Terrain</Badge>
+                            <span className="w-2 h-2 rounded-full bg-emerald-400" title="LÉNA disponible" />
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
-                  <button onClick={() => setActiveTab("acces")} className="text-xs text-amber-400 hover:text-amber-300 mt-3 underline">
-                    Gérer les accès →
-                  </button>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
+                    <p className="text-xs text-white/30">Tous les membres terrain ont accès à LÉNA et au micro vocal</p>
+                    <button onClick={() => setActiveTab("acces")} className="text-xs text-amber-400 hover:text-amber-300 underline">
+                      Gérer les accès →
+                    </button>
+                  </div>
+                </div>
+
+                {/* Architecture LÉNA */}
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-white mb-3">Architecture LÉNA (Binôme IA)</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">🧠</span>
+                        <span className="text-sm font-semibold text-amber-300">LÉNA (Claude Opus)</span>
+                      </div>
+                      <ul className="text-xs text-white/60 space-y-1">
+                        <li>• Rédaction fiches SEO</li>
+                        <li>• Questions guidées terrain</li>
+                        <li>• Mémoire de session</li>
+                        <li>• Structure éditoriale</li>
+                      </ul>
+                    </div>
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">🔍</span>
+                        <span className="text-sm font-semibold text-blue-300">SCOUT (Perplexity)</span>
+                      </div>
+                      <ul className="text-xs text-white/60 space-y-1">
+                        <li>• Recherche web temps réel</li>
+                        <li>• Infos complémentaires</li>
+                        <li>• Photos et médias</li>
+                        <li>• Vérification des données</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <p className="text-xs text-white/30 mt-3">
+                    LÉNA guide les membres terrain (Amin et collègues) à travers 10 étapes structurées pour créer des fiches complètes et SEO-optimisées.
+                  </p>
                 </div>
               </TabsContent>
 

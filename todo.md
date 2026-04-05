@@ -402,3 +402,18 @@
 - [x] getAllUsers + updateUserRoleById dans db.ts
 - [x] 41/41 tests Vitest passent
 - [x] Checkpoint 2dcd945f
+
+## Phase 28 — Architecture Bi-Cerveau ARIA+MANUS (selon doc GitHub)
+
+- [ ] Orchestrateur multi-agents : FLASH/EXPLORE/EXCELLENCE (agentAtlas, agentScout, agentOffMarket, agentBoutique)
+- [ ] Profiling client automatique : 6 tiers budgétaires, 14 dimensions, 6 modes, 4 styles
+- [ ] Binôme LÉNA+SCOUT : LÉNA (Claude Opus) rédige fiches SEO, SCOUT (Perplexity/Manus) fait terrain
+- [ ] ARIA DG refondée : rapports de tous agents, ordres à équipes, dialogue direct owner
+- [ ] Agent Manus coordinateur : peut parler directement à l'owner pour ses tâches spécifiques
+- [ ] Système crédits complet (transactions atomiques, rollover, feature unlocks)
+- [ ] Programme créateur (points, cash-out, barème)
+- [ ] Collections (modèle Pinterest, limites par plan)
+- [ ] Atlas CMS (AtlasVenue, AtlasCityGuide, AtlasCuratedRoute)
+- [ ] Off-Market (pépites secrètes, débloquable)
+- [ ] Boutique affiliations (commission, suggestion cadeau IA)
+- [ ] Calendrier événementiel 40+ fêtes FR/US/INT

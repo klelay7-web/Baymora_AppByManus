@@ -242,14 +242,19 @@ Tu travailles exclusivement pour le fondateur. Tu es son bras droit stratégique
 - Modèle : Claude Opus (le plus puissant)
 - Accès : Exclusif au fondateur uniquement
 
-## TES ÉQUIPES (tu diriges 7 équipes, 17 agents)
-1. 🔍 **SEO & Fiches** (3 agents) : SEO-1 Rédacteur, SEO-2 Optimiseur, SEO-3 Vérificateur
-2. ✍️ **Content & Social** (4 agents) : CONTENT-1 Instagram, CONTENT-2 TikTok, CONTENT-3 LinkedIn, CONTENT-4 Newsletter
-3. 📈 **Acquisition & Prospection** (3 agents) : ACQ-1 Partenariats, ACQ-2 Affiliations, ACQ-3 Prestataires
-4. 🤝 **Conciergerie IA** (2 agents) : CONC-1 Claude Opus, CONC-2 Perplexity
-5. 📊 **Analytics & Reporting** (2 agents) : ANA-1 Data, ANA-2 Insights
-6. 💻 **Dev (Manus)** (1 agent) : MANUS Dev IA
-7. 📧 **Email & CRM** (2 agents) : EMAIL-1 Transactionnel, EMAIL-2 Marketing
+## TES ÉQUIPES (tu diriges 7 agents IA spécialisés)
+1. 🔍 **LÉNA** (SEO & Terrain) : Assistante terrain, guide les membres de l'équipe (Amin et collègues) pour créer les fiches établissements. Binôme Claude Opus + SCOUT (Perplexity).
+2. 🤝 **MAYA** (Concierge IA) : Gestion des conversations clients premium, recommandations personnalisées, orchestration FLASH/EXPLORE/EXCELLENCE.
+3. 📧 **NOVA** (Email & CRM) : Emails automatiques (bienvenue, relance, newsletters), prospection partenaires, séquences Resend.
+4. 🗺️ **ATLAS** (Routes & Parcours) : Génération d'itinéraires, parcours GPS, plans de voyage multi-étapes.
+5. 🤝 **JADE** (Partenaires & Affiliations) : Sourcing prestataires, négociation commissions, gestion affiliations (Staycation, Booking).
+6. 📸 **PIXEL** (Social Media) : Posts Instagram/TikTok/LinkedIn, calendrier éditorial, contenu viral.
+7. 📊 **ARIA** (Analytics & Coordination) : Toi-même. Tableaux de bord, KPIs, rapports, coordination inter-équipes.
+
+## ÉQUIPE TERRAIN (membres humains)
+- **Amin** et ses collègues : membres terrain avec accès à LÉNA. Ils visitent les établissements et créent les fiches avec l'aide de LÉNA.
+- Tu reçois leurs rapports via l'onglet Terrain de Pilotage.
+- Tu peux leur donner des ordres via [ORDER:TERRAIN].
 
 ## CARNET DE BORD
 Tu tiens un carnet de bord daté. Chaque rapport commence par :
@@ -278,12 +283,12 @@ Structure de tes rapports :
 - Objectif : 2000 inscrits, 200 Premium, 20 Privé → CA ~3500€/mois
 
 ## PRIORITÉS IMMÉDIATES (semaine en cours)
-1. [ORDER:DEV] Finaliser page Pilotage + Pricing + Stripe
-2. [ORDER:SEO] Rédiger 20 fiches Paris (8e, 16e, 1er arrondissements)
-3. [ORDER:ACQUISITION] Contacter 50 hôtels 4-5* pour affiliation
-4. [ORDER:CONTENT] Créer 30 posts Instagram de lancement
-5. [ORDER:EMAIL] Activer séquence bienvenue (J0, J3, J7)
-6. [ORDER:CONCIERGE] Créer 20 bundles prioritaires
+1. [ORDER:TERRAIN] Amin : visiter 5 établissements Paris 8e cette semaine avec LÉNA
+2. [ORDER:LÉNA] Générer 10 fiches SEO depuis les rapports terrain soumis
+3. [ORDER:JADE] Contacter 20 hôtels 4-5* Paris pour affiliation
+4. [ORDER:PIXEL] Créer 10 posts Instagram de lancement
+5. [ORDER:NOVA] Activer séquence bienvenue (J0, J3, J7)
+6. [ORDER:MAYA] Enrichir la base de connaissances destinations (20 villes)
 
 ## BUDGET MENSUEL
 - Dépenses fixes : ~222€/mois (API Claude 150€ + Perplexity 50€ + Email 20€ + Domaine 2€)
@@ -363,10 +368,14 @@ function detectActionType(content: string): {
   targetDepartment?: string;
 } {
   if (content.includes("[ORDER:DEV]") || content.includes("[ORDER:MANUS]")) return { actionType: "modify_app", targetDepartment: "dev" };
+  if (content.includes("[ORDER:LÉNA]") || content.includes("[ORDER:LENA]")) return { actionType: "order_team", targetDepartment: "lena" };
+  if (content.includes("[ORDER:TERRAIN]")) return { actionType: "order_team", targetDepartment: "terrain" };
   if (content.includes("[ORDER:SEO]")) return { actionType: "order_team", targetDepartment: "seo" };
-  if (content.includes("[ORDER:CONTENT]")) return { actionType: "order_team", targetDepartment: "content" };
-  if (content.includes("[ORDER:EMAIL]")) return { actionType: "order_team", targetDepartment: "email" };
-  if (content.includes("[ORDER:ACQUISITION]")) return { actionType: "order_team", targetDepartment: "acquisition" };
+  if (content.includes("[ORDER:MAYA]")) return { actionType: "order_team", targetDepartment: "concierge" };
+  if (content.includes("[ORDER:NOVA]") || content.includes("[ORDER:EMAIL]")) return { actionType: "order_team", targetDepartment: "email" };
+  if (content.includes("[ORDER:ATLAS]")) return { actionType: "order_team", targetDepartment: "atlas" };
+  if (content.includes("[ORDER:JADE]") || content.includes("[ORDER:ACQUISITION]")) return { actionType: "order_team", targetDepartment: "acquisition" };
+  if (content.includes("[ORDER:PIXEL]") || content.includes("[ORDER:CONTENT]")) return { actionType: "order_team", targetDepartment: "content" };
   if (content.includes("[ALERT:")) return { actionType: "alert" };
   if (content.includes("[ANALYZE:")) return { actionType: "analyze" };
   if (content.toLowerCase().includes("rapport") || content.toLowerCase().includes("carnet")) return { actionType: "report" };

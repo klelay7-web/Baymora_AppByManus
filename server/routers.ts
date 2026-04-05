@@ -41,6 +41,7 @@ import { generateConciergeResponse, getWelcomeResponse } from "./services/concie
 import { sendEmail, previewEmail, triggerPartnerProspection, triggerAffiliateWelcome, triggerTeamWeeklyReport, sendBulkWeeklyPlans } from "./services/emailService";
 import type { EmailType } from "./services/emailService";
 import { callClaude, buildSystemPrompt, parseStructuredTags, type ClaudeMessage } from "./services/claudeService";
+import { orchestrate } from "./services/ai/orchestrator";
 import type { User } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
@@ -54,6 +55,8 @@ import {
 import { generateImage } from "./_core/imageGeneration";
 import { extractProfileFromMessage } from "./services/profileExtractor";
 import { transcribeAudio } from "./_core/voiceTranscription";
+import { chatWithLena, generateFicheWithLena } from "./services/ai/lenaService";
+import type { LenaMessage, LenaSession } from "./services/ai/lenaService";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux administrateurs" });
@@ -149,8 +152,16 @@ export const appRouter = router({
           }));
         claudeMessages.push({ role: "user", content: input.content });
 
-        // Appel Claude avec routing Opus/Sonnet intelligent
-        const claudeResponse = await callClaude(claudeMessages, systemPrompt, messageIndex, input.content);
+        // Orchestrateur multi-agents FLASH/EXPLORE/EXCELLENCE
+        const orchestratorResult = await orchestrate({
+          userMessage: input.content,
+          systemPrompt,
+          history: claudeMessages.slice(0, -1),
+          subscriptionTier: ctx.user.subscriptionTier || "free",
+          messageIndex,
+          userCity: ctx.user.homeCity || undefined,
+        });
+        const claudeResponse = { content: orchestratorResult.content, model: orchestratorResult.model };
 
         // Parser les tags structurés dans la réponse
         const parsed = parseStructuredTags(claudeResponse.content);
@@ -1196,6 +1207,61 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
         return updateUserRoleById(input.userId, input.role);
+      }),
+  }),
+
+  // ─── LÉNA — Assistante Terrain IA ──────────────────────────────────────────
+  lena: router({
+    // Chat guidé avec LÉNA (binôme Claude+Scout)
+    chat: teamProcedure
+      .input(z.object({
+        message: z.string().min(1).max(5000),
+        history: z.array(z.object({
+          role: z.enum(["user", "assistant"]),
+          content: z.string(),
+        })).default([]),
+        session: z.object({
+          fieldReportId: z.number().optional(),
+          establishmentName: z.string().optional(),
+          city: z.string().optional(),
+          currentStep: z.enum(["ACCUEIL", "COLLECTE_BASE", "AMBIANCE", "OFFRE", "PRATIQUE", "ANECDOTES", "PHOTOS", "SCOUT_RECHERCHE", "CONSTRUCTION_FICHE", "VALIDATION_ARIA", "PUBLIEE"]).default("ACCUEIL"),
+          collectedData: z.record(z.string(), z.any()).default({}),
+          scoutBriefing: z.string().optional(),
+        }).default({ currentStep: "ACCUEIL", collectedData: {} }),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const response = await chatWithLena(
+          ctx.user.id,
+          input.message,
+          input.history as LenaMessage[],
+          input.session as LenaSession
+        );
+        return response;
+      }),
+
+    // Génération automatique de fiche complète
+    generateFiche: teamProcedure
+      .input(z.object({
+        establishmentName: z.string().min(1),
+        city: z.string().min(1),
+        collectedData: z.record(z.string(), z.any()).default({}),
+      }))
+      .mutation(async ({ input }) => {
+        const fiche = await generateFicheWithLena(
+          input.establishmentName,
+          input.city,
+          input.collectedData
+        );
+        return { fiche };
+      }),
+
+    // Transcription vocale pour LÉNA (Amine parle, LÉNA transcrit)
+    transcribeForLena: teamProcedure
+      .input(z.object({ audioUrl: z.string() }))
+      .mutation(async ({ input }) => {
+        const result = await transcribeAudio({ audioUrl: input.audioUrl, language: "fr", prompt: "Rapport terrain établissement luxe" });
+        if ('error' in result) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: result.error });
+        return { text: result.text };
       }),
   }),
 

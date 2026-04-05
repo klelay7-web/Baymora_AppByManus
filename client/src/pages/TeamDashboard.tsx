@@ -1,13 +1,14 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Plus, FileText, MapPin, Phone, Camera, Send, ChevronRight, ChevronLeft,
   Star, Trash2, Upload, Plane, Car, Building2, Sparkles, Clock, Eye,
-  CheckCircle2, AlertTriangle, Loader2, X
+  CheckCircle2, AlertTriangle, Loader2, X, Mic, MicOff, MessageSquare,
+  Bot, ArrowRight, RefreshCw, Zap
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,7 +65,7 @@ const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
 
 export default function TeamDashboard() {
   const { user } = useAuth();
-  const [view, setView] = useState<"list" | "create">("list");
+  const [view, setView] = useState<"list" | "create" | "lena">("list");
 
   if (!user || (user.role !== "team" && user.role !== "admin")) {
     return (
@@ -89,21 +90,35 @@ export default function TeamDashboard() {
                 Documentez vos visites d'établissements pour enrichir le catalogue Baymora
               </p>
             </div>
-            {view === "list" ? (
-              <Button onClick={() => setView("create")} className="gap-2 bg-primary hover:bg-primary/90">
-                <Plus className="w-4 h-4" /> Nouveau Rapport
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={() => setView("list")} className="gap-2">
-                <ChevronLeft className="w-4 h-4" /> Retour à la liste
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {view !== "lena" && (
+                <Button
+                  variant="outline"
+                  onClick={() => setView("lena")}
+                  className="gap-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                >
+                  <Bot className="w-4 h-4" /> Parler à LÉNA
+                </Button>
+              )}
+              {view === "list" && (
+                <Button onClick={() => setView("create")} className="gap-2 bg-primary hover:bg-primary/90">
+                  <Plus className="w-4 h-4" /> Nouveau Rapport
+                </Button>
+              )}
+              {view !== "list" && (
+                <Button variant="outline" onClick={() => setView("list")} className="gap-2">
+                  <ChevronLeft className="w-4 h-4" /> Retour à la liste
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
-        {view === "list" ? <ReportsList /> : <CreateReport onDone={() => setView("list")} />}
+        {view === "list" && <ReportsList />}
+        {view === "create" && <CreateReport onDone={() => setView("list")} />}
+        {view === "lena" && <LenaAssistant />}
       </div>
     </div>
   );
@@ -1194,6 +1209,451 @@ function SummaryCard({ title, icon, children }: { title: string; icon: React.Rea
         <span className="text-sm font-medium">{title}</span>
       </div>
       <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+// ─── LÉNA Assistant — Chat Vocal Guidé ────────────────────────────────────────
+
+type LenaStep =
+  | "ACCUEIL" | "COLLECTE_BASE" | "AMBIANCE" | "OFFRE"
+  | "PRATIQUE" | "ANECDOTES" | "PHOTOS" | "SCOUT_RECHERCHE"
+  | "CONSTRUCTION_FICHE" | "VALIDATION_ARIA" | "PUBLIEE";
+
+interface LenaMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface LenaSession {
+  fieldReportId?: number;
+  establishmentName?: string;
+  city?: string;
+  currentStep: LenaStep;
+  collectedData: Record<string, unknown>;
+}
+
+const LENA_STEPS: { key: LenaStep; label: string; short: string }[] = [
+  { key: "ACCUEIL", label: "Accueil", short: "1" },
+  { key: "COLLECTE_BASE", label: "Infos de base", short: "2" },
+  { key: "AMBIANCE", label: "Ambiance", short: "3" },
+  { key: "OFFRE", label: "Offre & Prix", short: "4" },
+  { key: "PRATIQUE", label: "Infos pratiques", short: "5" },
+  { key: "ANECDOTES", label: "Anecdotes", short: "6" },
+  { key: "PHOTOS", label: "Photos", short: "7" },
+  { key: "SCOUT_RECHERCHE", label: "Recherche SCOUT", short: "8" },
+  { key: "CONSTRUCTION_FICHE", label: "Fiche SEO", short: "9" },
+  { key: "VALIDATION_ARIA", label: "Validation ARIA", short: "10" },
+];
+
+function LenaAssistant() {
+  const [messages, setMessages] = useState<LenaMessage[]>([
+    {
+      role: "assistant",
+      content: "Bonjour ! Je suis **LÉNA**, ton assistante terrain Baymora. 👋\n\nJe vais te guider étape par étape pour créer une fiche établissement complète et SEO-optimisée.\n\nOn travaille sur quelle adresse aujourd'hui ?",
+    },
+  ]);
+  const [session, setSession] = useState<LenaSession>({
+    currentStep: "ACCUEIL",
+    collectedData: {},
+  });
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [draftFiche, setDraftFiche] = useState<Record<string, unknown> | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const lenaChat = trpc.lena.chat.useMutation();
+  const transcribeVoice = trpc.lena.transcribeForLena.useMutation();
+  const generateFiche = trpc.lena.generateFiche.useMutation();
+  const uploadMedia = trpc.fieldReports.getUploadUrl.useMutation();
+
+  // Scroll automatique
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Envoyer un message texte
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || isLoading) return;
+
+    const userMsg: LenaMessage = { role: "user", content: text };
+    setMessages(prev => [...prev, userMsg]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const result = await lenaChat.mutateAsync({
+        message: text,
+        history: messages,
+        session,
+      });
+
+      const assistantMsg: LenaMessage = { role: "assistant", content: result.content };
+      setMessages(prev => [...prev, assistantMsg]);
+
+      // Mettre à jour la session
+      setSession(prev => ({
+        ...prev,
+        currentStep: result.step as LenaStep,
+      }));
+
+      // Si LÉNA a généré une fiche
+      if (result.draftFiche) {
+        setDraftFiche(result.draftFiche as Record<string, unknown>);
+        toast.success("LÉNA a généré une fiche SEO !");
+      }
+
+      // Si SCOUT a été lancé
+      if (result.shouldLaunchScout) {
+        toast.info("SCOUT effectue des recherches web...", { duration: 3000 });
+      }
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error("Erreur LÉNA : " + (error?.message || "Réessayez"));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [messages, session, lenaChat, isLoading]);
+
+  // Enregistrement vocal
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+
+        // Upload audio
+        try {
+          const formData = new FormData();
+          formData.append("file", audioBlob, "voice.webm");
+          const uploadRes = await fetch("/api/upload/field-report", {
+            method: "POST",
+            headers: {
+              "x-file-name": "voice.webm",
+              "content-type": "audio/webm",
+            },
+            body: audioBlob,
+          });
+          const { url } = await uploadRes.json() as { url: string };
+
+          // Transcrire
+          const transcription = await transcribeVoice.mutateAsync({ audioUrl: url });
+          if (transcription.text) {
+            setInput(transcription.text);
+            toast.success("Transcription : " + transcription.text.slice(0, 60) + "...");
+          }
+        } catch {
+          toast.error("Erreur de transcription vocale");
+        }
+        setIsRecording(false);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch {
+      toast.error("Microphone non disponible");
+    }
+  }, [transcribeVoice]);
+
+  const stopRecording = useCallback(() => {
+    mediaRecorderRef.current?.stop();
+  }, []);
+
+  // Générer fiche complète
+  const handleGenerateFiche = useCallback(async () => {
+    if (!session.establishmentName || !session.city) {
+      toast.error("Donnez d'abord le nom et la ville de l'établissement à LÉNA");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const result = await generateFiche.mutateAsync({
+        establishmentName: session.establishmentName,
+        city: session.city,
+        collectedData: session.collectedData,
+      });
+      setDraftFiche(result.fiche as Record<string, unknown>);
+      toast.success("Fiche SEO générée par LÉNA + SCOUT !");
+    } catch {
+      toast.error("Erreur lors de la génération de fiche");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session, generateFiche]);
+
+  const currentStepIndex = LENA_STEPS.findIndex(s => s.key === session.currentStep);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Colonne gauche : Chat LÉNA */}
+      <div className="lg:col-span-2 flex flex-col">
+        {/* En-tête LÉNA */}
+        <div className="bg-gradient-to-r from-amber-950/40 to-amber-900/20 border border-amber-500/20 rounded-t-xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+              <Bot className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-amber-300">LÉNA</span>
+                <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Assistante Terrain</span>
+                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+                  En ligne
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">Binôme Claude Opus + SCOUT (Perplexity)</p>
+            </div>
+          </div>
+
+          {/* Barre de progression */}
+          <div className="mt-3">
+            <div className="flex items-center gap-1 overflow-x-auto pb-1">
+              {LENA_STEPS.map((step, idx) => (
+                <div
+                  key={step.key}
+                  className={`flex items-center gap-1 flex-shrink-0 ${idx <= currentStepIndex ? "opacity-100" : "opacity-30"}`}
+                >
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                      idx < currentStepIndex
+                        ? "bg-green-500/30 text-green-400 border border-green-500/30"
+                        : idx === currentStepIndex
+                        ? "bg-amber-500/30 text-amber-400 border border-amber-500/50"
+                        : "bg-muted/20 text-muted-foreground border border-border/20"
+                    }`}
+                  >
+                    {idx < currentStepIndex ? <CheckCircle2 className="w-3 h-3" /> : step.short}
+                  </div>
+                  {idx < LENA_STEPS.length - 1 && (
+                    <div className={`w-3 h-px ${idx < currentStepIndex ? "bg-green-500/40" : "bg-border/20"}`} />
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-amber-400/70 mt-1">
+              Étape {currentStepIndex + 1}/{LENA_STEPS.length} — {LENA_STEPS[currentStepIndex]?.label}
+            </p>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 bg-card/20 border-x border-border/30 overflow-y-auto p-4 space-y-4" style={{ minHeight: "400px", maxHeight: "500px" }}>
+          {messages.map((msg, idx) => (
+            <div key={idx} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
+              {msg.role === "assistant" && (
+                <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-amber-400" />
+                </div>
+              )}
+              <div
+                className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
+                  msg.role === "user"
+                    ? "bg-primary/20 text-foreground border border-primary/20 ml-auto"
+                    : "bg-amber-950/30 text-foreground border border-amber-500/10"
+                }`}
+              >
+                {msg.content.split("\n").map((line, i) => (
+                  <p key={i} className={line.startsWith("**") ? "font-semibold" : ""}>
+                    {line.replace(/\*\*(.*?)\*\*/g, "$1")}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+                <Bot className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="bg-amber-950/30 border border-amber-500/10 rounded-xl px-4 py-3">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Zone de saisie */}
+        <div className="bg-card/30 border border-border/30 rounded-b-xl p-3">
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage(input)}
+              placeholder="Répondez à LÉNA ou parlez avec le micro..."
+              className="flex-1 bg-background/50 border-border/30 text-sm"
+              disabled={isLoading}
+            />
+            {/* Bouton micro */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`flex-shrink-0 transition-colors ${
+                isRecording
+                  ? "bg-red-500/20 border-red-500/40 text-red-400 hover:bg-red-500/30"
+                  : "border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+              }`}
+              disabled={isLoading}
+              title={isRecording ? "Arrêter l'enregistrement" : "Parler à LÉNA"}
+            >
+              {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </Button>
+            {/* Bouton envoyer */}
+            <Button
+              onClick={() => sendMessage(input)}
+              disabled={isLoading || !input.trim()}
+              className="flex-shrink-0 bg-amber-600 hover:bg-amber-500 text-white"
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </Button>
+          </div>
+          {isRecording && (
+            <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+              Enregistrement en cours... Cliquez sur le micro pour arrêter
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Colonne droite : Infos session + Fiche générée */}
+      <div className="space-y-4">
+        {/* Infos session */}
+        <div className="bg-card/30 border border-border/30 rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-amber-400" />
+            Session en cours
+          </h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Établissement</span>
+              <span className="text-foreground font-medium">{session.establishmentName || "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Ville</span>
+              <span className="text-foreground">{session.city || "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Étape</span>
+              <span className="text-amber-400 text-xs font-medium">{session.currentStep}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions rapides */}
+        <div className="bg-card/30 border border-border/30 rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary" />
+            Actions rapides
+          </h3>
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-2 text-xs border-amber-500/20 text-amber-400 hover:bg-amber-500/10"
+              onClick={() => sendMessage("Lance SCOUT pour rechercher des infos sur cet établissement")}
+              disabled={isLoading || !session.establishmentName}
+            >
+              <RefreshCw className="w-3 h-3" /> Lancer SCOUT
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-2 text-xs border-primary/20 text-primary hover:bg-primary/10"
+              onClick={handleGenerateFiche}
+              disabled={isLoading || !session.establishmentName}
+            >
+              <Sparkles className="w-3 h-3" /> Générer la fiche SEO
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-2 text-xs border-green-500/20 text-green-400 hover:bg-green-500/10"
+              onClick={() => sendMessage("C'est bon, soumet la fiche à ARIA pour validation")}
+              disabled={isLoading || !draftFiche}
+            >
+              <CheckCircle2 className="w-3 h-3" /> Soumettre à ARIA
+            </Button>
+          </div>
+        </div>
+
+        {/* Fiche générée */}
+        {draftFiche && (
+          <div className="bg-card/30 border border-green-500/20 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-green-400 mb-3 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              Fiche SEO générée
+            </h3>
+            <div className="space-y-2 text-xs">
+              {Boolean(draftFiche.name) && (
+                <div>
+                  <span className="text-muted-foreground">Nom : </span>
+                  <span className="text-foreground font-medium">{String(draftFiche.name ?? "")}</span>
+                </div>
+              )}
+              {Boolean(draftFiche.category) && (
+                <div>
+                  <span className="text-muted-foreground">Catégorie : </span>
+                  <span className="text-foreground">{String(draftFiche.category ?? "")}</span>
+                </div>
+              )}
+              {Boolean(draftFiche.shortDescription) && (
+                <div>
+                  <span className="text-muted-foreground block mb-1">Accroche :</span>
+                  <p className="text-foreground/80 italic">{String(draftFiche.shortDescription ?? "")}</p>
+                </div>
+              )}
+              {Boolean(draftFiche.metaTitle) && (
+                <div>
+                  <span className="text-muted-foreground">Meta titre : </span>
+                  <span className="text-foreground text-xs">{String(draftFiche.metaTitle ?? "")}</span>
+                </div>
+              )}
+            </div>
+            <Button
+              size="sm"
+              className="w-full mt-3 gap-2 bg-green-600 hover:bg-green-500 text-white text-xs"
+              onClick={() => {
+                const json = JSON.stringify(draftFiche, null, 2);
+                navigator.clipboard.writeText(json);
+                toast.success("Fiche copiée dans le presse-papiers !");
+              }}
+            >
+              <ArrowRight className="w-3 h-3" /> Copier la fiche JSON
+            </Button>
+          </div>
+        )}
+
+        {/* Aide */}
+        <div className="bg-card/20 border border-border/20 rounded-xl p-4">
+          <h3 className="text-xs font-semibold text-muted-foreground mb-2">💡 Conseils</h3>
+          <ul className="text-xs text-muted-foreground space-y-1">
+            <li>• Utilisez le micro pour dicter sans taper</li>
+            <li>• LÉNA mémorise votre session</li>
+            <li>• SCOUT cherche les infos web automatiquement</li>
+            <li>• Dites "suivant" pour passer à l'étape suivante</li>
+            <li>• Dites "lance SCOUT" pour une recherche web</li>
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
