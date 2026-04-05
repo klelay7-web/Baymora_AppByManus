@@ -243,3 +243,72 @@ export async function rechercherVideoVirale(
     },
   ];
 }
+
+// ─── PIPELINE CONTENU SOCIAL PAR VILLE ───────────────────────────────────────
+export interface CityContentPlan {
+  city: string;
+  instagramCarousel: SocialPost;
+  instagramReel: SocialPost;
+  tiktokScript: SocialPost;
+  linkedinPost: SocialPost;
+  blogArticle: BlogArticle;
+  calendarItems: ContentCalendarItem[];
+}
+
+export async function generateSocialContentFromCity(
+  city: string,
+  country: string,
+  seoCards: { nom: string; ville: string; type: string; description?: string }[],
+  bundleNames: string[] = []
+): Promise<CityContentPlan> {
+  const topCards = seoCards.slice(0, 8);
+  const cityContext = `${city}, ${country}`;
+
+  // Générer en parallèle pour gagner du temps
+  const [carousel, reel, tiktok, linkedin, blog, calendar] = await Promise.all([
+    genererPostSocial(
+      `Top 10 expériences luxe à ${cityContext}`,
+      "instagram",
+      "carrousel",
+      topCards[0] ? { nom: topCards[0].nom, ville: city, description: topCards[0].description || "" } : undefined
+    ),
+    genererPostSocial(
+      `Découverte exclusive : ${topCards[0]?.nom || city} comme jamais vu`,
+      "instagram",
+      "reel",
+      topCards[0] ? { nom: topCards[0].nom, ville: city, description: topCards[0].description || "" } : undefined
+    ),
+    genererPostSocial(
+      `POV : Tu explores ${city} comme un local VIP`,
+      "tiktok",
+      "reel",
+      topCards[1] ? { nom: topCards[1].nom, ville: city, description: topCards[1].description || "" } : undefined
+    ),
+    genererPostSocial(
+      `Les secrets de ${city} que seuls les connaisseurs connaissent`,
+      "linkedin",
+      "editorial",
+      undefined
+    ),
+    genererArticleBlog(
+      `Guide Luxe ${cityContext} 2025 : Les 15 Expériences Incontournables`,
+      topCards,
+      [`expériences luxe ${city}`, `meilleurs restaurants ${city}`, `hôtels luxe ${city}`, `que faire ${city}`, `guide ${city} premium`]
+    ),
+    genererCalendrierEditorial(
+      30,
+      topCards.map(c => c.nom),
+      bundleNames
+    ),
+  ]);
+
+  return {
+    city,
+    instagramCarousel: carousel,
+    instagramReel: reel,
+    tiktokScript: tiktok,
+    linkedinPost: linkedin,
+    blogArticle: blog,
+    calendarItems: calendar,
+  };
+}

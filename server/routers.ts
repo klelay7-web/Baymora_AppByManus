@@ -64,8 +64,11 @@ import { extractProfileFromMessage } from "./services/profileExtractor";
 import { transcribeAudio } from "./_core/voiceTranscription";
 import { chatWithLena, generateFicheWithLena } from "./services/ai/lenaService";
 import type { LenaMessage, LenaSession } from "./services/ai/lenaService";
-import { enrichEstablishment, runSeoEnrichmentCampaign } from "./services/ai/scrapingAgent";
+import { enrichEstablishment, runSeoEnrichmentCampaign, PRIORITY_CITIES, SEO_CATEGORIES } from "./services/ai/scrapingAgent";
 import type { EstablishmentInput } from "./services/ai/scrapingAgent";
+import { runSeoBundlePipeline, generateBlogArticle } from "./services/ai/bundlePipelineAgent";
+import { generateSocialContentFromCity } from "./services/ai/creativeAgent";
+import { extractProfileFromConversation, addAriaInstruction, getAriaInstructions, removeAriaInstruction } from "./services/ai/profileExtractor";
 import { chatWithManus, delibererAriaEtManus, creerMission, MANUS_PROFILE, STRATEGIE_LANCEMENT } from "./services/ai/manusAgent";
 import type { ManusMessage } from "./services/ai/manusAgent";
 import { genererArticleBlog, genererPostSocial, genererCalendrierEditorial, rechercherVideoVirale } from "./services/ai/creativeAgent";
@@ -127,6 +130,12 @@ export const appRouter = router({
         conversationId: z.number(),
         content: z.string().min(1).max(5000),
         isVoice: z.boolean().optional(),
+        userLocation: z.object({
+          city: z.string().optional(),
+          country: z.string().optional(),
+          lat: z.number().optional(),
+          lng: z.number().optional(),
+        }).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         // Owner & admin bypass: accès illimité
@@ -165,8 +174,8 @@ export const appRouter = router({
           homeCountry: ctx.user.homeCountry || undefined,
         };
 
-        // Construire le system prompt dynamique avec profil client
-        const systemPrompt = buildSystemPrompt(clientProfile);
+        // Construire le system prompt dynamique avec profil client + géoloc réelle
+        const systemPrompt = buildSystemPrompt(clientProfile, new Date(), input.userLocation || undefined);
 
         // Formater l'historique pour Claude (exclure le dernier message user déjà ajouté)
         const claudeMessages: ClaudeMessage[] = history
@@ -1664,9 +1673,170 @@ export const appRouter = router({
 
     // Liste des établissements disponibles
     listEstablishments: ownerProcedure.query(async () => getAllEstablishments()),
-  }),
 
-  // ─── MANUS — Agent Directeur Technique (binôme ARIA) ─────────────────────────────
+    // Liste des villes prioritaires
+    listCities: ownerProcedure.query(async () => PRIORITY_CITIES),
+
+    // Liste des catégories SEO
+    listCategories: ownerProcedure.query(async () => SEO_CATEGORIES),
+
+    // Pipeline complet par ville : SEO → Bundle → Parcours
+    runCityPipeline: ownerProcedure
+      .input(z.object({
+        city: z.string().min(1),
+        country: z.string().min(1),
+        region: z.string().default(""),
+        maxFichesPerCategory: z.number().min(1).max(5).default(2),
+        selectedCategories: z.array(z.string()).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const categories = input.selectedCategories
+          ? SEO_CATEGORIES.filter(c => input.selectedCategories!.includes(c.key))
+          : SEO_CATEGORIES.slice(0, 6);
+
+        const savedFiches: Array<{ id: number; title: string; category: string }> = [];
+
+        for (const cat of categories) {
+          const ficheCount = Math.min(cat.count, input.maxFichesPerCategory);
+          for (let i = 0; i < ficheCount; i++) {
+            try {
+              const estab: EstablishmentInput = {
+                id: 0,
+                name: `${cat.label} — ${input.city} #${i + 1}`,
+                city: input.city,
+                category: cat.key,
+              };
+              const fiche = await enrichEstablishment(estab);
+              const ficheId = await createSeoCard({
+                slug: fiche.slug + `-${Date.now()}`,
+                title: fiche.title,
+                subtitle: fiche.subtitle ?? null,
+                category: fiche.category,
+                city: input.city,
+                country: input.country,
+                region: input.region || null,
+                description: fiche.description,
+                highlights: JSON.stringify(fiche.highlights),
+                practicalInfo: JSON.stringify(fiche.practicalInfo),
+                metaTitle: fiche.metaTitle,
+                metaDescription: fiche.metaDescription,
+                imageUrl: fiche.imageUrl ?? null,
+                galleryUrls: JSON.stringify(fiche.galleryUrls ?? []),
+                rating: fiche.rating ?? null,
+                priceLevel: fiche.priceLevel ?? null,
+                tags: JSON.stringify(fiche.tags ?? []),
+                status: "draft",
+                generatedBy: "lena",
+                isVerified: false,
+                lenaCreated: true,
+                sourceType: "ai_auto",
+                schemaOrg: null,
+                affiliateLinks: null,
+                viewCount: 0,
+                publishedAt: null,
+                fieldReportId: null,
+              });
+              savedFiches.push({ id: ficheId, title: fiche.title, category: cat.key });
+            } catch (err) {
+              console.error(`[Pipeline] Erreur fiche ${cat.key}:`, err);
+            }
+          }
+        }
+
+        const allSeoCards = await getAllSeoCards();
+        const citySeoCards = allSeoCards
+          .filter(c => c.city?.toLowerCase() === input.city.toLowerCase())
+          .map(c => ({
+            id: c.id,
+            title: c.title,
+            category: c.category,
+            city: c.city,
+            country: c.country,
+            priceLevel: String(c.priceLevel ?? "upscale"),
+            rating: c.rating != null ? Number(c.rating) : undefined,
+            description: c.description,
+            highlights: c.highlights ?? undefined,
+            tags: c.tags ?? undefined,
+          }));
+
+        const bundlePipeline = await runSeoBundlePipeline(input.city, input.country, citySeoCards);
+        const savedBundles: Array<{ title: string; budgetTarget: string; bundleId?: number }> = [];
+
+        for (const { bundle } of bundlePipeline.bundles) {
+          try {
+            const bundleId = await createBundle({
+              slug: bundle.slug + `-${Date.now()}`,
+              title: bundle.title,
+              subtitle: bundle.subtitle ?? null,
+              description: bundle.description,
+              category: bundle.category,
+              destination: bundle.destination,
+              duration: bundle.duration,
+              priceFrom: bundle.priceFrom,
+              priceTo: bundle.priceTo,
+              currency: bundle.currency,
+              includes: JSON.stringify(bundle.includes),
+              status: "draft",
+              isVip: bundle.isVip,
+              accessLevel: bundle.accessLevel,
+              tags: JSON.stringify(bundle.tags),
+              coverImage: null,
+              seoCardIds: JSON.stringify(bundle.seoCardIds),
+              cityFocus: bundle.cityFocus,
+              lenaCreated: true,
+              isVerified: false,
+              budgetTarget: bundle.budgetTarget,
+            });
+            savedBundles.push({ title: bundle.title, budgetTarget: bundle.budgetTarget, bundleId: bundleId ?? undefined });
+          } catch (err) {
+            console.error(`[Pipeline] Erreur bundle ${bundle.budgetTarget}:`, err);
+            savedBundles.push({ title: bundle.title, budgetTarget: bundle.budgetTarget });
+          }
+        }
+
+        return {
+          success: true,
+          city: input.city,
+          fichesCreated: savedFiches.length,
+          bundlesCreated: savedBundles.filter(b => b.bundleId).length,
+          savedFiches,
+          savedBundles,
+          totalDuration: bundlePipeline.totalDuration,
+        };
+      }),
+
+    // Générer un article blog SEO pour une ville
+    generateBlogForCity: ownerProcedure
+      .input(z.object({ city: z.string(), country: z.string() }))
+      .mutation(async ({ input }) => {
+        const allSeoCards = await getAllSeoCards();
+        const citySeoCards = allSeoCards
+          .filter(c => c.city?.toLowerCase() === input.city.toLowerCase())
+          .map(c => ({ id: c.id, title: c.title, category: c.category, city: c.city, country: c.country, priceLevel: String(c.priceLevel ?? "upscale"), rating: c.rating != null ? Number(c.rating) : undefined, description: c.description, highlights: c.highlights ?? undefined, tags: c.tags ?? undefined }));
+        const article = await generateBlogArticle(
+          input.city, input.country, citySeoCards,
+          [`expériences luxe ${input.city}`, `meilleurs restaurants ${input.city}`, `hôtels luxe ${input.city}`, `guide ${input.city} premium`, `que faire ${input.city}`]
+        );
+        return { success: true, article };
+      }),
+
+    // Générer le contenu social pour une ville
+    generateSocialForCity: ownerProcedure
+      .input(z.object({ city: z.string(), country: z.string() }))
+      .mutation(async ({ input }) => {
+        const allSeoCards = await getAllSeoCards();
+        const citySeoCards = allSeoCards
+          .filter(c => c.city?.toLowerCase() === input.city.toLowerCase())
+          .map(c => ({ nom: c.title, ville: c.city, type: c.category, description: c.description }));
+        const allBundles = await getAllBundles();
+        const cityBundles = allBundles
+          .filter(b => b.cityFocus?.toLowerCase() === input.city.toLowerCase())
+          .map(b => b.title);
+        const content = await generateSocialContentFromCity(input.city, input.country, citySeoCards, cityBundles);
+        return { success: true, content };
+      }),
+  }),
+  // ─── MANUSS — Agent Directeur Technique (binôme ARIA) ─────────────────────────────
   manus: router({  // Chat avec MANUS
     chat: ownerProcedure
       .input(z.object({
@@ -1786,6 +1956,60 @@ export const appRouter = router({
         { nom: input.nom, type: input.type, ville: input.ville },
         input.contexte
       )),
+  }),
+
+  // ─── ARIA — Commandes dynamiques & profil intelligent ─────────────────────
+  aria: router({
+    // Ajouter une instruction ARIA pour un client
+    addInstruction: ownerProcedure
+      .input(z.object({
+        userId: z.number(),
+        instruction: z.string().min(1).max(500),
+        addedBy: z.enum(["aria", "manus", "owner"]).default("aria"),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await addAriaInstruction(input.userId, input.instruction, input.addedBy);
+        return { success: true, instruction: result };
+      }),
+
+    // Voir les instructions ARIA actives pour un client
+    getInstructions: ownerProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        const instructions = await getAriaInstructions(input.userId);
+        return { instructions };
+      }),
+
+    // Désactiver une instruction ARIA
+    removeInstruction: ownerProcedure
+      .input(z.object({ userId: z.number(), instructionId: z.string() }))
+      .mutation(async ({ input }) => {
+        await removeAriaInstruction(input.userId, input.instructionId);
+        return { success: true };
+      }),
+
+    // Extraire le profil depuis une conversation (déclenché manuellement par ARIA)
+    extractProfile: ownerProcedure
+      .input(z.object({
+        userId: z.number(),
+        messages: z.array(z.object({
+          role: z.enum(["user", "assistant"]),
+          content: z.string(),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        const extracted = await extractProfileFromConversation(input.userId, input.messages);
+        return { success: true, extracted };
+      }),
+
+    // Voir le profil enrichi d'un client (pour ARIA)
+    getClientProfile: ownerProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        const profile = await getClientProfile(input.userId);
+        const instructions = await getAriaInstructions(input.userId);
+        return { profile, ariaInstructions: instructions };
+      }),
   }),
 
   // ─── ATLAS — Agent Affiliation & Partenariats ──────────────────────────────

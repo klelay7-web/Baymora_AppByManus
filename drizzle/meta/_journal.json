@@ -71,6 +71,20 @@
       "when": 1775421878902,
       "tag": "0009_vengeful_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1775425027676,
+      "tag": "0010_hot_franklin_richards",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1775426894301,
+      "tag": "0011_talented_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }

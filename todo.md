@@ -417,3 +417,16 @@
 - [ ] Off-Market (pépites secrètes, débloquable)
 - [ ] Boutique affiliations (commission, suggestion cadeau IA)
 - [ ] Calendrier événementiel 40+ fêtes FR/US/INT
+
+## Phase 20 — Système SEO par Ville (Pipeline Complet)
+
+- [ ] Migration DB : étendre catégories seoCards (transport, cityGuide, rooftop, vip, event, boutique, airport, spa_wellness, park_garden, beach, viewpoint, secret_spot, nightlife, shopping_luxury, concierge, villa, private_jet)
+- [ ] Migration DB : ajouter champ viralVideos (JSON) dans seoCards + budgetTarget dans bundles
+- [ ] Refondre scrapingAgent : pipeline par ville, 20+ catégories, vidéos virales TikTok/Instagram
+- [ ] Définir liste des villes prioritaires (France+USA riches en premier)
+- [ ] Pipeline SEO→Bundle : génération auto de 3 bundles (budget/moyen/luxe) depuis fiches d'une ville
+- [ ] Pipeline Bundle→Parcours : génération auto de parcours depuis les bundles
+- [ ] Pipeline contenu social : MAYA génère posts Instagram/TikTok/YouTube + blog SEO (sans révéler le payant)
+- [ ] Interface CampaignTab : sélection par ville, pipeline visuel complet, progression live
+- [ ] Lancer campagne complète Paris (20+ fiches toutes catégories)
+- [ ] Lancer campagne New York

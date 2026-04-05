@@ -257,7 +257,12 @@ export const seoCards = mysqlTable("seoCards", {
   slug: varchar("slug", { length: 256 }).notNull().unique(),
   title: varchar("title", { length: 256 }).notNull(),
   subtitle: varchar("subtitle", { length: 256 }),
-  category: mysqlEnum("category", ["restaurant", "hotel", "activity", "bar", "spa", "guide", "experience"]).notNull(),
+  category: mysqlEnum("category", [
+    "restaurant", "hotel", "activity", "bar", "spa", "guide", "experience",
+    "transport", "cityGuide", "rooftop", "vip", "event", "boutique", "airport",
+    "spa_wellness", "park_garden", "beach", "viewpoint", "secret_spot",
+    "nightlife", "shopping_luxury", "concierge", "villa", "private_jet"
+  ]).notNull(),
   city: varchar("city", { length: 128 }).notNull(),
   country: varchar("country", { length: 128 }).notNull(),
   region: varchar("region", { length: 128 }),
@@ -270,6 +275,7 @@ export const seoCards = mysqlTable("seoCards", {
   imageUrl: text("imageUrl"),
   imageAlt: varchar("imageAlt", { length: 256 }),
   galleryUrls: text("galleryUrls"),
+  viralVideos: text("viralVideos"), // JSON: [{platform:'tiktok'|'instagram'|'youtube', url, title, views, thumbnail, embedId}]
   affiliateLinks: text("affiliateLinks"),
   rating: decimal("rating", { precision: 2, scale: 1 }),
   priceLevel: mysqlEnum("priceLevel", ["budget", "moderate", "upscale", "luxury"]).default("upscale"),
@@ -548,6 +554,10 @@ export const bundles = mysqlTable("bundles", {
   status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
   viewCount: int("viewCount").default(0),
   bookingCount: int("bookingCount").default(0),
+  // Budget cible (pour pipeline SEO→Bundle→Parcours)
+  budgetTarget: mysqlEnum("budgetTarget", ["budget", "moderate", "premium", "luxury"]).default("moderate"),
+  cityFocus: varchar("cityFocus", { length: 128 }), // ville principale du bundle
+  seoCardCount: int("seoCardCount").default(0), // nombre de fiches SEO liées
   // LÉNA enrichment
   isVerified: boolean("isVerified").default(false).notNull(),
   lenaCreated: boolean("lenaCreated").default(false).notNull(),
@@ -572,6 +582,12 @@ export const contentCalendar = mysqlTable("contentCalendar", {
   platform: mysqlEnum("platform", ["instagram", "tiktok", "linkedin", "twitter", "youtube", "blog"]).notNull(),
   status: mysqlEnum("status", ["idea", "generating", "review", "approved", "scheduled", "published", "failed"]).default("idea").notNull(),
   performance: text("performance"), // JSON { impressions, likes, shares, comments }
+  // Blog SEO (article complet, ne révèle pas le payant)
+  blogContent: text("blogContent"), // HTML/Markdown de l'article complet
+  blogSeoCity: varchar("blogSeoCity", { length: 128 }), // ville cible de l'article
+  blogKeywords: text("blogKeywords"), // JSON array de mots-clés cibles
+  blogSlug: varchar("blogSlug", { length: 256 }), // slug URL de l'article
+  linkedSeoCardIds: text("linkedSeoCardIds"), // JSON array de fiches SEO liées
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -791,12 +807,15 @@ export const clientProfiles = mysqlTable("clientProfiles", {
   sleepPreference: varchar("sleepPreference", { length: 128 }),
   tempPreference: varchar("tempPreference", { length: 64 }),
 
-  // Notes libres
+   // Notes libres
   freeNotes: text("freeNotes"),
-
+  // Commandes ARIA — instructions dynamiques injectées dans le prompt système
+  ariaInstructions: text("ariaInstructions"), // JSON array: [{id, instruction, addedAt, addedBy}]
+  ariaInstructionsUpdatedAt: timestamp("ariaInstructionsUpdatedAt"),
   // Méta IA
   aiLastExtracted: timestamp("aiLastExtracted"),
   aiExtractionCount: int("aiExtractionCount").default(0),
+  profileExtractedFields: text("profileExtractedFields"), // JSON: champs extraits automatiquement de la conversation
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

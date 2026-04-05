@@ -68,6 +68,34 @@ interface PlanData {
   activities?: Array<{ name: string; date?: string; time?: string }>;
 }
 
+interface ScenarioStep {
+  time: string;
+  establishment: string;
+  type: string;
+  description: string;
+  city: string;
+  coordinates?: { lat: number; lng: number };
+  transportMode?: string;
+}
+interface ScenarioDay {
+  day: number;
+  title: string;
+  steps: ScenarioStep[];
+}
+interface Scenario {
+  id: number;
+  title: string;
+  budget: string;
+  style: string;
+  highlight: string;
+  days: ScenarioDay[];
+}
+interface UserLocation {
+  city?: string;
+  country?: string;
+  lat?: number;
+  lng?: number;
+}
 interface ClaudeMessage {
   role: "user" | "assistant";
   content: string;
@@ -78,6 +106,7 @@ interface ClaudeMessage {
   journey?: JourneyData;
   quickReplies?: string[];
   plan?: PlanData;
+  scenarios?: Scenario[];
   model?: string;
   createdAt?: Date;
   // Legacy
@@ -658,11 +687,165 @@ function MessageBubble({
           </div>
         )}
 
+        {/* 3 Scénarios visuels */}
+        {!isUser && msg.scenarios && msg.scenarios.length > 0 && (
+          <ScenariosCard
+            scenarios={msg.scenarios}
+            onSelect={(s) => {
+              // Ouvrir le panneau droit avec le plan du scénario sélectionné
+              onPlaceSelect({
+                name: s.title,
+                type: "experience",
+                city: s.days[0]?.steps[0]?.city || "",
+                country: "",
+                description: s.highlight,
+              } as Place);
+            }}
+          />
+        )}
+
         {/* Quick Replies QR — seulement sur le dernier message */}
         {!isUser && isLast && quickReplies.length > 0 && (
           <QuickReplies replies={quickReplies} onSelect={onQuickReply} />
         )}
       </div>
+    </motion.div>
+  );
+}
+
+// ─── Scenarios Card — 3 scénarios visuels cliquables ─────────────────
+function ScenariosCard({ scenarios, onSelect }: { scenarios: Scenario[]; onSelect: (s: Scenario) => void }) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const [saved, setSaved] = useState<number | null>(null);
+  const saveParcours = trpc.lena.saveParcours.useMutation();
+  const { user } = useAuth();
+
+  const budgetColors: Record<number, { border: string; bg: string; badge: string; text: string }> = {
+    1: { border: "border-emerald-500/30", bg: "bg-emerald-500/5", badge: "bg-emerald-500/20 text-emerald-400", text: "text-emerald-400" },
+    2: { border: "border-[#c8a94a]/40", bg: "bg-[#c8a94a]/5", badge: "bg-[#c8a94a]/20 text-[#c8a94a]", text: "text-[#c8a94a]" },
+    3: { border: "border-purple-500/30", bg: "bg-purple-500/5", badge: "bg-purple-500/20 text-purple-400", text: "text-purple-400" },
+  };
+
+  const handleSave = async (s: Scenario) => {
+    if (!user) return;
+    try {
+      const budgetMap: Record<string, "economique" | "confort" | "premium" | "luxe"> = {
+        "Essentiel": "economique", "Budget": "economique", "economique": "economique",
+        "Confort": "confort", "Moyen": "confort", "confort": "confort",
+        "Premium": "premium", "premium": "premium",
+        "Luxe": "luxe", "Excellence": "luxe", "luxe": "luxe",
+      };
+      const steps = s.days.flatMap(d => d.steps.map(st => `${d.title} — ${st.time} ${st.establishment}`));
+      await saveParcours.mutateAsync({
+        title: s.title,
+        description: s.highlight,
+        budget: budgetMap[s.budget] || "confort",
+        steps: steps.join("\n"),
+        highlights: s.highlight,
+        isLenaGenerated: false,
+      });
+      setSaved(s.id);
+    } catch {}
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-3 mt-3"
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <Sparkles size={12} className="text-[#c8a94a]" />
+        <span className="text-[11px] text-[#c8a94a] font-medium uppercase tracking-wider">3 scénarios pour vous</span>
+      </div>
+      {scenarios.map((s) => {
+        const colors = budgetColors[s.id] || budgetColors[2];
+        const isSelected = selected === s.id;
+        const isSaved = saved === s.id;
+        return (
+          <motion.div
+            key={s.id}
+            whileHover={{ scale: 1.01 }}
+            onClick={() => { setSelected(isSelected ? null : s.id); onSelect(s); }}
+            className={`rounded-xl border cursor-pointer transition-all overflow-hidden ${colors.border} ${colors.bg} ${isSelected ? "ring-1 ring-offset-0 ring-white/20" : ""}`}
+          >
+            <div className="p-3">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${colors.badge}`}>{s.budget}</span>
+                    <span className="text-[9px] text-white/40">{s.style}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-white leading-tight">{s.title}</p>
+                  <p className="text-[11px] text-white/60 mt-1 leading-relaxed">{s.highlight}</p>
+                </div>
+                <span className="text-xl shrink-0">{s.id === 1 ? "🌱" : s.id === 2 ? "✨" : "💎"}</span>
+              </div>
+
+              {/* Aperçu du premier jour */}
+              {s.days[0] && (
+                <div className="mt-2 pt-2 border-t border-white/5">
+                  <p className="text-[9px] text-white/40 uppercase tracking-wider mb-1">{s.days[0].title}</p>
+                  <div className="space-y-1">
+                    {s.days[0].steps.slice(0, 3).map((step, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-[9px] text-white/30 w-8 shrink-0">{step.time}</span>
+                        <span className="text-[10px] text-white/70 truncate">{step.establishment}</span>
+                        {step.transportMode && <span className="text-[9px] text-white/30 shrink-0">{step.transportMode === "walk" ? "🚶" : step.transportMode === "taxi" ? "🚕" : step.transportMode === "metro" ? "🚇" : "🚗"}</span>}
+                      </div>
+                    ))}
+                    {s.days[0].steps.length > 3 && (
+                      <p className="text-[9px] text-white/30">+{s.days[0].steps.length - 3} étapes...</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleSave(s); }}
+                  className={`flex-1 text-[10px] py-1.5 rounded-lg border transition-all font-medium ${
+                    isSaved
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                      : `${colors.border} hover:${colors.bg} text-white/60 hover:text-white`
+                  }`}
+                >
+                  {isSaved ? "✓ Enregistré" : "💾 Enregistrer"}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelected(isSelected ? null : s.id); }}
+                  className={`text-[10px] px-3 py-1.5 rounded-lg border transition-all ${colors.border} ${colors.text} hover:${colors.bg}`}
+                >
+                  {isSelected ? "Réduire" : "Détailler"}
+                </button>
+              </div>
+            </div>
+
+            {/* Détail développé */}
+            {isSelected && (
+              <div className="border-t border-white/5 p-3 space-y-3">
+                {s.days.map((day) => (
+                  <div key={day.day}>
+                    <p className="text-[10px] font-semibold text-white/80 mb-1.5">{day.title}</p>
+                    <div className="space-y-1.5">
+                      {day.steps.map((step, i) => (
+                        <div key={i} className="flex gap-2 p-2 rounded-lg bg-white/3">
+                          <span className="text-[9px] text-white/30 w-8 shrink-0 pt-0.5">{step.time}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-medium text-white/90 truncate">{step.establishment}</p>
+                            <p className="text-[9px] text-white/50 leading-relaxed mt-0.5">{step.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        );
+      })}
     </motion.div>
   );
 }
@@ -679,6 +862,8 @@ export default function Chat() {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [showRightPanel, setShowRightPanel] = useState(false);
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [selectedScenario, setSelectedScenario] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -701,6 +886,19 @@ export default function Chat() {
     }
     return null;
   }, [localMessages]);
+
+  // GPS optionnel — activé uniquement si le client le demande
+  const activateGPS = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, city: undefined });
+        },
+        () => { /* géoloc refusée — silencieux */ },
+        { timeout: 8000, maximumAge: 60000 }
+      );
+    }
+  };
 
   const { data: conversations, refetch: refetchConversations } = trpc.chat.getConversations.useQuery(
     undefined,
@@ -731,13 +929,14 @@ export default function Chat() {
         journey: data.journey || null,
         quickReplies: data.quickReplies || data.parsed?.quickReplies || [],
         plan: data.plan || null,
+        scenarios: data.scenarios || null,
         model: data.model,
         createdAt: new Date(),
       };
       setLocalMessages(prev => [...prev, newMsg]);
       setIsTyping(false);
-      // Auto-ouvrir le panneau droit si places ou plan
-      if ((newMsg.places && newMsg.places.length > 0) || newMsg.plan) {
+      // Auto-ouvrir le panneau droit si places, plan ou scénarios
+      if ((newMsg.places && newMsg.places.length > 0) || newMsg.plan || (newMsg.scenarios && newMsg.scenarios.length > 0)) {
         setShowRightPanel(true);
       }
     },
@@ -769,13 +968,24 @@ export default function Chat() {
             .replace(/:::GCAL:::[\s\S]*?:::END:::/g, "")
             .replace(/:::BOOKING:::[\s\S]*?:::END:::/g, "")
             .replace(/:::QR:::[\s\S]*?:::END:::/g, "")
-            .replace(/:::PLAN:::[\s\S]*?:::END:::/g, "")
+            .replace(/:::PLAN:::[sS]*?:::END:::/g, "")
+            .replace(/:::SCENARIOS:::[sS]*?:::END:::/g, "")
             .trim();
+          // Parser les scénarios stockés
+          let scenarios: Scenario[] | undefined;
+          const scenMatch = m.content.match(/:::SCENARIOS:::([sS]*?):::END:::/);
+          if (scenMatch) { try { scenarios = JSON.parse(scenMatch[1].trim()); } catch {} }
+          // Parser les places stockées
+          let places: Place[] | undefined;
+          const plMatch = m.content.match(/:::PLACES:::([sS]*?):::END:::/);
+          if (plMatch) { try { places = JSON.parse(plMatch[1].trim()); } catch {} }
           return {
             role: m.role as "user" | "assistant",
             content: m.content,
             cleanMessage,
             quickReplies: qr,
+            places,
+            scenarios,
             createdAt: m.createdAt ? new Date(m.createdAt) : undefined,
           };
         }
@@ -841,7 +1051,7 @@ export default function Chat() {
     setIsTyping(true);
 
     if (convId && isAuthenticated) {
-      sendMessage.mutate({ conversationId: convId, content: messageText });
+      sendMessage.mutate({ conversationId: convId, content: messageText, userLocation: userLocation || undefined });
     } else {
       // Demo mode
       setTimeout(() => {
