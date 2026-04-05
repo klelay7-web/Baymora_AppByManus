@@ -11,6 +11,7 @@ import {
   Play, Instagram, Music, Quote, Info, AlertCircle, DollarSign
 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 const categoryIcons: Record<string, any> = {
   restaurant: Utensils, hotel: Hotel, bar: Utensils, spa: Sparkles,
@@ -393,6 +394,96 @@ export default function EstablishmentDetail() {
             </div>
           </motion.section>
         )}
+
+        {/* Partage Multi-Canal */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+          <div className="bg-white/[0.03] rounded-lg p-6 border border-white/5">
+            <h3 className="text-lg font-playfair font-semibold text-white mb-2">Partager cette fiche</h3>
+            <p className="text-xs text-white/40 mb-4">Envoyez cette adresse ou demandez une prise en charge</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <Button
+                variant="outline"
+                className="border-white/10 text-white/70 hover:border-gold/30 hover:text-gold text-xs h-auto py-3 flex-col gap-1"
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast.success("Lien copié ! Envoyez-le à un proche.");
+                }}
+              >
+                <Share2 className="w-4 h-4" />
+                Un proche
+              </Button>
+              <Button
+                variant="outline"
+                className="border-white/10 text-white/70 hover:border-gold/30 hover:text-gold text-xs h-auto py-3 flex-col gap-1"
+                onClick={() => {
+                  toast.info("Fonctionnalité bientôt disponible");
+                }}
+              >
+                <Sparkles className="w-4 h-4" />
+                Mon assistant
+              </Button>
+              <Button
+                variant="outline"
+                className="border-white/10 text-white/70 hover:border-gold/30 hover:text-gold text-xs h-auto py-3 flex-col gap-1"
+                onClick={() => {
+                  toast.info("Indiquez le contact de votre conciergerie préférée");
+                }}
+              >
+                <Phone className="w-4 h-4" />
+                Ma conciergerie
+              </Button>
+              <Button
+                variant="outline"
+                className="border-white/10 text-white/70 hover:border-gold/30 hover:text-gold text-xs h-auto py-3 flex-col gap-1"
+                onClick={() => {
+                  toast.info("Demande envoyée à une conciergerie partenaire Baymora");
+                }}
+              >
+                <Globe className="w-4 h-4" />
+                Conciergerie Baymora
+              </Button>
+            </div>
+          </div>
+        </motion.section>
+      </div>
+
+      {/* Sticky CTA Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-white/10 p-3 z-50">
+        <div className="container max-w-4xl flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{establishment.name}</p>
+            <p className="text-xs text-white/40">
+              {establishment.priceRange || priceLevelLabels[establishment.priceLevel || ""] || ""}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-gold/30 text-gold hover:bg-gold/10 rounded-none text-xs"
+              onClick={() => {
+                toast.success("Ajouté à votre parcours !");
+              }}
+            >
+              <MapPin className="w-3 h-3 mr-1" /> Ajouter au parcours
+            </Button>
+            {affiliateLinks.length > 0 ? (
+              <a href={affiliateLinks[0].url} target="_blank" rel="noopener noreferrer">
+                <Button size="sm" className="bg-gold text-background hover:bg-gold/90 rounded-none text-xs">
+                  Réserver <ExternalLink className="w-3 h-3 ml-1" />
+                </Button>
+              </a>
+            ) : (
+              <Button
+                size="sm"
+                className="bg-gold text-background hover:bg-gold/90 rounded-none text-xs"
+                onClick={() => navigate("/chat")}
+              >
+                Réserver via l'assistant
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

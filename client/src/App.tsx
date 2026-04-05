@@ -12,6 +12,10 @@ import Profile from "./pages/Profile";
 import Pricing from "./pages/Pricing";
 import TripPlan from "./pages/TripPlan";
 import EstablishmentDetail from "./pages/EstablishmentDetail";
+import Destinations from "./pages/Destinations";
+import Inspirations from "./pages/Inspirations";
+import Services from "./pages/Services";
+import About from "./pages/About";
 import Navbar from "./components/Navbar";
 import { lazy, Suspense } from "react";
 
@@ -50,6 +54,10 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       <Route path="/trip/:id" component={TripPlan} />
       <Route path="/establishment/:id" component={EstablishmentDetail} />
+      <Route path="/destinations" component={Destinations} />
+      <Route path="/inspirations" component={Inspirations} />
+      <Route path="/services" component={Services} />
+      <Route path="/a-propos" component={About} />
 
       {/* Client Dashboards */}
       <Route path="/profile" component={Profile} />

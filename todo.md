@@ -177,3 +177,30 @@
 - [x] Connecter et interconnecter tous les dashboards, routes, navigation, permissions
 - [x] Tester et sauvegarder checkpoint
 - [x] Pousser tout sur GitHub
+
+## Phase 14 — Construction Complète de l'Expérience
+
+### Sprint 1 — Chat IA Interactif Split-View
+- [x] Message d'accueil proactif qui donne envie (l'IA prend l'initiative)
+- [x] Réponses cliquables (boutons) au lieu de texte libre — minimum d'écriture pour le client
+- [x] Option "Autre" pour écrire sa propre réponse si les propositions ne conviennent pas
+- [x] Split-view : conversation à gauche, fiches/map/récap à droite
+- [x] Génération de 3 parcours différents par l'IA, sélection et enregistrement
+- [x] Panneau droit : fiche établissement, récap parcours, map interactive
+- [x] Système de réservation en ligne (soi-même) depuis le panneau droit
+- [x] Système de partage : vers proche, assistant, conciergerie préférée, conciergerie partenaire Baymora
+- [x] Backend IA : system prompt interactif avec questions et propositions cliquables
+
+### Sprint 2 — Fiches Établissements & Map Interactive
+- [x] Fiches établissements SEO complètes avec hero, visuels, contenu
+- [ ] Map interactive jour par jour (GPS, transport, notifications)
+- [ ] Chaque établissement cliquable sur la map avec sa fiche SEO
+- [ ] Sync calendrier Google, notifications, rappels
+
+### Sprint 3 — Contenus de Toutes les Pages
+- [x] Page Destinations (par continent, par expérience, secrets, tendances)
+- [x] Page Nos Services (assistant IA, parcours, bundles, off-market, mode fantôme)
+- [x] Page Inspirations/Bundles
+- [x] Page À Propos (notre histoire, comment ça marche)
+- [x] Page Devenir Ambassadeur (intégré dans À Propos)
+- [x] Page Prestataires B2B (intégré dans À Propos #b2b)

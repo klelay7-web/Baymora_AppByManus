@@ -29,7 +29,7 @@ import {
   getPublishedBundles, getAllBundles, createBundle, updateBundle,
   getContentCalendar, createContentCalendarItem, updateContentCalendarItem,
 } from "./db";
-import { generateConciergeResponse } from "./services/concierge";
+import { generateConciergeResponse, getWelcomeResponse } from "./services/concierge";
 import type { User } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
@@ -69,6 +69,8 @@ export const appRouter = router({
       .input(z.object({ conversationId: z.number() }))
       .query(({ input }) => getConversationMessages(input.conversationId)),
 
+    getWelcome: publicProcedure.query(() => getWelcomeResponse()),
+
     sendMessage: protectedProcedure
       .input(z.object({
         conversationId: z.number(),
@@ -89,8 +91,9 @@ export const appRouter = router({
         const history = await getConversationMessages(input.conversationId, 20);
         const formattedHistory = history.map(m => ({ role: m.role, content: m.content }));
         const aiResponse = await generateConciergeResponse(ctx.user.id, formattedHistory, input.content);
-        await addMessage(input.conversationId, "assistant", aiResponse);
-        return { content: aiResponse };
+        // Store the full JSON as the message content
+        await addMessage(input.conversationId, "assistant", JSON.stringify(aiResponse));
+        return aiResponse;
       }),
 
     transcribeVoice: protectedProcedure

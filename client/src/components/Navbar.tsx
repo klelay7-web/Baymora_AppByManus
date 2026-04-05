@@ -58,25 +58,25 @@ const servicesItems = [
   {
     title: "Parcours Sur-Mesure",
     description: "Itinéraires GPS jour par jour, carte interactive",
-    href: "/discover",
+    href: "/services",
     icon: MapPin,
   },
   {
     title: "Bundles & Sélections",
     description: "Top 10, secrets d'initiés, listes curatées",
-    href: "/discover",
+    href: "/inspirations",
     icon: Star,
   },
   {
     title: "Accès Off-Market",
     description: "Propriétés, yachts et expériences exclusives",
-    href: "/pricing",
+    href: "/inspirations#off-market",
     icon: Lock,
   },
   {
     title: "Mode Fantôme",
     description: "Réservations anonymes, discrétion absolue",
-    href: "/pricing",
+    href: "/services#fantome",
     icon: Shield,
   },
 ];
@@ -85,25 +85,25 @@ const destinationsItems = [
   {
     title: "Par Continent",
     description: "Europe, Asie, Amériques, Afrique, Océanie",
-    href: "/discover",
+    href: "/destinations",
     icon: Globe,
   },
   {
     title: "Par Expérience",
     description: "Gastronomie, Bien-être, Aventure, Culture",
-    href: "/discover",
+    href: "/destinations#experiences",
     icon: Compass,
   },
   {
     title: "Destinations Secrètes",
     description: "Adresses confidentielles réservées aux membres",
-    href: "/discover",
+    href: "/destinations#secretes",
     icon: Gem,
   },
   {
     title: "Tendances du Moment",
     description: "Les destinations qui font parler en ce moment",
-    href: "/discover",
+    href: "/destinations#tendances",
     icon: Heart,
   },
 ];
@@ -133,19 +133,19 @@ const aboutItems = [
   {
     title: "Notre Vision",
     description: "L'intelligence artificielle au service du luxe",
-    href: "/#about",
+    href: "/a-propos",
     icon: Building2,
   },
   {
     title: "Comment ça Marche",
     description: "4 étapes pour une expérience inoubliable",
-    href: "/#how-it-works",
+    href: "/services#how-it-works",
     icon: Compass,
   },
   {
     title: "Prestataires & Partenaires",
     description: "Rejoignez notre réseau de prestataires premium",
-    href: "/#b2b",
+    href: "/a-propos#b2b",
     icon: Utensils,
   },
 ];
