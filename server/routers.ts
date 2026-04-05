@@ -64,6 +64,8 @@ import { extractProfileFromMessage } from "./services/profileExtractor";
 import { transcribeAudio } from "./_core/voiceTranscription";
 import { chatWithLena, generateFicheWithLena } from "./services/ai/lenaService";
 import type { LenaMessage, LenaSession } from "./services/ai/lenaService";
+import { enrichEstablishment, runSeoEnrichmentCampaign } from "./services/ai/scrapingAgent";
+import type { EstablishmentInput } from "./services/ai/scrapingAgent";
 import { chatWithManus, delibererAriaEtManus, creerMission, MANUS_PROFILE, STRATEGIE_LANCEMENT } from "./services/ai/manusAgent";
 import type { ManusMessage } from "./services/ai/manusAgent";
 import { genererArticleBlog, genererPostSocial, genererCalendrierEditorial, rechercherVideoVirale } from "./services/ai/creativeAgent";
@@ -1598,10 +1600,74 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+  // ─── CAMPAGNE SEO — Enrichissement MANUS+LÉNA ─────────────────────────────
+  campaign: router({
+    // Enrichir un seul établissement
+    enrichOne: ownerProcedure
+      .input(z.object({ establishmentId: z.number() }))
+      .mutation(async ({ input }) => {
+        const estab = await getEstablishmentById(input.establishmentId);
+        if (!estab) throw new TRPCError({ code: "NOT_FOUND", message: "\u00c9tablissement introuvable" });
+        const ficheInput: EstablishmentInput = { id: estab.id, name: estab.name, city: estab.city, category: estab.category, address: estab.address ?? undefined };
+        const fiche = await enrichEstablishment(ficheInput);
+        const id = await createSeoCard({
+          slug: fiche.slug, title: fiche.title, subtitle: fiche.subtitle ?? null,
+          category: fiche.category, city: fiche.city, country: fiche.country ?? "France",
+          region: fiche.region ?? null, description: fiche.description,
+          highlights: JSON.stringify(fiche.highlights), practicalInfo: JSON.stringify(fiche.practicalInfo),
+          metaTitle: fiche.metaTitle, metaDescription: fiche.metaDescription,
+          imageUrl: fiche.imageUrl ?? null, galleryUrls: JSON.stringify(fiche.galleryUrls ?? []),
+          rating: fiche.rating ?? null, priceLevel: fiche.priceLevel ?? null,
+          tags: JSON.stringify(fiche.tags ?? []), status: "draft",
+          generatedBy: "MANUS+L\u00c9NA", isVerified: false, lenaCreated: true,
+          sourceType: "manus_scraping", schemaOrg: null, affiliateLinks: null,
+          viewCount: 0, publishedAt: null, fieldReportId: null,
+        });
+        return { success: true, id, fiche };
+      }),
 
-  // ─── MANUS — Agent Directeur Technique (binôme ARIA) ─────────────────────────
-  manus: router({
-    // Chat avec MANUS
+    // Lancer la campagne sur plusieurs établissements
+    runCampaign: ownerProcedure
+      .input(z.object({ establishmentIds: z.array(z.number()).min(1).max(10) }))
+      .mutation(async ({ input }) => {
+        const establishments: EstablishmentInput[] = [];
+        for (const eid of input.establishmentIds) {
+          const estab = await getEstablishmentById(eid);
+          if (estab) establishments.push({ id: estab.id, name: estab.name, city: estab.city, category: estab.category, address: estab.address ?? undefined });
+        }
+        const results = await runSeoEnrichmentCampaign(establishments);
+        const saved: { id: number; name: string; ficheId?: number; status: string }[] = [];
+        for (const result of results) {
+          if (result.status === "success" && result.fiche) {
+            try {
+              const ficheId = await createSeoCard({
+                slug: result.fiche.slug, title: result.fiche.title, subtitle: result.fiche.subtitle ?? null,
+                category: result.fiche.category, city: result.fiche.city, country: result.fiche.country ?? "France",
+                region: result.fiche.region ?? null, description: result.fiche.description,
+                highlights: JSON.stringify(result.fiche.highlights), practicalInfo: JSON.stringify(result.fiche.practicalInfo),
+                metaTitle: result.fiche.metaTitle, metaDescription: result.fiche.metaDescription,
+                imageUrl: result.fiche.imageUrl ?? null, galleryUrls: JSON.stringify(result.fiche.galleryUrls ?? []),
+                rating: result.fiche.rating ?? null, priceLevel: result.fiche.priceLevel ?? null,
+                tags: JSON.stringify(result.fiche.tags ?? []), status: "draft",
+                generatedBy: "MANUS+L\u00c9NA", isVerified: false, lenaCreated: true,
+                sourceType: "manus_scraping", schemaOrg: null, affiliateLinks: null,
+                viewCount: 0, publishedAt: null, fieldReportId: null,
+              });
+              saved.push({ id: result.establishmentId, name: result.establishmentName, ficheId, status: "success" });
+            } catch { saved.push({ id: result.establishmentId, name: result.establishmentName, status: "error_save" }); }
+          } else {
+            saved.push({ id: result.establishmentId, name: result.establishmentName, status: result.status });
+          }
+        }
+        return { results, saved, total: results.length, success: saved.filter(s => s.status === "success").length };
+      }),
+
+    // Liste des établissements disponibles
+    listEstablishments: ownerProcedure.query(async () => getAllEstablishments()),
+  }),
+
+  // ─── MANUS — Agent Directeur Technique (binôme ARIA) ─────────────────────────────
+  manus: router({  // Chat avec MANUS
     chat: ownerProcedure
       .input(z.object({
         message: z.string().min(1).max(4000),

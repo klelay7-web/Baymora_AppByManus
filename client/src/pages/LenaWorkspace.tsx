@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,8 @@ import { Link } from "wouter";
 import {
   FileText, Package, Map, Users, CheckCircle2, Clock, Archive,
   Globe, Star, Trash2, Eye, Edit3, ArrowLeft, RefreshCw,
-  Sparkles, BookOpen, Route, ShieldCheck, AlertCircle, Plus
+  Sparkles, BookOpen, Route, ShieldCheck, AlertCircle, Plus,
+  Rocket, Zap, Search, ChevronRight, CheckSquare, Square
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -530,6 +531,10 @@ export default function LenaWorkspace() {
                 Parcours
                 <Badge className="ml-1 bg-zinc-700 text-zinc-300 text-xs">{data.allParcours.length}</Badge>
               </TabsTrigger>
+              <TabsTrigger value="campaign" className="data-[state=active]:bg-[#C9A84C] data-[state=active]:text-black">
+                <Rocket className="w-4 h-4 mr-1" />
+                Campagne SEO
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="stats">
@@ -547,9 +552,283 @@ export default function LenaWorkspace() {
             <TabsContent value="parcours">
               <ParcoursTab parcours={data.allParcours as Parcours[]} saves={data.saves} onRefresh={refetch} />
             </TabsContent>
+            <TabsContent value="campaign">
+              <CampaignTab onRefresh={refetch} />
+            </TabsContent>
           </Tabs>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Composant CampaignTab ────────────────────────────────────────────────────
+type Establishment = { id: number; name: string; city: string; category: string; address?: string | null };
+type CampaignResult = {
+  establishmentId: number;
+  establishmentName: string;
+  status: "success" | "error";
+  error?: string;
+  duration?: number;
+  fiche?: { title: string; metaTitle: string; highlights: string[] };
+};
+
+function CampaignTab({ onRefresh }: { onRefresh: () => void }) {
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [results, setResults] = useState<CampaignResult[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [currentStep, setCurrentStep] = useState("");
+  const [progress, setProgress] = useState(0);
+
+  const { data: establishments, isLoading } = trpc.campaign.listEstablishments.useQuery();
+
+  const runCampaign = trpc.campaign.runCampaign.useMutation({
+    onSuccess: (data) => {
+      setResults(data.results as CampaignResult[]);
+      setIsRunning(false);
+      setProgress(100);
+      setCurrentStep(`✓ Campagne terminée — ${data.success}/${data.total} fiches créées`);
+      toast.success(`${data.success} fiches SEO créées avec succès !`);
+      onRefresh();
+    },
+    onError: (err) => {
+      setIsRunning(false);
+      toast.error(`Erreur campagne : ${err.message}`);
+    },
+  });
+
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  }, []);
+
+  const selectAll = useCallback(() => {
+    if (!establishments) return;
+    const first5 = establishments.slice(0, 5).map((e: Establishment) => e.id);
+    setSelectedIds(first5);
+  }, [establishments]);
+
+  const handleLaunch = () => {
+    if (selectedIds.length === 0) { toast.error("Sélectionnez au moins un établissement"); return; }
+    setIsRunning(true);
+    setResults([]);
+    setProgress(5);
+    setCurrentStep("Initialisation de la campagne MANUS+LÉNA...");
+
+    // Simulation de progression pendant le traitement
+    const steps = [
+      { p: 15, msg: "🔍 MANUS recherche les informations générales..." },
+      { p: 30, msg: "⭐ Analyse des avis TripAdvisor & Google Maps..." },
+      { p: 50, msg: "🎬 Recherche des vidéos virales TikTok/Instagram..." },
+      { p: 70, msg: "✍️ LÉNA rédige les fiches SEO premium..." },
+      { p: 85, msg: "💾 Sauvegarde des fiches en base..." },
+      { p: 95, msg: "🔗 Liaison avec les établissements..." },
+    ];
+    let stepIdx = 0;
+    const interval = setInterval(() => {
+      if (stepIdx < steps.length) {
+        setProgress(steps[stepIdx].p);
+        setCurrentStep(steps[stepIdx].msg);
+        stepIdx++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 4000);
+
+    runCampaign.mutate({ establishmentIds: selectedIds });
+  };
+
+  const categoryEmoji: Record<string, string> = {
+    restaurant: "🍽️", hotel: "🏨", bar: "🍸", spa: "💆", museum: "🏛️",
+    experience: "✨", boutique: "🛍️", club: "🎵", beach: "🏖️", yacht: "⛵",
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+            <Rocket className="w-5 h-5 text-[#C9A84C]" />
+            Campagne SEO — MANUS + LÉNA
+          </h2>
+          <p className="text-zinc-400 text-sm mt-1">
+            Sélectionnez jusqu'à 5 établissements. MANUS scrape les données, LÉNA génère les fiches SEO premium.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={selectAll}
+          className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+          disabled={isRunning}
+        >
+          <CheckSquare className="w-4 h-4 mr-1" />
+          Sélectionner 5 premiers
+        </Button>
+      </div>
+
+      {/* Pipeline visuel */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { icon: <Search className="w-4 h-4" />, label: "MANUS Scrape", desc: "TripAdvisor, Google Maps, Instagram" },
+          { icon: <Zap className="w-4 h-4" />, label: "Analyse Avis", desc: "Notes, highlights, tendances" },
+          { icon: <Sparkles className="w-4 h-4" />, label: "LÉNA Rédige", desc: "SEO premium, ton Baymora" },
+          { icon: <CheckCircle2 className="w-4 h-4" />, label: "Fiche Créée", desc: "Brouillon prêt à vérifier" },
+        ].map((step, i) => (
+          <div key={i} className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-center">
+            <div className="w-8 h-8 rounded-full bg-[#C9A84C]/20 flex items-center justify-center mx-auto mb-2 text-[#C9A84C]">
+              {step.icon}
+            </div>
+            <div className="text-white text-xs font-medium">{step.label}</div>
+            <div className="text-zinc-500 text-xs mt-0.5">{step.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Sélection établissements */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-white font-medium text-sm">
+            Établissements disponibles
+            <span className="text-zinc-500 ml-2">({selectedIds.length} sélectionné{selectedIds.length > 1 ? "s" : ""})</span>
+          </h3>
+          {selectedIds.length > 0 && (
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])} className="text-zinc-500 text-xs h-7">
+              Tout désélectionner
+            </Button>
+          )}
+        </div>
+        {isLoading ? (
+          <div className="text-zinc-500 text-sm py-4 text-center">Chargement...</div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto pr-1">
+            {(establishments as Establishment[] | undefined)?.map((estab) => {
+              const isSelected = selectedIds.includes(estab.id);
+              return (
+                <button
+                  key={estab.id}
+                  onClick={() => toggleSelect(estab.id)}
+                  disabled={isRunning || (!isSelected && selectedIds.length >= 5)}
+                  className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
+                    isSelected
+                      ? "border-[#C9A84C] bg-[#C9A84C]/10"
+                      : "border-zinc-700 bg-zinc-800/50 hover:border-zinc-600"
+                  } ${!isSelected && selectedIds.length >= 5 ? "opacity-40 cursor-not-allowed" : ""}`}
+                >
+                  <div className={`w-5 h-5 flex-shrink-0 ${isSelected ? "text-[#C9A84C]" : "text-zinc-600"}`}>
+                    {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                  </div>
+                  <span className="text-lg">{categoryEmoji[estab.category] || "📍"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-white text-sm font-medium truncate">{estab.name}</div>
+                    <div className="text-zinc-500 text-xs">{estab.city} · {estab.category}</div>
+                  </div>
+                  {isSelected && <ChevronRight className="w-4 h-4 text-[#C9A84C] flex-shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Barre de progression */}
+      {(isRunning || progress > 0) && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-white text-sm font-medium">Progression</span>
+            <span className="text-[#C9A84C] text-sm font-bold">{progress}%</span>
+          </div>
+          <div className="w-full bg-zinc-800 rounded-full h-2 mb-3">
+            <div
+              className="bg-gradient-to-r from-[#C9A84C] to-[#F0D080] h-2 rounded-full transition-all duration-1000"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-zinc-400 text-xs">{currentStep}</p>
+        </div>
+      )}
+
+      {/* Bouton lancement */}
+      <Button
+        onClick={handleLaunch}
+        disabled={isRunning || selectedIds.length === 0}
+        className="w-full bg-[#C9A84C] hover:bg-[#B8963B] text-black font-semibold h-12 text-base"
+      >
+        {isRunning ? (
+          <>
+            <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+            Campagne en cours... ({selectedIds.length} établissements)
+          </>
+        ) : (
+          <>
+            <Rocket className="w-5 h-5 mr-2" />
+            Lancer la campagne MANUS+LÉNA ({selectedIds.length} établissement{selectedIds.length > 1 ? "s" : ""})
+          </>
+        )}
+      </Button>
+
+      {/* Résultats */}
+      {results.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-white font-medium flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-green-400" />
+            Résultats de la campagne
+          </h3>
+          {results.map((result) => (
+            <div
+              key={result.establishmentId}
+              className={`border rounded-xl p-4 ${
+                result.status === "success"
+                  ? "border-green-800 bg-green-900/20"
+                  : "border-red-800 bg-red-900/20"
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  {result.status === "success" ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                  )}
+                  <div>
+                    <div className="text-white font-medium text-sm">{result.establishmentName}</div>
+                    {result.status === "success" && result.fiche && (
+                      <div className="text-zinc-400 text-xs mt-0.5">{result.fiche.metaTitle}</div>
+                    )}
+                    {result.status === "error" && (
+                      <div className="text-red-400 text-xs mt-0.5">{result.error}</div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <Badge variant={result.status === "success" ? "default" : "destructive"} className="text-xs">
+                    {result.status === "success" ? "✓ Fiche créée" : "✗ Erreur"}
+                  </Badge>
+                  {result.duration && (
+                    <div className="text-zinc-600 text-xs mt-1">{(result.duration / 1000).toFixed(1)}s</div>
+                  )}
+                </div>
+              </div>
+              {result.status === "success" && result.fiche?.highlights && (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {result.fiche.highlights.slice(0, 3).map((h, i) => (
+                    <span key={i} className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">{h}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setResults([]); setProgress(0); setCurrentStep(""); setSelectedIds([]); }}
+            className="border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+          >
+            <RefreshCw className="w-4 h-4 mr-1" />
+            Nouvelle campagne
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
