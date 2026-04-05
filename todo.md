@@ -176,4 +176,4 @@
 - [x] Salle de Réunion IA (QG) — conversation départements, KPIs, directives, compte-rendu
 - [x] Connecter et interconnecter tous les dashboards, routes, navigation, permissions
 - [x] Tester et sauvegarder checkpoint
-- [ ] Pousser tout sur GitHub
+- [x] Pousser tout sur GitHub
