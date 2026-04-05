@@ -12,7 +12,7 @@
 import { prisma } from '../../db';
 
 const MANUS_API_KEY = process.env.MANUS_API_KEY;
-const MANUS_API = 'https://api.manus.im/v2/tasks';
+const MANUS_API = 'https://api.manus.ai/v2/tasks';
 
 interface ManusResult {
   taskId: string;

@@ -173,7 +173,7 @@ async function callManus(query: string, city: string, apiKey: string): Promise<a
     // 1. Créer la tâche (timeout court pour ne pas bloquer le chat)
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000); // 10s max
-    const createRes = await fetch('https://api.manus.im/v2/tasks', {
+    const createRes = await fetch('https://api.manus.ai/v2/tasks', {
       signal: controller.signal,
       method: 'POST',
       headers: {
@@ -208,7 +208,7 @@ Concentre-toi sur la qualité et la pertinence. Langue: français.`,
     while (Date.now() - start < maxWait) {
       await new Promise(r => setTimeout(r, pollInterval));
 
-      const pollRes = await fetch(`https://api.manus.im/v2/tasks/${taskId}`, {
+      const pollRes = await fetch(`https://api.manus.ai/v2/tasks/${taskId}`, {
         headers: { 'Authorization': `Bearer ${apiKey}` },
       });
 
