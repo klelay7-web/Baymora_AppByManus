@@ -37,14 +37,21 @@ import {
   getFieldReportMediaItems, addFieldReportMediaItem, deleteFieldReportMediaItem,
 } from "./db";
 import { generateConciergeResponse, getWelcomeResponse } from "./services/concierge";
-import { sendEmail, previewEmail, triggerPartnerProspection, triggerAffiliateWelcome, triggerTeamWeeklyReport, sendBulkWeeklyPlans, type EmailType } from "./services/emailService";
+import { sendEmail, previewEmail, triggerPartnerProspection, triggerAffiliateWelcome, triggerTeamWeeklyReport, sendBulkWeeklyPlans } from "./services/emailService";
+import type { EmailType } from "./services/emailService";
 import { callClaude, buildSystemPrompt, parseStructuredTags, type ClaudeMessage } from "./services/claudeService";
 import type { User } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
 import { notifyOwner } from "./_core/notification";
 import { chatWithDG, generateDailyReport, getCarnetsDebord, getDGHistory, ORGANIGRAMME, STRATEGIE, BUDGET_MENSUEL } from "./services/dgService";
+import {
+  getClientProfile, upsertClientProfile,
+  listCompanions, getCompanion, createCompanion, updateCompanion, deleteCompanion,
+  listMyDestinations, listPublicDestinations, getDestination, createDestination, updateDestination, deleteDestination, saveDestinationForUser,
+} from "./services/profileService";
 import { generateImage } from "./_core/imageGeneration";
+import { extractProfileFromMessage } from "./services/profileExtractor";
 import { transcribeAudio } from "./_core/voiceTranscription";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -108,6 +115,9 @@ export const appRouter = router({
 
         // Ajouter le message utilisateur
         await addMessage(input.conversationId, "user", input.content, undefined, input.isVoice);
+
+        // Auto-remplissage IA silencieux du profil (fire & forget)
+        extractProfileFromMessage(ctx.user.id, input.content).catch(() => {});
 
         // Récupérer l'historique complet
         const history = await getConversationMessages(input.conversationId, 30);
@@ -1174,5 +1184,189 @@ export const appRouter = router({
         return { ...adminStats, ...revenueStats };
       }),
   }),
+
+  // ─── Profile Enrichi ─────────────────────────────────────────────────────────
+  profileEnriched: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      return getClientProfile(ctx.user.id);
+    }),
+    update: protectedProcedure
+      .input(z.object({
+        pseudo: z.string().max(64).optional(),
+        mode: z.enum(["signature", "fantome"]).optional(),
+        dietRegime: z.string().optional(),
+        dietAllergies: z.string().optional(),
+        dietOther: z.string().optional(),
+        travelStyles: z.string().optional(),
+        travelBudget: z.enum(["economique", "confort", "premium", "luxe", "sans_limite"]).optional(),
+        travelGroup: z.enum(["solo", "couple", "famille", "amis", "business"]).optional(),
+        travelMobility: z.enum(["aucune", "pmr", "reduite", "poussette"]).optional(),
+        languages: z.string().optional(),
+        pet: z.enum(["aucun", "chien", "chat", "autre"]).optional(),
+        smoking: z.enum(["non_fumeur", "fumeur", "cigare", "vape"]).optional(),
+        dresscode: z.enum(["casual", "smart_casual", "chic", "formel"]).optional(),
+        ecofriendly: z.boolean().optional(),
+        homeCity: z.string().max(128).optional(),
+        homeAddress: z.string().optional(),
+        preferredAirport: z.string().max(16).optional(),
+        airportLounge: z.boolean().optional(),
+        priorityLane: z.boolean().optional(),
+        clothingSize: z.string().max(16).optional(),
+        shoeSize: z.string().max(8).optional(),
+        favoriteAlcohol: z.string().max(128).optional(),
+        favoriteCuisine: z.string().max(256).optional(),
+        sleepPreference: z.string().max(128).optional(),
+        tempPreference: z.string().max(64).optional(),
+        freeNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await upsertClientProfile(ctx.user.id, input);
+        return { success: true };
+      }),
+  }),
+
+  // ─── Companions (Cercle Proche) ───────────────────────────────────────────────
+  companions: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return listCompanions(ctx.user.id);
+    }),
+    get: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return getCompanion(input.id, ctx.user.id);
+      }),
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string().min(1).max(128),
+        relationship: z.enum(["conjoint", "enfant", "parent", "ami", "collegue", "autre"]).optional(),
+        birthDate: z.string().max(10).optional(),
+        avatarUrl: z.string().optional(),
+        dietRegime: z.string().optional(),
+        dietAllergies: z.string().optional(),
+        dietOther: z.string().optional(),
+        travelStyles: z.string().optional(),
+        travelBudget: z.enum(["economique", "confort", "premium", "luxe", "sans_limite"]).optional(),
+        travelMobility: z.enum(["aucune", "pmr", "reduite", "poussette"]).optional(),
+        languages: z.string().optional(),
+        pet: z.enum(["aucun", "chien", "chat", "autre"]).optional(),
+        smoking: z.enum(["non_fumeur", "fumeur", "cigare", "vape"]).optional(),
+        clothingSize: z.string().max(16).optional(),
+        shoeSize: z.string().max(8).optional(),
+        favoriteAlcohol: z.string().max(128).optional(),
+        favoriteCuisine: z.string().max(256).optional(),
+        freeNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await createCompanion(ctx.user.id, input);
+        return { success: true, id };
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).max(128).optional(),
+        relationship: z.enum(["conjoint", "enfant", "parent", "ami", "collegue", "autre"]).optional(),
+        birthDate: z.string().max(10).optional(),
+        avatarUrl: z.string().optional(),
+        dietRegime: z.string().optional(),
+        dietAllergies: z.string().optional(),
+        dietOther: z.string().optional(),
+        travelStyles: z.string().optional(),
+        travelBudget: z.enum(["economique", "confort", "premium", "luxe", "sans_limite"]).optional(),
+        travelMobility: z.enum(["aucune", "pmr", "reduite", "poussette"]).optional(),
+        languages: z.string().optional(),
+        pet: z.enum(["aucun", "chien", "chat", "autre"]).optional(),
+        smoking: z.enum(["non_fumeur", "fumeur", "cigare", "vape"]).optional(),
+        clothingSize: z.string().max(16).optional(),
+        shoeSize: z.string().max(8).optional(),
+        favoriteAlcohol: z.string().max(128).optional(),
+        favoriteCuisine: z.string().max(256).optional(),
+        freeNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...data } = input;
+        await updateCompanion(id, ctx.user.id, data);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteCompanion(input.id, ctx.user.id);
+        return { success: true };
+      }),
+  }),
+
+  // ─── User Destinations (Parcours Personnels) ──────────────────────────────────
+  destinations: router({
+    listMine: protectedProcedure.query(async ({ ctx }) => {
+      return listMyDestinations(ctx.user.id);
+    }),
+    listPublic: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).default(20) }).optional())
+      .query(async ({ input }) => {
+        return listPublicDestinations(input?.limit ?? 20);
+      }),
+    get: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return getDestination(input.id);
+      }),
+    create: protectedProcedure
+      .input(z.object({
+        title: z.string().min(1).max(256),
+        description: z.string().optional(),
+        coverImageUrl: z.string().optional(),
+        tags: z.string().optional(),
+        tripType: z.enum(["leisure", "business", "romantic", "family", "staycation", "adventure", "wellness"]).optional(),
+        budget: z.enum(["economique", "confort", "premium", "luxe"]).optional(),
+        duration: z.number().optional(),
+        destination: z.string().max(256).optional(),
+        country: z.string().max(128).optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+        steps: z.string().optional(),
+        highlights: z.string().optional(),
+        tips: z.string().optional(),
+        visibility: z.enum(["private", "family", "public"]).default("private"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await createDestination(ctx.user.id, input);
+        return { success: true, id };
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().min(1).max(256).optional(),
+        description: z.string().optional(),
+        coverImageUrl: z.string().optional(),
+        tags: z.string().optional(),
+        tripType: z.enum(["leisure", "business", "romantic", "family", "staycation", "adventure", "wellness"]).optional(),
+        budget: z.enum(["economique", "confort", "premium", "luxe"]).optional(),
+        duration: z.number().optional(),
+        destination: z.string().max(256).optional(),
+        country: z.string().max(128).optional(),
+        steps: z.string().optional(),
+        highlights: z.string().optional(),
+        tips: z.string().optional(),
+        visibility: z.enum(["private", "family", "public"]).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { id, ...data } = input;
+        await updateDestination(id, ctx.user.id, data);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteDestination(input.id, ctx.user.id);
+        return { success: true };
+      }),
+    save: protectedProcedure
+      .input(z.object({ destinationId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await saveDestinationForUser(ctx.user.id, input.destinationId);
+        return { success: true };
+      }),
+  }),
+
 });
 export type AppRouter = typeof appRouter;

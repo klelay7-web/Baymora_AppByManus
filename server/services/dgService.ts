@@ -373,6 +373,84 @@ function detectActionType(content: string): {
   return { actionType: "chat" };
 }
 
+// ─── Détecter le panneau à afficher selon l'intention du message ─────────────
+export function detectPanelIntent(userMessage: string, stats: AppStats): {
+  panelType: "teams" | "budget" | "strategy" | "alerts" | "tasks" | "report" | "overview" | null;
+  panelData: any;
+} {
+  const msg = userMessage.toLowerCase();
+
+  // Équipes / organigramme
+  if (msg.match(/équipe|equipe|agent|organigramme|qui fait quoi|effectif|brigade|staff|personnel/)) {
+    return {
+      panelType: "teams",
+      panelData: ORGANIGRAMME,
+    };
+  }
+
+  // Budget / finances
+  if (msg.match(/budget|finance|argent|dépense|depense|revenu|rentabilité|rentabilite|coût|cout|marge|ca |chiffre/)) {
+    const revenu = (stats.premiumUsers * 14.9) + (stats.eliteUsers * 49.9);
+    const depenses = 222;
+    return {
+      panelType: "budget",
+      panelData: {
+        ...BUDGET_MENSUEL,
+        revenueActuel: revenu,
+        margeActuelle: revenu - depenses,
+        rentable: revenu >= depenses,
+        premiumUsers: stats.premiumUsers,
+        eliteUsers: stats.eliteUsers,
+      },
+    };
+  }
+
+  // Stratégie / plan
+  if (msg.match(/stratégie|strategie|plan|objectif|roadmap|priorité|priorite|30 jours|60 jours|90 jours|prochains/)) {
+    return {
+      panelType: "strategy",
+      panelData: STRATEGIE,
+    };
+  }
+
+  // Alertes
+  if (msg.match(/alerte|alert|problème|probleme|urgence|urgent|critique|bug|erreur/)) {
+    const revenu = (stats.premiumUsers * 14.9) + (stats.eliteUsers * 49.9);
+    const alerts = [];
+    if (stats.premiumUsers < 15) alerts.push({ level: "warning", msg: `Seuil rentabilité non atteint : ${stats.premiumUsers}/15 abonnés Premium` });
+    if (stats.publishedCards < 10) alerts.push({ level: "warning", msg: `Peu de fiches publiées : ${stats.publishedCards} fiches actives` });
+    if (stats.totalEstablishments < 30) alerts.push({ level: "info", msg: `Base établissements à enrichir : ${stats.totalEstablishments} établissements` });
+    if (revenu < 222) alerts.push({ level: "critical", msg: `Déficit mensuel estimé : ${(revenu - 222).toFixed(2)}€` });
+    return { panelType: "alerts", panelData: { alerts, stats } };
+  }
+
+  // Tâches
+  if (msg.match(/tâche|tache|todo|à faire|a faire|mission|travail|ordre|instruction/)) {
+    const tasks = ORGANIGRAMME.equipes.flatMap(e =>
+      e.tachesUrgentes.map(t => ({ equipe: e.nom, emoji: e.emoji, tache: t, statut: "en attente" }))
+    );
+    return { panelType: "tasks", panelData: { tasks } };
+  }
+
+  // Rapport
+  if (msg.match(/rapport|report|bilan|résumé|resume|carnet|synthèse|synthese/)) {
+    return {
+      panelType: "report",
+      panelData: { stats, date: new Date().toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) },
+    };
+  }
+
+  // Vue générale
+  if (msg.match(/vue|dashboard|tableau de bord|aperçu|apercu|global|général|general|tout|overview/)) {
+    return {
+      panelType: "overview",
+      panelData: { stats, organigramme: ORGANIGRAMME, budget: BUDGET_MENSUEL },
+    };
+  }
+
+  return { panelType: null, panelData: null };
+}
+
 // ─── Construire le contexte stats ────────────────────────────────────────────
 function buildStatsContext(stats: AppStats): string {
   const now = new Date();
@@ -403,11 +481,11 @@ function buildStatsContext(stats: AppStats): string {
 `;
 }
 
-// ─── Chat avec ARIA DG ────────────────────────────────────────────────────────
+// ─── Chat avec ARIA DG ────────────────────────────────────────────────────
 export async function chatWithDG(
   userMessage: string,
   stats: AppStats
-): Promise<{ content: string; actionType: string; targetDepartment?: string }> {
+): Promise<{ content: string; actionType: string; targetDepartment?: string; panelType: string | null; panelData: any }> {
   const history = await getDGHistory(40);
   await saveDGMessage("user", userMessage);
   const statsContext = buildStatsContext(stats);
@@ -424,7 +502,9 @@ export async function chatWithDG(
   const content = response.content[0].type === "text" ? response.content[0].text : "";
   const { actionType, targetDepartment } = detectActionType(content);
   await saveDGMessage("assistant", content, actionType, targetDepartment);
-  return { content, actionType, targetDepartment };
+  // Détecter le panneau visuel à afficher selon l'intention du message
+  const { panelType, panelData } = detectPanelIntent(userMessage, stats);
+  return { content, actionType, targetDepartment, panelType, panelData };
 }
 
 // ─── Rapport journalier automatique ──────────────────────────────────────────

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import BackNav from "@/components/BackNav";
 import { Streamdown } from "streamdown";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -322,29 +323,25 @@ export default function CommandCenter() {
   };
 
   return (
-    <div className="min-h-screen pt-16 bg-background">
+    <div className="min-h-screen bg-background">
+      <BackNav
+        title="Salle de Réunion"
+        icon={<BrainCircuit size={16} />}
+        backHref="/admin"
+        backLabel="Dashboard"
+        breadcrumb={[
+          { label: "Admin", href: "/admin" },
+          { label: "Salle de Réunion" },
+        ]}
+      />
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Link href="/">
-            <ArrowLeft size={20} className="text-muted-foreground hover:text-[#c8a94a] transition-colors" />
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#c8a94a]/10 flex items-center justify-center border border-[#c8a94a]/20">
-              <BrainCircuit size={20} className="text-[#c8a94a]" />
-            </div>
-            <div>
-              <h1 className="font-serif text-xl font-bold">Salle de Réunion</h1>
-              <p className="text-xs text-muted-foreground">Centre de commandement IA · Maison Baymora</p>
-            </div>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[11px] text-emerald-400 font-medium">
-                {MOCK_TEAM.filter(m => m.status === "online").length} en ligne
-              </span>
-            </div>
+        {/* Status bar */}
+        <div className="flex items-center justify-end mb-4">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[11px] text-emerald-400 font-medium">
+              {MOCK_TEAM.filter(m => m.status === "online").length} en ligne
+            </span>
           </div>
         </div>
 

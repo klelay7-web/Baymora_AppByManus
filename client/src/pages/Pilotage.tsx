@@ -13,11 +13,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import BackNav from "@/components/BackNav";
+import { Shield } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   actionType?: string;
+  panelType?: string | null;
+  panelData?: any;
   timestamp?: Date;
 }
 
@@ -27,6 +31,7 @@ export default function Pilotage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [ariaPanelOverride, setAriaPanelOverride] = useState<{ type: string; data: any } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: stats } = trpc.pilotage.stats.useQuery(undefined, { refetchInterval: 30000 });
@@ -66,8 +71,25 @@ export default function Pilotage() {
         role: "assistant",
         content: result.content,
         actionType: result.actionType,
+        panelType: result.panelType,
+        panelData: result.panelData,
         timestamp: new Date(),
       }]);
+      // Basculer le panneau droit si ARIA a détecté une intention
+      if (result.panelType) {
+        const panelToTab: Record<string, string> = {
+          teams: "teams",
+          budget: "budget",
+          strategy: "strategy",
+          alerts: "overview",
+          tasks: "tasks",
+          report: "logbook",
+          overview: "overview",
+        };
+        const tab = panelToTab[result.panelType];
+        if (tab) setActiveTab(tab);
+        setAriaPanelOverride({ type: result.panelType, data: result.panelData });
+      }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : "Erreur inconnue";
       toast.error(`Erreur ARIA : ${errorMsg}`);
@@ -119,24 +141,17 @@ export default function Pilotage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col">
-      {/* Header */}
-      <div className="border-b border-white/10 bg-[#0d0d14] px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-lg font-bold text-black">A</div>
-          <div>
-            <h1 className="text-lg font-bold text-white">Centre de Pilotage</h1>
-            <p className="text-xs text-white/50">ARIA — Directrice Générale IA · Maison Baymora</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-xs text-white/50">Système opérationnel</span>
-          </div>
-          <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs">Owner Only</Badge>
-          {user && <span className="text-xs text-white/40">{user.name}</span>}
-        </div>
-      </div>
+      <BackNav
+        title="Centre de Pilotage — ARIA"
+        icon={<Shield size={16} />}
+        backHref="/admin"
+        backLabel="Dashboard"
+        breadcrumb={[
+          { label: "Accueil", href: "/" },
+          { label: "Dashboard", href: "/admin" },
+          { label: "Pilotage ARIA" },
+        ]}
+      />
 
       {/* Corps principal */}
       <div className="flex flex-1" style={{ height: "calc(100vh - 73px)", overflow: "hidden" }}>
@@ -240,7 +255,13 @@ export default function Pilotage() {
 
         {/* ─── Dashboard ────────────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          {ariaPanelOverride && (
+            <div className="flex items-center justify-between px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-xs">
+              <span className="text-amber-400">📌 ARIA a mis à jour ce panneau</span>
+              <button onClick={() => setAriaPanelOverride(null)} className="text-white/40 hover:text-white/70 ml-4">✕ Fermer</button>
+            </div>
+          )}
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setAriaPanelOverride(null); }} className="flex-1 flex flex-col overflow-hidden">
             <div className="border-b border-white/10 bg-[#0d0d14] px-6 flex-shrink-0">
               <TabsList className="bg-transparent border-0 h-12 gap-1">
                 {[

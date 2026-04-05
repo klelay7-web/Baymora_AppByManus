@@ -357,3 +357,38 @@
 - [x] Router email tRPC (send, preview, triggers automatiques)
 - [ ] Stripe Checkout fonctionnel (produits à créer dans dashboard Stripe)
 - [ ] Page Pricing refondée avec 3 plans corrects
+
+## Phase 24 — Cercle Familial & Profil Client Complet
+- [ ] Migration DB : enrichir userPreferences (30+ champs : alimentation, voyage, lifestyle, logistique, tailles)
+- [ ] Migration DB : enrichir travelCompanions (fiche proche complète avec tous les champs)
+- [ ] Migration DB : table userDestinations (parcours personnels partageables public/privé/famille)
+- [ ] Backend tRPC : profil complet CRUD (getProfile, updateProfile)
+- [ ] Backend tRPC : proches CRUD (listCompanions, addCompanion, updateCompanion, deleteCompanion)
+- [ ] Backend tRPC : destinations personnelles CRUD (listDestinations, saveDestination, updateVisibility, deleteDestination)
+- [ ] Auto-remplissage IA silencieux : extraction infos personnelles dans chaque message Claude
+- [ ] Frontend : refondre Mon Espace (fiche profil complète avec tous les champs)
+- [ ] Frontend : page Cercle (liste proches + fiches individuelles)
+- [ ] Frontend : section Mes Destinations dans page Destinations
+- [ ] Tests Vitest pour les nouveaux routers
+
+## Phase 25 — Navigation + Assistante LÉNA (Terrain)
+- [ ] Composant BackNav (flèche retour + breadcrumb) réutilisable
+- [ ] Ajouter BackNav sur : Dashboard, Salle de Réunion, Pilotage, Terrain, Mon Espace, Admin
+- [ ] Menu latéral persistant sur les pages admin (navigation sans retour à l'accueil)
+- [ ] Page Terrain refondée : assistante LÉNA (Claude Opus) avec voix
+- [ ] LÉNA : questions guidées pour remplir la fiche SEO (nom, adresse, type, services, prix...)
+- [ ] LÉNA : mémoire de session (reprend où on s'est arrêté)
+- [ ] LÉNA : recherche web Perplexity pour compléter les infos
+- [ ] LÉNA : construction fiche SEO finale automatique (Claude)
+- [ ] Backend : router tRPC terrain (sessions, questions, recherche, construction fiche)
+- [ ] Schema DB : table terrainSessions pour la mémoire LÉNA
+
+## Phase 26 — ARIA Panneau Dynamique
+- [ ] Router pilotage.chat retourne panelType + panelData structurés selon intention
+- [ ] Pilotage.tsx panneau droit affiche composants visuels dynamiques selon panelType
+- [ ] TeamPanel : 7 équipes + agents + tâches en cours visuellement
+- [ ] BudgetPanel : CA, coûts, marges, seuil rentabilité avec graphiques
+- [ ] StrategyPanel : plan 30/60/90j avec tâches urgentes
+- [ ] AlertPanel : alertes actives avec priorité et actions
+- [ ] TaskPanel : tâches par équipe avec statut
+- [ ] ReportPanel : rapport journalier formaté et structuré

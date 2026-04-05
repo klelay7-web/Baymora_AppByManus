@@ -736,3 +736,156 @@ export const fieldReportMedia = mysqlTable("fieldReportMedia", {
   sortOrder: int("sortOrder").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+// ─── Client Profile (Fiche Profil Enrichie) ─────────────────────────
+// Table dédiée au profil détaillé du client (séparée de users pour éviter les colonnes trop nombreuses)
+export const clientProfiles = mysqlTable("clientProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+
+  // Identité
+  pseudo: varchar("pseudo", { length: 64 }),
+  mode: mysqlEnum("mode", ["signature", "fantome"]).default("signature"),
+
+  // Alimentation
+  dietRegime: varchar("dietRegime", { length: 256 }), // JSON array: ["vegetarien","halal",...]
+  dietAllergies: text("dietAllergies"), // JSON array: ["arachides","noix",...]
+  dietOther: text("dietOther"), // texte libre
+
+  // Voyage
+  travelStyles: text("travelStyles"), // JSON array: ["detente","gastronomie","culture",...]
+  travelBudget: mysqlEnum("travelBudget", ["economique", "confort", "premium", "luxe", "sans_limite"]).default("confort"),
+  travelGroup: mysqlEnum("travelGroup", ["solo", "couple", "famille", "amis", "business"]).default("couple"),
+  travelMobility: mysqlEnum("travelMobility", ["aucune", "pmr", "reduite", "poussette"]).default("aucune"),
+
+  // Lifestyle
+  languages: text("languages"), // JSON array: ["français","anglais",...]
+  pet: mysqlEnum("pet", ["aucun", "chien", "chat", "autre"]).default("aucun"),
+  smoking: mysqlEnum("smoking", ["non_fumeur", "fumeur", "cigare", "vape"]).default("non_fumeur"),
+  dresscode: mysqlEnum("dresscode", ["casual", "smart_casual", "chic", "formel"]).default("smart_casual"),
+  ecofriendly: boolean("ecofriendly").default(false),
+
+  // Logistique
+  homeCity: varchar("homeCity", { length: 128 }),
+  homeAddress: text("homeAddress"),
+  preferredAirport: varchar("preferredAirport", { length: 16 }), // CDG, ORY, etc.
+  airportLounge: boolean("airportLounge").default(false),
+  priorityLane: boolean("priorityLane").default(false),
+
+  // Tailles & goûts
+  clothingSize: varchar("clothingSize", { length: 16 }),
+  shoeSize: varchar("shoeSize", { length: 8 }),
+  favoriteAlcohol: varchar("favoriteAlcohol", { length: 128 }),
+  favoriteCuisine: varchar("favoriteCuisine", { length: 256 }),
+  sleepPreference: varchar("sleepPreference", { length: 128 }),
+  tempPreference: varchar("tempPreference", { length: 64 }),
+
+  // Notes libres
+  freeNotes: text("freeNotes"),
+
+  // Méta IA
+  aiLastExtracted: timestamp("aiLastExtracted"),
+  aiExtractionCount: int("aiExtractionCount").default(0),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ClientProfile = typeof clientProfiles.$inferSelect;
+export type InsertClientProfile = typeof clientProfiles.$inferInsert;
+
+// ─── Travel Companions Enrichis (Cercle Proche) ──────────────────────
+// Remplace l'ancienne table travelCompanions avec tous les champs demandés
+export const companions = mysqlTable("companions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+
+  // Identité
+  name: varchar("name", { length: 128 }).notNull(),
+  relationship: mysqlEnum("relationship", [
+    "conjoint", "enfant", "parent", "ami", "collegue", "autre"
+  ]).default("autre"),
+  birthDate: varchar("birthDate", { length: 10 }),
+  avatarUrl: text("avatarUrl"),
+
+  // Alimentation
+  dietRegime: varchar("dietRegime", { length: 256 }), // JSON array
+  dietAllergies: text("dietAllergies"), // JSON array
+  dietOther: text("dietOther"),
+
+  // Voyage
+  travelStyles: text("travelStyles"), // JSON array
+  travelBudget: mysqlEnum("travelBudget", ["economique", "confort", "premium", "luxe", "sans_limite"]).default("confort"),
+  travelMobility: mysqlEnum("travelMobility", ["aucune", "pmr", "reduite", "poussette"]).default("aucune"),
+
+  // Lifestyle
+  languages: text("languages"), // JSON array
+  pet: mysqlEnum("pet", ["aucun", "chien", "chat", "autre"]).default("aucun"),
+  smoking: mysqlEnum("smoking", ["non_fumeur", "fumeur", "cigare", "vape"]).default("non_fumeur"),
+
+  // Tailles & goûts
+  clothingSize: varchar("clothingSize", { length: 16 }),
+  shoeSize: varchar("shoeSize", { length: 8 }),
+  favoriteAlcohol: varchar("favoriteAlcohol", { length: 128 }),
+  favoriteCuisine: varchar("favoriteCuisine", { length: 256 }),
+
+  // Notes libres
+  freeNotes: text("freeNotes"),
+
+  // Méta
+  isActive: boolean("isActive").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Companion = typeof companions.$inferSelect;
+export type InsertCompanion = typeof companions.$inferInsert;
+
+// ─── User Destinations (Parcours Personnels Partageables) ────────────
+export const userDestinations = mysqlTable("userDestinations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+
+  // Contenu
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  coverImageUrl: text("coverImageUrl"),
+  tags: text("tags"), // JSON array: ["gastronomie","week-end","romantique",...]
+  tripType: mysqlEnum("tripType", ["leisure", "business", "romantic", "family", "staycation", "adventure", "wellness"]).default("leisure"),
+  budget: mysqlEnum("budget", ["economique", "confort", "premium", "luxe"]).default("confort"),
+  duration: int("duration"), // nombre de jours
+  destination: varchar("destination", { length: 256 }), // "Paris", "Côte d'Azur", etc.
+  country: varchar("country", { length: 128 }),
+  lat: float("lat"),
+  lng: float("lng"),
+
+  // Contenu riche (JSON)
+  steps: text("steps"), // JSON array de {day, title, places[], notes}
+  highlights: text("highlights"), // JSON array de points forts
+  tips: text("tips"), // JSON array de conseils
+
+  // Visibilité
+  visibility: mysqlEnum("visibility", ["private", "family", "public"]).default("private"),
+  isVerified: boolean("isVerified").default(false), // vérifié par Baymora
+  isFeatured: boolean("isFeatured").default(false), // mis en avant par Baymora
+
+  // Stats
+  viewCount: int("viewCount").default(0),
+  saveCount: int("saveCount").default(0),
+  likeCount: int("likeCount").default(0),
+
+  // Méta
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserDestination = typeof userDestinations.$inferSelect;
+export type InsertUserDestination = typeof userDestinations.$inferInsert;
+
+// ─── Destination Saves (Sauvegardes de parcours par d'autres users) ──
+export const destinationSaves = mysqlTable("destinationSaves", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  destinationId: int("destinationId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});

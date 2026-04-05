@@ -12,8 +12,9 @@ import {
   ArrowLeft, Users, FileText, BarChart3, Zap, Globe, Plus,
   TrendingUp, Eye, DollarSign, Loader2, Brain, Target,
   TrendingDown, Activity, CreditCard, Server, UserPlus,
-  ChevronRight, Crown, Sparkles, Building2
+  ChevronRight, Crown, Sparkles, Building2, LayoutDashboard
 } from "lucide-react";
+import BackNav from "@/components/BackNav";
 import { toast } from "sonner";
 
 const GOLD = "#c8a94a";
@@ -103,30 +104,16 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#080c14] text-white">
-      {/* Header */}
-      <header className="border-b border-white/8 px-6 py-4 sticky top-0 z-20 bg-[#080c14]/95 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto flex items-center gap-4">
-          <Link href="/">
-            <ArrowLeft size={18} className="text-white/40 hover:text-[#c8a94a] transition-colors cursor-pointer" />
-          </Link>
-          <div className="flex-1">
-            <h1 className="font-['Playfair_Display'] text-lg font-semibold">Centre de Gestion</h1>
-            <p className="text-[10px] text-white/30 tracking-wider uppercase">Maison Baymora — Dashboard Propriétaire</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/admin/command-center">
-              <Button size="sm" className="bg-[#c8a94a]/10 text-[#c8a94a] border border-[#c8a94a]/20 hover:bg-[#c8a94a]/20 rounded-none text-xs gap-2">
-                <Brain size={14} /> Salle de Réunion IA
-              </Button>
-            </Link>
-            <Link href="/admin/seo-fiches">
-              <Button size="sm" variant="outline" className="border-white/10 text-white/60 hover:text-white rounded-none text-xs gap-2">
-                <FileText size={14} /> Fiches SEO
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <BackNav
+        title="Centre de Gestion"
+        icon={<LayoutDashboard size={16} />}
+        backHref="/"
+        backLabel="Accueil"
+        breadcrumb={[
+          { label: "Accueil", href: "/" },
+          { label: "Dashboard Admin" },
+        ]}
+      />
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
