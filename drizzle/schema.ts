@@ -7,7 +7,7 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "admin", "team"]).default("user").notNull(),
   subscriptionTier: mysqlEnum("subscriptionTier", ["free", "premium"]).default("free").notNull(),
   credits: int("credits").default(3).notNull(),
   creditsRollover: int("creditsRollover").default(0).notNull(),
@@ -584,4 +584,135 @@ export const establishmentComments = mysqlTable("establishmentComments", {
   status: mysqlEnum("status", ["published", "hidden", "flagged"]).default("published").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Field Reports (Rapports Terrain — Membres Équipe) ──────────────
+export const fieldReports = mysqlTable("fieldReports", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // team member who created it
+  // Establishment info
+  establishmentName: varchar("establishmentName", { length: 256 }).notNull(),
+  establishmentType: mysqlEnum("establishmentType", [
+    "clinique", "hotel", "restaurant", "spa", "bar", "activite", "experience", "transport", "autre"
+  ]).notNull(),
+  specialty: varchar("specialty", { length: 256 }), // e.g. "chirurgie esthétique", "dentaire"
+  // Location
+  city: varchar("city", { length: 128 }).notNull(),
+  country: varchar("country", { length: 128 }).notNull(),
+  region: varchar("region", { length: 128 }),
+  address: text("address"),
+  lat: float("lat"),
+  lng: float("lng"),
+  googleMapsUrl: text("googleMapsUrl"),
+  // Description
+  description: text("description"), // detailed description by team member
+  ambiance: text("ambiance"), // atmosphere, feel, first impressions
+  highlights: text("highlights"), // JSON array of key highlights
+  // Practical info
+  languagesSpoken: text("languagesSpoken"), // JSON array ["français", "anglais", "turc"]
+  paymentMethods: text("paymentMethods"), // JSON array
+  openingHours: text("openingHours"), // JSON
+  website: text("website"),
+  // Team member's personal assessment
+  personalAdvice: text("personalAdvice"), // what to prepare, tips, warnings
+  overallRating: int("overallRating"), // 1-5 personal rating
+  wouldRecommend: boolean("wouldRecommend").default(true),
+  targetClientele: text("targetClientele"), // who is this best for?
+  // AI enrichment
+  aiEnrichedDescription: text("aiEnrichedDescription"),
+  aiResearchNotes: text("aiResearchNotes"), // JSON: AI research findings
+  aiRecommendation: text("aiRecommendation"), // AI-generated recommendation
+  aiSeoData: text("aiSeoData"), // JSON: generated SEO metadata
+  // Conversion to establishment
+  convertedEstablishmentId: int("convertedEstablishmentId"), // linked establishment once published
+  // Status
+  status: mysqlEnum("status", ["draft", "submitted", "ai_processing", "review", "approved", "published", "rejected"]).default("draft").notNull(),
+  adminNotes: text("adminNotes"),
+  submittedAt: timestamp("submittedAt"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+// ─── Field Report Services (Prestations) ────────────────────────────
+export const fieldReportServices = mysqlTable("fieldReportServices", {
+  id: int("id").autoincrement().primaryKey(),
+  fieldReportId: int("fieldReportId").notNull(),
+  serviceName: varchar("serviceName", { length: 256 }).notNull(),
+  serviceCategory: varchar("serviceCategory", { length: 128 }), // "soins dentaires", "chirurgie", "hébergement"
+  description: text("description"),
+  priceFrom: decimal("priceFrom", { precision: 10, scale: 2 }),
+  priceTo: decimal("priceTo", { precision: 10, scale: 2 }),
+  currency: varchar("currency", { length: 3 }).default("EUR"),
+  isOnQuote: boolean("isOnQuote").default(false), // "sur devis"
+  duration: varchar("duration", { length: 64 }), // "2 heures", "3 jours"
+  includes: text("includes"), // JSON array of what's included
+  notes: text("notes"),
+  sortOrder: int("sortOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Field Report Journey (Parcours Transport Complet) ──────────────
+export const fieldReportJourney = mysqlTable("fieldReportJourney", {
+  id: int("id").autoincrement().primaryKey(),
+  fieldReportId: int("fieldReportId").notNull(),
+  stepOrder: int("stepOrder").notNull(), // 1, 2, 3...
+  stepType: mysqlEnum("stepType", [
+    "chauffeur", "avion", "train", "taxi", "transfert", "arrivee", "prise_en_charge", "prestation", "depart", "autre"
+  ]).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  // Location
+  fromLocation: varchar("fromLocation", { length: 256 }),
+  toLocation: varchar("toLocation", { length: 256 }),
+  // Transport details
+  companyName: varchar("companyName", { length: 256 }), // airline, car service, etc.
+  flightNumber: varchar("flightNumber", { length: 32 }),
+  vehicleType: varchar("vehicleType", { length: 128 }),
+  // Timing
+  departureTime: varchar("departureTime", { length: 16 }),
+  arrivalTime: varchar("arrivalTime", { length: 16 }),
+  durationMinutes: int("durationMinutes"),
+  // Cost
+  estimatedCost: decimal("estimatedCost", { precision: 10, scale: 2 }),
+  currency: varchar("currency", { length: 3 }).default("EUR"),
+  isIncluded: boolean("isIncluded").default(false), // included in package?
+  // Affiliation
+  affiliateLink: text("affiliateLink"),
+  bookingReference: varchar("bookingReference", { length: 128 }),
+  // Notes
+  notes: text("notes"),
+  photoUrl: text("photoUrl"), // photo of this step
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Field Report Contacts (Contacts Sur Place) ─────────────────────
+export const fieldReportContacts = mysqlTable("fieldReportContacts", {
+  id: int("id").autoincrement().primaryKey(),
+  fieldReportId: int("fieldReportId").notNull(),
+  contactName: varchar("contactName", { length: 256 }).notNull(),
+  role: varchar("role", { length: 128 }), // "directeur", "chirurgien", "coordinatrice patients"
+  phone: varchar("phone", { length: 64 }),
+  email: varchar("email", { length: 320 }),
+  whatsapp: varchar("whatsapp", { length: 64 }),
+  languages: text("languages"), // JSON array ["français", "anglais", "turc"]
+  notes: text("notes"),
+  isMainContact: boolean("isMainContact").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// ─── Field Report Media (Photos & Vidéos Terrain) ───────────────────
+export const fieldReportMedia = mysqlTable("fieldReportMedia", {
+  id: int("id").autoincrement().primaryKey(),
+  fieldReportId: int("fieldReportId").notNull(),
+  type: mysqlEnum("type", ["photo", "video"]).notNull(),
+  url: text("url").notNull(),
+  thumbnailUrl: text("thumbnailUrl"),
+  caption: varchar("caption", { length: 256 }),
+  category: mysqlEnum("category", [
+    "facade", "interieur", "prestation", "equipement", "chambre", "transport",
+    "parcours", "equipe", "resultat", "vue", "repas", "autre"
+  ]).default("autre").notNull(),
+  sortOrder: int("sortOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

@@ -9,7 +9,8 @@ import {
   establishments, establishmentMedia, tripPlans, tripDays, tripSteps,
   favorites, collections, ambassadors, referrals, commissionPayments,
   serviceProviders, aiDirectives, aiDepartmentReports, bundles, contentCalendar,
-  establishmentComments
+  establishmentComments,
+  fieldReports, fieldReportServices, fieldReportJourney, fieldReportContacts, fieldReportMedia
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -587,4 +588,117 @@ export async function getEstablishmentCommentCount(establishmentId: number) {
   const result = await db.select({ count: sql<number>`COUNT(*)` }).from(establishmentComments)
     .where(and(eq(establishmentComments.establishmentId, establishmentId), eq(establishmentComments.status, "published")));
   return result[0]?.count || 0;
+}
+
+// ─── Field Reports (Rapports Terrain) ───────────────────────────────
+export async function getFieldReportsByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(fieldReports).where(eq(fieldReports.userId, userId)).orderBy(desc(fieldReports.updatedAt));
+}
+
+export async function getAllFieldReports() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(fieldReports).orderBy(desc(fieldReports.updatedAt));
+}
+
+export async function getFieldReportById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(fieldReports).where(eq(fieldReports.id, id));
+  return rows[0] || null;
+}
+
+export async function createFieldReport(data: any): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [result] = await db.insert(fieldReports).values(data);
+  return result.insertId;
+}
+
+export async function updateFieldReport(id: number, data: any) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(fieldReports).set(data).where(eq(fieldReports.id, id));
+}
+
+// Services
+export async function getFieldReportServices(reportId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(fieldReportServices).where(eq(fieldReportServices.fieldReportId, reportId)).orderBy(fieldReportServices.sortOrder);
+}
+
+export async function addFieldReportService(data: any): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [result] = await db.insert(fieldReportServices).values(data);
+  return result.insertId;
+}
+
+export async function deleteFieldReportService(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(fieldReportServices).where(eq(fieldReportServices.id, id));
+}
+
+// Journey steps
+export async function getFieldReportJourneySteps(reportId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(fieldReportJourney).where(eq(fieldReportJourney.fieldReportId, reportId)).orderBy(fieldReportJourney.stepOrder);
+}
+
+export async function addFieldReportJourneyStep(data: any): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [result] = await db.insert(fieldReportJourney).values(data);
+  return result.insertId;
+}
+
+export async function deleteFieldReportJourneyStep(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(fieldReportJourney).where(eq(fieldReportJourney.id, id));
+}
+
+// Contacts
+export async function getFieldReportContacts(reportId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(fieldReportContacts).where(eq(fieldReportContacts.fieldReportId, reportId));
+}
+
+export async function addFieldReportContact(data: any): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [result] = await db.insert(fieldReportContacts).values(data);
+  return result.insertId;
+}
+
+export async function deleteFieldReportContact(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(fieldReportContacts).where(eq(fieldReportContacts.id, id));
+}
+
+// Media
+export async function getFieldReportMediaItems(reportId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(fieldReportMedia).where(eq(fieldReportMedia.fieldReportId, reportId)).orderBy(fieldReportMedia.sortOrder);
+}
+
+export async function addFieldReportMediaItem(data: any): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [result] = await db.insert(fieldReportMedia).values(data);
+  return result.insertId;
+}
+
+export async function deleteFieldReportMediaItem(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(fieldReportMedia).where(eq(fieldReportMedia.id, id));
 }

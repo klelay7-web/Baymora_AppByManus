@@ -234,4 +234,23 @@
 - [x] Seed 120 commentaires IA (5 par établissement x 24) avec contenu spécifique par slug
 - [x] Interactions : bouton Utile avec compteur optimiste, Signaler avec toast
 - [x] 7 tests vitest (comments.test.ts) — 18 tests totaux passants
+- [x] Checkpoint f47fa092 et livraison
+
+## Phase 18 — Système de Reporting Terrain (Rôle Team)
+- [x] Migration DB : rôle `team` ajouté à l'enum users.role (migration 0005)
+- [x] Table `fieldReports` : rapport terrain complet (20+ champs)
+- [x] Table `fieldReportServices` : prestations détaillées (nom, catégorie, prix min/max, devise, sur devis, durée)
+- [x] Table `fieldReportJourneySteps` : parcours transport (10 types d'étapes, compagnie, vol, coût, inclus)
+- [x] Table `fieldReportContacts` : contacts (nom, rôle, tél, email, WhatsApp, langues, principal)
+- [x] Table `fieldReportMedia` : photos/vidéos (12 catégories, upload S3)
+- [x] `teamProcedure` backend : accès restreint team + admin
+- [x] Router tRPC `fieldReports` : create, update, getMyReports, getAll, submit, enrichWithAI, addService, addJourneyStep, addContact, addMedia
+- [x] Page `/team/fiches` : dashboard avec liste des rapports + statuts
+- [x] Formulaire multi-étapes 7 sections : Établissement, Prestations, Parcours, Contacts, Médias, Conseils, Résumé
+- [x] Upload photos/vidéos vers S3 avec catégorisation (endpoint /api/upload/field-report)
+- [x] Service IA `fieldReportEnricher` : description SEO, recherche, recommandation, Schema.org
+- [x] Enrichissement IA : génère description 300-500 mots, recherche réputation/certifications, recommandation parcours, métadonnées SEO
+- [x] Conversion rapport → fiche : workflow submit → ai_processing → review → approved → published
+- [x] Lien navbar desktop + mobile "Terrain" pour team + admin
+- [x] 11 tests vitest (fieldReports.test.ts) — 29 tests totaux passants
 - [ ] Checkpoint et livraison

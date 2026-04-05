@@ -29,6 +29,11 @@ import {
   getPublishedBundles, getAllBundles, createBundle, updateBundle,
   getContentCalendar, createContentCalendarItem, updateContentCalendarItem,
   getEstablishmentComments, createEstablishmentComment, incrementCommentHelpful, getEstablishmentCommentCount,
+  getFieldReportsByUser, getAllFieldReports, getFieldReportById, createFieldReport, updateFieldReport,
+  getFieldReportServices, addFieldReportService, deleteFieldReportService,
+  getFieldReportJourneySteps, addFieldReportJourneyStep, deleteFieldReportJourneyStep,
+  getFieldReportContacts, addFieldReportContact, deleteFieldReportContact,
+  getFieldReportMediaItems, addFieldReportMediaItem, deleteFieldReportMediaItem,
 } from "./db";
 import { generateConciergeResponse, getWelcomeResponse } from "./services/concierge";
 import type { User } from "../drizzle/schema";
@@ -40,6 +45,11 @@ import { transcribeAudio } from "./_core/voiceTranscription";
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux administrateurs" });
+  return next({ ctx });
+});
+
+const teamProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "team" && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux membres de l'équipe" });
   return next({ ctx });
 });
 
@@ -674,6 +684,256 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await updateContentCalendarItem(input.id, input.data);
         return { success: true };
+      }),
+  }),
+
+  // ─── Field Reports (Rapports Terrain — Équipe) ──────────────────────
+  fieldReports: router({
+    // List reports for current team member
+    getMyReports: teamProcedure.query(({ ctx }) => getFieldReportsByUser(ctx.user.id)),
+
+    // Admin: list all reports
+    getAll: adminProcedure.query(() => getAllFieldReports()),
+
+    // Get full report with sub-data
+    getById: teamProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const report = await getFieldReportById(input.id);
+        if (!report) throw new TRPCError({ code: "NOT_FOUND", message: "Rapport non trouvé" });
+        // Team members can only see their own reports, admins can see all
+        if (ctx.user.role === "team" && report.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Accès non autorisé" });
+        }
+        const [services, journey, contacts, media] = await Promise.all([
+          getFieldReportServices(report.id),
+          getFieldReportJourneySteps(report.id),
+          getFieldReportContacts(report.id),
+          getFieldReportMediaItems(report.id),
+        ]);
+        return { ...report, services, journey, contacts, media };
+      }),
+
+    // Create new report
+    create: teamProcedure
+      .input(z.object({
+        establishmentName: z.string().min(1),
+        establishmentType: z.enum(["clinique", "hotel", "restaurant", "spa", "bar", "activite", "experience", "transport", "autre"]),
+        specialty: z.string().optional(),
+        city: z.string().min(1),
+        country: z.string().min(1),
+        region: z.string().optional(),
+        address: z.string().optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+        googleMapsUrl: z.string().optional(),
+        description: z.string().optional(),
+        ambiance: z.string().optional(),
+        highlights: z.string().optional(),
+        languagesSpoken: z.string().optional(),
+        paymentMethods: z.string().optional(),
+        openingHours: z.string().optional(),
+        website: z.string().optional(),
+        personalAdvice: z.string().optional(),
+        overallRating: z.number().min(1).max(5).optional(),
+        wouldRecommend: z.boolean().optional(),
+        targetClientele: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const id = await createFieldReport({ ...input, userId: ctx.user.id });
+        return { id };
+      }),
+
+    // Update report
+    update: teamProcedure
+      .input(z.object({
+        id: z.number(),
+        data: z.record(z.string(), z.any()),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const report = await getFieldReportById(input.id);
+        if (!report) throw new TRPCError({ code: "NOT_FOUND" });
+        if (ctx.user.role === "team" && report.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        await updateFieldReport(input.id, input.data);
+        return { success: true };
+      }),
+
+    // Submit for review
+    submit: teamProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const report = await getFieldReportById(input.id);
+        if (!report) throw new TRPCError({ code: "NOT_FOUND" });
+        if (ctx.user.role === "team" && report.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        await updateFieldReport(input.id, { status: "submitted", submittedAt: new Date() });
+        await notifyOwner({ title: "Nouveau rapport terrain", content: `${ctx.user.name} a soumis un rapport pour ${report.establishmentName} à ${report.city}, ${report.country}` });
+        return { success: true };
+      }),
+
+    // Admin: review report
+    review: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        action: z.enum(["approve", "reject"]),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const status = input.action === "approve" ? "approved" : "rejected";
+        await updateFieldReport(input.id, {
+          status,
+          adminNotes: input.notes || null,
+          reviewedAt: new Date(),
+        });
+        return { success: true };
+      }),
+
+    // ─── Services (Prestations) ─────────────────────────────────────
+    addService: teamProcedure
+      .input(z.object({
+        fieldReportId: z.number(),
+        serviceName: z.string().min(1),
+        serviceCategory: z.string().optional(),
+        description: z.string().optional(),
+        priceFrom: z.string().optional(),
+        priceTo: z.string().optional(),
+        currency: z.string().default("EUR"),
+        isOnQuote: z.boolean().default(false),
+        duration: z.string().optional(),
+        includes: z.string().optional(),
+        notes: z.string().optional(),
+        sortOrder: z.number().default(0),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await addFieldReportService(input);
+        return { id };
+      }),
+
+    removeService: teamProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteFieldReportService(input.id);
+        return { success: true };
+      }),
+
+    // ─── Journey Steps (Parcours Transport) ─────────────────────────
+    addJourneyStep: teamProcedure
+      .input(z.object({
+        fieldReportId: z.number(),
+        stepOrder: z.number(),
+        stepType: z.enum(["chauffeur", "avion", "train", "taxi", "transfert", "arrivee", "prise_en_charge", "prestation", "depart", "autre"]),
+        title: z.string().min(1),
+        description: z.string().optional(),
+        fromLocation: z.string().optional(),
+        toLocation: z.string().optional(),
+        companyName: z.string().optional(),
+        flightNumber: z.string().optional(),
+        vehicleType: z.string().optional(),
+        departureTime: z.string().optional(),
+        arrivalTime: z.string().optional(),
+        durationMinutes: z.number().optional(),
+        estimatedCost: z.string().optional(),
+        currency: z.string().default("EUR"),
+        isIncluded: z.boolean().default(false),
+        affiliateLink: z.string().optional(),
+        bookingReference: z.string().optional(),
+        notes: z.string().optional(),
+        photoUrl: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await addFieldReportJourneyStep(input);
+        return { id };
+      }),
+
+    removeJourneyStep: teamProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteFieldReportJourneyStep(input.id);
+        return { success: true };
+      }),
+
+    // ─── Contacts ───────────────────────────────────────────────────
+    addContact: teamProcedure
+      .input(z.object({
+        fieldReportId: z.number(),
+        contactName: z.string().min(1),
+        role: z.string().optional(),
+        phone: z.string().optional(),
+        email: z.string().optional(),
+        whatsapp: z.string().optional(),
+        languages: z.string().optional(),
+        notes: z.string().optional(),
+        isMainContact: z.boolean().default(false),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await addFieldReportContact(input);
+        return { id };
+      }),
+
+    removeContact: teamProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteFieldReportContact(input.id);
+        return { success: true };
+      }),
+
+    // ─── Media (Photos & Vidéos) ────────────────────────────────────
+    addMedia: teamProcedure
+      .input(z.object({
+        fieldReportId: z.number(),
+        type: z.enum(["photo", "video"]),
+        url: z.string(),
+        thumbnailUrl: z.string().optional(),
+        caption: z.string().optional(),
+        category: z.enum(["facade", "interieur", "prestation", "equipement", "chambre", "transport", "parcours", "equipe", "resultat", "vue", "repas", "autre"]).default("autre"),
+        sortOrder: z.number().default(0),
+      }))
+      .mutation(async ({ input }) => {
+        const id = await addFieldReportMediaItem(input);
+        return { id };
+      }),
+
+    removeMedia: teamProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await deleteFieldReportMediaItem(input.id);
+        return { success: true };
+      }),
+
+    // ─── AI Enrichment ──────────────────────────────────────────────
+    enrichWithAI: teamProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const report = await getFieldReportById(input.id);
+        if (!report) throw new TRPCError({ code: "NOT_FOUND" });
+        await updateFieldReport(input.id, { status: "ai_processing" });
+        try {
+          const { enrichFieldReport } = await import("./services/fieldReportEnricher");
+          const enriched = await enrichFieldReport(report);
+          await updateFieldReport(input.id, {
+            aiEnrichedDescription: enriched.description,
+            aiResearchNotes: JSON.stringify(enriched.research),
+            aiRecommendation: enriched.recommendation,
+            aiSeoData: JSON.stringify(enriched.seoData),
+            status: "review",
+          });
+          return { success: true, enriched };
+        } catch (err: any) {
+          await updateFieldReport(input.id, { status: "submitted" });
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: err.message });
+        }
+      }),
+
+    // ─── Upload endpoint ────────────────────────────────────────────
+    getUploadUrl: teamProcedure
+      .input(z.object({
+        fileName: z.string(),
+        contentType: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { storagePut } = await import("./storage");
+        const key = `field-reports/${ctx.user.id}/${Date.now()}-${input.fileName}`;
+        // Return the key for client to use with direct upload
+        return { key, uploadPath: `/api/upload/field-report` };
       }),
   }),
 });

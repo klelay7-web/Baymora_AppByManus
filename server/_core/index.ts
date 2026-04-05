@@ -35,6 +35,31 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // File upload for field reports
+  app.post("/api/upload/field-report", async (req, res) => {
+    try {
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("end", async () => {
+        try {
+          const body = Buffer.concat(chunks);
+          const contentType = req.headers["content-type"] || "application/octet-stream";
+          const fileName = (req.headers["x-file-name"] as string) || `upload-${Date.now()}`;
+          const userId = (req.headers["x-user-id"] as string) || "unknown";
+          const { storagePut } = await import("../storage");
+          const suffix = Math.random().toString(36).substring(2, 8);
+          const key = `field-reports/${userId}/${Date.now()}-${suffix}-${fileName}`;
+          const { url } = await storagePut(key, body, contentType);
+          res.json({ url, key });
+        } catch (err: any) {
+          res.status(500).json({ error: err.message });
+        }
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

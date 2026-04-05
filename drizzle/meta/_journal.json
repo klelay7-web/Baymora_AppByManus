@@ -36,6 +36,13 @@
       "when": 1775402512012,
       "tag": "0004_married_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1775405060281,
+      "tag": "0005_naive_echo",
+      "breakpoints": true
     }
   ]
 }

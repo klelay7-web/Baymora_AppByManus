@@ -1,0 +1,111 @@
+CREATE TABLE `fieldReportContacts` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`fieldReportId` int NOT NULL,
+	`contactName` varchar(256) NOT NULL,
+	`role` varchar(128),
+	`phone` varchar(64),
+	`email` varchar(320),
+	`whatsapp` varchar(64),
+	`languages` text,
+	`notes` text,
+	`isMainContact` boolean DEFAULT false,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `fieldReportContacts_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `fieldReportJourney` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`fieldReportId` int NOT NULL,
+	`stepOrder` int NOT NULL,
+	`stepType` enum('chauffeur','avion','train','taxi','transfert','arrivee','prise_en_charge','prestation','depart','autre') NOT NULL,
+	`title` varchar(256) NOT NULL,
+	`description` text,
+	`fromLocation` varchar(256),
+	`toLocation` varchar(256),
+	`companyName` varchar(256),
+	`flightNumber` varchar(32),
+	`vehicleType` varchar(128),
+	`departureTime` varchar(16),
+	`arrivalTime` varchar(16),
+	`durationMinutes` int,
+	`estimatedCost` decimal(10,2),
+	`currency` varchar(3) DEFAULT 'EUR',
+	`isIncluded` boolean DEFAULT false,
+	`affiliateLink` text,
+	`bookingReference` varchar(128),
+	`notes` text,
+	`photoUrl` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `fieldReportJourney_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `fieldReportMedia` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`fieldReportId` int NOT NULL,
+	`type` enum('photo','video') NOT NULL,
+	`url` text NOT NULL,
+	`thumbnailUrl` text,
+	`caption` varchar(256),
+	`category` enum('facade','interieur','prestation','equipement','chambre','transport','parcours','equipe','resultat','vue','repas','autre') NOT NULL DEFAULT 'autre',
+	`sortOrder` int DEFAULT 0,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `fieldReportMedia_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `fieldReportServices` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`fieldReportId` int NOT NULL,
+	`serviceName` varchar(256) NOT NULL,
+	`serviceCategory` varchar(128),
+	`description` text,
+	`priceFrom` decimal(10,2),
+	`priceTo` decimal(10,2),
+	`currency` varchar(3) DEFAULT 'EUR',
+	`isOnQuote` boolean DEFAULT false,
+	`duration` varchar(64),
+	`includes` text,
+	`notes` text,
+	`sortOrder` int DEFAULT 0,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `fieldReportServices_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `fieldReports` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`establishmentName` varchar(256) NOT NULL,
+	`establishmentType` enum('clinique','hotel','restaurant','spa','bar','activite','experience','transport','autre') NOT NULL,
+	`specialty` varchar(256),
+	`city` varchar(128) NOT NULL,
+	`country` varchar(128) NOT NULL,
+	`region` varchar(128),
+	`address` text,
+	`lat` float,
+	`lng` float,
+	`googleMapsUrl` text,
+	`description` text,
+	`ambiance` text,
+	`highlights` text,
+	`languagesSpoken` text,
+	`paymentMethods` text,
+	`openingHours` text,
+	`website` text,
+	`personalAdvice` text,
+	`overallRating` int,
+	`wouldRecommend` boolean DEFAULT true,
+	`targetClientele` text,
+	`aiEnrichedDescription` text,
+	`aiResearchNotes` text,
+	`aiRecommendation` text,
+	`aiSeoData` text,
+	`convertedEstablishmentId` int,
+	`status` enum('draft','submitted','ai_processing','review','approved','published','rejected') NOT NULL DEFAULT 'draft',
+	`adminNotes` text,
+	`submittedAt` timestamp,
+	`reviewedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `fieldReports_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+ALTER TABLE `users` MODIFY COLUMN `role` enum('user','admin','team') NOT NULL DEFAULT 'user';

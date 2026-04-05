@@ -27,6 +27,7 @@ const AdminCommandCenter = lazy(() => import("./pages/AdminCommandCenter"));
 const AdminSeoFiches = lazy(() => import("./pages/AdminSeoFiches"));
 const AdminContentSocial = lazy(() => import("./pages/AdminContentSocial"));
 const AdminPartnersCommissions = lazy(() => import("./pages/AdminPartnersCommissions"));
+const TeamDashboard = lazy(() => import("./pages/TeamDashboard"));
 
 function LazyPage({ Component }: { Component: React.LazyExoticComponent<any> }) {
   return (
@@ -63,6 +64,9 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/mon-espace">{() => <LazyPage Component={DashboardClient} />}</Route>
       <Route path="/ambassadeur">{() => <LazyPage Component={DashboardAmbassador} />}</Route>
+
+      {/* Team Dashboard */}
+      <Route path="/team/fiches">{() => <LazyPage Component={TeamDashboard} />}</Route>
 
       {/* Admin Dashboards */}
       <Route path="/admin">{() => <LazyPage Component={AdminDashboard} />}</Route>

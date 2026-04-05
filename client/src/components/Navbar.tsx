@@ -368,6 +368,18 @@ export default function Navbar() {
             {/* Desktop CTA */}
             {isAuthenticated ? (
               <div className="hidden lg:flex items-center gap-3">
+                {(user?.role === "team" || user?.role === "admin") && (
+                  <Link href="/team/fiches">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white/50 hover:text-[#c8a94a] hover:bg-transparent gap-2 rounded-none font-light text-[13px]"
+                    >
+                      <Building2 className="h-4 w-4" />
+                      Terrain
+                    </Button>
+                  </Link>
+                )}
                 <Link href="/mon-espace">
                   <Button
                     variant="ghost"
@@ -515,6 +527,20 @@ export default function Navbar() {
                             Mon Espace
                           </Button>
                         </Link>
+                        {(user?.role === "team" || user?.role === "admin") && (
+                          <Link
+                            href="/team/fiches"
+                            onClick={() => setMobileOpen(false)}
+                          >
+                            <Button
+                              variant="outline"
+                              className="w-full border-[#c8a94a]/20 text-[#c8a94a]/70 hover:text-[#c8a94a] hover:border-[#c8a94a]/40 rounded-none py-5 tracking-wider uppercase text-sm mt-2"
+                            >
+                              <Building2 className="h-4 w-4 mr-2" />
+                              Espace Terrain
+                            </Button>
+                          </Link>
+                        )}
                       </>
                     ) : (
                       <>
