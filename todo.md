@@ -392,3 +392,13 @@
 - [ ] AlertPanel : alertes actives avec priorité et actions
 - [ ] TaskPanel : tâches par équipe avec statut
 - [ ] ReportPanel : rapport journalier formaté et structuré
+
+## Phase 27 — Réorganisation Architecture Interne (COMPLÉTÉ)
+
+- [x] Navbar : supprimer Dashboard et Salle de Réunion, garder Terrain (terrain+owner) et PILOTAGE (owner)
+- [x] Pilotage.tsx : 5 onglets (Dashboard | Salle de Réunion | Terrain | Carnet | Accès)
+- [x] Salle de Réunion dans Pilotage : 7 vrais agents IA (ARIA, LÉNA, MAYA, NOVA, ATLAS, JADE, PIXEL) avec fonctions réelles
+- [x] Gestion des accès dans Pilotage (promouvoir rôle terrain/admin depuis l'interface)
+- [x] getAllUsers + updateUserRoleById dans db.ts
+- [x] 41/41 tests Vitest passent
+- [x] Checkpoint 2dcd945f

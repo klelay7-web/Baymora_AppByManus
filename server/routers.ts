@@ -35,6 +35,7 @@ import {
   getFieldReportJourneySteps, addFieldReportJourneyStep, deleteFieldReportJourneyStep,
   getFieldReportContacts, addFieldReportContact, deleteFieldReportContact,
   getFieldReportMediaItems, addFieldReportMediaItem, deleteFieldReportMediaItem,
+  getAllUsers, updateUserRoleById,
 } from "./db";
 import { generateConciergeResponse, getWelcomeResponse } from "./services/concierge";
 import { sendEmail, previewEmail, triggerPartnerProspection, triggerAffiliateWelcome, triggerTeamWeeklyReport, sendBulkWeeklyPlans } from "./services/emailService";
@@ -1182,6 +1183,19 @@ export const appRouter = router({
         const adminStats = await getAdminStats();
         const revenueStats = await getRevenueStats();
         return { ...adminStats, ...revenueStats };
+      }),
+    // Liste tous les utilisateurs
+    listUsers: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+        return getAllUsers();
+      }),
+    // Mettre à jour le rôle d'un utilisateur
+    updateUserRole: protectedProcedure
+      .input(z.object({ userId: z.number(), role: z.enum(["user", "team", "admin"]) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.openId !== ENV.ownerOpenId) throw new TRPCError({ code: "FORBIDDEN" });
+        return updateUserRoleById(input.userId, input.role);
       }),
   }),
 

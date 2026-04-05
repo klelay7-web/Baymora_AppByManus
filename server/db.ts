@@ -798,3 +798,24 @@ export async function getRevenueStats() {
     monthlyData,
   };
 }
+
+// ─── Admin: gestion des utilisateurs ─────────────────────────────────────────
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    subscriptionTier: users.subscriptionTier,
+    createdAt: users.createdAt,
+  }).from(users).orderBy(users.createdAt);
+}
+
+export async function updateUserRoleById(userId: number, role: "user" | "team" | "admin") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ role }).where(eq(users.id, userId));
+  return { success: true };
+}
