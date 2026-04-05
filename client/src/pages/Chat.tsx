@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getLoginUrl } from "@/const";
 import { Streamdown } from "streamdown";
 import { useRoute } from "wouter";
-import { MapView } from "@/components/Map";
+import { InteractiveMap, type MapEstablishment, type MapDay } from "@/components/InteractiveMap";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -136,62 +136,57 @@ function RightPanel({
   allEstablishments,
   tripSuggestion,
   onClose,
+  onEstablishmentClick,
 }: {
   selectedEstablishment: Establishment | null;
   allEstablishments: Establishment[];
   tripSuggestion: TripSuggestion | null;
   onClose: () => void;
+  onEstablishmentClick?: (est: Establishment) => void;
 }) {
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const [activeTab, setActiveTab] = useState(tripSuggestion ? "parcours" : "carte");
 
-  // Compute center from establishments
-  const mapCenter = useMemo(() => {
-    const coords = allEstablishments.filter(e => e.coordinates).map(e => e.coordinates!);
-    if (selectedEstablishment?.coordinates) return selectedEstablishment.coordinates;
-    if (coords.length > 0) {
-      const avgLat = coords.reduce((s, c) => s + c.lat, 0) / coords.length;
-      const avgLng = coords.reduce((s, c) => s + c.lng, 0) / coords.length;
-      return { lat: avgLat, lng: avgLng };
-    }
-    return { lat: 48.8566, lng: 2.3522 }; // Paris default
-  }, [allEstablishments, selectedEstablishment]);
+  // Convert to InteractiveMap types
+  const mapEstablishments: MapEstablishment[] = useMemo(() =>
+    allEstablishments.map(e => ({
+      name: e.name,
+      type: e.type,
+      city: e.city,
+      country: e.country,
+      description: e.description,
+      priceRange: e.priceRange,
+      coordinates: e.coordinates,
+    })),
+    [allEstablishments]
+  );
 
-  // Update markers when map or establishments change
-  useEffect(() => {
-    if (!mapRef.current || !window.google) return;
-    // Clear old markers
-    markersRef.current.forEach(m => (m.map = null));
-    markersRef.current = [];
+  const mapDays: MapDay[] | undefined = useMemo(() => {
+    if (!tripSuggestion) return undefined;
+    return tripSuggestion.days.map(d => ({
+      day: d.day,
+      title: d.title,
+      steps: d.steps.map(s => ({
+        time: s.time,
+        establishment: s.establishment,
+        type: s.type,
+        description: s.description,
+        city: s.city,
+        coordinates: s.coordinates,
+      })),
+    }));
+  }, [tripSuggestion]);
 
-    const ests = allEstablishments.filter(e => e.coordinates);
-    ests.forEach((est, i) => {
-      const pin = document.createElement("div");
-      pin.className = "flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold";
-      pin.style.background = selectedEstablishment?.name === est.name ? "#c8a94a" : "#1e293b";
-      pin.style.color = selectedEstablishment?.name === est.name ? "#080c14" : "#c8a94a";
-      pin.style.border = "2px solid #c8a94a";
-      pin.textContent = String(i + 1);
-
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        map: mapRef.current!,
-        position: est.coordinates!,
-        title: est.name,
-        content: pin,
-      });
-      markersRef.current.push(marker);
-    });
-
-    if (selectedEstablishment?.coordinates) {
-      mapRef.current.panTo(selectedEstablishment.coordinates);
-      mapRef.current.setZoom(14);
-    } else if (ests.length > 1) {
-      const bounds = new google.maps.LatLngBounds();
-      ests.forEach(e => bounds.extend(e.coordinates!));
-      mapRef.current.fitBounds(bounds, 50);
-    }
-  }, [allEstablishments, selectedEstablishment]);
+  const selectedMapEst: MapEstablishment | null = selectedEstablishment
+    ? {
+        name: selectedEstablishment.name,
+        type: selectedEstablishment.type,
+        city: selectedEstablishment.city,
+        country: selectedEstablishment.country,
+        description: selectedEstablishment.description,
+        priceRange: selectedEstablishment.priceRange,
+        coordinates: selectedEstablishment.coordinates,
+      }
+    : null;
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -214,13 +209,21 @@ function RightPanel({
           <TabsTrigger value="partage" className="text-xs">📤 Partager</TabsTrigger>
         </TabsList>
 
-        {/* Map Tab */}
+        {/* Map Tab — Interactive Map with pins, routes, transport, dark mode */}
         <TabsContent value="carte" className="flex-1 m-0 p-0">
-          <MapView
+          <InteractiveMap
+            establishments={mapEstablishments}
+            days={mapDays}
+            selectedEstablishment={selectedMapEst}
+            onEstablishmentClick={(est) => {
+              if (onEstablishmentClick) {
+                // Convert back to Chat's Establishment type
+                onEstablishmentClick(est as unknown as Establishment);
+              }
+            }}
+            showTransportOptions={true}
+            showDayNavigation={!!tripSuggestion && !!mapDays && mapDays.length > 1}
             className="w-full h-full min-h-[300px]"
-            initialCenter={mapCenter}
-            initialZoom={allEstablishments.length > 0 ? 11 : 5}
-            onMapReady={(map) => { mapRef.current = map; }}
           />
         </TabsContent>
 
@@ -764,6 +767,10 @@ export default function Chat() {
               allEstablishments={allEstablishments}
               tripSuggestion={latestTrip}
               onClose={() => setShowRightPanel(false)}
+              onEstablishmentClick={(est) => {
+                setSelectedEstablishment(est);
+                setShowRightPanel(true);
+              }}
             />
           </motion.div>
         )}

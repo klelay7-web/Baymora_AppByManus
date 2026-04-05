@@ -193,8 +193,8 @@
 
 ### Sprint 2 — Fiches Établissements & Map Interactive
 - [x] Fiches établissements SEO complètes avec hero, visuels, contenu
-- [ ] Map interactive jour par jour (GPS, transport, notifications)
-- [ ] Chaque établissement cliquable sur la map avec sa fiche SEO
+- [x] Map interactive jour par jour (GPS, transport, notifications)
+- [x] Chaque établissement cliquable sur la map avec sa fiche SEO
 - [ ] Sync calendrier Google, notifications, rappels
 
 ### Sprint 3 — Contenus de Toutes les Pages
@@ -204,3 +204,12 @@
 - [x] Page À Propos (notre histoire, comment ça marche)
 - [x] Page Devenir Ambassadeur (intégré dans À Propos)
 - [x] Page Prestataires B2B (intégré dans À Propos #b2b)
+
+## Phase 15 — Carte Interactive Google Maps
+- [x] Composant InteractiveMap avec pins cliquables, itinéraires, transport
+- [x] Intégration dans le panneau droit du Chat split-view
+- [x] Intégration dans la page TripPlan (parcours jour par jour)
+- [x] Pins numérotés par jour avec fiches cliquables
+- [x] Options transport (Uber, chauffeur, métro, à pied)
+- [x] Itinéraires tracés entre les étapes
+- [x] Popup fiche établissement au clic sur un pin

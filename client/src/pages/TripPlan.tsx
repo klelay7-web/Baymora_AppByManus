@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { MapView } from "@/components/Map";
+import { InteractiveMap, type MapDay, type MapEstablishment } from "@/components/InteractiveMap";
 import { useParams, useLocation } from "wouter";
-import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin, Clock, Car, Footprints, Bike, Train, Plane, Navigation,
@@ -39,10 +39,6 @@ export default function TripPlan() {
   const { user, isAuthenticated } = useAuth();
   const [activeDay, setActiveDay] = useState(0);
   const [selectedStep, setSelectedStep] = useState<number | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
-  const polylineRef = useRef<google.maps.Polyline | null>(null);
-
   const tripId = params.id ? parseInt(params.id) : 0;
   const { data: trip, isLoading } = trpc.trips.getPlan.useQuery(
     { id: tripId },
@@ -52,102 +48,46 @@ export default function TripPlan() {
   const currentDay = trip?.days?.[activeDay];
   const steps = currentDay?.steps || [];
 
-  // Draw route on map when day changes
-  const drawRoute = useCallback((map: google.maps.Map) => {
-    // Clear previous markers and polyline
-    markersRef.current.forEach(m => m.setMap(null));
-    markersRef.current = [];
-    if (polylineRef.current) polylineRef.current.setMap(null);
+  // Convert trip data to InteractiveMap types
+  const tripMapDays: MapDay[] = useMemo(() => {
+    if (!trip?.days) return [];
+    return trip.days.map((d: any) => ({
+      day: d.dayNumber || 1,
+      title: d.title || `Jour ${d.dayNumber}`,
+      steps: (d.steps || []).map((s: any) => ({
+        time: s.startTime || "",
+        establishment: s.title || s.locationName || "",
+        type: s.stepType || "activity",
+        description: s.description || "",
+        city: s.locationName || "",
+        coordinates: s.lat && s.lng ? { lat: s.lat, lng: s.lng } : undefined,
+        transportMode: s.transportMode,
+        transportDuration: s.transportDurationMinutes ? `${s.transportDurationMinutes} min` : undefined,
+      })),
+    }));
+  }, [trip?.days]);
 
-    if (!steps.length) return;
-
-    const bounds = new google.maps.LatLngBounds();
-    const path: google.maps.LatLngLiteral[] = [];
-
-    steps.forEach((step, index) => {
-      if (!step.lat || !step.lng) return;
-      const pos = { lat: step.lat, lng: step.lng };
-      path.push(pos);
-      bounds.extend(pos);
-
-      const StepIcon = stepTypeIcons[step.stepType] || MapPin;
-      const marker = new google.maps.Marker({
-        position: pos,
-        map,
-        label: {
-          text: `${index + 1}`,
-          color: "#080c14",
-          fontWeight: "bold",
-          fontSize: "12px",
-        },
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 16,
-          fillColor: step.confirmed ? "#c8a94a" : "#ffffff",
-          fillOpacity: 1,
-          strokeColor: "#c8a94a",
-          strokeWeight: 2,
-        },
-        title: step.title,
+  const tripMapEstablishments: MapEstablishment[] = useMemo(() => {
+    if (!trip?.days) return [];
+    const ests: MapEstablishment[] = [];
+    trip.days.forEach((d: any) => {
+      (d.steps || []).forEach((s: any) => {
+        if (s.lat && s.lng) {
+          ests.push({
+            name: s.title || s.locationName || "",
+            type: s.stepType || "activity",
+            city: s.locationName || "",
+            description: s.description || "",
+            priceRange: s.estimatedCost ? `${s.estimatedCost}\u20ac` : undefined,
+            coordinates: { lat: s.lat, lng: s.lng },
+          });
+        }
       });
-
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div style="padding:8px;max-width:200px;font-family:Inter,sans-serif;">
-            <h3 style="margin:0 0 4px;font-size:14px;font-weight:600;">${step.title}</h3>
-            ${step.startTime ? `<p style="margin:0;font-size:12px;color:#666;">${step.startTime}${step.endTime ? ` - ${step.endTime}` : ''}</p>` : ''}
-            ${step.description ? `<p style="margin:4px 0 0;font-size:12px;">${step.description}</p>` : ''}
-            ${step.estimatedCost ? `<p style="margin:4px 0 0;font-size:12px;font-weight:600;">${step.estimatedCost}€</p>` : ''}
-          </div>
-        `,
-      });
-
-      marker.addListener("click", () => {
-        infoWindow.open(map, marker);
-        setSelectedStep(index);
-      });
-
-      markersRef.current.push(marker);
     });
+    return ests;
+  }, [trip?.days]);
 
-    // Draw polyline route
-    if (path.length > 1) {
-      polylineRef.current = new google.maps.Polyline({
-        path,
-        geodesic: true,
-        strokeColor: "#c8a94a",
-        strokeOpacity: 0.8,
-        strokeWeight: 3,
-        icons: [{
-          icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 3, fillColor: "#c8a94a", fillOpacity: 1 },
-          offset: "50%",
-          repeat: "100px",
-        }],
-      });
-      polylineRef.current.setMap(map);
-    }
-
-    if (!bounds.isEmpty()) map.fitBounds(bounds, 60);
-  }, [steps]);
-
-  const handleMapReady = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    map.setOptions({
-      styles: [
-        { elementType: "geometry", stylers: [{ color: "#0d1117" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#0d1117" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#8b949e" }] },
-        { featureType: "road", elementType: "geometry", stylers: [{ color: "#1a1f2e" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#0a1628" }] },
-        { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
-      ],
-    });
-    drawRoute(map);
-  }, [drawRoute]);
-
-  useEffect(() => {
-    if (mapRef.current) drawRoute(mapRef.current);
-  }, [activeDay, drawRoute]);
+  // Map drawing is now handled by InteractiveMap component
 
   if (!isAuthenticated) {
     return (
@@ -279,10 +219,6 @@ export default function TripPlan() {
                     <button
                       onClick={() => {
                         setSelectedStep(idx);
-                        if (mapRef.current && step.lat && step.lng) {
-                          mapRef.current.panTo({ lat: step.lat, lng: step.lng });
-                          mapRef.current.setZoom(16);
-                        }
                       }}
                       className={`w-full text-left p-3 rounded-lg transition-all ${
                         isSelected
@@ -360,34 +296,16 @@ export default function TripPlan() {
 
         {/* Right Panel: Interactive Map */}
         <div className="flex-1 relative order-1 md:order-2 h-[40vh] md:h-full">
-          <MapView
-            onMapReady={handleMapReady}
+          <InteractiveMap
+            establishments={tripMapEstablishments}
+            days={tripMapDays}
+            showTransportOptions={true}
+            showDayNavigation={(trip.days?.length || 0) > 1}
             className="w-full h-full"
           />
 
-          {/* Floating Day Navigation */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-background/90 backdrop-blur-sm rounded-full px-4 py-2 border border-gold/20">
-            <button
-              onClick={() => { if (activeDay > 0) { setActiveDay(activeDay - 1); setSelectedStep(null); } }}
-              disabled={activeDay === 0}
-              className="text-white/60 hover:text-gold disabled:opacity-30"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm text-white font-medium px-2">
-              Jour {(trip.days?.[activeDay]?.dayNumber) || activeDay + 1}
-            </span>
-            <button
-              onClick={() => { if (trip.days && activeDay < trip.days.length - 1) { setActiveDay(activeDay + 1); setSelectedStep(null); } }}
-              disabled={!trip.days || activeDay >= trip.days.length - 1}
-              className="text-white/60 hover:text-gold disabled:opacity-30"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
           {/* Trip Overview Card */}
-          <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm rounded-lg p-3 border border-gold/20 max-w-[200px]">
+          <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm rounded-lg p-3 border border-gold/20 max-w-[200px] z-10">
             <div className="flex items-center gap-2 mb-2">
               <Plane className="w-4 h-4 text-gold" />
               <span className="text-xs font-medium text-white">{trip.destinationCity}</span>
