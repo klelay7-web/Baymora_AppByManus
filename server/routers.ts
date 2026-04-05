@@ -2,6 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { ENV } from "./_core/env";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
@@ -89,7 +90,10 @@ export const appRouter = router({
         isVoice: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        if (ctx.user.subscriptionTier === "free") {
+        // Owner & admin bypass: accès illimité
+        const isOwner = ctx.user.openId === ENV.ownerOpenId;
+        const isPrivileged = isOwner || ctx.user.role === "admin";
+        if (!isPrivileged && ctx.user.subscriptionTier === "free") {
           if (ctx.user.freeMessagesUsed >= 3) {
             throw new TRPCError({
               code: "FORBIDDEN",

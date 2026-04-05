@@ -253,4 +253,4 @@
 - [x] Conversion rapport → fiche : workflow submit → ai_processing → review → approved → published
 - [x] Lien navbar desktop + mobile "Terrain" pour team + admin
 - [x] 11 tests vitest (fieldReports.test.ts) — 29 tests totaux passants
-- [ ] Checkpoint et livraison
+- [x] Checkpoint ba47d35a et livraison
