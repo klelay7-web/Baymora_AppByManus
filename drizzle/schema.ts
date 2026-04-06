@@ -1092,3 +1092,48 @@ export const teamInvitations = mysqlTable("teamInvitations", {
 });
 export type TeamInvitation = typeof teamInvitations.$inferSelect;
 export type InsertTeamInvitation = typeof teamInvitations.$inferInsert;
+
+// ─── Operator Messages (Messagerie Admin ↔ Opérateur Terrain) ────────
+export const operatorMessages = mysqlTable("operatorMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  fromUserId: int("fromUserId").notNull(),   // admin ou opérateur
+  toUserId: int("toUserId").notNull(),        // opérateur ou admin
+  content: text("content").notNull(),
+  isRead: boolean("isRead").default(false).notNull(),
+  attachmentUrl: text("attachmentUrl"),       // lien photo/doc optionnel
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type OperatorMessage = typeof operatorMessages.$inferSelect;
+
+// ─── Operator Routes (Parcours Locaux Créés par les Opérateurs) ──────
+export const operatorRoutes = mysqlTable("operatorRoutes", {
+  id: int("id").autoincrement().primaryKey(),
+  createdByUserId: int("createdByUserId").notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  city: varchar("city", { length: 128 }).notNull(),
+  country: varchar("country", { length: 128 }).default("France").notNull(),
+  category: mysqlEnum("category", [
+    "decouverte",   // Découverte de la ville
+    "gastronomie",  // Circuit gastronomique
+    "plages",       // Plages & balnéaire
+    "culture",      // Culture & patrimoine
+    "shopping",     // Shopping & boutiques
+    "nature",       // Nature & randonnée
+    "nightlife",    // Vie nocturne
+    "wellness",     // Bien-être & spa
+    "business",     // Parcours business
+    "famille",      // Famille & enfants
+    "autre"         // Autre
+  ]).default("decouverte").notNull(),
+  durationMinutes: int("durationMinutes"),    // durée estimée en minutes
+  status: mysqlEnum("status", ["draft", "submitted", "approved", "published"]).default("draft").notNull(),
+  coverImageUrl: text("coverImageUrl"),
+  establishmentIds: text("establishmentIds"), // JSON array d'IDs d'établissements
+  steps: text("steps"),                       // JSON array des étapes du parcours
+  notes: text("notes"),                       // Notes internes de l'opérateur
+  adminFeedback: text("adminFeedback"),       // Retour de l'admin
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type OperatorRoute = typeof operatorRoutes.$inferSelect;

@@ -14,7 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
-import { Shield, ExternalLink, Users, ChevronRight, Zap, Megaphone, Mail, Globe, UserPlus, Copy, Check, X, Phone, AtSign, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Shield, ExternalLink, Users, ChevronRight, Zap, Megaphone, Mail, Globe, UserPlus, Copy, Check, X, Phone, AtSign, Clock, CheckCircle2, XCircle, Crown, Package, User, MessageSquare, Send, BadgeCheck, Loader2, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Link } from "wouter";
 
 interface Message {
@@ -205,7 +206,7 @@ export default function Pilotage() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const { data: invitations, refetch: refetchInvitations } = trpc.team.listInvitations.useQuery();
-  const { data: teamMembers } = trpc.team.listMembers.useQuery();
+  const { data: teamMembers, refetch: refetchTeamMembers } = trpc.team.listMembers.useQuery();
   const inviteMutation = trpc.team.invite.useMutation({
     onSuccess: (data) => {
       const link = `${window.location.origin}/invite/${data.token}`;
@@ -222,6 +223,17 @@ export default function Pilotage() {
     onSuccess: () => toast.success("Email d'invitation envoyé !"),
     onError: (err) => toast.error(err.message),
   });
+  const grantTierMutation = trpc.team.grantTier.useMutation({
+    onSuccess: () => { toast.success("Forfait attribué !"); refetchTeamMembers(); },
+    onError: (err) => toast.error(err.message),
+  });
+  const sendOperatorMessageMutation = trpc.team.sendMessage.useMutation({
+    onSuccess: () => { toast.success("Message envoyé !"); setOperatorMsgContent(""); setSelectedOperatorId(null); },
+    onError: (err) => toast.error(err.message),
+  });
+  const [selectedOperatorId, setSelectedOperatorId] = useState<number | null>(null);
+  const [operatorMsgContent, setOperatorMsgContent] = useState("");
+  const [grantTierUserId, setGrantTierUserId] = useState<number | null>(null);
   const copyInviteLink = async (link: string) => {
     await navigator.clipboard.writeText(link);
     setCopiedLink(true);
@@ -881,26 +893,112 @@ export default function Pilotage() {
                       <p className="text-xs text-white/30">Invitez des opérateurs pour qu'ils puissent utiliser LÉNA.</p>
                     </div>
                   ) : (
-                    <div className="space-y-2 mb-4">
-                      {teamMembers.map((u) => (
-                        <div key={u.id} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xs font-bold text-amber-400">
-                              {(u.name || u.email || "?").charAt(0).toUpperCase()}
+                    <div className="space-y-3 mb-4">
+                      {(teamMembers as any[]).map((u: any) => {
+                        const tierMap: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+                          free: { label: "Découverte", icon: <User className="w-3 h-3" />, color: "text-gray-400" },
+                          explorer: { label: "Explorer", icon: <Package className="w-3 h-3" />, color: "text-blue-400" },
+                          premium: { label: "Premium", icon: <Crown className="w-3 h-3" />, color: "text-amber-400" },
+                          elite: { label: "Élite", icon: <Crown className="w-3 h-3" />, color: "text-purple-400" },
+                        };
+                        const t = tierMap[u.subscriptionTier || "free"] || tierMap.free;
+                        return (
+                          <div key={u.id} className="bg-white/5 border border-white/10 rounded-xl p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xs font-bold text-amber-400">
+                                  {(u.name || u.email || "?").charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-sm text-white font-medium">{u.name || u.email}</p>
+                                    <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded-full">
+                                      <BadgeCheck className="w-2.5 h-2.5" /> Validé
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <p className="text-xs text-white/40">{u.role === "admin" ? "Admin" : "Opérateur Terrain"}</p>
+                                    <span className={`flex items-center gap-1 text-xs ${t.color}`}>{t.icon} {t.label}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400" title="LÉNA disponible" />
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-sm text-white font-medium">{u.name || u.email}</p>
-                              <p className="text-xs text-white/40">{u.role === "admin" ? "Administrateur" : "Opérateur Terrain"} · LÉNA actif</p>
-                            </div>
+                            {/* Actions admin */}
+                            {u.role !== "admin" && (
+                              <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-white/5">
+                                {/* Attribuer forfait */}
+                                {grantTierUserId === u.id ? (
+                                  <div className="flex items-center gap-1 flex-1">
+                                    <select
+                                      className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs text-foreground"
+                                      defaultValue={u.subscriptionTier || "free"}
+                                      onChange={(e) => {
+                                        grantTierMutation.mutate({ userId: u.id, tier: e.target.value as any });
+                                        setGrantTierUserId(null);
+                                      }}
+                                    >
+                                      <option value="free">Découverte (gratuit)</option>
+                                      <option value="explorer">Explorer — 9,90€/mois</option>
+                                      <option value="premium">Premium — 29,90€/mois</option>
+                                      <option value="elite">Élite — 89,90€/mois</option>
+                                    </select>
+                                    <button onClick={() => setGrantTierUserId(null)} className="text-white/40 hover:text-white/70 p-1">
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setGrantTierUserId(u.id)}
+                                    className="flex items-center gap-1 text-xs text-amber-400/70 hover:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-2 py-1 rounded transition-colors"
+                                  >
+                                    <Crown size={10} /> Forfait
+                                  </button>
+                                )}
+                                {/* Envoyer un message */}
+                                {selectedOperatorId === u.id ? (
+                                  <div className="flex items-center gap-1 flex-1">
+                                    <Input
+                                      placeholder="Directive..."
+                                      value={operatorMsgContent}
+                                      onChange={e => setOperatorMsgContent(e.target.value)}
+                                      onKeyDown={e => {
+                                        if (e.key === "Enter" && operatorMsgContent.trim()) {
+                                          sendOperatorMessageMutation.mutate({ toUserId: u.id, content: operatorMsgContent.trim() });
+                                        }
+                                      }}
+                                      className="flex-1 h-7 text-xs"
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        if (operatorMsgContent.trim()) {
+                                          sendOperatorMessageMutation.mutate({ toUserId: u.id, content: operatorMsgContent.trim() });
+                                        }
+                                      }}
+                                      disabled={!operatorMsgContent.trim() || sendOperatorMessageMutation.isPending}
+                                      className="text-blue-400 hover:text-blue-300 p-1 disabled:opacity-40"
+                                    >
+                                      {sendOperatorMessageMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                                    </button>
+                                    <button onClick={() => setSelectedOperatorId(null)} className="text-white/40 hover:text-white/70 p-1">
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setSelectedOperatorId(u.id)}
+                                    className="flex items-center gap-1 text-xs text-blue-400/70 hover:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-colors"
+                                  >
+                                    <MessageSquare size={10} /> Message
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge className={u.role === "admin" ? "bg-purple-500/20 text-purple-300 border-purple-500/30 text-xs" : "bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs"}>
-                              {u.role === "admin" ? "Admin" : "Terrain"}
-                            </Badge>
-                            <span className="w-2 h-2 rounded-full bg-emerald-400" title="LÉNA disponible" />
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 

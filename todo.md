@@ -541,3 +541,15 @@
 - [ ] BUG-8 : Navigation terrain — pas de flèche retour arrière
 - [ ] FEAT-9 : Forfait gratuit — permettre 1-2 parcours complets avant limitation
 - [ ] FEAT-10 : Popup upgrade Opus→Sonnet — proposer forfait ou crédits supplémentaires
+
+## Phase 22 — Dashboard Opérateur Terrain Complet (06/04/2026)
+
+- [ ] Profil opérateur validé visible dans TeamDashboard (badge "Profil validé", date d'inscription, forfait actuel)
+- [ ] Gestion forfait par admin dans Pilotage : bouton pour attribuer forfait Explorer/Premium à un opérateur
+- [ ] Messagerie directe admin→opérateur dans Pilotage + réception dans TeamDashboard
+- [ ] Fiches établissements/prestataires : formulaire de création avec statut (à visiter / visité / approuvé / partenariat)
+- [ ] Parcours locaux : créer un parcours avec plusieurs établissements dans une ville (découverte, plages, etc.)
+- [ ] Upload photos depuis TeamDashboard (S3)
+- [ ] Contenu généraliste — remplacer références "chirurgie esthétique Turquie" par exemples universels
+- [ ] Badge validation Théo dans Pilotage > Terrain (vert = validé, orange = en attente)
+- [ ] Schéma DB : table operator_messages, operator_field_reports (fiches terrain), operator_routes (parcours)

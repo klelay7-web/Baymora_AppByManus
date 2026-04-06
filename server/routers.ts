@@ -2315,6 +2315,213 @@ export const appRouter = router({
         await conn.end();
         return { success: true };
       }),
+
+    // Attribuer un forfait à un opérateur terrain
+    grantTier: ownerProcedure
+      .input(z.object({
+        userId: z.number(),
+        tier: z.enum(["free", "explorer", "premium", "elite"]),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        await db.update(schema.users)
+          .set({ subscriptionTier: input.tier as any })
+          .where(eq(schema.users.id, input.userId));
+        await conn.end();
+        return { success: true };
+      }),
+
+    // Envoyer un message à un opérateur terrain
+    sendMessage: ownerProcedure
+      .input(z.object({
+        toUserId: z.number(),
+        content: z.string().min(1).max(2000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        await db.insert(schema.operatorMessages).values({
+          fromUserId: ctx.user.id,
+          toUserId: input.toUserId,
+          content: input.content,
+          isRead: false,
+        });
+        await conn.end();
+        return { success: true };
+      }),
+
+    // Répondre à un message (opérateur terrain)
+    replyMessage: protectedProcedure
+      .input(z.object({
+        toUserId: z.number(),
+        content: z.string().min(1).max(2000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "team" && ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        await db.insert(schema.operatorMessages).values({
+          fromUserId: ctx.user.id,
+          toUserId: input.toUserId,
+          content: input.content,
+          isRead: false,
+        });
+        await conn.end();
+        return { success: true };
+      }),
+
+    // Récupérer les messages entre admin et un opérateur
+    getMessages: protectedProcedure
+      .input(z.object({ withUserId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { or, and, eq, desc } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const msgs = await db.select().from(schema.operatorMessages)
+          .where(
+            or(
+              and(eq(schema.operatorMessages.fromUserId, ctx.user.id), eq(schema.operatorMessages.toUserId, input.withUserId)),
+              and(eq(schema.operatorMessages.fromUserId, input.withUserId), eq(schema.operatorMessages.toUserId, ctx.user.id))
+            )
+          )
+          .orderBy(desc(schema.operatorMessages.createdAt))
+          .limit(100);
+        // Marquer comme lus les messages reçus
+        await db.update(schema.operatorMessages)
+          .set({ isRead: true })
+          .where(
+            and(eq(schema.operatorMessages.fromUserId, input.withUserId), eq(schema.operatorMessages.toUserId, ctx.user.id))
+          );
+        await conn.end();
+        return msgs.reverse();
+      }),
+
+    // Compter les messages non lus pour l'opérateur connecté
+    getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { eq, and } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const rows = await db.select().from(schema.operatorMessages)
+        .where(and(eq(schema.operatorMessages.toUserId, ctx.user.id), eq(schema.operatorMessages.isRead, false)));
+      await conn.end();
+      return { count: rows.length };
+    }),
+
+    // Créer un parcours local
+    createRoute: protectedProcedure
+      .input(z.object({
+        title: z.string().min(2).max(256),
+        description: z.string().optional(),
+        city: z.string().min(1).max(128),
+        country: z.string().default("France"),
+        category: z.enum(["decouverte","gastronomie","plages","culture","shopping","nature","nightlife","wellness","business","famille","autre"]),
+        durationMinutes: z.number().optional(),
+        steps: z.array(z.object({
+          order: z.number(),
+          establishmentName: z.string(),
+          type: z.string(),
+          address: z.string().optional(),
+          notes: z.string().optional(),
+          durationMinutes: z.number().optional(),
+        })).optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== "team" && ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const [result] = await db.insert(schema.operatorRoutes).values({
+          createdByUserId: ctx.user.id,
+          title: input.title,
+          description: input.description,
+          city: input.city,
+          country: input.country,
+          category: input.category,
+          durationMinutes: input.durationMinutes,
+          steps: input.steps ? JSON.stringify(input.steps) : null,
+          notes: input.notes,
+          status: "draft",
+        });
+        await conn.end();
+        return { success: true, id: (result as any).insertId };
+      }),
+
+    // Lister les parcours de l'opérateur connecté
+    getMyRoutes: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "team" && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { eq, desc } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const routes = await db.select().from(schema.operatorRoutes)
+        .where(eq(schema.operatorRoutes.createdByUserId, ctx.user.id))
+        .orderBy(desc(schema.operatorRoutes.createdAt));
+      await conn.end();
+      return routes;
+    }),
+
+    // Lister tous les parcours (admin)
+    getAllRoutes: ownerProcedure.query(async () => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { desc } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const routes = await db.select().from(schema.operatorRoutes)
+        .orderBy(desc(schema.operatorRoutes.createdAt));
+      await conn.end();
+      return routes;
+    }),
+
+    // Approuver/rejeter un parcours (admin)
+    reviewRoute: ownerProcedure
+      .input(z.object({
+        routeId: z.number(),
+        status: z.enum(["approved", "published", "draft"]),
+        feedback: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        await db.update(schema.operatorRoutes)
+          .set({ status: input.status, adminFeedback: input.feedback })
+          .where(eq(schema.operatorRoutes.id, input.routeId));
+        await conn.end();
+        return { success: true };
+      }),
   }),
 
 });

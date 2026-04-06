@@ -8,20 +8,24 @@ import {
   Plus, FileText, MapPin, Phone, Camera, Send, ChevronRight, ChevronLeft,
   Star, Trash2, Upload, Plane, Car, Building2, Sparkles, Clock, Eye,
   CheckCircle2, AlertTriangle, Loader2, X, Mic, MicOff, MessageSquare,
-  Bot, ArrowRight, RefreshCw, Zap, ArrowLeft
+  Bot, ArrowRight, RefreshCw, Zap, ArrowLeft, Route, Shield, Handshake,
+  BadgeCheck, Crown, User, Mail, Calendar, Package
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
 const ESTABLISHMENT_TYPES = [
-  { value: "clinique", label: "Clinique / Centre médical", icon: "🏥" },
   { value: "hotel", label: "Hôtel / Resort", icon: "🏨" },
-  { value: "restaurant", label: "Restaurant", icon: "🍽️" },
-  { value: "spa", label: "Spa / Wellness", icon: "🧖" },
-  { value: "bar", label: "Bar / Lounge", icon: "🍸" },
+  { value: "restaurant", label: "Restaurant / Gastronomie", icon: "🍽️" },
+  { value: "spa", label: "Spa / Wellness / Beauté", icon: "🧖" },
+  { value: "bar", label: "Bar / Lounge / Rooftop", icon: "🍸" },
+  { value: "plage", label: "Plage / Beach Club", icon: "🏖️" },
   { value: "activite", label: "Activité / Excursion", icon: "🎯" },
-  { value: "experience", label: "Expérience unique", icon: "✨" },
-  { value: "transport", label: "Transport / Transfert", icon: "🚗" },
+  { value: "culture", label: "Culture / Patrimoine / Musée", icon: "🏛️" },
+  { value: "shopping", label: "Shopping / Boutique", icon: "🛍️" },
+  { value: "experience", label: "Expérience unique / VIP", icon: "✨" },
+  { value: "transport", label: "Transport / Transfert / Chauffeur", icon: "🚗" },
+  { value: "prestataire", label: "Prestataire / Service local", icon: "🤝" },
   { value: "autre", label: "Autre", icon: "📋" },
 ];
 
@@ -64,10 +68,18 @@ const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
   { key: "review", label: "Résumé", icon: <Eye className="w-4 h-4" /> },
 ];
 
+type MainTab = "overview" | "reports" | "routes" | "lena" | "messages";
+
 export default function TeamDashboard() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
-  const [view, setView] = useState<"list" | "create" | "lena">("list");
+  const [view, setView] = useState<"list" | "create" | "createRoute">("list");
+  const [activeTab, setActiveTab] = useState<MainTab>("overview");
+
+  const { data: unread } = trpc.team.getUnreadCount.useQuery(undefined, {
+    refetchInterval: 30000,
+    enabled: !!user,
+  });
 
   if (!user || (user.role !== "team" && user.role !== "admin")) {
     return (
@@ -80,54 +92,102 @@ export default function TeamDashboard() {
     );
   }
 
+  const tierLabels: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    free: { label: "Découverte", color: "text-gray-400", icon: <User className="w-3 h-3" /> },
+    explorer: { label: "Explorer", color: "text-blue-400", icon: <Package className="w-3 h-3" /> },
+    premium: { label: "Premium", color: "text-amber-400", icon: <Crown className="w-3 h-3" /> },
+    elite: { label: "Élite", color: "text-purple-400", icon: <Crown className="w-3 h-3" /> },
+  };
+  const tier = tierLabels[(user as any).subscriptionTier || "free"] || tierLabels.free;
+
+  const tabs: { key: MainTab; label: string; icon: React.ReactNode; badge?: number }[] = [
+    { key: "overview", label: "Mon Profil", icon: <User className="w-4 h-4" /> },
+    { key: "reports", label: "Fiches Terrain", icon: <Building2 className="w-4 h-4" /> },
+    { key: "routes", label: "Parcours", icon: <Route className="w-4 h-4" /> },
+    { key: "lena", label: "LÉNA", icon: <Bot className="w-4 h-4" /> },
+    { key: "messages", label: "Messages", icon: <MessageSquare className="w-4 h-4" />, badge: unread?.count },
+  ];
+
   return (
     <div className="min-h-screen bg-background pt-20">
+      {/* Header */}
       <div className="border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-5">
+          <div className="flex items-start justify-between">
             <div>
-              {/* Bouton retour */}
               <button
                 onClick={() => navigate("/")}
                 className="flex items-center gap-1 text-xs text-white/40 hover:text-white/70 mb-3 transition-colors"
               >
                 <ArrowLeft size={12} /> Retour à l'accueil
               </button>
-              <p className="text-primary text-sm tracking-widest uppercase mb-1">Espace Équipe</p>
-              <h1 className="text-3xl font-serif text-foreground">Rapports Terrain</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Documentez vos visites d'établissements pour enrichir le catalogue Baymora
-              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-lg">
+                  {user.name?.charAt(0).toUpperCase() || "O"}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-semibold text-foreground">{user.name || "Opérateur"}</h1>
+                    <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full">
+                      <BadgeCheck className="w-3 h-3" /> Profil validé
+                    </span>
+                    <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-white/5 ${tier.color}`}>
+                      {tier.icon} {tier.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">Opérateur Terrain Baymora · Membre depuis {new Date(user.createdAt || Date.now()).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</p>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              {view !== "lena" && (
-                <Button
-                  variant="outline"
-                  onClick={() => setView("lena")}
-                  className="gap-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
-                >
-                  <Bot className="w-4 h-4" /> Parler à LÉNA
+              {activeTab === "reports" && view === "list" && (
+                <Button onClick={() => setView("create")} className="gap-2 bg-primary hover:bg-primary/90 text-sm">
+                  <Plus className="w-4 h-4" /> Nouvelle Fiche
                 </Button>
               )}
-              {view === "list" && (
-                <Button onClick={() => setView("create")} className="gap-2 bg-primary hover:bg-primary/90">
-                  <Plus className="w-4 h-4" /> Nouveau Rapport
+              {activeTab === "routes" && view === "list" && (
+                <Button onClick={() => setView("createRoute")} className="gap-2 bg-primary hover:bg-primary/90 text-sm">
+                  <Plus className="w-4 h-4" /> Nouveau Parcours
                 </Button>
               )}
               {view !== "list" && (
-                <Button variant="outline" onClick={() => setView("list")} className="gap-2">
-                  <ChevronLeft className="w-4 h-4" /> Retour à la liste
+                <Button variant="outline" onClick={() => setView("list")} className="gap-2 text-sm">
+                  <ChevronLeft className="w-4 h-4" /> Retour
                 </Button>
               )}
             </div>
+          </div>
+
+          {/* Onglets */}
+          <div className="flex gap-1 mt-5 overflow-x-auto">
+            {tabs.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => { setActiveTab(tab.key); setView("list"); }}
+                className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg whitespace-nowrap transition-colors relative ${
+                  activeTab === tab.key
+                    ? "bg-primary/15 text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                }`}
+              >
+                {tab.icon} {tab.label}
+                {tab.badge && tab.badge > 0 ? (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">{tab.badge}</span>
+                ) : null}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
-        {view === "list" && <ReportsList />}
-        {view === "create" && <CreateReport onDone={() => setView("list")} />}
-        {view === "lena" && <LenaAssistant />}
+        {activeTab === "overview" && <OperatorOverview user={user} />}
+        {activeTab === "reports" && view === "list" && <ReportsList />}
+        {activeTab === "reports" && view === "create" && <CreateReport onDone={() => setView("list")} />}
+        {activeTab === "routes" && view === "list" && <RoutesList />}
+        {activeTab === "routes" && view === "createRoute" && <CreateRoute onDone={() => setView("list")} />}
+        {activeTab === "lena" && <LenaAssistant />}
+        {activeTab === "messages" && <OperatorMessages user={user} />}
       </div>
     </div>
   );
@@ -1662,6 +1722,390 @@ function LenaAssistant() {
             <li>• Dites "lance SCOUT" pour une recherche web</li>
           </ul>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Operator Overview (Profil Validé) ────────────────────────────────
+function OperatorOverview({ user }: { user: any }) {
+  const { data: reports } = trpc.fieldReports.getMyReports.useQuery();
+  const { data: routes } = trpc.team.getMyRoutes.useQuery();
+
+  const stats = [
+    { label: "Fiches soumises", value: reports?.length ?? 0, icon: <Building2 className="w-5 h-5 text-blue-400" />, color: "text-blue-400" },
+    { label: "Fiches approuvées", value: reports?.filter((r: any) => r.status === "approved" || r.status === "published").length ?? 0, icon: <CheckCircle2 className="w-5 h-5 text-green-400" />, color: "text-green-400" },
+    { label: "Parcours créés", value: routes?.length ?? 0, icon: <Route className="w-5 h-5 text-amber-400" />, color: "text-amber-400" },
+    { label: "Partenariats validés", value: reports?.filter((r: any) => r.partnershipValidated).length ?? 0, icon: <Handshake className="w-5 h-5 text-purple-400" />, color: "text-purple-400" },
+  ];
+
+  const tierInfo: Record<string, { label: string; desc: string; color: string }> = {
+    free: { label: "Découverte", desc: "Accès limité — 15 messages IA", color: "text-gray-400" },
+    explorer: { label: "Explorer — 9,90€/mois", desc: "Accès complet LÉNA + fiches illimitées", color: "text-blue-400" },
+    premium: { label: "Premium — 29,90€/mois", desc: "Priorité IA + mémoire longue durée + SCOUT avancé", color: "text-amber-400" },
+    elite: { label: "Élite — 89,90€/mois", desc: "Accès total + support dédié + agents autonomes", color: "text-purple-400" },
+  };
+  const currentTier = tierInfo[(user as any).subscriptionTier || "free"] || tierInfo.free;
+
+  return (
+    <div className="space-y-6">
+      {/* Carte profil */}
+      <div className="bg-card/30 border border-border/40 rounded-2xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-2xl flex-shrink-0">
+            {user.name?.charAt(0).toUpperCase() || "O"}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-semibold text-foreground">{user.name || "Opérateur"}</h2>
+              <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-400 px-2 py-1 rounded-full">
+                <BadgeCheck className="w-3 h-3" /> Profil validé
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">{user.email}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Membre depuis {new Date(user.createdAt || Date.now()).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <span className={`text-xs font-medium ${currentTier.color}`}>{currentTier.label}</span>
+              <span className="text-xs text-muted-foreground">· {currentTier.desc}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {stats.map((s, i) => (
+          <div key={i} className="bg-card/20 border border-border/30 rounded-xl p-4 text-center">
+            <div className="flex justify-center mb-2">{s.icon}</div>
+            <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+            <div className="text-xs text-muted-foreground mt-1">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Guide rapide */}
+      <div className="bg-card/20 border border-border/30 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-foreground mb-3">🗺️ Votre mission terrain</h3>
+        <div className="space-y-3">
+          {[
+            { icon: <Building2 className="w-4 h-4 text-blue-400" />, title: "Fiches Terrain", desc: "Documentez les établissements que vous visitez (hôtels, restaurants, spas, activités, plages, boutiques...)" },
+            { icon: <Route className="w-4 h-4 text-amber-400" />, title: "Parcours Locaux", desc: "Créez des itinéraires thématiques dans une ville : découverte, gastronomie, plages, culture, shopping..." },
+            { icon: <Handshake className="w-4 h-4 text-green-400" />, title: "Partenariats", desc: "Signalez les établissements prêts à s'affilier à Baymora pour des commissions sur réservations" },
+            { icon: <Camera className="w-4 h-4 text-purple-400" />, title: "Photos & Médias", desc: "Ajoutez des photos de qualité pour enrichir les fiches et les parcours" },
+          ].map((item, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <div className="mt-0.5">{item.icon}</div>
+              <div>
+                <p className="text-sm font-medium text-foreground">{item.title}</p>
+                <p className="text-xs text-muted-foreground">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Routes List (Parcours Locaux) ────────────────────────────────────
+function RoutesList() {
+  const { data: routes, isLoading } = trpc.team.getMyRoutes.useQuery();
+
+  const categoryLabels: Record<string, { label: string; emoji: string }> = {
+    decouverte: { label: "Découverte", emoji: "🗺️" },
+    gastronomie: { label: "Gastronomie", emoji: "🍽️" },
+    plages: { label: "Plages", emoji: "🏖️" },
+    culture: { label: "Culture", emoji: "🏛️" },
+    shopping: { label: "Shopping", emoji: "🛍️" },
+    nature: { label: "Nature", emoji: "🌿" },
+    nightlife: { label: "Vie nocturne", emoji: "🌙" },
+    wellness: { label: "Bien-être", emoji: "🧖" },
+    business: { label: "Business", emoji: "💼" },
+    famille: { label: "Famille", emoji: "👨‍👩‍👧" },
+    autre: { label: "Autre", emoji: "📋" },
+  };
+
+  const statusColors: Record<string, string> = {
+    draft: "bg-gray-500/10 text-gray-400",
+    submitted: "bg-blue-500/10 text-blue-400",
+    approved: "bg-green-500/10 text-green-400",
+    published: "bg-emerald-500/10 text-emerald-400",
+  };
+  const statusLabels: Record<string, string> = {
+    draft: "Brouillon", submitted: "Soumis", approved: "Approuvé", published: "Publié",
+  };
+
+  if (isLoading) return <div className="text-muted-foreground animate-pulse">Chargement...</div>;
+
+  if (!routes || routes.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <Route className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground">Aucun parcours créé pour l'instant</p>
+        <p className="text-xs text-muted-foreground mt-1">Créez votre premier itinéraire local en cliquant sur "Nouveau Parcours"</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {routes.map((route: any) => {
+        const cat = categoryLabels[route.category] || { label: route.category, emoji: "📋" };
+        const steps = route.steps ? JSON.parse(route.steps) : [];
+        return (
+          <div key={route.id} className="bg-card/30 border border-border/40 rounded-xl p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-lg">{cat.emoji}</span>
+                  <h3 className="font-semibold text-foreground">{route.title}</h3>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[route.status] || "bg-gray-500/10 text-gray-400"}`}>
+                    {statusLabels[route.status] || route.status}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {route.city}, {route.country}</span>
+                  <span>{cat.label}</span>
+                  {route.durationMinutes && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {Math.floor(route.durationMinutes / 60)}h{route.durationMinutes % 60 > 0 ? `${route.durationMinutes % 60}min` : ""}</span>}
+                  <span>{steps.length} étape{steps.length > 1 ? "s" : ""}</span>
+                </div>
+                {route.description && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{route.description}</p>}
+                {route.adminFeedback && (
+                  <div className="mt-2 text-xs bg-amber-500/10 text-amber-400 px-3 py-2 rounded-lg">
+                    💬 Retour admin : {route.adminFeedback}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Create Route (Nouveau Parcours) ──────────────────────────────────
+function CreateRoute({ onDone }: { onDone: () => void }) {
+  const [form, setForm] = useState({
+    title: "", description: "", city: "", country: "France",
+    category: "decouverte" as const, durationMinutes: 120, notes: "",
+  });
+  const [steps, setSteps] = useState<Array<{ order: number; establishmentName: string; type: string; address: string; notes: string; durationMinutes: number }>>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const createMutation = trpc.team.createRoute.useMutation({
+    onSuccess: () => { toast.success("Parcours créé avec succès !"); onDone(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const addStep = () => setSteps(prev => [...prev, { order: prev.length + 1, establishmentName: "", type: "lieu", address: "", notes: "", durationMinutes: 30 }]);
+  const removeStep = (i: number) => setSteps(prev => prev.filter((_, idx) => idx !== i));
+  const updateStep = (i: number, field: string, value: string | number) => setSteps(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
+
+  const handleSubmit = async () => {
+    if (!form.title || !form.city) return toast.error("Titre et ville requis");
+    setIsSubmitting(true);
+    try {
+      await createMutation.mutateAsync({ ...form, steps, durationMinutes: form.durationMinutes });
+    } finally { setIsSubmitting(false); }
+  };
+
+  const categoryOptions = [
+    { value: "decouverte", label: "🗺️ Découverte de la ville" },
+    { value: "gastronomie", label: "🍽️ Circuit gastronomique" },
+    { value: "plages", label: "🏖️ Plages & balnéaire" },
+    { value: "culture", label: "🏛️ Culture & patrimoine" },
+    { value: "shopping", label: "🛍️ Shopping & boutiques" },
+    { value: "nature", label: "🌿 Nature & randonnée" },
+    { value: "nightlife", label: "🌙 Vie nocturne" },
+    { value: "wellness", label: "🧖 Bien-être & spa" },
+    { value: "business", label: "💼 Parcours business" },
+    { value: "famille", label: "👨‍👩‍👧 Famille & enfants" },
+    { value: "autre", label: "📋 Autre" },
+  ];
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground mb-1">Créer un parcours local</h2>
+        <p className="text-sm text-muted-foreground">Composez un itinéraire thématique avec plusieurs étapes dans une ville</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Titre du parcours *</label>
+          <Input placeholder="Ex : Les incontournables de Barcelone" value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Ville *</label>
+            <Input placeholder="Ex : Barcelone" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Pays</label>
+            <Input placeholder="Ex : Espagne" value={form.country} onChange={e => setForm(p => ({ ...p, country: e.target.value }))} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Catégorie</label>
+            <select
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground"
+              value={form.category}
+              onChange={e => setForm(p => ({ ...p, category: e.target.value as any }))}
+            >
+              {categoryOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Durée estimée (minutes)</label>
+            <Input type="number" min={30} max={1440} value={form.durationMinutes} onChange={e => setForm(p => ({ ...p, durationMinutes: parseInt(e.target.value) || 120 }))} />
+          </div>
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Description</label>
+          <Textarea placeholder="Décrivez ce parcours en quelques phrases..." value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} />
+        </div>
+      </div>
+
+      {/* Étapes */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-foreground">Étapes du parcours ({steps.length})</h3>
+          <Button variant="outline" size="sm" onClick={addStep} className="gap-1 text-xs">
+            <Plus className="w-3 h-3" /> Ajouter une étape
+          </Button>
+        </div>
+        <div className="space-y-3">
+          {steps.map((step, i) => (
+            <div key={i} className="bg-card/20 border border-border/30 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-medium text-primary">Étape {i + 1}</span>
+                <button onClick={() => removeStep(i)} className="text-muted-foreground hover:text-red-400 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="col-span-2">
+                  <Input placeholder="Nom du lieu *" value={step.establishmentName} onChange={e => updateStep(i, "establishmentName", e.target.value)} className="text-sm" />
+                </div>
+                <Input placeholder="Adresse" value={step.address} onChange={e => updateStep(i, "address", e.target.value)} className="text-sm" />
+                <Input type="number" placeholder="Durée (min)" value={step.durationMinutes} onChange={e => updateStep(i, "durationMinutes", parseInt(e.target.value) || 30)} className="text-sm" />
+                <div className="col-span-2">
+                  <Input placeholder="Notes / conseils" value={step.notes} onChange={e => updateStep(i, "notes", e.target.value)} className="text-sm" />
+                </div>
+              </div>
+            </div>
+          ))}
+          {steps.length === 0 && (
+            <div className="text-center py-6 border border-dashed border-border/30 rounded-xl">
+              <p className="text-xs text-muted-foreground">Cliquez sur "Ajouter une étape" pour composer votre parcours</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">Notes internes (optionnel)</label>
+        <Textarea placeholder="Remarques, conseils pour l'admin..." value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} />
+      </div>
+
+      <Button onClick={handleSubmit} disabled={isSubmitting || !form.title || !form.city} className="w-full gap-2 bg-primary hover:bg-primary/90">
+        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+        Soumettre le parcours
+      </Button>
+    </div>
+  );
+}
+
+// ─── Operator Messages (Messagerie Admin ↔ Opérateur) ─────────────────
+function OperatorMessages({ user }: { user: any }) {
+  // L'opérateur terrain parle avec l'admin (owner)
+  // On utilise userId=1 comme admin par défaut (le fondateur)
+  const [adminUserId] = useState(1);
+  const [newMsg, setNewMsg] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { data: messages, refetch } = trpc.team.getMessages.useQuery(
+    { withUserId: adminUserId },
+    { refetchInterval: 15000 }
+  );
+
+  const replyMutation = trpc.team.replyMessage.useMutation({
+    onSuccess: () => { setNewMsg(""); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = () => {
+    if (!newMsg.trim()) return;
+    replyMutation.mutate({ toUserId: adminUserId, content: newMsg.trim() });
+  };
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-280px)] min-h-[400px]">
+      <div className="bg-card/20 border border-border/30 rounded-t-xl px-4 py-3 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">A</div>
+        <div>
+          <p className="text-sm font-medium text-foreground">Direction Baymora</p>
+          <p className="text-xs text-muted-foreground">Directives & coordination terrain</p>
+        </div>
+        <button onClick={() => refetch()} className="ml-auto text-muted-foreground hover:text-foreground transition-colors">
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto bg-card/10 border-x border-border/30 p-4 space-y-3">
+        {!messages || messages.length === 0 ? (
+          <div className="text-center py-12">
+            <MessageSquare className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">Aucun message pour l'instant</p>
+            <p className="text-xs text-muted-foreground mt-1">La direction vous enverra des directives ici</p>
+          </div>
+        ) : (
+          (messages as any[]).map((msg: any) => {
+            const isFromMe = msg.fromUserId === user.id;
+            return (
+              <div key={msg.id} className={`flex ${isFromMe ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm ${
+                  isFromMe
+                    ? "bg-primary/20 text-foreground rounded-br-sm"
+                    : "bg-card/40 border border-border/30 text-foreground rounded-bl-sm"
+                }`}>
+                  <p>{msg.content}</p>
+                  <p className="text-xs text-muted-foreground mt-1 text-right">
+                    {new Date(msg.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                    {!isFromMe && !msg.isRead && <span className="ml-1 text-amber-400">●</span>}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="bg-card/20 border border-border/30 border-t-0 rounded-b-xl p-3 flex gap-2">
+        <Input
+          placeholder="Répondre à la direction..."
+          value={newMsg}
+          onChange={e => setNewMsg(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
+          className="flex-1 text-sm"
+        />
+        <Button
+          size="sm"
+          onClick={handleSend}
+          disabled={!newMsg.trim() || replyMutation.isPending}
+          className="bg-primary hover:bg-primary/90 px-3"
+        >
+          {replyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        </Button>
       </div>
     </div>
   );
