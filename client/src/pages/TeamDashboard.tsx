@@ -2072,7 +2072,7 @@ function CreateRoute({ onDone }: { onDone: () => void }) {
   const setFormSave = (updater: (p: typeof form) => typeof form) =>
     setForm(prev => { const next = updater(prev); setTimeout(() => saveDraft(next, steps), 0); return next; });
   const setStepsSave = (updater: (p: typeof steps) => typeof steps) =>
-    setSteps(prev => { const next = updater(prev); setTimeout(() => saveDraft(form, next), 0); return next; });
+    setSteps((prev: typeof steps) => { const next = updater(prev); setTimeout(() => saveDraft(form, next), 0); return next; });
 
   const createMutation = trpc.team.createRoute.useMutation({
     onSuccess: () => {
