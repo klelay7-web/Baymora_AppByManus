@@ -589,10 +589,17 @@
 - [x] Chat.tsx : overlay mobile pour fermeture par tap
 
 ## Phase 23b — Proactivité MAYA & ARIA
-- [ ] claudeService.ts : MAYA ultra-proactive — mène les échanges, propose toujours plus, jamais d'attente
-- [ ] claudeService.ts : QR riches systématiques — 4-6 suggestions cliquables après chaque réponse
-- [ ] Pilotage.tsx : ARIA proactive — rapports spontanés, ordres aux agents, alertes sans qu'on demande
+- [x] claudeService.ts : MAYA ultra-proactive — mène les échanges, propose toujours plus, jamais d'attente
+- [x] claudeService.ts : QR riches systématiques — 4-6 suggestions cliquables après chaque réponse
+- [x] claudeService.ts : Règle N°7 porte de sortie libre impérative ("Autre chose")
 
 ## Phase 23c — Liberté client dans les QR de MAYA
-- [ ] claudeService.ts : MAYA inclut toujours une option "Autre / votre idée" dans chaque QR
-- [ ] claudeService.ts : MAYA se repositionne immédiatement sur l'intention libre du client
+- [x] claudeService.ts : MAYA inclut toujours une option "💬 Autre chose" dans chaque QR
+- [x] claudeService.ts : MAYA se repositionne immédiatement sur l'intention libre du client
+
+## Phase 24 — Accès total ARIA en écriture DB
+- [x] Cartographier les tables que ARIA doit pouvoir écrire (seoCards, establishments, socialMediaPosts, contentCalendar)
+- [x] Procédures tRPC admin : aria.getAllSeoCardsAria, aria.getAllEstablishmentsAria, aria.enrichSeoCard, aria.createSeoCardAria, aria.createEstablishmentAria, aria.updateEstablishmentAria, aria.saveSocialPostAria, aria.createContentItemAria, aria.getContentCalendarAria, aria.updateContentStatusAria
+- [x] Interface Pilotage ARIA : bouton "Enregistrer en base" + "Copier" sur chaque message ARIA long
+- [x] Détection intelligente du type de contenu (reel/script → socialPost, fiche SEO → seoCard, autre → contentCalendar)
+- [x] Zéro erreur TypeScript

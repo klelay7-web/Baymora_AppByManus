@@ -2165,6 +2165,317 @@ export const appRouter = router({
         const instructions = await getAriaInstructions(input.userId);
         return { profile, ariaInstructions: instructions };
       }),
+
+    // ─── ACCÈS TOTAL ARIA EN ÉCRITURE ─────────────────────────────────────────
+    // ARIA peut lire toutes les fiches SEO
+    getAllSeoCardsAria: ownerProcedure.query(async () => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { desc } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const cards = await db.select({
+        id: schema.seoCards.id,
+        title: schema.seoCards.title,
+        slug: schema.seoCards.slug,
+        city: schema.seoCards.city,
+        category: schema.seoCards.category,
+        status: schema.seoCards.status,
+        viewCount: schema.seoCards.viewCount,
+        publishedAt: schema.seoCards.publishedAt,
+        rating: schema.seoCards.rating,
+        description: schema.seoCards.description,
+        highlights: schema.seoCards.highlights,
+        metaTitle: schema.seoCards.metaTitle,
+        metaDescription: schema.seoCards.metaDescription,
+        tags: schema.seoCards.tags,
+        imageUrl: schema.seoCards.imageUrl,
+      }).from(schema.seoCards).orderBy(desc(schema.seoCards.createdAt));
+      await conn.end();
+      return cards;
+    }),
+
+    // ARIA peut lire tous les établissements
+    getAllEstablishmentsAria: ownerProcedure.query(async () => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { desc } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const rows = await db.select({
+        id: schema.establishments.id,
+        name: schema.establishments.name,
+        slug: schema.establishments.slug,
+        city: schema.establishments.city,
+        country: schema.establishments.country,
+        category: schema.establishments.category,
+        status: schema.establishments.status,
+        rating: schema.establishments.rating,
+        viewCount: schema.establishments.viewCount,
+        description: schema.establishments.description,
+        shortDescription: schema.establishments.shortDescription,
+        address: schema.establishments.address,
+        website: schema.establishments.website,
+        phone: schema.establishments.phone,
+      }).from(schema.establishments).orderBy(desc(schema.establishments.createdAt));
+      await conn.end();
+      return rows;
+    }),
+
+    // ARIA peut enrichir une fiche SEO existante directement
+    enrichSeoCard: ownerProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().optional(),
+        content: z.string().optional(),
+        excerpt: z.string().optional(),
+        metaTitle: z.string().optional(),
+        metaDescription: z.string().optional(),
+        tags: z.string().optional(),
+        imageUrl: z.string().optional(),
+        galleryUrls: z.string().optional(),
+        viralVideos: z.string().optional(),
+        affiliateLinks: z.string().optional(),
+        rating: z.string().optional(),
+        status: z.enum(["draft", "published", "archived"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const { id, ...updates } = input;
+        const cleanUpdates: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(updates)) {
+          if (v !== undefined) cleanUpdates[k] = v;
+        }
+        if (cleanUpdates.status === "published") {
+          cleanUpdates.publishedAt = new Date();
+        }
+        await db.update(schema.seoCards).set(cleanUpdates).where(eq(schema.seoCards.id, id));
+        const [updated] = await db.select().from(schema.seoCards).where(eq(schema.seoCards.id, id));
+        await conn.end();
+        return { success: true, card: updated };
+      }),
+
+    // ARIA peut créer une fiche SEO complète
+    createSeoCardAria: ownerProcedure
+      .input(z.object({
+        establishmentId: z.number().optional(),
+        title: z.string(),
+        slug: z.string(),
+        city: z.string(),
+        country: z.string(),
+        category: z.string(),
+        content: z.string(),
+        excerpt: z.string().optional(),
+        metaTitle: z.string().optional(),
+        metaDescription: z.string().optional(),
+        imageUrl: z.string().optional(),
+        tags: z.string().optional(),
+        rating: z.string().optional(),
+        priceLevel: z.enum(["budget", "moderate", "upscale", "luxury"]).default("luxury"),
+        status: z.enum(["draft", "published", "archived"]).default("draft"),
+        affiliateLinks: z.string().optional(),
+        viralVideos: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const insertData = {
+          ...input,
+          generatedBy: "ai" as const,
+          publishedAt: input.status === "published" ? new Date() : undefined,
+        };
+        const [result] = await db.insert(schema.seoCards).values(insertData as any);
+        await conn.end();
+        return { success: true, id: (result as any).insertId };
+      }),
+
+    // ARIA peut créer un établissement directement
+    createEstablishmentAria: ownerProcedure
+      .input(z.object({
+        name: z.string(),
+        slug: z.string(),
+        category: z.enum(["restaurant", "hotel", "bar", "spa", "museum", "park", "beach", "nightclub", "shopping", "transport", "activity", "experience", "wellness"]),
+        city: z.string(),
+        country: z.string(),
+        description: z.string(),
+        shortDescription: z.string().optional(),
+        address: z.string().optional(),
+        phone: z.string().optional(),
+        website: z.string().optional(),
+        priceRange: z.string().optional(),
+        priceLevel: z.enum(["budget", "moderate", "upscale", "luxury"]).default("upscale"),
+        rating: z.string().optional(),
+        heroImageUrl: z.string().optional(),
+        tags: z.string().optional(),
+        highlights: z.string().optional(),
+        anecdotes: z.string().optional(),
+        thingsToKnow: z.string().optional(),
+        affiliateLinks: z.string().optional(),
+        metaTitle: z.string().optional(),
+        metaDescription: z.string().optional(),
+        status: z.enum(["draft", "published", "archived"]).default("draft"),
+        subcategory: z.string().optional(),
+        region: z.string().optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const [result] = await db.insert(schema.establishments).values({ ...input, generatedBy: "ai" } as any);
+        await conn.end();
+        return { success: true, id: (result as any).insertId };
+      }),
+
+    // ARIA peut mettre à jour un établissement existant
+    updateEstablishmentAria: ownerProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        shortDescription: z.string().optional(),
+        address: z.string().optional(),
+        phone: z.string().optional(),
+        website: z.string().optional(),
+        priceRange: z.string().optional(),
+        rating: z.string().optional(),
+        heroImageUrl: z.string().optional(),
+        tags: z.string().optional(),
+        highlights: z.string().optional(),
+        anecdotes: z.string().optional(),
+        thingsToKnow: z.string().optional(),
+        affiliateLinks: z.string().optional(),
+        metaTitle: z.string().optional(),
+        metaDescription: z.string().optional(),
+        status: z.enum(["draft", "published", "archived"]).optional(),
+        viralVideos: z.string().optional(),
+        openingHours: z.string().optional(),
+        reviews: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const { id, ...updates } = input;
+        const cleanUpdates: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(updates)) {
+          if (v !== undefined) cleanUpdates[k] = v;
+        }
+        if (cleanUpdates.status === "published") {
+          cleanUpdates.publishedAt = new Date();
+        }
+        await db.update(schema.establishments).set(cleanUpdates).where(eq(schema.establishments.id, id));
+        const [updated] = await db.select().from(schema.establishments).where(eq(schema.establishments.id, id));
+        await conn.end();
+        return { success: true, establishment: updated };
+      }),
+
+    // ARIA peut enregistrer un post social media (script vidéo, carrousel, reel...)
+    saveSocialPostAria: ownerProcedure
+      .input(z.object({
+        seoCardId: z.number().optional(),
+        establishmentId: z.number().optional(),
+        platform: z.enum(["instagram", "tiktok", "linkedin", "twitter"]),
+        contentType: z.enum(["carousel", "reel", "story", "post", "script"]),
+        title: z.string().optional(),
+        content: z.string(),
+        hashtags: z.string().optional(),
+        mediaUrls: z.string().optional(),
+        status: z.enum(["draft", "scheduled", "published", "failed"]).default("draft"),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const [result] = await db.insert(schema.socialMediaPosts).values(input as any);
+        await conn.end();
+        return { success: true, id: (result as any).insertId };
+      }),
+
+    // ARIA peut créer un contenu dans le calendrier éditorial
+    createContentItemAria: ownerProcedure
+      .input(z.object({
+        title: z.string(),
+        contentType: z.enum(["instagram_post", "instagram_reel", "instagram_story", "instagram_carousel", "tiktok_video", "linkedin_post", "youtube_video", "twitter_post"]),
+        platform: z.enum(["instagram", "tiktok", "linkedin", "twitter", "youtube", "blog"]),
+        topic: z.string().optional(),
+        brief: z.string().optional(),
+        generatedContent: z.string().optional(),
+        scheduledDate: z.string(),
+        scheduledTime: z.string().optional(),
+        status: z.enum(["idea", "generating", "review", "approved", "scheduled", "published", "failed"]).default("review"),
+        linkedSeoCardIds: z.string().optional(),
+        blogContent: z.string().optional(),
+        blogSeoCity: z.string().optional(),
+        blogKeywords: z.string().optional(),
+        blogSlug: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const [result] = await db.insert(schema.contentCalendar).values(input as any);
+        await conn.end();
+        return { success: true, id: (result as any).insertId };
+      }),
+
+    // ARIA peut lire le calendrier éditorial complet
+    getContentCalendarAria: ownerProcedure.query(async () => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { desc } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const rows = await db.select().from(schema.contentCalendar).orderBy(desc(schema.contentCalendar.scheduledDate));
+      await conn.end();
+      return rows;
+    }),
+
+    // ARIA peut mettre à jour le statut d'un contenu calendrier
+    updateContentStatusAria: ownerProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(["idea", "generating", "review", "approved", "scheduled", "published", "failed"]),
+        generatedContent: z.string().optional(),
+        performance: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const { id, ...updates } = input;
+        const cleanUpdates: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(updates)) {
+          if (v !== undefined) cleanUpdates[k] = v;
+        }
+        await db.update(schema.contentCalendar).set(cleanUpdates).where(eq(schema.contentCalendar.id, id));
+        await conn.end();
+        return { success: true };
+      }),
   }),
 
   // ─── ATLAS — Agent Affiliation & Partenariats ──────────────────────────────

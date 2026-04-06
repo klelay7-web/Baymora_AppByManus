@@ -254,6 +254,51 @@ export default function Pilotage() {
     toast.success("Lien copié !");
   };
 
+  // ─── Mutations accès total ARIA en écriture ───────────────────────────────────────────────────────────────────────
+  const createSeoCardMutation = trpc.aria.createSeoCardAria.useMutation({
+    onSuccess: (d) => toast.success(`✅ Fiche SEO créée en base (ID: ${d.id})`),
+    onError: (e) => toast.error(e.message),
+  });
+  const saveSocialPostMutation = trpc.aria.saveSocialPostAria.useMutation({
+    onSuccess: (d) => toast.success(`✅ Post social enregistré (ID: ${d.id})`),
+    onError: (e) => toast.error(e.message),
+  });
+  const createContentItemMutation = trpc.aria.createContentItemAria.useMutation({
+    onSuccess: (d) => toast.success(`✅ Contenu calendrier enregistré (ID: ${d.id})`),
+    onError: (e) => toast.error(e.message),
+  });
+  const [savingMsgIdx, setSavingMsgIdx] = useState<number | null>(null);
+
+  // Sauvegarde intelligente : détecte le type de contenu ARIA et enregistre en base
+  const saveAriaOutput = async (msgContent: string, msgIdx: number) => {
+    setSavingMsgIdx(msgIdx);
+    try {
+      const lower = msgContent.toLowerCase();
+      const today = new Date().toISOString().split("T")[0];
+      const titleLine = msgContent.split("\n")[0].replace(/[#*]/g, "").replace(/[\uD800-\uDFFF]/g, "").trim().slice(0, 80) || "Contenu ARIA";
+      if (lower.includes("reel") || lower.includes("tiktok") || lower.includes("script") || lower.includes("vidéo")) {
+        const platform = lower.includes("tiktok") ? "tiktok" : "instagram";
+        const contentType = lower.includes("reel") ? "reel" : "script";
+        await saveSocialPostMutation.mutateAsync({ platform, contentType, title: titleLine, content: msgContent, status: "draft" });
+      } else if (lower.includes("fiche seo") || lower.includes("meta title") || lower.includes("meta description") || lower.includes("slug")) {
+        const slugBase = titleLine.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        await createSeoCardMutation.mutateAsync({
+          title: titleLine, slug: slugBase + "-" + Date.now(),
+          city: "Paris", country: "France", category: "hotel",
+          content: msgContent, status: "draft",
+        });
+      } else {
+        // Par défaut : calendrier éditorial
+        await createContentItemMutation.mutateAsync({
+          title: titleLine, contentType: "instagram_post", platform: "instagram",
+          generatedContent: msgContent, scheduledDate: today, status: "review",
+        });
+      }
+    } finally {
+      setSavingMsgIdx(null);
+    }
+  };
+
   useEffect(() => {
     if (history && history.length > 0 && messages.length === 0) {
       setMessages(history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content, timestamp: new Date() })));
@@ -429,6 +474,28 @@ export default function Pilotage() {
                         <p>{msg.content}</p>
                       )}
                     </div>
+                    {/* Bouton Enregistrer en base — uniquement sur les messages ARIA longs */}
+                    {msg.role === "assistant" && msg.content.length > 200 && (
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <button
+                          onClick={() => saveAriaOutput(msg.content, i)}
+                          disabled={savingMsgIdx === i}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 hover:border-amber-500/40 transition-all disabled:opacity-50"
+                        >
+                          {savingMsgIdx === i ? (
+                            <><Loader2 className="w-3 h-3 animate-spin" /> Enregistrement...</>
+                          ) : (
+                            <><BadgeCheck className="w-3 h-3" /> Enregistrer en base</>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(msg.content); toast.success("Copié !"); }}
+                          className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/70 border border-white/10 transition-all"
+                        >
+                          <Copy className="w-3 h-3" /> Copier
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
