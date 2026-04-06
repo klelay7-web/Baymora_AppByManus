@@ -1006,6 +1006,11 @@ export const appRouter = router({
       }),
 
     // ─── Media (Photos & Vidéos) ────────────────────────────────────
+    getMedia: teamProcedure
+      .input(z.object({ fieldReportId: z.number() }))
+      .query(async ({ input }) => {
+        return getFieldReportMediaItems(input.fieldReportId);
+      }),
     addMedia: teamProcedure
       .input(z.object({
         fieldReportId: z.number(),

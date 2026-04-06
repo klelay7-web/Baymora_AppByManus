@@ -196,6 +196,7 @@ export default function TeamDashboard() {
 // ─── Reports List ─────────────────────────────────────────────────────
 function ReportsList() {
   const { data: reports, isLoading } = trpc.fieldReports.getMyReports.useQuery();
+  const [expandedMediaId, setExpandedMediaId] = useState<number | null>(null);
 
   const statusColors: Record<string, string> = {
     draft: "bg-gray-500/10 text-gray-400",
@@ -249,12 +250,191 @@ function ReportsList() {
           {r.description && (
             <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{r.description}</p>
           )}
-          <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-            <Clock className="w-3 h-3" />
-            {new Date(r.updatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="w-3 h-3" />
+              {new Date(r.updatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+            </div>
+            <button
+              onClick={() => setExpandedMediaId(expandedMediaId === r.id ? null : r.id)}
+              className="flex items-center gap-1.5 text-xs text-primary/70 hover:text-primary bg-primary/5 hover:bg-primary/10 px-2.5 py-1 rounded-full transition-colors"
+            >
+              <Camera className="w-3 h-3" />
+              {expandedMediaId === r.id ? "Fermer médias" : "Photos & Vidéos"}
+            </button>
           </div>
+          {/* Panneau médias inline */}
+          {expandedMediaId === r.id && (
+            <div className="border-t border-border/30 bg-background/30 p-4">
+              <ReportMediaPanel reportId={r.id} />
+            </div>
+          )}
         </div>
       ))}
+    </div>
+  );
+}
+
+// ─── Panneau médias inline pour une fiche existante ──────────────────
+function ReportMediaPanel({ reportId }: { reportId: number }) {
+  const utils = trpc.useUtils();
+  const { data: mediaItems, isLoading } = trpc.fieldReports.getMedia.useQuery({ fieldReportId: reportId });
+  const addMediaMutation = trpc.fieldReports.addMedia.useMutation({
+    onSuccess: () => utils.fieldReports.getMedia.invalidate({ fieldReportId: reportId }),
+  });
+  const removeMediaMutation = trpc.fieldReports.removeMedia.useMutation({
+    onSuccess: () => utils.fieldReports.getMedia.invalidate({ fieldReportId: reportId }),
+  });
+
+  const [pendingFiles, setPendingFiles] = useState<{ file: File; previewUrl: string; type: "photo" | "video"; caption: string; category: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
+  const [lightbox, setLightbox] = useState<{ url: string; type: "photo" | "video" } | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const addPendingFiles = (files: FileList) => {
+    const MAX_SIZE = 16 * 1024 * 1024;
+    const newPending = Array.from(files)
+      .filter(f => { if (f.size > MAX_SIZE) { toast.error(`${f.name} dépasse 16 Mo`); return false; } return true; })
+      .map(file => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+        type: (file.type.startsWith("video/") ? "video" : "photo") as "photo" | "video",
+        caption: file.name.replace(/\.[^.]+$/, ""),
+        category: "autre",
+      }));
+    setPendingFiles(prev => [...prev, ...newPending]);
+  };
+
+  const uploadAll = async () => {
+    if (pendingFiles.length === 0) return;
+    setUploading(true);
+    setUploadProgress({ done: 0, total: pendingFiles.length });
+    for (let i = 0; i < pendingFiles.length; i++) {
+      const pf = pendingFiles[i];
+      try {
+        const res = await fetch("/api/upload/field-report", {
+          method: "POST",
+          headers: { "Content-Type": pf.file.type, "x-file-name": encodeURIComponent(pf.file.name), "x-user-id": "operator" },
+          body: pf.file,
+          credentials: "include",
+        });
+        const { url } = await res.json();
+        if (url) {
+          await addMediaMutation.mutateAsync({ fieldReportId: reportId, type: pf.type, url, caption: pf.caption, category: pf.category as any });
+        }
+      } catch { toast.error(`Erreur lors de l'envoi de ${pf.file.name}`); }
+      setUploadProgress(prev => ({ ...prev, done: i + 1 }));
+    }
+    pendingFiles.forEach(pf => URL.revokeObjectURL(pf.previewUrl));
+    setPendingFiles([]);
+    setUploadProgress({ done: 0, total: 0 });
+    setUploading(false);
+    toast.success("Médias ajoutés avec succès !");
+  };
+
+  if (isLoading) return <div className="text-xs text-muted-foreground animate-pulse py-2">Chargement des médias...</div>;
+
+  return (
+    <div className="space-y-4">
+      {/* Zone de dépôt */}
+      <label
+        className={`block border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
+          dragOver ? "border-primary bg-primary/5" : "border-border/40 hover:border-primary/40"
+        }`}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={e => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files.length) addPendingFiles(e.dataTransfer.files); }}
+      >
+        <input type="file" multiple accept="image/*,video/*" className="hidden"
+          onChange={e => { if (e.target.files) addPendingFiles(e.target.files); (e.target as HTMLInputElement).value = ""; }}
+        />
+        <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+        <p className="text-xs text-muted-foreground">Cliquez ou glissez vos photos & vidéos (max 16 Mo)</p>
+        <p className="text-xs text-muted-foreground/60 mt-0.5">JPG, PNG, WebP, MP4, MOV, WebM</p>
+      </label>
+
+      {/* Fichiers en attente */}
+      {pendingFiles.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">{pendingFiles.length} fichier{pendingFiles.length > 1 ? "s" : ""} en attente</span>
+            <Button size="sm" onClick={uploadAll} disabled={uploading} className="h-7 text-xs gap-1">
+              {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+              {uploading ? `${uploadProgress.done}/${uploadProgress.total}` : "Envoyer tout"}
+            </Button>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {pendingFiles.map((pf, i) => (
+              <div key={i} className="relative group rounded-lg overflow-hidden bg-background/50 border border-border/30">
+                <div className="h-24 relative">
+                  {pf.type === "photo"
+                    ? <img src={pf.previewUrl} className="w-full h-full object-cover" alt="" />
+                    : <video src={pf.previewUrl} className="w-full h-full object-cover" muted />}
+                  <span className={`absolute top-1 left-1 text-[9px] px-1 py-0.5 rounded font-medium ${
+                    pf.type === "video" ? "bg-purple-500/80 text-white" : "bg-blue-500/80 text-white"
+                  }`}>{pf.type === "video" ? "VIDÉO" : "PHOTO"}</span>
+                  <button onClick={() => { URL.revokeObjectURL(pf.previewUrl); setPendingFiles(prev => prev.filter((_, idx) => idx !== i)); }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="p-1.5 space-y-1">
+                  <input value={pf.caption} onChange={e => setPendingFiles(prev => { const u = [...prev]; u[i] = { ...u[i], caption: e.target.value }; return u; })}
+                    placeholder="Légende" className="w-full h-6 px-1.5 rounded border border-border bg-background text-[10px] text-foreground" />
+                  <select value={pf.category} onChange={e => setPendingFiles(prev => { const u = [...prev]; u[i] = { ...u[i], category: e.target.value }; return u; })}
+                    className="w-full h-6 px-1 rounded border border-border bg-background text-[10px] text-foreground">
+                    {MEDIA_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Galerie des médias déjà uploadés */}
+      {mediaItems && mediaItems.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">{mediaItems.length} média{mediaItems.length > 1 ? "s" : ""} enregistré{mediaItems.length > 1 ? "s" : ""}</p>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {(mediaItems as any[]).map((item: any) => (
+              <div key={item.id} className="relative group rounded-lg overflow-hidden bg-background/50 border border-green-500/20">
+                <div className="h-24 relative cursor-pointer" onClick={() => setLightbox({ url: item.url, type: item.type })}>
+                  {item.type === "photo"
+                    ? <img src={item.url} className="w-full h-full object-cover" alt={item.caption || ""} />
+                    : <video src={item.url} className="w-full h-full object-cover" muted />}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                    <Eye className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <span className="absolute top-1 left-1 text-[9px] px-1 py-0.5 rounded bg-green-500/80 text-white font-medium">✓</span>
+                  <button onClick={e => { e.stopPropagation(); removeMediaMutation.mutate({ id: item.id }); }}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+                {item.caption && <p className="text-[10px] text-muted-foreground px-1.5 py-1 truncate">{item.caption}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : pendingFiles.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-3">Aucun média pour cette fiche. Ajoutez des photos ou vidéos ci-dessus.</p>
+      )}
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
+          <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 z-10">
+            <X className="w-5 h-5" />
+          </button>
+          <div className="max-w-5xl max-h-[90vh] w-full" onClick={e => e.stopPropagation()}>
+            {lightbox.type === "photo"
+              ? <img src={lightbox.url} className="w-full h-full object-contain max-h-[85vh] rounded-lg" alt="" />
+              : <video src={lightbox.url} controls className="w-full max-h-[85vh] rounded-lg" autoPlay />}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
