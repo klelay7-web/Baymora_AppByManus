@@ -133,21 +133,21 @@ export default function Home() {
           variants={stagger}
         >
           <motion.div variants={fadeUp} className="mb-6">
-            <div className="w-16 h-16 mx-auto rounded-full border-2 border-[#c8a94a]/40 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 mx-auto rounded-full border-2 border-[#c8a94a]/40 flex items-center justify-center mb-4 md:flex hidden">
               <span className="text-[#c8a94a] font-bold text-3xl" style={{ fontFamily: "'Playfair Display', serif" }}>B</span>
             </div>
           </motion.div>
 
           <motion.p
             variants={fadeUp}
-            className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs font-light mb-6"
+            className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs font-light mb-6 hidden md:block"
           >
             Conciergerie premium &amp; voyages d'exception
           </motion.p>
 
           <motion.h1
             variants={fadeUp}
-            className="font-['Playfair_Display'] text-4xl md:text-6xl lg:text-7xl leading-tight mb-8"
+            className="font-['Playfair_Display'] text-2xl md:text-6xl lg:text-7xl leading-tight mb-6"
             style={{ textShadow: '0 2px 20px rgba(0,0,0,0.7)' }}
           >
             Nous créons les{" "}
@@ -169,7 +169,7 @@ export default function Home() {
             <Button
               asChild
               size="lg"
-              className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] font-medium rounded-none px-10 py-6 text-base tracking-wider"
+              className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] font-medium rounded-xl px-10 py-6 text-base tracking-wider"
             >
               <a href={isAuthenticated ? "/chat" : getLoginUrl()}>
                 <MessageCircle className="mr-2 h-5 w-5" />
@@ -180,7 +180,7 @@ export default function Home() {
               asChild
               size="lg"
               variant="outline"
-              className="border-white/20 text-white hover:bg-white/5 rounded-none px-10 py-6 text-base tracking-wider"
+              className="border-white/20 text-white hover:bg-white/5 rounded-xl px-10 py-6 text-base tracking-wider"
             >
               <a href="/discover">
                 Explorer les destinations
@@ -190,7 +190,7 @@ export default function Home() {
           </motion.div>
 
           {/* Teaser gratuit */}
-          <motion.p variants={fadeUp} className="mt-6 text-white/40 text-sm">
+          <motion.p variants={fadeUp} className="mt-6 text-white/40 text-sm hidden md:block">
             Essai gratuit — Aucune carte bancaire requise
           </motion.p>
         </motion.div>
@@ -245,7 +245,7 @@ export default function Home() {
               <motion.div
                 key={i}
                 variants={fadeUp}
-                className="group p-8 border border-white/5 hover:border-[#c8a94a]/30 transition-all duration-500"
+                className="group p-8 border border-white/5 hover:border-[#c8a94a]/30 transition-all duration-500 rounded-2xl"
               >
                 <item.icon className="h-8 w-8 text-[#c8a94a] mb-6" />
                 <h3 className="font-['Playfair_Display'] text-xl mb-3">{item.title}</h3>
@@ -380,7 +380,7 @@ export default function Home() {
             <Button
               asChild
               variant="outline"
-              className="border-[#c8a94a]/30 text-[#c8a94a] hover:bg-[#c8a94a]/10 rounded-none px-8 py-5 tracking-wider"
+              className="border-[#c8a94a]/30 text-[#c8a94a] hover:bg-[#c8a94a]/10 rounded-xl px-8 py-5 tracking-wider"
             >
               <a href="/discover">
                 Voir toutes les inspirations
@@ -468,7 +468,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }}
-                className={`relative p-8 border transition-all duration-500 ${
+                className={`relative p-8 border transition-all duration-500 rounded-2xl ${
                   plan.accent
                     ? "border-[#c8a94a]/50 bg-[#c8a94a]/5"
                     : (plan as any).comingSoon
@@ -478,14 +478,14 @@ export default function Home() {
               >
                 {plan.badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-[#c8a94a] text-[#080c14] text-[10px] tracking-[0.15em] uppercase font-semibold px-4 py-1">
+                    <span className="bg-[#c8a94a] text-[#080c14] text-[10px] tracking-[0.15em] uppercase font-semibold px-4 py-1 rounded-full">
                       {plan.badge}
                     </span>
                   </div>
                 )}
                 {(plan as any).comingSoon && (
                   <div className="absolute top-4 right-4">
-                    <span className="bg-purple-500/20 text-purple-300 border border-purple-400/30 text-[9px] tracking-[0.1em] uppercase px-2 py-1">
+                    <span className="bg-purple-500/20 text-purple-300 border border-purple-400/30 text-[9px] tracking-[0.1em] uppercase px-2 py-1 rounded-full">
                       En cours de création
                     </span>
                   </div>
@@ -512,7 +512,7 @@ export default function Home() {
                 <Button
                   asChild
                   disabled={(plan as any).comingSoon}
-                  className={`w-full rounded-none py-5 tracking-wider ${
+                  className={`w-full rounded-xl py-5 tracking-wider ${
                     plan.accent
                       ? "bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a]"
                       : (plan as any).comingSoon
@@ -533,7 +533,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="mt-12 text-center p-8 border border-white/5"
+            className="mt-12 text-center p-8 border border-white/5 rounded-2xl"
           >
             <div className="flex items-center justify-center gap-3 mb-4">
               <Zap className="h-5 w-5 text-[#c8a94a]" />
@@ -549,7 +549,7 @@ export default function Home() {
                 { credits: "150", price: "29,99€" },
                 { credits: "500", price: "79,99€" },
               ].map((pack, i) => (
-                <div key={i} className="px-5 py-3 border border-white/10 hover:border-[#c8a94a]/30 transition-colors cursor-pointer">
+                <div key={i} className="px-5 py-3 border border-white/10 hover:border-[#c8a94a]/30 transition-colors cursor-pointer rounded-xl">
                   <span className="text-[#c8a94a] font-medium">{pack.credits}</span>
                   <span className="text-white/40 ml-1">crédits</span>
                   <span className="text-white/60 ml-2">{pack.price}</span>
@@ -655,14 +655,14 @@ export default function Home() {
             <motion.div variants={fadeUp} className="flex flex-wrap justify-center gap-6 text-sm text-white/30">
               {["Hôtellerie", "Gastronomie", "Transport", "Yachts", "Immobilier", "Bien-être", "Mode", "Événementiel", "Conciergerie", "Social Clubs", "Mariages & VIP", "Expériences"].map(
                 (cat) => (
-                  <span key={cat} className="px-4 py-2 border border-white/10 hover:border-[#c8a94a]/30 hover:text-[#c8a94a] transition-colors cursor-default">
+                  <span key={cat} className="px-4 py-2 border border-white/10 hover:border-[#c8a94a]/30 hover:text-[#c8a94a] transition-colors cursor-default rounded-full">
                     {cat}
                   </span>
                 )
               )}
             </motion.div>
             <motion.div variants={fadeUp} className="mt-10">
-              <Button className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none px-10 py-5 tracking-wider">
+              <Button className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-xl px-10 py-5 tracking-wider">
                 Devenir partenaire
               </Button>
             </motion.div>
@@ -697,7 +697,7 @@ export default function Home() {
               <Button
                 asChild
                 size="lg"
-                className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none px-12 py-6 text-base tracking-wider"
+                className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-xl px-12 py-6 text-base tracking-wider"
               >
                 <a href={isAuthenticated ? "/chat" : getLoginUrl()}>
                   <MessageCircle className="mr-2 h-5 w-5" />

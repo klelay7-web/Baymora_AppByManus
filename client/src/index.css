@@ -51,7 +51,7 @@
 
 /* Baymora Dark Theme — Bleu Nuit #080c14 + Or #c8a94a */
 :root {
-  --radius: 0.875rem; /* Angles iOS arrondis */
+  --radius: 1.25rem; /* Apple/Spotify style — rounded moderne */
   /* Dark by default for luxury feel */
   --primary: oklch(0.78 0.12 85);           /* Gold #c8a94a */
   --primary-foreground: oklch(0.10 0.02 260); /* Navy dark */

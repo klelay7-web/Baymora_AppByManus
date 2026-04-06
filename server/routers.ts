@@ -900,19 +900,54 @@ export const appRouter = router({
       }),
 
     // Admin: review report
+    // Admin: get pending reports for review
+    getPendingReviews: adminProcedure.query(async () => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { eq, or, desc } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const reports = await db.select().from(schema.fieldReports)
+        .where(or(eq(schema.fieldReports.status, "submitted"), eq(schema.fieldReports.status, "review")))
+        .orderBy(desc(schema.fieldReports.submittedAt))
+        .limit(50);
+      await conn.end();
+      return reports;
+    }),
     review: adminProcedure
       .input(z.object({
         id: z.number(),
         action: z.enum(["approve", "reject"]),
         notes: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const status = input.action === "approve" ? "approved" : "rejected";
+        const report = await getFieldReportById(input.id);
+        if (!report) throw new TRPCError({ code: "NOT_FOUND", message: "Rapport non trouvé" });
         await updateFieldReport(input.id, {
           status,
           adminNotes: input.notes || null,
           reviewedAt: new Date(),
         });
+        // Notification automatique à l'opérateur terrain
+        if (report.userId) {
+          const { drizzle } = await import("drizzle-orm/mysql2");
+          const mysql = await import("mysql2/promise");
+          const schema = await import("../drizzle/schema");
+          const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+          const db = drizzle(conn);
+          const notifContent = input.action === "approve"
+            ? `✅ Votre fiche "${report.establishmentName}" a été approuvée et est maintenant publiée.${input.notes ? ` Note : ${input.notes}` : ""}`
+            : `❌ Votre fiche "${report.establishmentName}" a été rejetée.${input.notes ? ` Motif : ${input.notes}` : " Veuillez la corriger et la soumettre à nouveau."}` ;
+          await db.insert(schema.operatorMessages).values({
+            fromUserId: ctx.user.id,
+            toUserId: report.userId,
+            content: notifContent,
+            isRead: false,
+          });
+          await conn.end();
+        }
         return { success: true };
       }),
 
@@ -2441,9 +2476,37 @@ export const appRouter = router({
       const rows = await db.select().from(schema.operatorMessages)
         .where(and(eq(schema.operatorMessages.toUserId, ctx.user.id), eq(schema.operatorMessages.isRead, false)));
       await conn.end();
-      return { count: rows.length };
+       return { count: rows.length };
     }),
-
+    // Récupérer les dernières notifications (messages reçus)
+    getRecentNotifications: protectedProcedure.query(async ({ ctx }) => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { eq, desc } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const msgs = await db.select().from(schema.operatorMessages)
+        .where(eq(schema.operatorMessages.toUserId, ctx.user.id))
+        .orderBy(desc(schema.operatorMessages.createdAt))
+        .limit(20);
+      await conn.end();
+      return msgs;
+    }),
+    // Marquer toutes les notifications comme lues
+    markAllNotificationsRead: protectedProcedure.mutation(async ({ ctx }) => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { eq } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      await db.update(schema.operatorMessages)
+        .set({ isRead: true })
+        .where(eq(schema.operatorMessages.toUserId, ctx.user.id));
+      await conn.end();
+      return { success: true };
+    }),
     // Créer un parcours local
     createRoute: protectedProcedure
       .input(z.object({

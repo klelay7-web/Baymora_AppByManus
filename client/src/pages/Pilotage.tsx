@@ -234,6 +234,19 @@ export default function Pilotage() {
   const [selectedOperatorId, setSelectedOperatorId] = useState<number | null>(null);
   const [operatorMsgContent, setOperatorMsgContent] = useState("");
   const [grantTierUserId, setGrantTierUserId] = useState<number | null>(null);
+  // ─── Validation fiches terrain ────────────────────────────────────────
+  const [reviewNotes, setReviewNotes] = useState<Record<number, string>>({});
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const { data: pendingReports, refetch: refetchPendingReports } = trpc.fieldReports.getPendingReviews.useQuery();
+  const reviewMutation = trpc.fieldReports.review.useMutation({
+    onSuccess: (_data, vars) => {
+      toast.success(vars.action === "approve" ? "✅ Fiche approuvée — opérateur notifié" : "❌ Fiche rejetée — opérateur notifié");
+      refetchPendingReports();
+      setReviewingId(null);
+      setReviewNotes(n => { const c = { ...n }; delete c[vars.id]; return c; });
+    },
+    onError: (err) => toast.error(err.message),
+  });
   const copyInviteLink = async (link: string) => {
     await navigator.clipboard.writeText(link);
     setCopiedLink(true);
@@ -1103,6 +1116,96 @@ export default function Pilotage() {
                   <p className="text-xs text-white/30 mt-3">
                     LÉNA guide les membres terrain (Amin et collègues) à travers 10 étapes structurées pour créer des fiches complètes et SEO-optimisées.
                   </p>
+                </div>
+
+                {/* ─── Validation fiches terrain ─────────────────────────────────────────────── */}
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-amber-400" />
+                      Fiches à valider
+                      {pendingReports && pendingReports.length > 0 && (
+                        <span className="bg-amber-400 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                          {pendingReports.length}
+                        </span>
+                      )}
+                    </h3>
+                    <button onClick={() => refetchPendingReports()} className="text-white/30 hover:text-white/60 transition-colors">
+                      <RefreshCw size={12} />
+                    </button>
+                  </div>
+                  {!pendingReports || pendingReports.length === 0 ? (
+                    <div className="text-center py-6">
+                      <CheckCircle2 size={24} className="text-emerald-400/40 mx-auto mb-2" />
+                      <p className="text-xs text-white/30">Aucune fiche en attente de validation</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {pendingReports.map((report) => (
+                        <div key={report.id} className="bg-white/5 border border-white/10 rounded-xl p-3">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-white truncate">{report.establishmentName}</p>
+                              <p className="text-xs text-white/40 mt-0.5">{report.city}, {report.country} · {report.establishmentType}</p>
+                              {report.submittedAt && (
+                                <p className="text-xs text-amber-400/60 mt-0.5">
+                                  Soumis le {new Date(report.submittedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-[10px] bg-amber-400/10 text-amber-400 border border-amber-400/20 px-2 py-0.5 rounded-full shrink-0">
+                              En attente
+                            </span>
+                          </div>
+                          {report.description && (
+                            <p className="text-xs text-white/50 line-clamp-2 mb-3">{report.description}</p>
+                          )}
+                          {/* Zone notes + actions */}
+                          {reviewingId === report.id ? (
+                            <div className="space-y-2">
+                              <Input
+                                placeholder="Note pour l'opérateur (optionnel)..."
+                                value={reviewNotes[report.id] || ""}
+                                onChange={e => setReviewNotes(n => ({ ...n, [report.id]: e.target.value }))}
+                                className="h-8 text-xs bg-white/5 border-white/10"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => reviewMutation.mutate({ id: report.id, action: "approve", notes: reviewNotes[report.id] })}
+                                  disabled={reviewMutation.isPending}
+                                  className="flex-1 flex items-center justify-center gap-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs font-medium py-2 rounded-xl border border-emerald-500/30 transition-colors disabled:opacity-50"
+                                >
+                                  {reviewMutation.isPending ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />}
+                                  Approuver
+                                </button>
+                                <button
+                                  onClick={() => reviewMutation.mutate({ id: report.id, action: "reject", notes: reviewNotes[report.id] })}
+                                  disabled={reviewMutation.isPending}
+                                  className="flex-1 flex items-center justify-center gap-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium py-2 rounded-xl border border-red-500/30 transition-colors disabled:opacity-50"
+                                >
+                                  <XCircle size={10} />
+                                  Rejeter
+                                </button>
+                                <button
+                                  onClick={() => setReviewingId(null)}
+                                  className="text-white/30 hover:text-white/60 px-2"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setReviewingId(report.id)}
+                              className="w-full flex items-center justify-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-medium py-2 rounded-xl border border-amber-500/20 transition-colors"
+                            >
+                              <Shield size={11} /> Examiner cette fiche
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 

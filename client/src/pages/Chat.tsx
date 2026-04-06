@@ -419,7 +419,7 @@ function PlanPanel({ plan, conversationId }: { plan: PlanData; conversationId?: 
         <Button
           onClick={handleSave}
           disabled={saveParcours.isPending || saved}
-          className={`w-full rounded-none text-xs transition-all ${
+          className={`w-full rounded-xl text-xs transition-all ${
             saved
               ? "bg-emerald-600 text-white hover:bg-emerald-600"
               : "bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a]"
@@ -428,7 +428,7 @@ function PlanPanel({ plan, conversationId }: { plan: PlanData; conversationId?: 
           <Bookmark className="mr-2 h-3 w-3" />
           {saved ? "✓ Parcours enregistré" : saveParcours.isPending ? "Enregistrement..." : "Enregistrer ce plan"}
         </Button>
-        <Button variant="outline" className="w-full border-white/20 text-white rounded-none text-xs">
+        <Button variant="outline" className="w-full border-white/20 text-white rounded-xl text-xs">
           <Calendar className="mr-2 h-3 w-3" /> Sync Google Calendrier
         </Button>
       </div>
@@ -548,16 +548,16 @@ function RightPanel({
                   <div className="space-y-2 pt-2">
                     {selectedPlace.bookingUrl && (
                       <Button
-                        className="w-full bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none text-xs"
+                        className="w-full bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-xl text-xs"
                         onClick={() => window.open(selectedPlace.bookingUrl, "_blank")}
                       >
                         <ExternalLink className="mr-2 h-3 w-3" /> Réserver en ligne
                       </Button>
                     )}
-                    <Button variant="outline" className="w-full border-white/20 text-white rounded-none text-xs">
+                    <Button variant="outline" className="w-full border-white/20 text-white rounded-xl text-xs">
                       <Star className="mr-2 h-3 w-3" /> Ajouter aux favoris
                     </Button>
-                    <Button variant="outline" className="w-full border-white/20 text-white rounded-none text-xs">
+                    <Button variant="outline" className="w-full border-white/20 text-white rounded-xl text-xs">
                       <Navigation className="mr-2 h-3 w-3" /> Ajouter au parcours
                     </Button>
                   </div>
@@ -1284,7 +1284,7 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* ─── Right Panel ─── */}
+      {/* ─── Right Panel desktop ─── */}
       <AnimatePresence>
         {showRightPanel && (
           <motion.div
@@ -1305,6 +1305,59 @@ export default function Chat() {
               }}
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Right Panel mobile drawer ─── */}
+      <AnimatePresence>
+        {showRightPanel && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+            className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-[#0a0f1e] border-t border-white/10 rounded-t-2xl shadow-2xl"
+            style={{ maxHeight: "85vh" }}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-white/20" />
+            </div>
+            {/* Header drawer */}
+            <div className="flex items-center justify-between px-4 pb-2">
+              <span className="text-sm font-semibold text-white/80">Carte & Détails</span>
+              <button
+                onClick={() => setShowRightPanel(false)}
+                className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="overflow-y-auto" style={{ maxHeight: "calc(85vh - 70px)" }}>
+              <RightPanel
+                selectedPlace={selectedPlace}
+                allPlaces={allPlaces}
+                currentPlan={latestPlan}
+                onClose={() => setShowRightPanel(false)}
+                onPlaceClick={(p) => {
+                  setSelectedPlace(p);
+                  setShowRightPanel(true);
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Overlay mobile */}
+      <AnimatePresence>
+        {showRightPanel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowRightPanel(false)}
+          />
         )}
       </AnimatePresence>
 

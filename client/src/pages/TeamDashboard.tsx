@@ -250,6 +250,42 @@ function ReportsList() {
           {r.description && (
             <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{r.description}</p>
           )}
+          {/* ─── Dashboard SEO — visible si approuvé ou publié */}
+          {(r.status === "approved" || r.status === "published") && (
+            <div className="mt-3 pt-3 border-t border-border/20">
+              <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                <Eye className="w-3 h-3" /> Performance SEO
+              </p>
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                <div className="bg-primary/5 rounded-xl p-2 text-center">
+                  <p className="text-[10px] text-muted-foreground">👁 Vues</p>
+                  <p className="text-sm font-semibold text-foreground">{r.viewCount ?? 0}</p>
+                </div>
+                <div className="bg-primary/5 rounded-xl p-2 text-center">
+                  <p className="text-[10px] text-muted-foreground">📅 Publiée</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {r.publishedAt ? new Date(r.publishedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "—"}
+                  </p>
+                </div>
+                <div className="bg-primary/5 rounded-xl p-2 text-center">
+                  <p className="text-[10px] text-muted-foreground">📈 Évolution</p>
+                  <p className="text-sm font-semibold text-emerald-400">
+                    {(r.viewCount ?? 0) > 50 ? `⬆ ${r.viewCount}` : (r.viewCount ?? 0) > 0 ? `+${r.viewCount}` : "Nouveau"}
+                  </p>
+                </div>
+              </div>
+              {r.slug && (
+                <a
+                  href={`/discover/${r.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 text-xs text-primary/70 hover:text-primary bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded-full transition-colors w-full"
+                >
+                  <Eye className="w-3 h-3" /> Voir la fiche publiée
+                </a>
+              )}
+            </div>
+          )}
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Clock className="w-3 h-3" />

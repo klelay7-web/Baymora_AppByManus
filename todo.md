@@ -553,3 +553,42 @@
 - [ ] Contenu généraliste — remplacer références "chirurgie esthétique Turquie" par exemples universels
 - [ ] Badge validation Théo dans Pilotage > Terrain (vert = validé, orange = en attente)
 - [ ] Schéma DB : table operator_messages, operator_field_reports (fiches terrain), operator_routes (parcours)
+
+## Phase 23 — Design Apple/Spotify + Évolutions Majeures
+
+### Design global rounded (Apple/Spotify)
+- [ ] index.css : variables globales rounded
+- [ ] Home.tsx : pills tags rounded-full, cards rounded-2xl, boutons rounded-xl
+- [ ] Pricing.tsx : boutons crédits rounded-xl, cards forfaits rounded-2xl
+- [ ] Services.tsx : pills catégories rounded-full, bouton "Devenir partenaire" rounded-xl
+- [ ] Chat.tsx : pills QR rounded-full, cards établissements rounded-2xl
+- [ ] TeamDashboard.tsx : badges rounded-full, boutons rounded-xl
+- [ ] Pilotage.tsx : badges rounded-full, boutons rounded-xl
+
+### Hero mobile allégé
+- [ ] Home.tsx : masquer logo B + tag CONCIERGERIE sur mobile, titre text-2xl mobile
+
+### Cloche notifications
+- [x] routers.ts : procédure team.getUnreadCount (existait déjà)
+- [x] routers.ts : getRecentNotifications + markAllNotificationsRead
+- [x] MobileHeader.tsx : cloche → drawer notifications messages non lus + badge rouge
+
+### Validation fiches terrain (Pilotage)
+- [x] routers.ts : procédure fieldReports.getPendingReviews
+- [x] Pilotage.tsx : bloc "À valider" avec Approuver/Rejeter + notes
+- [x] Notification auto opérateur via operatorMessages après review
+
+### Dashboard SEO opérateur (TeamDashboard)
+- [x] TeamDashboard.tsx : stats SEO par fiche publiée (vues, date, évolution, lien)
+
+### LÉNA proactive
+- [x] claudeService.ts : Règle N°6 relance + clôture + proposition sauvegarde
+
+### RightPanel mobile
+- [x] Chat.tsx : drawer mobile bottom sheet pour RightPanel (spring animation)
+- [x] Chat.tsx : overlay mobile pour fermeture par tap
+
+## Phase 23b — Proactivité MAYA & ARIA
+- [ ] claudeService.ts : MAYA ultra-proactive — mène les échanges, propose toujours plus, jamais d'attente
+- [ ] claudeService.ts : QR riches systématiques — 4-6 suggestions cliquables après chaque réponse
+- [ ] Pilotage.tsx : ARIA proactive — rapports spontanés, ordres aux agents, alertes sans qu'on demande

@@ -198,7 +198,7 @@ export default function Services() {
                 {/* Badge "En cours de création" */}
                 {!service.active && (
                   <div className="absolute top-4 right-4 z-10">
-                    <Badge className="bg-purple-500/20 text-purple-300 border border-purple-400/30 rounded-none text-[10px]">
+                    <Badge className="bg-purple-500/20 text-purple-300 border border-purple-400/30 rounded-xl text-[10px]">
                       En cours de création
                     </Badge>
                   </div>
@@ -225,7 +225,7 @@ export default function Services() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 flex-wrap mb-1">
                           <h3 className="font-['Playfair_Display'] text-xl font-semibold">{service.title}</h3>
-                          <Badge className={`text-[9px] rounded-none border ${tierInfo.color}`}>
+                          <Badge className={`text-[9px] rounded-xl border ${tierInfo.color}`}>
                             {tierInfo.label}
                           </Badge>
                           {service.active && (
@@ -253,7 +253,7 @@ export default function Services() {
 
                     <Link href={service.cta}>
                       <Button
-                        className={`rounded-none text-xs px-6 ${
+                        className={`rounded-xl text-xs px-6 ${
                           service.active
                             ? "bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a]"
                             : "bg-white/5 text-white/40 border border-white/10 hover:bg-white/10 cursor-default"
@@ -294,7 +294,7 @@ export default function Services() {
                 >
                   <div className="mb-6">
                     <Icon className="text-white/60 mb-4" size={28} />
-                    <Badge className={`${level.badgeColor} rounded-none text-[10px] border mb-4`}>
+                    <Badge className={`${level.badgeColor} rounded-xl text-[10px] border mb-4`}>
                       {level.badge}
                     </Badge>
                     <h3 className="font-['Playfair_Display'] text-lg font-semibold mb-3 leading-snug">
@@ -314,7 +314,7 @@ export default function Services() {
               Les niveaux 1 et 2 sont actifs dès aujourd'hui. Le niveau 3 arrive prochainement.
             </p>
             <Link href="/pricing">
-              <Button variant="outline" className="border-[#c8a94a]/30 text-[#c8a94a] hover:bg-[#c8a94a]/10 rounded-none px-8">
+              <Button variant="outline" className="border-[#c8a94a]/30 text-[#c8a94a] hover:bg-[#c8a94a]/10 rounded-xl px-8">
                 Voir les forfaits <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -364,7 +364,7 @@ export default function Services() {
             3 messages gratuits. Aucune carte bancaire requise.
           </p>
           <Link href="/chat">
-            <Button className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none px-12 py-5 tracking-wider text-base">
+            <Button className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-xl px-12 py-5 tracking-wider text-base">
               Commencer maintenant <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
