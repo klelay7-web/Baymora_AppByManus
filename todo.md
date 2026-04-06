@@ -603,3 +603,14 @@
 - [x] Interface Pilotage ARIA : bouton "Enregistrer en base" + "Copier" sur chaque message ARIA long
 - [x] Détection intelligente du type de contenu (reel/script → socialPost, fiche SEO → seoCard, autre → contentCalendar)
 - [x] Zéro erreur TypeScript
+
+## Phase 25 — Responsive Pilotage 100% mobile
+- [x] Corriger débordement chat ARIA : overflow-hidden + max-w-[400px] + min-w-0 + break-words sur markdown
+- [x] Onglet Dashboard : grid-cols-2 md:grid-cols-3 pour stats, grid-cols-1 md:grid-cols-2 pour budget
+- [x] Onglet Salle de Réunion : grid-cols-1 sm:grid-cols-2 pour agents
+- [x] Onglet Terrain : grid-cols-2 md:grid-cols-4 pour quick actions
+- [x] Onglet Creative : grid-cols-2 md:grid-cols-4 + flex-wrap sous-onglets
+- [x] Onglet Comms : grid-cols-1 sm:grid-cols-2 md:grid-cols-3 + flex-wrap sous-onglets
+- [x] Onglet MANUS DG : flex-wrap header buttons + grid-cols-1 sm:grid-cols-2 md:grid-cols-3
+- [x] Tabs navigation : overflow-x-auto scrollbar-hide + min-w-max sur TabsList
+- [x] Zéro erreur TypeScript

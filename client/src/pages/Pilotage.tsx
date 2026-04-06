@@ -431,7 +431,7 @@ export default function Pilotage() {
       <div className="flex flex-1 flex-col md:flex-row" style={{ height: "calc(100vh - 57px)", overflow: "hidden" }}>
 
         {/* ─── Chat ARIA (gauche) ─────────────────────────────────────── */}
-        <div className={`${mobileView === "chat" ? "flex" : "hidden"} md:flex w-full md:w-[400px] md:min-w-[360px] border-r border-white/10 flex-col bg-[#0d0d14] h-full`}>
+        <div className={`${mobileView === "chat" ? "flex" : "hidden"} md:flex w-full md:w-[400px] md:min-w-[360px] md:max-w-[400px] border-r border-white/10 flex-col bg-[#0d0d14] h-full overflow-hidden`}>
           <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-xs font-bold text-black">A</div>
@@ -452,7 +452,7 @@ export default function Pilotage() {
             <div className="space-y-4">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className="max-w-[92%]">
+                  <div className="max-w-[92%] min-w-0 overflow-hidden">
                     {msg.role === "assistant" && (
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-xs font-bold text-black">A</div>
@@ -467,7 +467,7 @@ export default function Pilotage() {
                         : "bg-white/5 text-white/90 border border-white/10"
                     }`}>
                       {msg.role === "assistant" ? (
-                        <div className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                        <div className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 break-words overflow-wrap-anywhere">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
                       ) : (
@@ -556,8 +556,8 @@ export default function Pilotage() {
           )}
 
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setAriaPanelOverride(null); }} className="flex-1 flex flex-col overflow-hidden">
-            <div className="border-b border-white/10 bg-[#0d0d14] px-2 md:px-4 flex-shrink-0 overflow-x-auto">
-              <TabsList className="bg-transparent border-0 h-10 md:h-12 gap-1 flex-nowrap">
+            <div className="border-b border-white/10 bg-[#0d0d14] px-2 md:px-4 flex-shrink-0 overflow-x-auto scrollbar-hide">
+              <TabsList className="bg-transparent border-0 h-10 md:h-12 gap-1 flex-nowrap min-w-max">
                 {[
                   { value: "dashboard",   label: "📊 Dashboard" },
                   { value: "salle",       label: "🧠 Salle de Réunion" },
@@ -597,9 +597,9 @@ export default function Pilotage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                   {statsCards.map((card) => (
-                    <div key={card.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div key={card.label} className="bg-white/5 border border-white/10 rounded-xl p-3 md:p-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-2xl">{card.icon}</span>
                         <span className={`text-2xl font-bold ${card.color}`}>{card.value}</span>
@@ -640,7 +640,7 @@ export default function Pilotage() {
                       <div key={alert.label} className="flex items-center justify-between bg-red-500/5 rounded-lg px-3 py-2">
                         <div className="flex items-center gap-2">
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${alert.priority === "critique" ? "bg-red-500" : alert.priority === "haute" ? "bg-orange-500" : "bg-yellow-500"}`} />
-                          <span className="text-sm text-white/80">{alert.label}</span>
+                          <span className="text-xs md:text-sm text-white/80 truncate">{alert.label}</span>
                         </div>
                         <button onClick={() => { setInput(`ARIA, ${alert.action}`); }} className="text-xs text-amber-400 hover:text-amber-300 underline flex-shrink-0 ml-2">{alert.action} →</button>
                       </div>
@@ -649,7 +649,7 @@ export default function Pilotage() {
                 </div>
 
                 {/* Budget résumé */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                   <div className="bg-white/5 border border-white/10 rounded-xl p-4">
                     <h3 className="text-sm font-semibold text-green-400 mb-3">📈 Revenus</h3>
                     {budget && Object.entries(budget.revenus).map(([key, rev]) => (
@@ -709,7 +709,7 @@ export default function Pilotage() {
                 </div>
 
                 {/* 6 autres agents */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                   {AGENTS_IA.slice(1).map((agent) => {
                     const c = COULEUR_MAP[agent.couleur] || COULEUR_MAP.blue;
                     const isSelected = selectedAgent?.id === agent.id;
@@ -816,7 +816,7 @@ export default function Pilotage() {
                 </div>
 
                 {/* Stats terrain */}
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
                     <p className="text-2xl font-bold text-blue-400">{stats?.totalEstablishments ?? 0}</p>
                     <p className="text-xs text-white/50 mt-1">Établissements créés</p>
@@ -865,7 +865,7 @@ export default function Pilotage() {
                           className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-white/50 mb-1 flex items-center gap-1"><AtSign size={10} /> Email</label>
                           <input
@@ -1154,7 +1154,7 @@ export default function Pilotage() {
                 {/* Architecture LÉNA */}
                 <div className="bg-white/5 border border-white/10 rounded-xl p-4">
                   <h3 className="text-sm font-semibold text-white mb-3">Architecture LÉNA (Binôme IA)</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg">🧠</span>
@@ -1509,7 +1509,7 @@ function ManusPanel({ setInput }: { setInput: (v: string) => void }) {
           </h2>
           <p className="text-sm text-white/50">Binôme d'ARIA · Décisions partagées · Accès total</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-1.5">
           <button
             onClick={() => setActiveManusTab("chat")}
             className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${activeManusTab === "chat" ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"}`}
@@ -1522,12 +1522,12 @@ function ManusPanel({ setInput }: { setInput: (v: string) => void }) {
             onClick={deliberer}
             disabled={isLoading}
             className="text-xs px-3 py-1.5 rounded-lg border bg-yellow-500/20 text-yellow-300 border-yellow-500/30 hover:bg-yellow-500/30 disabled:opacity-50"
-          >⚡ Délibérer ARIA+MANUS</button>
+          >⚡ Délibérer</button>
         </div>
       </div>
 
       {/* Profil MANUS */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         {[
           { label: "Design UI/UX", desc: "Niveau magazine luxe", icon: "🎨", color: "text-pink-400" },
           { label: "Web Scraping", desc: "TripAdvisor, Maps, Instagram", icon: "🔍", color: "text-blue-400" },
@@ -1560,7 +1560,7 @@ function ManusPanel({ setInput }: { setInput: (v: string) => void }) {
             {manusHistory.map((m, i) => (
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "bg-yellow-500/20 text-white border border-yellow-500/30" : "bg-white/5 text-white/90 border border-white/10"}`}>
-                  <div className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                  <div className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 break-words overflow-wrap-anywhere">
                     <ReactMarkdown>{m.content}</ReactMarkdown>
                   </div>
                 </div>
@@ -1685,7 +1685,7 @@ function CreativePanel() {
         <p className="text-sm text-white/50">Blog SEO · Réseaux sociaux · Carrousels · Réels · Calendrier éditorial</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Blog SEO", desc: "Articles premium", icon: "✍️", color: "text-purple-400" },
           { label: "Instagram", desc: "Posts & Carrousels", icon: "📸", color: "text-pink-400" },
@@ -1700,7 +1700,7 @@ function CreativePanel() {
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {(["post", "blog", "calendrier"] as const).map((t) => (
           <button key={t} onClick={() => setActiveTab(t)}
             className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${activeTab === t ? "bg-purple-500/20 text-purple-300 border-purple-500/30" : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"}`}
@@ -1796,7 +1796,7 @@ function CommsPanel() {
         <p className="text-sm text-white/50">Emails · Commentaires · Messages privés · CRM · Newsletter</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         {[
           { label: "Commentaires", desc: "Instagram, TikTok, Google", icon: "💬", color: "text-green-400" },
           { label: "Emails", desc: "Bienvenue, relance, promo", icon: "📧", color: "text-blue-400" },
@@ -1810,7 +1810,7 @@ function CommsPanel() {
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {(["commentaires", "email", "message"] as const).map((t) => (
           <button key={t} onClick={() => setActiveTab(t)}
             className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${activeTab === t ? "bg-green-500/20 text-green-300 border-green-500/30" : "bg-white/5 text-white/50 border-white/10 hover:text-white/80"}`}
