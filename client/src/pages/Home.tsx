@@ -252,11 +252,9 @@ export default function Home() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#080c14] via-[#080c14]/30 to-[#080c14]/10" />
           <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-6">
-            <img
-              src={LOGO}
-              alt="Baymora"
-              className="w-24 h-24 object-contain mb-6 opacity-80"
-            />
+            <div className="w-16 h-16 rounded-full border border-[#c8a94a]/30 flex items-center justify-center mb-6">
+              <span className="font-['Playfair_Display'] text-3xl text-[#c8a94a]">B</span>
+            </div>
             <p className="text-[11px] tracking-[0.3em] uppercase text-[#c8a94a]/60 mb-4">
               Votre assistant personnel premium
             </p>

@@ -520,3 +520,5 @@
 - [ ] Pilotage mobile-first
 - [ ] Terrain mobile-first
 - [ ] Toutes les pages breakpoints cohérents
+
+- [x] Retirer le logo Baymora du hero homepage, garder uniquement le B stylisé
