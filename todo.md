@@ -515,3 +515,16 @@
 - [x] Gamification : points gagnés en remplissant la fiche, barre de progression
 - [x] Adaptation FR/US : questions différentes selon la locale (champs adaptés)
 - [x] L'IA peut remplir automatiquement les champs via les conversations (system prompt mis à jour)
+
+## Sprint 0.7 — Système Invitation Opérateurs Terrain
+
+- [ ] Table `teamInvitations` (token, email, téléphone, nom, statut, expiration)
+- [ ] Route tRPC `team.invite` (créer invitation + envoyer email OU générer lien WhatsApp/SMS)
+- [ ] Route tRPC `team.acceptInvite` (valider token + activer compte team)
+- [ ] Route tRPC `team.listInvitations` (liste des invitations envoyées)
+- [ ] Route tRPC `team.listMembers` (liste des membres terrain actifs)
+- [ ] UI Pilotage onglet Terrain : bouton "Inviter un opérateur" + formulaire (email OU téléphone)
+- [ ] UI Pilotage onglet Terrain : liste des membres avec statut (en attente / actif)
+- [ ] Page /rejoindre/:token (acceptation invitation, création compte automatique)
+- [ ] Email d'invitation avec lien personnalisé OU lien copiable + bouton WhatsApp
+- [ ] Activation automatique rôle `team` + forfait Explorer offert

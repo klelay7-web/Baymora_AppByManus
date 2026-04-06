@@ -80,12 +80,13 @@ describe("buildSystemPrompt", () => {
 
 // ─── Test routing modèle ─────────────────────────────────────────
 describe("Routing modèle Claude", () => {
-  it("utilise Opus pour les 5 premiers messages", () => {
+  it("utilise Opus pour les 3 premiers messages (garanti)", () => {
     expect(selectModel(1, "bonjour")).toBe("claude-opus-4-5");
-    expect(selectModel(5, "ok")).toBe("claude-opus-4-5");
+    expect(selectModel(3, "ok")).toBe("claude-opus-4-5"); // msg <=3 → Opus garanti
   });
 
-  it("utilise Sonnet pour les messages courts après le 5e", () => {
+  it("utilise Sonnet pour les messages courts avec trigger après le 3e", () => {
+    // "ok" est dans SONNET_TRIGGERS et message court → Sonnet après msg 3
     expect(selectModel(6, "ok")).toBe("claude-sonnet-4-5");
     expect(selectModel(10, "merci")).toBe("claude-sonnet-4-5");
   });

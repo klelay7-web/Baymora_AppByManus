@@ -1071,3 +1071,24 @@ export const agentTaskOrders = mysqlTable("agentTaskOrders", {
 });
 export type AgentTaskOrder = typeof agentTaskOrders.$inferSelect;
 export type InsertAgentTaskOrder = typeof agentTaskOrders.$inferInsert;
+
+// ─── Team Invitations (Invitations opérateurs terrain) ───────────────────────
+export const teamInvitations = mysqlTable("teamInvitations", {
+  id: int("id").autoincrement().primaryKey(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  invitedBy: int("invitedBy").notNull(), // userId du fondateur
+  recipientName: varchar("recipientName", { length: 128 }),
+  recipientEmail: varchar("recipientEmail", { length: 320 }),
+  recipientPhone: varchar("recipientPhone", { length: 32 }),
+  role: mysqlEnum("role", ["team", "admin"]).default("team").notNull(),
+  grantedTier: mysqlEnum("grantedTier", ["free", "explorer", "premium"]).default("explorer").notNull(),
+  status: mysqlEnum("status", ["pending", "accepted", "expired", "cancelled"]).default("pending").notNull(),
+  acceptedByUserId: int("acceptedByUserId"),
+  message: text("message"), // message personnalisé du fondateur
+  expiresAt: timestamp("expiresAt").notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TeamInvitation = typeof teamInvitations.$inferSelect;
+export type InsertTeamInvitation = typeof teamInvitations.$inferInsert;

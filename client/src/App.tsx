@@ -35,6 +35,7 @@ const AdminEmailCenter = lazy(() => import("./pages/AdminEmailCenter"));
 const LenaWorkspace = lazy(() => import("./pages/LenaWorkspace"));
 const AmbassadeurInfo = lazy(() => import("./pages/AmbassadeurInfo"));
 const MaFiche = lazy(() => import("./pages/MaFiche"));
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 
 function LazyPage({ Component }: { Component: React.LazyExoticComponent<any> }) {
   return (
@@ -89,6 +90,9 @@ function Router() {
       <Route path="/pilotage">{() => <LazyPage Component={Pilotage} />}</Route>
       <Route path="/admin/emails">{() => <LazyPage Component={AdminEmailCenter} />}</Route>
       <Route path="/lena-workspace">{() => <LazyPage Component={LenaWorkspace} />}</Route>
+
+      {/* Invitation Terrain */}
+      <Route path="/invite/:token">{() => <LazyPage Component={AcceptInvite} />}</Route>
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

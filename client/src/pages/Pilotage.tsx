@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
-import { Shield, ExternalLink, Users, ChevronRight, Zap, Megaphone, Mail, Globe } from "lucide-react";
+import { Shield, ExternalLink, Users, ChevronRight, Zap, Megaphone, Mail, Globe, UserPlus, Copy, Check, X, Phone, AtSign, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { Link } from "wouter";
 
 interface Message {
@@ -198,6 +198,32 @@ export default function Pilotage() {
   const { data: missionHistory, refetch: refetchMissionHistory } = trpc.pilotage.missionHistory.useQuery({ limit: 20 });
   const createMissionMutation = trpc.pilotage.createMission.useMutation();
   const closeMissionMutation = trpc.pilotage.closeMission.useMutation();
+
+  // ─── Invitations Terrain ─────────────────────────────────────────────
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ recipientName: "", recipientEmail: "", recipientPhone: "", message: "", role: "team" as "team" | "admin" });
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const { data: invitations, refetch: refetchInvitations } = trpc.team.listInvitations.useQuery();
+  const { data: teamMembers } = trpc.team.listMembers.useQuery();
+  const inviteMutation = trpc.team.invite.useMutation({
+    onSuccess: (data) => {
+      const link = `${window.location.origin}/invite/${data.token}`;
+      setInviteLink(link);
+      refetchInvitations();
+      toast.success("Invitation créée avec succès !");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const cancelInviteMutation = trpc.team.cancelInvite.useMutation({
+    onSuccess: () => { refetchInvitations(); toast.success("Invitation annulée"); },
+  });
+  const copyInviteLink = async (link: string) => {
+    await navigator.clipboard.writeText(link);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+    toast.success("Lien copié !");
+  };
 
   useEffect(() => {
     if (history && history.length > 0 && messages.length === 0) {
@@ -713,20 +739,146 @@ export default function Pilotage() {
                   </div>
                 </div>
 
-                {/* Membres terrain */}
+                {/* ─── Inviter un opérateur terrain ─── */}
                 <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <UserPlus size={14} className="text-amber-400" />
+                      Inviter un opérateur terrain
+                    </h3>
+                    <Button
+                      size="sm"
+                      onClick={() => { setShowInviteForm(!showInviteForm); setInviteLink(null); }}
+                      className="bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold h-7 px-3"
+                    >
+                      {showInviteForm ? "Annuler" : "+ Inviter"}
+                    </Button>
+                  </div>
+
+                  {/* Formulaire d'invitation */}
+                  {showInviteForm && !inviteLink && (
+                    <div className="bg-white/5 border border-amber-500/20 rounded-xl p-4 mb-4 space-y-3">
+                      <p className="text-xs text-amber-400 font-medium mb-2">Créer un lien d'invitation (valable 7 jours)</p>
+                      <div>
+                        <label className="text-xs text-white/50 mb-1 block">Nom de l'opérateur *</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Amin Dupont"
+                          value={inviteForm.recipientName}
+                          onChange={(e) => setInviteForm(f => ({ ...f, recipientName: e.target.value }))}
+                          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-white/50 mb-1 flex items-center gap-1"><AtSign size={10} /> Email</label>
+                          <input
+                            type="email"
+                            placeholder="email@exemple.com"
+                            value={inviteForm.recipientEmail}
+                            onChange={(e) => setInviteForm(f => ({ ...f, recipientEmail: e.target.value }))}
+                            className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-white/50 mb-1 flex items-center gap-1"><Phone size={10} /> Téléphone</label>
+                          <input
+                            type="tel"
+                            placeholder="+33 6 12 34 56 78"
+                            value={inviteForm.recipientPhone}
+                            onChange={(e) => setInviteForm(f => ({ ...f, recipientPhone: e.target.value }))}
+                            className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-white/50 mb-1 block">Message personnalisé (optionnel)</label>
+                        <textarea
+                          placeholder="Bienvenue dans l'équipe Baymora ! Ce lien vous donne accès à LÉNA et au dashboard terrain."
+                          value={inviteForm.message}
+                          onChange={(e) => setInviteForm(f => ({ ...f, message: e.target.value }))}
+                          rows={2}
+                          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50 resize-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-white/50 mb-1 block">Rôle</label>
+                        <select
+                          value={inviteForm.role}
+                          onChange={(e) => setInviteForm(f => ({ ...f, role: e.target.value as "team" | "admin" }))}
+                          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400/50"
+                        >
+                          <option value="team">Opérateur Terrain</option>
+                          <option value="admin">Administrateur</option>
+                        </select>
+                      </div>
+                      <Button
+                        onClick={() => inviteMutation.mutate({
+                          recipientName: inviteForm.recipientName,
+                          recipientEmail: inviteForm.recipientEmail || undefined,
+                          recipientPhone: inviteForm.recipientPhone || undefined,
+                          message: inviteForm.message || undefined,
+                          role: inviteForm.role,
+                        })}
+                        disabled={inviteMutation.isPending || !inviteForm.recipientName || (!inviteForm.recipientEmail && !inviteForm.recipientPhone)}
+                        className="w-full bg-amber-500 hover:bg-amber-400 text-black font-semibold"
+                      >
+                        {inviteMutation.isPending ? "Génération..." : "Générer le lien d'invitation"}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Lien généré */}
+                  {inviteLink && (
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <CheckCircle2 size={16} className="text-green-400" />
+                        <p className="text-sm font-semibold text-green-400">Lien d'invitation créé !</p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3 mb-3">
+                        <p className="text-xs text-white/40 mb-1">Lien à partager :</p>
+                        <p className="text-xs text-white/80 break-all font-mono">{inviteLink}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => copyInviteLink(inviteLink)}
+                          className="flex-1 bg-white/10 hover:bg-white/20 text-white text-xs gap-1"
+                        >
+                          {copiedLink ? <Check size={12} /> : <Copy size={12} />}
+                          {copiedLink ? "Copié !" : "Copier le lien"}
+                        </Button>
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(`Bonjour ! Voici votre invitation pour rejoindre l'équipe Baymora : ${inviteLink}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1 bg-green-600/20 hover:bg-green-600/30 text-green-400 text-xs font-medium rounded-md px-3 py-2 border border-green-500/30"
+                        >
+                          <Phone size={12} /> WhatsApp
+                        </a>
+                      </div>
+                      <button
+                        onClick={() => { setInviteLink(null); setShowInviteForm(false); setInviteForm({ recipientName: "", recipientEmail: "", recipientPhone: "", message: "", role: "team" }); }}
+                        className="text-xs text-white/30 hover:text-white/50 mt-2 w-full text-center"
+                      >
+                        Créer une autre invitation
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Membres actifs */}
                   <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
                     <Users size={14} />
-                    Membres avec accès Terrain (LÉNA)
+                    Membres avec accès Terrain ({teamMembers?.length ?? 0})
                   </h3>
-                  {allUsers?.filter((u) => u.role === "team").length === 0 ? (
+                  {!teamMembers || teamMembers.length === 0 ? (
                     <div className="text-center py-4">
-                      <p className="text-xs text-white/40 mb-2">Aucun membre terrain pour l'instant.</p>
-                      <p className="text-xs text-white/30">Ajoutez des membres dans l'onglet Accès pour qu'ils puissent utiliser LÉNA.</p>
+                      <p className="text-xs text-white/40 mb-2">Aucun membre terrain actif.</p>
+                      <p className="text-xs text-white/30">Invitez des opérateurs pour qu'ils puissent utiliser LÉNA.</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {allUsers?.filter((u) => u.role === "team").map((u) => (
+                    <div className="space-y-2 mb-4">
+                      {teamMembers.map((u) => (
                         <div key={u.id} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xs font-bold text-amber-400">
@@ -734,23 +886,59 @@ export default function Pilotage() {
                             </div>
                             <div>
                               <p className="text-sm text-white font-medium">{u.name || u.email}</p>
-                              <p className="text-xs text-white/40">Accès LÉNA actif</p>
+                              <p className="text-xs text-white/40">{u.role === "admin" ? "Administrateur" : "Opérateur Terrain"} · LÉNA actif</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs">Terrain</Badge>
+                            <Badge className={u.role === "admin" ? "bg-purple-500/20 text-purple-300 border-purple-500/30 text-xs" : "bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs"}>
+                              {u.role === "admin" ? "Admin" : "Terrain"}
+                            </Badge>
                             <span className="w-2 h-2 rounded-full bg-emerald-400" title="LÉNA disponible" />
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/10">
-                    <p className="text-xs text-white/30">Tous les membres terrain ont accès à LÉNA et au micro vocal</p>
-                    <button onClick={() => setActiveTab("acces")} className="text-xs text-amber-400 hover:text-amber-300 underline">
-                      Gérer les accès →
-                    </button>
-                  </div>
+
+                  {/* Invitations en attente */}
+                  {invitations && invitations.filter(i => i.status === "pending").length > 0 && (
+                    <>
+                      <h3 className="text-sm font-semibold text-white/60 mb-2 flex items-center gap-2">
+                        <Clock size={13} className="text-amber-400" />
+                        Invitations en attente ({invitations.filter(i => i.status === "pending").length})
+                      </h3>
+                      <div className="space-y-2">
+                        {invitations.filter(i => i.status === "pending").map((inv) => (
+                          <div key={inv.id} className="flex items-center justify-between bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-white font-medium truncate">{inv.recipientName || "Opérateur"}</p>
+                              <p className="text-xs text-white/40 truncate">
+                                {inv.recipientEmail || inv.recipientPhone} · expire {new Date(inv.expiresAt).toLocaleDateString("fr-FR")}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 ml-2">
+                              <button
+                                onClick={() => copyInviteLink(`${window.location.origin}/invite/${inv.token}`)}
+                                className="text-white/40 hover:text-white/70 p-1"
+                                title="Copier le lien"
+                              >
+                                <Copy size={12} />
+                              </button>
+                              <button
+                                onClick={() => cancelInviteMutation.mutate({ token: inv.token })}
+                                className="text-red-400/60 hover:text-red-400 p-1"
+                                title="Annuler l'invitation"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  <p className="text-xs text-white/30 mt-3">Tous les membres terrain ont accès à LÉNA et au micro vocal</p>
                 </div>
 
                 {/* Architecture LÉNA */}

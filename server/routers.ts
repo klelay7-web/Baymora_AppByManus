@@ -2148,5 +2148,142 @@ export const appRouter = router({
       .mutation(async ({ input }) => analyserPartenaire(input.nom, input.type, input.siteWeb)),
   }),
 
+  // ─── Team Invitations ────────────────────────────────────────────────────────
+  team: router({
+    // Créer une invitation (fondateur seulement)
+    invite: ownerProcedure
+      .input(z.object({
+        recipientName: z.string().min(1, "Nom requis"),
+        recipientEmail: z.string().email().optional(),
+        recipientPhone: z.string().optional(),
+        message: z.string().optional(),
+        role: z.enum(["team", "admin"]).default("team"),
+        grantedTier: z.enum(["free", "explorer", "premium"]).default("explorer"),
+      }).refine(d => d.recipientEmail || d.recipientPhone, { message: "Email ou téléphone requis" }))
+      .mutation(async ({ ctx, input }) => {
+        const crypto = await import("crypto");
+        const token = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        await db.insert(schema.teamInvitations).values({
+          token,
+          invitedBy: ctx.user.id,
+          recipientName: input.recipientName,
+          recipientEmail: input.recipientEmail,
+          recipientPhone: input.recipientPhone,
+          role: input.role,
+          grantedTier: input.grantedTier,
+          message: input.message,
+          expiresAt,
+          status: "pending",
+        });
+        await conn.end();
+        return { token, expiresAt };
+      }),
+
+    // Lister les invitations envoyées
+    listInvitations: ownerProcedure.query(async () => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { desc } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const rows = await db.select().from(schema.teamInvitations).orderBy(desc(schema.teamInvitations.createdAt));
+      await conn.end();
+      return rows;
+    }),
+
+    // Lister les membres de l'équipe actifs
+    listMembers: ownerProcedure.query(async () => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { or, eq } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const rows = await db.select({
+        id: schema.users.id,
+        name: schema.users.name,
+        email: schema.users.email,
+        role: schema.users.role,
+        subscriptionTier: schema.users.subscriptionTier,
+        createdAt: schema.users.createdAt,
+      }).from(schema.users).where(
+        or(eq(schema.users.role, "team"), eq(schema.users.role, "admin"))
+      );
+      await conn.end();
+      return rows;
+    }),
+
+    // Valider une invitation (public — accessible via le lien token)
+    acceptInvite: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const [inv] = await db.select().from(schema.teamInvitations).where(eq(schema.teamInvitations.token, input.token));
+        await conn.end();
+        if (!inv) throw new TRPCError({ code: "NOT_FOUND", message: "Invitation introuvable" });
+        if (inv.status === "accepted") return { status: "already_accepted" as const, invitation: inv };
+        if (inv.status === "cancelled") return { status: "cancelled" as const, invitation: inv };
+        if (inv.expiresAt < new Date()) return { status: "expired" as const, invitation: inv };
+        return { status: "valid" as const, invitation: inv };
+      }),
+
+    // Confirmer l'acceptation après connexion OAuth
+    confirmAccept: protectedProcedure
+      .input(z.object({ token: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const [inv] = await db.select().from(schema.teamInvitations).where(eq(schema.teamInvitations.token, input.token));
+        if (!inv) { await conn.end(); throw new TRPCError({ code: "NOT_FOUND" }); }
+        if (inv.status !== "pending" || inv.expiresAt < new Date()) {
+          await conn.end();
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Invitation expirée ou déjà utilisée" });
+        }
+        // Activer le rôle
+        await db.update(schema.users).set({
+          role: inv.role,
+        }).where(eq(schema.users.id, ctx.user.id));
+        // Marquer l'invitation comme acceptée
+        await db.update(schema.teamInvitations).set({
+          status: "accepted",
+          acceptedByUserId: ctx.user.id,
+          acceptedAt: new Date(),
+        }).where(eq(schema.teamInvitations.token, input.token));
+        await conn.end();
+        return { success: true, role: inv.role };
+      }),
+
+    // Annuler une invitation
+    cancelInvite: ownerProcedure
+      .input(z.object({ token: z.string() }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        await db.update(schema.teamInvitations).set({ status: "cancelled" }).where(eq(schema.teamInvitations.token, input.token));
+        await conn.end();
+        return { success: true };
+      }),
+  }),
+
 });
 export type AppRouter = typeof appRouter;
