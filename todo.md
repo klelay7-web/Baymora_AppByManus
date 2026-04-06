@@ -592,3 +592,7 @@
 - [ ] claudeService.ts : MAYA ultra-proactive — mène les échanges, propose toujours plus, jamais d'attente
 - [ ] claudeService.ts : QR riches systématiques — 4-6 suggestions cliquables après chaque réponse
 - [ ] Pilotage.tsx : ARIA proactive — rapports spontanés, ordres aux agents, alertes sans qu'on demande
+
+## Phase 23c — Liberté client dans les QR de MAYA
+- [ ] claudeService.ts : MAYA inclut toujours une option "Autre / votre idée" dans chaque QR
+- [ ] claudeService.ts : MAYA se repositionne immédiatement sur l'intention libre du client
