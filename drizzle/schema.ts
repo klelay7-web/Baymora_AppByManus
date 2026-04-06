@@ -956,3 +956,46 @@ export const ariaMissions = mysqlTable("ariaMissions", {
 });
 export type AriaMission = typeof ariaMissions.$inferSelect;
 export type InsertAriaMission = typeof ariaMissions.$inferInsert;
+
+// ─── LÉNA Sessions (Persistance cross-device) ────────────────────────────────
+export const lenaSessions = mysqlTable("lenaSessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  sessionKey: varchar("sessionKey", { length: 64 }).notNull(),
+  establishmentName: varchar("establishmentName", { length: 256 }),
+  city: varchar("city", { length: 128 }),
+  currentStep: varchar("currentStep", { length: 64 }).default("ACCUEIL").notNull(),
+  collectedData: text("collectedData"),  // JSON
+  history: text("history"),              // JSON array of messages
+  scoutBriefing: text("scoutBriefing"),
+  fieldReportId: int("fieldReportId"),
+  status: mysqlEnum("status", ["active", "completed", "abandoned"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type LenaSessionDB = typeof lenaSessions.$inferSelect;
+export type InsertLenaSessionDB = typeof lenaSessions.$inferInsert;
+
+// ─── Agent Task Orders (Ordres traçables ARIA → Agents) ──────────────────────
+export const agentTaskOrders = mysqlTable("agentTaskOrders", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  agent: varchar("agent", { length: 64 }).notNull(),
+  requestedBy: varchar("requestedBy", { length: 64 }).default("fondateur").notNull(),
+  status: mysqlEnum("status", ["pending", "in_progress", "completed", "failed", "cancelled"]).default("pending").notNull(),
+  priority: mysqlEnum("priority", ["low", "normal", "high", "urgent"]).default("normal").notNull(),
+  progressPercent: int("progressPercent").default(0),
+  progressNotes: text("progressNotes"), // JSON array [{at, note, by}]
+  result: text("result"),
+  linkedMissionId: int("linkedMissionId"),
+  linkedFieldReportId: int("linkedFieldReportId"),
+  linkedSeoCardId: int("linkedSeoCardId"),
+  dueAt: timestamp("dueAt"),
+  startedAt: timestamp("startedAt"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type AgentTaskOrder = typeof agentTaskOrders.$inferSelect;
+export type InsertAgentTaskOrder = typeof agentTaskOrders.$inferInsert;

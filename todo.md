@@ -430,3 +430,31 @@
 - [ ] Interface CampaignTab : sélection par ville, pipeline visuel complet, progression live
 - [ ] Lancer campagne complète Paris (20+ fiches toutes catégories)
 - [ ] Lancer campagne New York
+
+## Phase 18 — Corrections Critiques (06/04/2026)
+
+### 18.1 Persistance session LÉNA cross-device
+- [x] Créer table `lenaSessions` en DB pour persister session, étape, données collectées
+- [x] Endpoint tRPC : saveSession, loadSession par userId
+- [x] Frontend Terrain : charger la session depuis DB au démarrage, sauvegarder à chaque message
+- [x] LÉNA reprend automatiquement où elle s'est arrêtée, même depuis un autre appareil
+
+### 18.2 Tableau de bord des tâches agents
+- [x] Enrichir table `agentTasks` : ajouter champs title, description, requestedBy, progressPercent, notes
+- [x] Endpoint tRPC : createTask, updateTaskProgress, listTasks (filtrés par agent/statut)
+- [x] Quand LÉNA reçoit une demande autonome, créer une tâche traçable en DB
+- [x] Quand ARIA donne un ordre, créer une tâche traçable en DB
+- [x] Onglet "Tâches" dans Pilotage : liste toutes les tâches avec %, agent, statut, date
+
+### 18.3 ARIA conversationnelle et exécutrice
+- [x] Refondre DG_SYSTEM_PROMPT : ARIA répond court, direct, conversationnel
+- [x] ARIA crée une tâche DB quand elle donne un ordre (via tag structuré parsé)
+- [x] ARIA ne renvoie JAMAIS vers Manus (l'IA externe) pour des actions internes
+- [x] ARIA peut lancer LÉNA en autonomie sur une fiche (créer la tâche + notifier)
+- [x] Réponses max 3-4 lignes sauf si rapport demandé explicitement
+
+### 18.4 Responsive mobile complet
+- [x] Pilotage : layout mobile (toggle ARIA / Tableau de bord, chat plein écran, header compact)
+- [x] Terrain : layout mobile adapté (déjà responsive avec classes sm/md)
+- [x] Toutes les pages : vérifier breakpoints sm/md/lg
+- [ ] Navigation bottom bar mobile sur toutes les pages internes (optionnel, MobileNav existe mais non monté)

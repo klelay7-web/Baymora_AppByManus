@@ -53,7 +53,9 @@ import type { User } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
 import { notifyOwner } from "./_core/notification";
-import { chatWithDG, generateDailyReport, getCarnetsDebord, getDGHistory, ORGANIGRAMME, STRATEGIE, BUDGET_MENSUEL } from "./services/dgService";
+import { chatWithDG, generateDailyReport, getCarnetsDebord, getDGHistory, ORGANIGRAMME, STRATEGIE, BUDGET_MENSUEL, parseAndCreateTasksFromARIA } from "./services/dgService";
+import { createTaskOrder, listTaskOrders, updateTaskProgress, updateTaskStatus, getActiveTasks, getTaskStats } from "./services/taskOrderService";
+import { saveLenaSession, loadLenaSession, listLenaSessions, closeLenaSession, generateSessionKey } from "./services/lenaSessionService";
 import {
   getClientProfile, upsertClientProfile,
   listCompanions, getCompanion, createCompanion, updateCompanion, deleteCompanion,
@@ -1159,7 +1161,7 @@ export const appRouter = router({
   pilotage: router({
     // Chat avec ARIA DG
     chat: ownerProcedure
-      .input(z.object({ message: z.string().min(1).max(4000) }))
+      .input(z.object({ message: z.string().min(1).max(20000) }))
       .mutation(async ({ input }) => {
         const adminStats = await getAdminStats();
         const stats = {
@@ -1177,7 +1179,10 @@ export const appRouter = router({
         const enrichedMessage = missionCtx
           ? `${missionCtx}\n\n---\n\nMessage du fondateur : ${input.message}`
           : input.message;
-        return chatWithDG(enrichedMessage, stats);
+        const result = await chatWithDG(enrichedMessage, stats);
+        // Parser et créer les tâches que ARIA a incluses dans sa réponse
+        const createdTasks = await parseAndCreateTasksFromARIA(result.content, "ARIA");
+        return { ...result, createdTasks };
       }),
     // Rapport journalier
     dailyReport: ownerProcedure
@@ -1225,6 +1230,86 @@ export const appRouter = router({
       .input(z.object({ userId: z.number(), role: z.enum(["user", "team", "admin"]) }))
       .mutation(async ({ input }) => updateUserRoleById(input.userId, input.role)),
 
+    // ─── Task Orders (Tableau de bord tâches agents) ──────────────────────────
+    // Créer une tâche manuellement (fondateur)
+    createTask: ownerProcedure
+      .input(z.object({
+        title: z.string().min(1).max(256),
+        description: z.string().optional(),
+        agent: z.string().min(1),
+        priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+        linkedMissionId: z.number().optional(),
+        dueAt: z.date().optional(),
+      }))
+      .mutation(async ({ input }) => createTaskOrder(input)),
+    // Lister les tâches
+    listTasks: ownerProcedure
+      .input(z.object({
+        agent: z.string().optional(),
+        status: z.enum(["pending", "in_progress", "completed", "failed", "cancelled"]).optional(),
+        limit: z.number().default(50),
+      }).optional())
+      .query(async ({ input }) => listTaskOrders(input)),
+    // Tâches actives
+    activeTasks: ownerProcedure
+      .query(async () => getActiveTasks(30)),
+    // Stats des tâches
+    taskStats: ownerProcedure
+      .query(async () => getTaskStats()),
+    // Mettre à jour la progression
+    updateTaskProgress: ownerProcedure
+      .input(z.object({
+        id: z.number(),
+        progressPercent: z.number().min(0).max(100),
+        note: z.string().optional(),
+        by: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await updateTaskProgress(input.id, input.progressPercent, input.note, input.by);
+        return { success: true };
+      }),
+    // Changer le statut
+    updateTaskStatus: ownerProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(["pending", "in_progress", "completed", "failed", "cancelled"]),
+        result: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await updateTaskStatus(input.id, input.status, input.result);
+        return { success: true };
+      }),
+    // ─── Sessions LÉNA persistées ──────────────────────────────────────────────
+    saveLenaSession: ownerProcedure
+      .input(z.object({
+        sessionKey: z.string(),
+        session: z.object({
+          establishmentName: z.string().optional(),
+          city: z.string().optional(),
+          currentStep: z.string(),
+          collectedData: z.record(z.string(), z.any()).default({}),
+          scoutBriefing: z.string().optional(),
+          fieldReportId: z.number().optional(),
+        }),
+        history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await saveLenaSession(ctx.user.id, input.sessionKey, input.session as any, input.history as any);
+        return { success: true };
+      }),
+    loadLenaSession: ownerProcedure
+      .input(z.object({ sessionKey: z.string().optional() }).optional())
+      .query(async ({ ctx, input }) => loadLenaSession(ctx.user.id, input?.sessionKey)),
+    listLenaSessions: ownerProcedure
+      .query(async ({ ctx }) => listLenaSessions(ctx.user.id)),
+    closeLenaSession: ownerProcedure
+      .input(z.object({ sessionKey: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await closeLenaSession(ctx.user.id, input.sessionKey);
+        return { success: true };
+      }),
+    newSessionKey: ownerProcedure
+      .query(() => ({ key: generateSessionKey() })),
     // ─── Missions 24h ────────────────────────────────────────────────────
     // Créer une nouvelle mission
     createMission: ownerProcedure
