@@ -2205,6 +2205,19 @@ export const appRouter = router({
     }),
 
     // Lister les membres de l'équipe actifs
+    // Récupérer l'admin principal (pour la messagerie terrain)
+    getAdminUser: teamProcedure.query(async () => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { eq } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const [admin] = await db.select({ id: schema.users.id, name: schema.users.name })
+        .from(schema.users).where(eq(schema.users.role, "admin")).limit(1);
+      await conn.end();
+      return admin || null;
+    }),
     listMembers: ownerProcedure.query(async () => {
       const { drizzle } = await import("drizzle-orm/mysql2");
       const { or, eq } = await import("drizzle-orm");

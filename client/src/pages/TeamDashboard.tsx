@@ -1929,31 +1929,6 @@ function OperatorOverview({ user }: { user: any }) {
 
   return (
     <div className="space-y-6">
-      {/* Carte profil */}
-      <div className="bg-card/30 border border-border/40 rounded-2xl p-6">
-        <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-2xl flex-shrink-0">
-            {user.name?.charAt(0).toUpperCase() || "O"}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-semibold text-foreground">{user.name || "Opérateur"}</h2>
-              <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-400 px-2 py-1 rounded-full">
-                <BadgeCheck className="w-3 h-3" /> Profil validé
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">{user.email}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Membre depuis {new Date(user.createdAt || Date.now()).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-            </p>
-            <div className="mt-3 flex items-center gap-2">
-              <span className={`text-xs font-medium ${currentTier.color}`}>{currentTier.label}</span>
-              <span className="text-xs text-muted-foreground">· {currentTier.desc}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {stats.map((s, i) => (
@@ -2067,16 +2042,44 @@ function RoutesList() {
 }
 
 // ─── Create Route (Nouveau Parcours) ──────────────────────────────────
+const ROUTE_DRAFT_KEY = "baymora_route_draft";
 function CreateRoute({ onDone }: { onDone: () => void }) {
-  const [form, setForm] = useState({
-    title: "", description: "", city: "", country: "France",
-    category: "decouverte" as const, durationMinutes: 120, notes: "",
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(ROUTE_DRAFT_KEY);
+      if (saved) { const p = JSON.parse(saved); return p.form || { title: "", description: "", city: "", country: "France", category: "decouverte" as const, durationMinutes: 120, notes: "" }; }
+    } catch {}
+    return { title: "", description: "", city: "", country: "France", category: "decouverte" as const, durationMinutes: 120, notes: "" };
   });
-  const [steps, setSteps] = useState<Array<{ order: number; establishmentName: string; type: string; address: string; notes: string; durationMinutes: number }>>([]);
+  const [steps, setSteps] = useState<Array<{ order: number; establishmentName: string; type: string; address: string; notes: string; durationMinutes: number }>>(() => {
+    try {
+      const saved = localStorage.getItem(ROUTE_DRAFT_KEY);
+      if (saved) { const p = JSON.parse(saved); return p.steps || []; }
+    } catch {}
+    return [];
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+
+  // Auto-save on every change
+  const saveDraft = useCallback((f = form, s = steps) => {
+    try {
+      localStorage.setItem(ROUTE_DRAFT_KEY, JSON.stringify({ form: f, steps: s }));
+      setLastSaved(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
+    } catch {}
+  }, [form, steps]);
+
+  const setFormSave = (updater: (p: typeof form) => typeof form) =>
+    setForm(prev => { const next = updater(prev); setTimeout(() => saveDraft(next, steps), 0); return next; });
+  const setStepsSave = (updater: (p: typeof steps) => typeof steps) =>
+    setSteps(prev => { const next = updater(prev); setTimeout(() => saveDraft(form, next), 0); return next; });
 
   const createMutation = trpc.team.createRoute.useMutation({
-    onSuccess: () => { toast.success("Parcours créé avec succès !"); onDone(); },
+    onSuccess: () => {
+      toast.success("Parcours créé avec succès !");
+      localStorage.removeItem(ROUTE_DRAFT_KEY);
+      onDone();
+    },
     onError: (e) => toast.error(e.message),
   });
 
@@ -2116,16 +2119,16 @@ function CreateRoute({ onDone }: { onDone: () => void }) {
       <div className="space-y-4">
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Titre du parcours *</label>
-          <Input placeholder="Ex : Les incontournables de Barcelone" value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} />
+          <Input placeholder="Ex : Les incontournables de Barcelone" value={form.title} onChange={e => setFormSave(p => ({ ...p, title: e.target.value }))} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Ville *</label>
-            <Input placeholder="Ex : Barcelone" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} />
+            <Input placeholder="Ex : Barcelone" value={form.city} onChange={e => setFormSave(p => ({ ...p, city: e.target.value }))} />
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Pays</label>
-            <Input placeholder="Ex : Espagne" value={form.country} onChange={e => setForm(p => ({ ...p, country: e.target.value }))} />
+            <Input placeholder="Ex : Espagne" value={form.country} onChange={e => setFormSave(p => ({ ...p, country: e.target.value }))} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -2134,19 +2137,19 @@ function CreateRoute({ onDone }: { onDone: () => void }) {
             <select
               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground"
               value={form.category}
-              onChange={e => setForm(p => ({ ...p, category: e.target.value as any }))}
+              onChange={e => setFormSave(p => ({ ...p, category: e.target.value as any }))}
             >
               {categoryOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Durée estimée (minutes)</label>
-            <Input type="number" min={30} max={1440} value={form.durationMinutes} onChange={e => setForm(p => ({ ...p, durationMinutes: parseInt(e.target.value) || 120 }))} />
+            <Input type="number" min={30} max={1440} value={form.durationMinutes} onChange={e => setFormSave(p => ({ ...p, durationMinutes: parseInt(e.target.value) || 120 }))} />
           </div>
         </div>
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Description</label>
-          <Textarea placeholder="Décrivez ce parcours en quelques phrases..." value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} />
+          <Textarea placeholder="Décrivez ce parcours en quelques phrases..." value={form.description} onChange={e => setFormSave(p => ({ ...p, description: e.target.value }))} rows={3} />
         </div>
       </div>
 
@@ -2189,9 +2192,10 @@ function CreateRoute({ onDone }: { onDone: () => void }) {
 
       <div>
         <label className="text-xs text-muted-foreground mb-1 block">Notes internes (optionnel)</label>
-        <Textarea placeholder="Remarques, conseils pour l'admin..." value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} />
+        <Textarea placeholder="Remarques, conseils pour l'admin..." value={form.notes} onChange={e => setFormSave(p => ({ ...p, notes: e.target.value }))} rows={2} />
       </div>
 
+      {lastSaved && <p className="text-xs text-muted-foreground text-center">Brouillon sauvegardé automatiquement à {lastSaved}</p>}
       <Button onClick={handleSubmit} disabled={isSubmitting || !form.title || !form.city} className="w-full gap-2 bg-primary hover:bg-primary/90">
         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
         Soumettre le parcours
@@ -2203,14 +2207,14 @@ function CreateRoute({ onDone }: { onDone: () => void }) {
 // ─── Operator Messages (Messagerie Admin ↔ Opérateur) ─────────────────
 function OperatorMessages({ user }: { user: any }) {
   // L'opérateur terrain parle avec l'admin (owner)
-  // On utilise userId=1 comme admin par défaut (le fondateur)
-  const [adminUserId] = useState(1);
+  const { data: adminUser } = trpc.team.getAdminUser.useQuery();
+  const adminUserId = adminUser?.id ?? 0;
   const [newMsg, setNewMsg] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: messages, refetch } = trpc.team.getMessages.useQuery(
     { withUserId: adminUserId },
-    { refetchInterval: 15000 }
+    { refetchInterval: 15000, enabled: adminUserId > 0 }
   );
 
   const replyMutation = trpc.team.replyMessage.useMutation({

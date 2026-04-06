@@ -27,7 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <MobileHeader />
 
       {/* Main content — padding for mobile header and bottom nav */}
-      <main className="pt-12 md:pt-0 pb-16 md:pb-0">
+      <main className="pt-12 md:pt-0 pb-20 md:pb-0">
         {children}
       </main>
 

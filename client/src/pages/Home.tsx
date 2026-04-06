@@ -142,7 +142,7 @@ export default function Home() {
             variants={fadeUp}
             className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs font-light mb-6"
           >
-            Votre assistant personnel premium
+            Conciergerie premium &amp; voyages d'exception
           </motion.p>
 
           <motion.h1
@@ -159,10 +159,10 @@ export default function Home() {
 
           <motion.p
             variants={fadeUp}
-            className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-10 font-light leading-relaxed"
+            className="text-white/60 text-sm md:text-xl max-w-2xl mx-auto mb-10 font-light leading-relaxed"
           >
-            Intelligence artificielle, parcours sur-mesure, accès privilégié.
-            Maison Baymora anticipe vos désirs et vous connecte au meilleur du monde.
+            <span className="hidden md:inline">Une équipe d'experts humains, augmentée par l'intelligence artificielle. Parcours sur-mesure, accès privilégié, service d'exception.</span>
+            <span className="md:hidden">Experts humains &amp; IA — voyages d'exception.</span>
           </motion.p>
 
           <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -191,7 +191,7 @@ export default function Home() {
 
           {/* Teaser gratuit */}
           <motion.p variants={fadeUp} className="mt-6 text-white/40 text-sm">
-            3 messages gratuits — Aucune carte bancaire requise
+            Essai gratuit — Aucune carte bancaire requise
           </motion.p>
         </motion.div>
 
@@ -237,7 +237,7 @@ export default function Home() {
             className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
           >
             {[
-              { icon: Sparkles, title: "IA Proactive", desc: "Recommandations personnalisées avant même votre demande" },
+              { icon: Sparkles, title: "Experts Humains", desc: "Nos conseillers terrain sélectionnent et valident chaque adresse pour vous" },
               { icon: MapPin, title: "Parcours GPS", desc: "Itinéraires jour par jour avec carte interactive en temps réel" },
               { icon: Shield, title: "Discrétion & Confidentialité", desc: "Vos données ne sont jamais revendues. Vous pouvez rester anonyme dans l'app et, sur demande, dans la vraie vie." },
               { icon: Globe, title: "Accès Mondial", desc: "Hôtels, restaurants, expériences, transports dans le monde entier" },

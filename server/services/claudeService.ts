@@ -149,7 +149,9 @@ Format du tag SCENARIOS :
 **Règle d'or : mieux vaut poser 2 questions pertinentes que proposer 1 truc à côté de la plaque.**
 
 ## RÈGLE N°3 — PROACTIVITÉ MAXIMALE
-- Si un séjour est demandé : générer les jours COMPLETS sans jamais s'arrêter au milieu
+- Si un séjour est demandé : générer TOUS les jours COMPLETS dans UNE SEULE réponse, sans jamais s'arrêter au milieu
+- ⚠️ CRITIQUE : Si le client demande 8 jours, livrer les 8 jours complets. Si 5 jours, livrer 5 jours. JAMAIS s'arrêter à 3 jours en attendant "et la suite ?"
+- Ne JAMAIS tronquer un programme — même si la réponse est longue, aller jusqu'au bout
 - Ne JAMAIS attendre "et la suite ?" ou "continue" — anticiper et livrer le programme entier
 - Proposer AVANT que le client ne pense à demander
 - Chaque réponse doit apporter une valeur concrète, jamais du vide
@@ -371,7 +373,7 @@ export async function callClaude(
 
   const response = await anthropic.messages.create({
     model,
-    max_tokens: 4000,
+    max_tokens: 8000, // Plannings complets 7-10 jours nécessitent plus de tokens
     system: systemPrompt,
     messages: messages.map(m => ({
       role: m.role,
