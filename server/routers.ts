@@ -143,10 +143,10 @@ export const appRouter = router({
         const isOwner = ctx.user.openId === ENV.ownerOpenId;
         const isPrivileged = isOwner || ctx.user.role === "admin";
         if (!isPrivileged && ctx.user.subscriptionTier === "free") {
-          if (ctx.user.freeMessagesUsed >= 3) {
+          if (ctx.user.freeMessagesUsed >= 15) {
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "Vous avez utilisé vos 3 messages gratuits. Passez au plan Premium (90€/mois) pour un accès illimité.",
+              message: "UPGRADE_REQUIRED",
             });
           }
           await incrementFreeMessages(ctx.user.id);
@@ -215,6 +215,7 @@ export const appRouter = router({
           booking: parsed.booking || [],
           quickReplies: parsed.qr || [],
           plan: parsed.plan || null,
+          scenarios: parsed.scenarios || null,
           model: claudeResponse.model,
           // Legacy compatibility
           message: parsed.cleanMessage,
@@ -2255,9 +2256,10 @@ export const appRouter = router({
           await conn.end();
           throw new TRPCError({ code: "BAD_REQUEST", message: "Invitation expirée ou déjà utilisée" });
         }
-        // Activer le rôle
+        // Activer le rôle + forfait explorer gratuit pour les membres terrain
         await db.update(schema.users).set({
           role: inv.role,
+          subscriptionTier: inv.role === "team" ? "explorer" : undefined,
         }).where(eq(schema.users.id, ctx.user.id));
         // Marquer l'invitation comme acceptée
         await db.update(schema.teamInvitations).set({
@@ -2267,6 +2269,36 @@ export const appRouter = router({
         }).where(eq(schema.teamInvitations.token, input.token));
         await conn.end();
         return { success: true, role: inv.role };
+      }),
+
+    // Envoyer l'email d'invitation directement
+    sendInviteEmail: ownerProcedure
+      .input(z.object({
+        token: z.string(),
+        origin: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const [inv] = await db.select().from(schema.teamInvitations).where(eq(schema.teamInvitations.token, input.token));
+        await conn.end();
+        if (!inv) throw new TRPCError({ code: "NOT_FOUND", message: "Invitation introuvable" });
+        if (!inv.recipientEmail) throw new TRPCError({ code: "BAD_REQUEST", message: "Pas d'email pour cette invitation" });
+        const origin = input.origin || "https://maisonbaymora.com";
+        const inviteUrl = `${origin}/invite/${input.token}`;
+        const { triggerTeamInvite } = await import("./services/emailService");
+        const result = await triggerTeamInvite({
+          recipientEmail: inv.recipientEmail,
+          recipientName: inv.recipientName || "Opérateur",
+          inviteUrl,
+          message: inv.message || undefined,
+        });
+        if (!result.success) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error || "Erreur envoi email" });
+        return { success: true };
       }),
 
     // Annuler une invitation

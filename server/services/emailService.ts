@@ -34,7 +34,8 @@ export type EmailType =
   | "affiliate_welcome"
   | "client_followup_30d"
   | "team_weekly_report"
-  | "feature_unlock_confirmed";
+  | "feature_unlock_confirmed"
+  | "team_invite";
 
 interface EmailContext {
   recipientName?: string;
@@ -115,6 +116,14 @@ Format : email interne structuré avec sections claires.`,
 Rédige un email de confirmation de déverrouillage de fonctionnalité "${context.customData?.featureName || "VIP"}" pour ${context.recipientName || "notre membre"}.
 Ton : exclusif, prestige, comme une invitation privée.
 Inclure : confirmation d'accès, durée (${context.customData?.durationDays || 30} jours), comment en profiter, CTA "Découvrir maintenant".`,
+
+    team_invite: `Tu es le directeur des opérations de Maison Baymora.
+Rédige un email d'invitation à rejoindre l'équipe terrain pour ${context.recipientName || "notre futur collaborateur"}.
+Lien d'invitation : ${context.customData?.inviteUrl || ""}
+${context.customData?.message ? `Message personnalisé de l'équipe : "${context.customData.message}"` : ""}
+Ton : professionnel, chaleureux, motivant. Comme une lettre d'onboarding d'une maison de luxe.
+Inclure : bienvenue dans l'équipe Baymora, ce qu'ils vont faire (terrain, fiches, LÉNA), accès gratuit inclus, bouton CTA "Rejoindre l'équipe" pointant vers le lien d'invitation.
+Format : HTML élégant, palette Baymora (fond sombre, or), signature : "L'équipe Maison Baymora".`,
   };
 
   const model = ["welcome", "weekly_plans", "partner_prospection"].includes(type)
@@ -278,6 +287,19 @@ export async function triggerAffiliateWelcome(affiliate: {
     recipientEmail: affiliate.email,
     companyName: affiliate.companyName,
   });
+}
+
+export async function triggerTeamInvite(params: {
+  recipientEmail: string;
+  recipientName: string;
+  inviteUrl: string;
+  message?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  return sendEmail("team_invite", {
+    recipientEmail: params.recipientEmail,
+    recipientName: params.recipientName,
+    customData: { inviteUrl: params.inviteUrl, message: params.message },
+  }, { from: FROM_TEAM });
 }
 
 export async function triggerTeamWeeklyReport(

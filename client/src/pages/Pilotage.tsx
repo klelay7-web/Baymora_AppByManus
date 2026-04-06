@@ -218,6 +218,10 @@ export default function Pilotage() {
   const cancelInviteMutation = trpc.team.cancelInvite.useMutation({
     onSuccess: () => { refetchInvitations(); toast.success("Invitation annulée"); },
   });
+  const sendInviteEmailMutation = trpc.team.sendInviteEmail.useMutation({
+    onSuccess: () => toast.success("Email d'invitation envoyé !"),
+    onError: (err) => toast.error(err.message),
+  });
   const copyInviteLink = async (link: string) => {
     await navigator.clipboard.writeText(link);
     setCopiedLink(true);
@@ -916,7 +920,35 @@ export default function Pilotage() {
                                 {inv.recipientEmail || inv.recipientPhone} · expire {new Date(inv.expiresAt).toLocaleDateString("fr-FR")}
                               </p>
                             </div>
-                            <div className="flex items-center gap-2 ml-2">
+                            <div className="flex items-center gap-1 ml-2">
+                              {/* Envoyer par email */}
+                              {inv.recipientEmail && (
+                                <button
+                                  onClick={() => sendInviteEmailMutation.mutate({ token: inv.token, origin: window.location.origin })}
+                                  disabled={sendInviteEmailMutation.isPending}
+                                  className="text-blue-400/60 hover:text-blue-400 p-1"
+                                  title={`Envoyer par email à ${inv.recipientEmail}`}
+                                >
+                                  <Mail size={12} />
+                                </button>
+                              )}
+                              {/* Envoyer par WhatsApp */}
+                              {inv.recipientPhone && (
+                                <button
+                                  onClick={() => {
+                                    const phone = inv.recipientPhone!.replace(/[^0-9]/g, "");
+                                    const intlPhone = phone.startsWith("0") ? "33" + phone.slice(1) : phone;
+                                    const link = `${window.location.origin}/invite/${inv.token}`;
+                                    const msg = encodeURIComponent(`Bonjour ${inv.recipientName} ! Vous êtes invité(e) à rejoindre l'équipe Baymora. Cliquez ici pour activer votre accès : ${link}`);
+                                    window.open(`https://wa.me/${intlPhone}?text=${msg}`, "_blank");
+                                  }}
+                                  className="text-green-400/60 hover:text-green-400 p-1"
+                                  title={`Envoyer par WhatsApp à ${inv.recipientPhone}`}
+                                >
+                                  <Phone size={12} />
+                                </button>
+                              )}
+                              {/* Copier le lien */}
                               <button
                                 onClick={() => copyInviteLink(`${window.location.origin}/invite/${inv.token}`)}
                                 className="text-white/40 hover:text-white/70 p-1"

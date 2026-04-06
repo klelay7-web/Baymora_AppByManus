@@ -8,8 +8,9 @@ import {
   Plus, FileText, MapPin, Phone, Camera, Send, ChevronRight, ChevronLeft,
   Star, Trash2, Upload, Plane, Car, Building2, Sparkles, Clock, Eye,
   CheckCircle2, AlertTriangle, Loader2, X, Mic, MicOff, MessageSquare,
-  Bot, ArrowRight, RefreshCw, Zap
+  Bot, ArrowRight, RefreshCw, Zap, ArrowLeft
 } from "lucide-react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 
 const ESTABLISHMENT_TYPES = [
@@ -65,6 +66,7 @@ const STEPS: { key: Step; label: string; icon: React.ReactNode }[] = [
 
 export default function TeamDashboard() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const [view, setView] = useState<"list" | "create" | "lena">("list");
 
   if (!user || (user.role !== "team" && user.role !== "admin")) {
@@ -84,6 +86,13 @@ export default function TeamDashboard() {
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
+              {/* Bouton retour */}
+              <button
+                onClick={() => navigate("/")}
+                className="flex items-center gap-1 text-xs text-white/40 hover:text-white/70 mb-3 transition-colors"
+              >
+                <ArrowLeft size={12} /> Retour à l'accueil
+              </button>
               <p className="text-primary text-sm tracking-widest uppercase mb-1">Espace Équipe</p>
               <h1 className="text-3xl font-serif text-foreground">Rapports Terrain</h1>
               <p className="text-sm text-muted-foreground mt-1">

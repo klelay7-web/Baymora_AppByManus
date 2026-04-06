@@ -131,11 +131,11 @@ describe("chat.sendMessage access control", () => {
     ).rejects.toThrow();
   });
 
-  it("blocks free users after 3 messages", async () => {
-    const { ctx } = createAuthContext({ freeMessagesUsed: 3, subscriptionTier: "free" });
+  it("blocks free users after 15 messages", async () => {
+    const { ctx } = createAuthContext({ freeMessagesUsed: 15, subscriptionTier: "free" });
     const caller = appRouter.createCaller(ctx);
     await expect(
       caller.chat.sendMessage({ conversationId: 1, content: "Hello" })
-    ).rejects.toThrow("3 messages gratuits");
-  });
+    ).rejects.toThrow("UPGRADE_REQUIRED");
+  }, 10000);
 });

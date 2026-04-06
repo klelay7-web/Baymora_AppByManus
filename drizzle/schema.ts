@@ -8,7 +8,7 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin", "team"]).default("user").notNull(),
-  subscriptionTier: mysqlEnum("subscriptionTier", ["free", "premium", "elite"]).default("free").notNull(),
+  subscriptionTier: mysqlEnum("subscriptionTier", ["free", "explorer", "premium", "elite"]).default("free").notNull(),
   credits: int("credits").default(15).notNull(),
   creditsRollover: int("creditsRollover").default(0).notNull(),
   points: int("points").default(0).notNull(),

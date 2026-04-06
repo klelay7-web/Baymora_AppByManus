@@ -528,3 +528,16 @@
 - [ ] Page /rejoindre/:token (acceptation invitation, création compte automatique)
 - [ ] Email d'invitation avec lien personnalisé OU lien copiable + bouton WhatsApp
 - [ ] Activation automatique rôle `team` + forfait Explorer offert
+
+## Phase 21 — Corrections Bugs Signalés (06/04/2026)
+
+- [ ] BUG-1 : 404 quand Théo clique le lien d'invitation → vérifier route /invite/:token en prod
+- [ ] BUG-2 : Forfait gratuit (free) non attribué lors de l'inscription via invitation
+- [ ] BUG-3 : Après acceptation invitation, Théo n'apparaît pas dans le dashboard terrain
+- [ ] BUG-4 : WhatsApp doit envoyer directement au numéro saisi (pas juste ouvrir WhatsApp Web)
+- [ ] BUG-5 : Email doit être envoyé directement depuis l'app (Resend) sur l'email saisi
+- [ ] BUG-6 : Bug affichage IA — scénarios affichent du "codage" (tags JSON/markdown bruts)
+- [ ] BUG-7 : QR cliquables partiels — l'IA ne propose que la moitié des réponses en cliquables
+- [ ] BUG-8 : Navigation terrain — pas de flèche retour arrière
+- [ ] FEAT-9 : Forfait gratuit — permettre 1-2 parcours complets avant limitation
+- [ ] FEAT-10 : Popup upgrade Opus→Sonnet — proposer forfait ou crédits supplémentaires

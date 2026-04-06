@@ -864,6 +864,7 @@ export default function Chat() {
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [selectedScenario, setSelectedScenario] = useState<number | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -963,11 +964,17 @@ export default function Chat() {
       }
     },
     onError: (error) => {
+      const isUpgrade = error.message === "UPGRADE_REQUIRED";
+      if (isUpgrade) {
+        setShowUpgradeModal(true);
+        setIsTyping(false);
+        return;
+      }
       setLocalMessages(prev => [...prev, {
         role: "assistant",
         content: error.message,
         cleanMessage: error.message,
-        quickReplies: ["🔄 Réessayer", "✏️ Autre demande"],
+        quickReplies: ["\uD83D\uDD04 Réessayer", "\u270F\uFE0F Autre demande"],
         createdAt: new Date(),
       }]);
       setIsTyping(false);
@@ -978,29 +985,39 @@ export default function Chat() {
     if (serverMessages) {
       setLocalMessages(serverMessages.map(m => {
         // Tenter de parser les tags structurés des messages stockés
-        const hasClaudeTags = m.content.includes(":::PLACES:::") || m.content.includes(":::QR:::");
-        if (hasClaudeTags && m.role === "assistant") {
-          // Parser inline (import dynamique non nécessaire, logique dupliquée légère)
-          const qrMatch = m.content.match(/:::QR:::([\s\S]*?):::END:::/);
-          const qr = qrMatch ? qrMatch[1].split("|").map((s: string) => s.trim()).filter(Boolean) : [];
-          const cleanMessage = m.content
+        // Toujours nettoyer les tags bruts pour les messages assistant
+        const hasClaudeTags = m.role === "assistant" && (
+          m.content.includes(":::PLACES:::") || m.content.includes(":::QR:::") ||
+          m.content.includes(":::SCENARIOS:::") || m.content.includes(":::PLAN:::") ||
+          m.content.includes(":::JOURNEY:::") || m.content.includes(":::MAP:::") ||
+          m.content.includes(":::GCAL:::") || m.content.includes(":::BOOKING:::")
+        );
+        if (hasClaudeTags) {
+          // Fonction de nettoyage robuste
+          const stripAllTags = (s: string) => s
             .replace(/:::PLACES:::[\s\S]*?:::END:::/g, "")
             .replace(/:::MAP:::[\s\S]*?:::END:::/g, "")
             .replace(/:::JOURNEY:::[\s\S]*?:::END:::/g, "")
             .replace(/:::GCAL:::[\s\S]*?:::END:::/g, "")
             .replace(/:::BOOKING:::[\s\S]*?:::END:::/g, "")
             .replace(/:::QR:::[\s\S]*?:::END:::/g, "")
-            .replace(/:::PLAN:::[sS]*?:::END:::/g, "")
-            .replace(/:::SCENARIOS:::[sS]*?:::END:::/g, "")
+            .replace(/:::PLAN:::[\s\S]*?:::END:::/g, "")
+            .replace(/:::SCENARIOS:::[\s\S]*?:::END:::/g, "")
+            // Filet de sécurité : supprimer tout tag résiduel non fermé
+            .replace(/:::[\w_]+:::[\s\S]*?(?=:::|$)/g, "")
+            .replace(/:::[\w_]+:::/g, "")
             .trim();
+          const qrMatch = m.content.match(/:::QR:::([\s\S]*?):::END:::/);
+          const qr = qrMatch ? qrMatch[1].split("|").map((s: string) => s.trim()).filter(Boolean) : [];
+          const cleanMessage = stripAllTags(m.content);
           // Parser les scénarios stockés
           let scenarios: Scenario[] | undefined;
-          const scenMatch = m.content.match(/:::SCENARIOS:::([sS]*?):::END:::/);
-          if (scenMatch) { try { scenarios = JSON.parse(scenMatch[1].trim()); } catch {} }
+          const scenMatch = m.content.match(/:::SCENARIOS:::([\s\S]*?):::END:::/);
+          if (scenMatch) { try { scenarios = JSON.parse(scenMatch[1].trim()); } catch { scenarios = undefined; } }
           // Parser les places stockées
           let places: Place[] | undefined;
-          const plMatch = m.content.match(/:::PLACES:::([sS]*?):::END:::/);
-          if (plMatch) { try { places = JSON.parse(plMatch[1].trim()); } catch {} }
+          const plMatch = m.content.match(/:::PLACES:::([\s\S]*?):::END:::/);
+          if (plMatch) { try { places = JSON.parse(plMatch[1].trim()); } catch { places = undefined; } }
           return {
             role: m.role as "user" | "assistant",
             content: m.content,
@@ -1287,6 +1304,73 @@ export default function Chat() {
                 setShowRightPanel(true);
               }}
             />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Popup Upgrade ─── */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+            onClick={() => setShowUpgradeModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-[#0d1220] border border-gold/20 rounded-2xl p-8 max-w-md w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center mb-6">
+                <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-4">
+                  <Sparkles size={24} className="text-gold" />
+                </div>
+                <h2 className="font-serif text-2xl font-bold mb-2">Continuez l'aventure</h2>
+                <p className="text-muted-foreground text-sm">
+                  Vous avez utilisé vos <strong>15 messages gratuits</strong>. Passez à un forfait pour continuer.
+                </p>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                {/* Explorer */}
+                <div className="flex items-center justify-between p-4 rounded-xl border border-white/10 hover:border-gold/30 transition-colors cursor-pointer" onClick={() => { setShowUpgradeModal(false); window.location.href = '/pricing'; }}>
+                  <div>
+                    <p className="font-semibold text-sm">Explorer</p>
+                    <p className="text-xs text-muted-foreground">20 messages / mois</p>
+                  </div>
+                  <span className="text-gold font-bold">9,90€/mois</span>
+                </div>
+                {/* Premium */}
+                <div className="flex items-center justify-between p-4 rounded-xl border border-gold/30 bg-gold/5 cursor-pointer" onClick={() => { setShowUpgradeModal(false); window.location.href = '/pricing'; }}>
+                  <div>
+                    <p className="font-semibold text-sm text-gold">Premium ⭐</p>
+                    <p className="text-xs text-muted-foreground">Messages illimités + parcours GPS</p>
+                  </div>
+                  <span className="text-gold font-bold">29,90€/mois</span>
+                </div>
+                {/* Crédits */}
+                <div className="flex items-center justify-between p-4 rounded-xl border border-white/10 hover:border-gold/30 transition-colors cursor-pointer" onClick={() => { setShowUpgradeModal(false); window.location.href = '/pricing'; }}>
+                  <div>
+                    <p className="font-semibold text-sm">Crédits à la carte</p>
+                    <p className="text-xs text-muted-foreground">Sans abonnement</p>
+                  </div>
+                  <span className="text-sm text-muted-foreground">dès 2,99€</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1 border-white/10" onClick={() => setShowUpgradeModal(false)}>
+                  Plus tard
+                </Button>
+                <Button className="flex-1 bg-gold text-navy-dark hover:bg-gold-light font-semibold" onClick={() => { setShowUpgradeModal(false); window.location.href = '/pricing'; }}>
+                  Voir les forfaits
+                </Button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

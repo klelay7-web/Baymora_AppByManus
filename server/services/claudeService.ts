@@ -472,7 +472,11 @@ export function parseStructuredTags(content: string): ParsedTags {
   // Extract QR
   const qrMatch = content.match(/:::QR:::([\s\S]*?):::END:::/);
   if (qrMatch) {
-    result.qr = qrMatch[1].split("|").map(s => s.trim()).filter(Boolean);
+    result.qr = qrMatch[1]
+      .split("|")
+      .map(s => s.trim())
+      .filter(s => s.length > 1 && s.length < 80) // Filtrer items vides ou trop longs
+      .slice(0, 6); // Max 6 suggestions cliquables
   }
 
   // Extract PLAN

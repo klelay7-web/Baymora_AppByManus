@@ -78,6 +78,7 @@ function Router() {
 
       {/* Team Dashboard */}
       <Route path="/team/fiches">{() => <LazyPage Component={TeamDashboard} />}</Route>
+      <Route path="/terrain">{() => <LazyPage Component={TeamDashboard} />}</Route>
 
       {/* Admin Dashboards */}
       <Route path="/admin">{() => <LazyPage Component={AdminDashboard} />}</Route>
