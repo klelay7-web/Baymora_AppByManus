@@ -999,3 +999,94 @@ export const agentTaskOrders = mysqlTable("agentTaskOrders", {
 });
 export type AgentTaskOrder = typeof agentTaskOrders.$inferSelect;
 export type InsertAgentTaskOrder = typeof agentTaskOrders.$inferInsert;
+
+
+// ─── Baymora Points (Solde par utilisateur) ─────────────────────────────────
+export const baymoraPoints = mysqlTable("baymoraPoints", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  balance: int("balance").default(0).notNull(),
+  lifetimeEarned: int("lifetimeEarned").default(0).notNull(),
+  lifetimeSpent: int("lifetimeSpent").default(0).notNull(),
+  lifetimeCashedOut: int("lifetimeCashedOut").default(0).notNull(),
+  tier: mysqlEnum("tier", ["bronze", "silver", "gold", "platinum", "diamond"]).default("bronze").notNull(),
+  lastEarnedAt: timestamp("lastEarnedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type BaymoraPoints = typeof baymoraPoints.$inferSelect;
+
+// ─── Points Transactions (Historique BP) ────────────────────────────────────
+export const pointsTransactions = mysqlTable("pointsTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  amount: int("amount").notNull(), // positif = gain, négatif = dépense
+  type: mysqlEnum("type", [
+    "subscription_reward", "referral_bonus", "booking_reward",
+    "review_reward", "social_share", "daily_login",
+    "spend_upgrade", "spend_experience", "spend_gift",
+    "cashout", "admin_adjustment", "welcome_bonus"
+  ]).notNull(),
+  description: text("description"),
+  referenceType: varchar("referenceType", { length: 64 }), // "subscription", "referral", "booking"
+  referenceId: int("referenceId"),
+  balanceAfter: int("balanceAfter").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PointsTransaction = typeof pointsTransactions.$inferSelect;
+
+// ─── Subscription Pause (Système de pause abonnement) ───────────────────────
+export const subscriptionPauses = mysqlTable("subscriptionPauses", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
+  pauseStartDate: timestamp("pauseStartDate").notNull(),
+  pauseEndDate: timestamp("pauseEndDate").notNull(),
+  originalTier: mysqlEnum("originalTier", ["free", "explorer", "duo", "premium", "maison"]).notNull(),
+  reason: text("reason"),
+  status: mysqlEnum("status", ["active", "resumed", "expired", "cancelled"]).default("active").notNull(),
+  autoResumeAt: timestamp("autoResumeAt"),
+  resumedAt: timestamp("resumedAt"),
+  maxPauseDays: int("maxPauseDays").default(90).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SubscriptionPause = typeof subscriptionPauses.$inferSelect;
+
+// ─── User Memory (Mémoire ARIA Client — séparée de DG) ─────────────────────
+export const userMemory = mysqlTable("userMemory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  memoryType: mysqlEnum("memoryType", [
+    "fact", "preference", "experience", "relationship",
+    "dislike", "dream", "habit", "context"
+  ]).notNull(),
+  content: text("content").notNull(),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }).default("0.80"),
+  source: mysqlEnum("source", ["conversation", "explicit", "inferred", "profile"]).default("conversation").notNull(),
+  conversationId: int("conversationId"),
+  isActive: boolean("isActive").default(true).notNull(),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type UserMemory = typeof userMemory.$inferSelect;
+
+// ─── Subscriptions (Plans détaillés 5 tiers) ───────────────────────────────
+export const subscriptions = mysqlTable("subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  tier: mysqlEnum("tier", ["free", "explorer", "duo", "premium", "maison"]).notNull(),
+  status: mysqlEnum("status", ["active", "paused", "cancelled", "past_due", "trialing"]).default("active").notNull(),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  currentPeriodStart: timestamp("currentPeriodStart"),
+  currentPeriodEnd: timestamp("currentPeriodEnd"),
+  cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false),
+  monthlyPrice: decimal("monthlyPrice", { precision: 6, scale: 2 }),
+  flexibilityOption: boolean("flexibilityOption").default(false), // +1.90€/mois
+  trialEndsAt: timestamp("trialEndsAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Subscription = typeof subscriptions.$inferSelect;

@@ -1,25 +1,24 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
-import { motion } from "framer-motion";
 import { Link } from "wouter";
 import {
   MessageCircle,
   MapPin,
-  Star,
-  Shield,
   Sparkles,
   Crown,
-  Globe,
   ChevronRight,
   ArrowRight,
   Check,
-  Zap,
-  Eye,
+  Star,
+  Globe,
+  Shield,
   Lock,
   Users,
+  Zap,
+  Eye,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 
@@ -30,719 +29,669 @@ const ROOFTOP_IMG = `${CDN}/rooftop_nyc_c0d713d4.jpg`;
 const SPA_IMG = `${CDN}/spa_palace_30cfe2c9.jpg`;
 const LOGO = `${CDN}/baymora_logo_1c0fc185.png`;
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" as const } },
-};
+/* ─── Data ──────────────────────────────────────────── */
 
-const stagger = {
-  visible: { transition: { staggerChildren: 0.15 } },
-} as const;
-
-// ─── Bundles SEO (Top X) ─────────────────────────────
-const bundles = [
-  { title: "10 tables secrètes", subtitle: "Paris, France", img: GASTRO_IMG, tag: "Gastronomie" },
-  { title: "5 rooftops d'exception", subtitle: "New York, USA", img: ROOFTOP_IMG, tag: "Nightlife" },
-  { title: "7 chalets d'altitude", subtitle: "Alpes, Suisse", img: SKI_IMG, tag: "Montagne" },
-  { title: "Les spas les plus exclusifs", subtitle: "Bali, Indonésie", img: SPA_IMG, tag: "Bien-être" },
+const trendingCards = [
+  { title: "Tables secrètes", subtitle: "Paris", img: GASTRO_IMG, tag: "Gastronomie", count: 10 },
+  { title: "Rooftops d'exception", subtitle: "New York", img: ROOFTOP_IMG, tag: "Nightlife", count: 5 },
+  { title: "Chalets d'altitude", subtitle: "Alpes", img: SKI_IMG, tag: "Montagne", count: 7 },
+  { title: "Spas exclusifs", subtitle: "Bali", img: SPA_IMG, tag: "Bien-être", count: 12 },
 ];
 
-// ─── Forfaits ────────────────────────────────────────
+const destinations = [
+  { name: "Paris", country: "France", img: GASTRO_IMG, experiences: 42 },
+  { name: "New York", country: "USA", img: ROOFTOP_IMG, experiences: 38 },
+  { name: "Alpes", country: "Suisse", img: SKI_IMG, experiences: 25 },
+  { name: "Bali", country: "Indonésie", img: SPA_IMG, experiences: 31 },
+];
+
+const categories = [
+  { label: "Tout", active: true },
+  { label: "Destinations" },
+  { label: "Bundles" },
+  { label: "Parcours" },
+  { label: "Expériences" },
+];
+
 const plans = [
   {
     name: "Explorer",
     price: "9,90",
-    tagline: "Découvrez le luxe accessible",
-    features: [
-      "20 messages assistant IA / mois",
-      "Accès aux fiches & bundles publics",
-      "Offres exclusives premier prix",
-      "Sauvegarde de 5 favoris",
-      "1 parcours par mois",
-    ],
-    cta: "Commencer l'aventure",
+    tagline: "Luxe accessible",
+    features: ["20 messages IA/mois", "Fiches & bundles publics", "5 favoris", "1 parcours/mois"],
+    cta: "Commencer",
     accent: false,
   },
   {
     name: "Premium",
     price: "29,90",
     tagline: "L'expérience complète",
-    features: [
-      "Messages illimités",
-      "Parcours personnalisés avec carte GPS",
-      "Fiches détaillées & secrets d'initiés",
-      "Mémoire client & profil enrichi",
-      "Favoris & collections illimités",
-      "Accès programme ambassadeur",
-    ],
+    features: ["Messages illimités", "Parcours GPS", "Mémoire client", "Collections illimitées"],
     cta: "Devenir Premium",
     accent: true,
-    badge: "Le plus populaire",
+    badge: "Populaire",
   },
   {
     name: "Élite",
     price: "89,90",
-    tagline: "Le privilège absolu — Bientôt disponible",
-    comingSoon: true,
-    features: [
-      "Tout Premium inclus",
-      "Recommandations proactives",
-      "Accès off-market exclusif",
-      "Mode Fantôme (anonymat total)",
-      "Réservations anonymisées",
-      "Conciergerie prioritaire 24/7",
-      "Accès ventes privées & yachts",
-    ],
-    cta: "Rejoindre l'Élite",
+    tagline: "Privilège absolu",
+    features: ["Tout Premium", "Off-market", "Mode Fantôme", "Conciergerie 24/7"],
+    cta: "Bientôt",
     accent: false,
+    comingSoon: true,
   },
 ];
 
+/* ─── Horizontal Scroll Section ─────────────────────── */
+
+function HScrollSection({
+  title,
+  subtitle,
+  children,
+  seeAllHref,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  seeAllHref?: string;
+}) {
+  return (
+    <section className="py-6 md:py-10">
+      <div className="px-4 md:px-6 flex items-end justify-between mb-4">
+        <div>
+          <h2 className="font-['Playfair_Display'] text-lg md:text-xl text-white/90">
+            {title}
+          </h2>
+          {subtitle && (
+            <p className="text-[11px] text-white/35 mt-0.5">{subtitle}</p>
+          )}
+        </div>
+        {seeAllHref && (
+          <Link
+            href={seeAllHref}
+            className="text-[11px] text-[#c8a94a]/70 hover:text-[#c8a94a] flex items-center gap-1 transition-colors"
+          >
+            Voir tout
+            <ChevronRight size={12} />
+          </Link>
+        )}
+      </div>
+      <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 md:px-6 pb-2 snap-x snap-mandatory">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Card Components ───────────────────────────────── */
+
+function TrendingCard({
+  card,
+}: {
+  card: (typeof trendingCards)[0];
+}) {
+  return (
+    <Link href="/discover" className="snap-start flex-shrink-0">
+      <div className="w-[260px] md:w-[300px] group relative overflow-hidden">
+        <div className="aspect-[4/5] relative">
+          <img
+            src={card.img}
+            alt={card.title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          {/* Tag */}
+          <div className="absolute top-3 left-3">
+            <span className="text-[9px] tracking-[0.15em] uppercase bg-[#c8a94a]/90 text-[#080c14] px-2 py-1 font-semibold">
+              {card.tag}
+            </span>
+          </div>
+          {/* Content */}
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <p className="text-[10px] text-[#c8a94a]/80 font-medium tracking-wider uppercase mb-1">
+              Top {card.count}
+            </p>
+            <h3 className="font-['Playfair_Display'] text-base text-white leading-tight">
+              {card.title}
+            </h3>
+            <p className="text-[11px] text-white/50 mt-1 flex items-center gap-1">
+              <MapPin size={10} />
+              {card.subtitle}
+            </p>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function DestinationCard({ dest }: { dest: (typeof destinations)[0] }) {
+  return (
+    <Link href="/destinations" className="snap-start flex-shrink-0">
+      <div className="w-[160px] md:w-[200px] group">
+        <div className="aspect-square relative overflow-hidden">
+          <img
+            src={dest.img}
+            alt={dest.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-3">
+            <h3 className="text-sm font-medium text-white">{dest.name}</h3>
+            <p className="text-[10px] text-white/50">{dest.country}</p>
+          </div>
+        </div>
+        <div className="mt-2 flex items-center gap-1">
+          <Star size={10} className="text-[#c8a94a]" />
+          <span className="text-[10px] text-white/40">
+            {dest.experiences} expériences
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/* ─── Main Home Component ───────────────────────────── */
+
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
-  const [activeBundle, setActiveBundle] = useState(0);
+  const [activeFilter, setActiveFilter] = useState(0);
 
   return (
-    <div className="min-h-screen bg-[#080c14] text-white overflow-x-hidden">
-
-      {/* Navigation is now handled globally by Navbar component in App.tsx */}
-
+    <div className="min-h-screen bg-[#080c14] text-white">
       {/* ═══════════════════════════════════════════════
-          HERO — Plein écran cinématographique
+          HERO — Compact mobile, full desktop
       ═══════════════════════════════════════════════ */}
-      <section className="relative min-h-screen flex items-center justify-center">
-        {/* Background image */}
-        <div className="absolute inset-0">
+      <section className="relative">
+        {/* Mobile hero — compact */}
+        <div className="md:hidden relative h-[55vh] min-h-[380px]">
           <img
             src={HERO_IMG}
             alt="Luxury yacht at sunset"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#080c14]/70 via-[#080c14]/40 to-[#080c14]" />
-        </div>
-
-        {/* Content */}
-        <motion.div
-          className="relative z-10 max-w-5xl mx-auto px-6 text-center pt-20"
-          initial="hidden"
-          animate="visible"
-          variants={stagger}
-        >
-          <motion.div variants={fadeUp} className="mb-6">
-            <img src={LOGO} alt="Maison Baymora" className="h-20 w-20 mx-auto rounded-full mb-6" />
-          </motion.div>
-
-          <motion.p
-            variants={fadeUp}
-            className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs font-light mb-6"
-          >
-            Votre assistant personnel premium
-          </motion.p>
-
-          <motion.h1
-            variants={fadeUp}
-            className="font-['Playfair_Display'] text-4xl md:text-6xl lg:text-7xl leading-tight mb-8"
-          >
-            Nous créons les{" "}
-            <em className="text-[#c8a94a] not-italic">expériences</em>
-            <br />
-            que vous n'imaginiez{" "}
-            <em className="text-[#c8a94a] not-italic">pas encore.</em>
-          </motion.h1>
-
-          <motion.p
-            variants={fadeUp}
-            className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-10 font-light leading-relaxed"
-          >
-            Intelligence artificielle, parcours sur-mesure, accès privilégié.
-            Maison Baymora anticipe vos désirs et vous connecte au meilleur du monde.
-          </motion.p>
-
-          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              asChild
-              size="lg"
-              className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] font-medium rounded-none px-10 py-6 text-base tracking-wider"
-            >
-              <a href={isAuthenticated ? "/chat" : getLoginUrl()}>
-                <MessageCircle className="mr-2 h-5 w-5" />
-                Parlez à votre assistant
-              </a>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="border-white/20 text-white hover:bg-white/5 rounded-none px-10 py-6 text-base tracking-wider"
-            >
-              <a href="/discover">
-                Explorer les destinations
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </a>
-            </Button>
-          </motion.div>
-
-          {/* Teaser gratuit */}
-          <motion.p variants={fadeUp} className="mt-6 text-white/40 text-sm">
-            3 messages gratuits — Aucune carte bancaire requise
-          </motion.p>
-        </motion.div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-          animate={{ y: [0, 10, 0] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-        >
-          <div className="w-[1px] h-16 bg-gradient-to-b from-[#c8a94a] to-transparent" />
-        </motion.div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════
-          PROPOSITION DE VALEUR — Ce que Baymora fait pour vous
-      ═══════════════════════════════════════════════ */}
-      <section className="py-24 md:py-32">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={stagger}
-            className="text-center mb-20"
-          >
-            <motion.p variants={fadeUp} className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-4">
-              L'art de l'excellence
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="font-['Playfair_Display'] text-3xl md:text-5xl mb-6">
-              Un assistant qui vous <em className="text-[#c8a94a] not-italic">connaît</em>
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-white/50 max-w-2xl mx-auto text-lg font-light">
-              Maison Baymora mémorise vos préférences, celles de vos proches,
-              et anticipe vos besoins avant même que vous ne les exprimiez.
-            </motion.p>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
-          >
-            {[
-              { icon: Sparkles, title: "IA Proactive", desc: "Recommandations personnalisées avant même votre demande" },
-              { icon: MapPin, title: "Parcours GPS", desc: "Itinéraires jour par jour avec carte interactive en temps réel" },
-              { icon: Shield, title: "Discrétion & Confidentialité", desc: "Vos données ne sont jamais revendues. Vous pouvez rester anonyme dans l'app et, sur demande, dans la vraie vie." },
-              { icon: Globe, title: "Accès Mondial", desc: "Hôtels, restaurants, expériences, transports dans le monde entier" },
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                variants={fadeUp}
-                className="group p-8 border border-white/5 hover:border-[#c8a94a]/30 transition-all duration-500"
-              >
-                <item.icon className="h-8 w-8 text-[#c8a94a] mb-6" />
-                <h3 className="font-['Playfair_Display'] text-xl mb-3">{item.title}</h3>
-                <p className="text-white/40 text-sm font-light leading-relaxed">{item.desc}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════
-          EXPÉRIENCES — Galerie immersive style Quintessentially
-      ═══════════════════════════════════════════════ */}
-      <section className="py-24 md:py-32 bg-[#0a0f1a]">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="text-center mb-16"
-          >
-            <motion.p variants={fadeUp} className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-4">
-              Des expériences légendaires
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="font-['Playfair_Display'] text-3xl md:text-5xl">
-              Chaque moment devient <em className="text-[#c8a94a] not-italic">inoubliable</em>
-            </motion.h2>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            {[
-              { img: GASTRO_IMG, title: "Gastronomie d'exception", desc: "Tables étoilées, chefs privés, dîners secrets" },
-              { img: SKI_IMG, title: "Évasions alpines", desc: "Chalets privés, ski hors-piste, après-ski exclusif" },
-              { img: ROOFTOP_IMG, title: "Nuits légendaires", desc: "Rooftops, clubs privés, événements sur invitation" },
-              { img: SPA_IMG, title: "Bien-être absolu", desc: "Spas de palace, retraites privées, soins sur-mesure" },
-            ].map((exp, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: i * 0.1 }}
-                className="relative group overflow-hidden aspect-[4/3] cursor-pointer"
-              >
-                <img
-                  src={exp.img}
-                  alt={exp.title}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#080c14] via-[#080c14]/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-8">
-                  <h3 className="font-['Playfair_Display'] text-2xl mb-2">{exp.title}</h3>
-                  <p className="text-white/50 text-sm font-light">{exp.desc}</p>
-                </div>
-                <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ArrowRight className="h-6 w-6 text-[#c8a94a]" />
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════
-          BUNDLES SEO — Inspirations (portes d'entrée)
-      ═══════════════════════════════════════════════ */}
-      <section id="bundles" className="py-24 md:py-32">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="text-center mb-16"
-          >
-            <motion.p variants={fadeUp} className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-4">
-              Nos sélections exclusives
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="font-['Playfair_Display'] text-3xl md:text-5xl mb-6">
-              Laissez-vous <em className="text-[#c8a94a] not-italic">inspirer</em>
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-white/50 max-w-xl mx-auto font-light">
-              Des sélections curatées par notre intelligence artificielle,
-              enrichies chaque jour par nos agents experts.
-            </motion.p>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {bundles.map((bundle, i) => (
-              <Link key={i} href="/inspirations">
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="group cursor-pointer"
-                >
-                  <div className="relative overflow-hidden aspect-[3/4] mb-4">
-                    <img
-                      src={bundle.img}
-                      alt={bundle.title}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#080c14]/90 via-transparent to-transparent" />
-                    <div className="absolute top-4 left-4">
-                      <span className="text-[10px] tracking-[0.2em] uppercase text-[#c8a94a] bg-[#080c14]/60 backdrop-blur-sm px-3 py-1">
-                        {bundle.tag}
-                      </span>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-6">
-                      <h3 className="font-['Playfair_Display'] text-xl mb-1">{bundle.title}</h3>
-                      <p className="text-white/40 text-sm flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {bundle.subtitle}
-                      </p>
-                    </div>
-                    {/* Voile teaser au hover — texte lisible sur fond sombre */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-[#080c14]/75">
-                      <div className="text-center">
-                        <ArrowRight className="h-6 w-6 text-[#c8a94a] mx-auto mb-2" />
-                        <p className="text-sm text-white font-medium">Voir la sélection</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#080c14] via-[#080c14]/40 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-5 pb-8">
+            <p className="text-[10px] tracking-[0.2em] uppercase text-[#c8a94a]/70 mb-2">
+              Votre assistant premium
+            </p>
+            <h1 className="font-['Playfair_Display'] text-2xl leading-tight text-white/95">
+              Les expériences que vous n'imaginiez{" "}
+              <span className="text-[#c8a94a] italic">pas encore.</span>
+            </h1>
+            <p className="text-xs text-white/40 mt-3 leading-relaxed max-w-[280px]">
+              IA, parcours sur-mesure, accès privilégié. Baymora anticipe vos désirs.
+            </p>
+            <div className="flex gap-3 mt-5">
+              <Link href={isAuthenticated ? "/chat" : getLoginUrl()}>
+                <Button className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none px-5 py-4 text-[11px] tracking-wider uppercase font-semibold">
+                  <Sparkles size={14} className="mr-1.5" />
+                  Parler à ARIA
+                </Button>
               </Link>
-            ))}
+              <Link href="/discover">
+                <Button
+                  variant="outline"
+                  className="border-white/15 text-white/60 hover:text-[#c8a94a] hover:border-[#c8a94a]/30 rounded-none px-5 py-4 text-[11px] tracking-wider uppercase bg-transparent"
+                >
+                  Explorer
+                  <ArrowRight size={12} className="ml-1.5" />
+                </Button>
+              </Link>
+            </div>
           </div>
+        </div>
 
-          <div className="text-center mt-10">
-            <Button
-              asChild
-              variant="outline"
-              className="border-[#c8a94a]/30 text-[#c8a94a] hover:bg-[#c8a94a]/10 rounded-none px-8 py-5 tracking-wider"
+        {/* Desktop hero — full cinematic */}
+        <div className="hidden md:block relative min-h-screen">
+          <img
+            src={HERO_IMG}
+            alt="Luxury yacht at sunset"
+            className="w-full h-full object-cover absolute inset-0"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#080c14] via-[#080c14]/30 to-[#080c14]/10" />
+          <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-6">
+            <img
+              src={LOGO}
+              alt="Baymora"
+              className="w-24 h-24 object-contain mb-6 opacity-80"
+            />
+            <p className="text-[11px] tracking-[0.3em] uppercase text-[#c8a94a]/60 mb-4">
+              Votre assistant personnel premium
+            </p>
+            <h1 className="font-['Playfair_Display'] text-5xl lg:text-6xl leading-tight max-w-3xl">
+              Nous créons les{" "}
+              <span className="text-[#c8a94a] italic">expériences</span>
+              <br />
+              que vous n'imaginiez{" "}
+              <span className="text-[#c8a94a] italic">pas encore.</span>
+            </h1>
+            <p className="text-sm text-white/50 mt-6 max-w-lg leading-relaxed">
+              Intelligence artificielle, parcours sur-mesure, accès privilégié.
+              Maison Baymora anticipe vos désirs et vous connecte au meilleur du monde.
+            </p>
+            <div className="flex gap-4 mt-8">
+              <Link href={isAuthenticated ? "/chat" : getLoginUrl()}>
+                <Button className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none px-8 py-5 text-sm tracking-wider uppercase font-medium">
+                  <MessageCircle size={16} className="mr-2" />
+                  Parlez à votre assistant
+                </Button>
+              </Link>
+              <Link href="/discover">
+                <Button
+                  variant="outline"
+                  className="border-white/15 text-white/60 hover:text-[#c8a94a] hover:border-[#c8a94a]/30 rounded-none px-8 py-5 text-sm tracking-wider uppercase bg-transparent"
+                >
+                  Explorer les destinations
+                  <ArrowRight size={14} className="ml-2" />
+                </Button>
+              </Link>
+            </div>
+            <p className="text-[11px] text-white/25 mt-4">
+              3 messages gratuits — Aucune carte bancaire requise
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          FILTER PILLS — Mobile only (Spotify-style)
+      ═══════════════════════════════════════════════ */}
+      <div className="md:hidden sticky top-14 z-40 bg-[#080c14]/95 backdrop-blur-xl border-b border-white/[0.04]">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 py-3">
+          {categories.map((cat, i) => (
+            <button
+              key={cat.label}
+              onClick={() => setActiveFilter(i)}
+              className={`whitespace-nowrap px-4 py-1.5 text-[11px] font-medium tracking-wide transition-all duration-200 flex-shrink-0 ${
+                activeFilter === i
+                  ? "bg-[#c8a94a] text-[#080c14]"
+                  : "bg-white/[0.05] text-white/50 hover:bg-white/[0.08]"
+              }`}
             >
-              <a href="/discover">
-                Voir toutes les inspirations
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════
+          GREETING — Personalized (authenticated)
+      ═══════════════════════════════════════════════ */}
+      {isAuthenticated && (
+        <div className="px-4 md:px-6 pt-6 md:pt-10">
+          <p className="text-[11px] text-[#c8a94a]/50 tracking-wider uppercase">
+            Bienvenue
+          </p>
+          <h2 className="font-['Playfair_Display'] text-lg text-white/90 mt-1">
+            {getGreeting()}, {user?.name?.split(" ")[0] || "voyageur"}
+          </h2>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════
+          QUICK ACTIONS — Mobile cards
+      ═══════════════════════════════════════════════ */}
+      <div className="md:hidden px-4 pt-5 grid grid-cols-2 gap-3">
+        <Link href={isAuthenticated ? "/chat" : getLoginUrl()}>
+          <div className="p-4 bg-[#c8a94a]/[0.08] border border-[#c8a94a]/15 group">
+            <Sparkles size={18} className="text-[#c8a94a] mb-2" />
+            <p className="text-xs text-white/80 font-medium">Parler à ARIA</p>
+            <p className="text-[10px] text-white/30 mt-0.5">Votre assistant IA</p>
+          </div>
+        </Link>
+        <Link href="/discover">
+          <div className="p-4 bg-white/[0.02] border border-white/[0.06] group">
+            <Globe size={18} className="text-white/40 mb-2" />
+            <p className="text-xs text-white/80 font-medium">Explorer</p>
+            <p className="text-[10px] text-white/30 mt-0.5">Destinations & fiches</p>
+          </div>
+        </Link>
+      </div>
+
+      {/* ═══════════════════════════════════════════════
+          TRENDING — Horizontal scroll
+      ═══════════════════════════════════════════════ */}
+      <HScrollSection
+        title="Tendances"
+        subtitle="Les sélections du moment"
+        seeAllHref="/inspirations"
+      >
+        {trendingCards.map((card) => (
+          <TrendingCard key={card.title} card={card} />
+        ))}
+      </HScrollSection>
+
+      {/* ═══════════════════════════════════════════════
+          DESTINATIONS — Square cards horizontal
+      ═══════════════════════════════════════════════ */}
+      <HScrollSection
+        title="Destinations"
+        subtitle="Explorez le monde"
+        seeAllHref="/destinations"
+      >
+        {destinations.map((dest) => (
+          <DestinationCard key={dest.name} dest={dest} />
+        ))}
+      </HScrollSection>
+
+      {/* ═══════════════════════════════════════════════
+          VALUE PROPOSITION — Features grid
+      ═══════════════════════════════════════════════ */}
+      <section className="py-8 md:py-16 px-4 md:px-6">
+        <div className="max-w-5xl mx-auto">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-[#c8a94a]/50 mb-2">
+            L'art de l'excellence
+          </p>
+          <h2 className="font-['Playfair_Display'] text-xl md:text-3xl text-white/90 mb-8">
+            Un assistant qui vous <span className="text-[#c8a94a] italic">connaît</span>
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {[
+              { icon: Sparkles, title: "IA Proactive", desc: "Recommandations avant votre demande" },
+              { icon: MapPin, title: "Parcours GPS", desc: "Itinéraires jour par jour" },
+              { icon: Shield, title: "Discrétion", desc: "Anonymat total sur demande" },
+              { icon: Globe, title: "Accès Mondial", desc: "Hôtels, restaurants, expériences" },
+            ].map((feat) => (
+              <div key={feat.title} className="p-4 md:p-6 bg-white/[0.02] border border-white/[0.05]">
+                <feat.icon size={20} className="text-[#c8a94a]/60 mb-3" />
+                <h3 className="text-xs md:text-sm font-medium text-white/80 mb-1">
+                  {feat.title}
+                </h3>
+                <p className="text-[10px] md:text-xs text-white/30 leading-relaxed">
+                  {feat.desc}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════════
-          COMMENT ÇA MARCHE — En 4 étapes
+          HOW IT WORKS — Steps
       ═══════════════════════════════════════════════ */}
-      <section className="py-24 md:py-32 bg-[#0a0f1a]">
-        <div className="max-w-5xl mx-auto px-6">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="text-center mb-16"
-          >
-            <motion.p variants={fadeUp} className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-4">
-              Simple & élégant
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="font-['Playfair_Display'] text-3xl md:text-5xl">
-              Comment ça <em className="text-[#c8a94a] not-italic">fonctionne</em>
-            </motion.h2>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid md:grid-cols-4 gap-8"
-          >
+      <section className="py-8 md:py-16 px-4 md:px-6 border-t border-white/[0.04]">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-[#c8a94a]/50 mb-2">
+            Simple & élégant
+          </p>
+          <h2 className="font-['Playfair_Display'] text-xl md:text-3xl text-white/90 mb-8">
+            Comment ça <span className="text-[#c8a94a] italic">fonctionne</span>
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { step: "01", title: "Parlez", desc: "Dites à votre assistant ce dont vous rêvez. Il vous connaît déjà." },
-              { step: "02", title: "Explorez", desc: "Recevez plusieurs scénarios adaptés à votre budget et vos envies." },
-              { step: "03", title: "Visualisez", desc: "Votre parcours s'affiche sur la carte. Jour par jour, étape par étape." },
-              { step: "04", title: "Vivez", desc: "Partez l'esprit libre. Tout est organisé, du départ au retour." },
-            ].map((item, i) => (
-              <motion.div key={i} variants={fadeUp} className="text-center">
-                <span className="font-['Playfair_Display'] text-5xl text-[#c8a94a]/20 block mb-4">
-                  {item.step}
+              { step: "01", title: "Parlez", desc: "Dites à ARIA ce dont vous rêvez" },
+              { step: "02", title: "Explorez", desc: "Recevez plusieurs scénarios adaptés" },
+              { step: "03", title: "Visualisez", desc: "Parcours sur carte, jour par jour" },
+              { step: "04", title: "Vivez", desc: "Partez l'esprit libre" },
+            ].map((s) => (
+              <div key={s.step} className="relative">
+                <span className="text-[32px] md:text-[48px] font-['Playfair_Display'] text-[#c8a94a]/10 leading-none">
+                  {s.step}
                 </span>
-                <h3 className="font-['Playfair_Display'] text-xl mb-3">{item.title}</h3>
-                <p className="text-white/40 text-sm font-light leading-relaxed">{item.desc}</p>
-              </motion.div>
+                <h3 className="text-sm font-medium text-white/80 mt-1">{s.title}</h3>
+                <p className="text-[10px] text-white/30 mt-1 leading-relaxed">{s.desc}</p>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════════
-          FORFAITS — Les 3 plans
+          PRICING — Compact mobile cards
       ═══════════════════════════════════════════════ */}
-      <section id="pricing" className="py-24 md:py-32">
-        <div className="max-w-6xl mx-auto px-6">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="text-center mb-16"
-          >
-            <motion.p variants={fadeUp} className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-4">
-              Choisissez votre expérience
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="font-['Playfair_Display'] text-3xl md:text-5xl mb-6">
-              Des forfaits pensés pour <em className="text-[#c8a94a] not-italic">chaque ambition</em>
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-white/50 max-w-xl mx-auto font-light">
-              Du luxe accessible aux privilèges absolus. Achetez aussi des crédits à l'unité
-              pour débloquer ponctuellement des fonctionnalités premium.
-            </motion.p>
-          </motion.div>
+      <section className="py-8 md:py-16 px-4 md:px-6 border-t border-white/[0.04]">
+        <div className="max-w-5xl mx-auto">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-[#c8a94a]/50 mb-2">
+            Choisissez votre expérience
+          </p>
+          <h2 className="font-['Playfair_Display'] text-xl md:text-3xl text-white/90 mb-8">
+            Des forfaits pour <span className="text-[#c8a94a] italic">chaque ambition</span>
+          </h2>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {plans.map((plan, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }}
-                className={`relative p-8 border transition-all duration-500 ${
+          {/* Mobile: horizontal scroll */}
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-4 snap-x snap-mandatory md:grid md:grid-cols-3 md:gap-6 md:overflow-visible">
+            {plans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`snap-start flex-shrink-0 w-[260px] md:w-auto p-5 md:p-6 border ${
                   plan.accent
-                    ? "border-[#c8a94a]/50 bg-[#c8a94a]/5"
-                    : (plan as any).comingSoon
-                    ? "border-white/5 opacity-60"
-                    : "border-white/5 hover:border-white/10"
-                }`}
+                    ? "border-[#c8a94a]/30 bg-[#c8a94a]/[0.04]"
+                    : "border-white/[0.06] bg-white/[0.02]"
+                } relative`}
               >
                 {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-[#c8a94a] text-[#080c14] text-[10px] tracking-[0.15em] uppercase font-semibold px-4 py-1">
-                      {plan.badge}
-                    </span>
-                  </div>
+                  <span className="absolute -top-3 left-4 text-[9px] bg-[#c8a94a] text-[#080c14] px-2 py-0.5 font-semibold tracking-wider uppercase">
+                    {plan.badge}
+                  </span>
                 )}
-                {(plan as any).comingSoon && (
-                  <div className="absolute top-4 right-4">
-                    <span className="bg-purple-500/20 text-purple-300 border border-purple-400/30 text-[9px] tracking-[0.1em] uppercase px-2 py-1">
-                      En cours de création
-                    </span>
-                  </div>
-                )}
-
-                <div className="mb-8">
-                  <h3 className="font-['Playfair_Display'] text-2xl mb-2">{plan.name}</h3>
-                  <p className="text-white/40 text-sm font-light mb-4">{plan.tagline}</p>
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-['Playfair_Display'] text-4xl text-[#c8a94a]">{plan.price}€</span>
-                    <span className="text-white/30 text-sm">/mois</span>
-                  </div>
+                <h3 className="font-['Playfair_Display'] text-base text-white/90">
+                  {plan.name}
+                </h3>
+                <p className="text-[10px] text-white/35 mt-0.5">{plan.tagline}</p>
+                <div className="mt-4 mb-5">
+                  <span className="text-2xl font-semibold text-white/90">
+                    {plan.price}
+                  </span>
+                  <span className="text-xs text-white/30">€/mois</span>
                 </div>
-
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-start gap-3 text-sm text-white/60">
-                      <Check className="h-4 w-4 text-[#c8a94a] mt-0.5 shrink-0" />
-                      <span>{f}</span>
+                <ul className="space-y-2 mb-6">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-[11px] text-white/50">
+                      <Check size={12} className="text-[#c8a94a]/60 mt-0.5 flex-shrink-0" />
+                      {f}
                     </li>
                   ))}
                 </ul>
-
-                <Button
-                  asChild
-                  disabled={(plan as any).comingSoon}
-                  className={`w-full rounded-none py-5 tracking-wider ${
-                    plan.accent
-                      ? "bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a]"
-                      : (plan as any).comingSoon
-                      ? "bg-white/5 text-white/30 border border-white/5 cursor-not-allowed"
-                      : "bg-white/5 text-white hover:bg-white/10 border border-white/10"
-                  }`}
-                >
-                  <a href={(plan as any).comingSoon ? "#" : (isAuthenticated ? "/pricing" : getLoginUrl())}>
-                    {(plan as any).comingSoon ? "Bientôt disponible" : plan.cta}
-                  </a>
-                </Button>
-              </motion.div>
+                {plan.comingSoon ? (
+                  <Button
+                    disabled
+                    className="w-full rounded-none py-4 text-[11px] tracking-wider uppercase opacity-40"
+                  >
+                    Bientôt disponible
+                  </Button>
+                ) : (
+                  <Link href={isAuthenticated ? "/pricing" : getLoginUrl()}>
+                    <Button
+                      className={`w-full rounded-none py-4 text-[11px] tracking-wider uppercase font-medium ${
+                        plan.accent
+                          ? "bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a]"
+                          : "bg-white/[0.05] text-white/60 hover:bg-white/[0.08]"
+                      }`}
+                    >
+                      {plan.cta}
+                    </Button>
+                  </Link>
+                )}
+              </div>
             ))}
           </div>
+        </div>
+      </section>
 
-          {/* Crédits one-shot */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="mt-12 text-center p-8 border border-white/5"
-          >
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Zap className="h-5 w-5 text-[#c8a94a]" />
-              <h3 className="font-['Playfair_Display'] text-xl">Crédits à la carte</h3>
-            </div>
-            <p className="text-white/40 text-sm font-light max-w-lg mx-auto mb-4">
-              Besoin ponctuel d'une fonctionnalité premium ? Achetez des crédits sans engagement.
+      {/* ═══════════════════════════════════════════════
+          AMBASSADOR — Compact
+      ═══════════════════════════════════════════════ */}
+      <section className="py-8 md:py-16 px-4 md:px-6 border-t border-white/[0.04]">
+        <div className="max-w-4xl mx-auto md:flex md:items-center md:gap-12">
+          <div className="flex-1">
+            <p className="text-[10px] tracking-[0.2em] uppercase text-[#c8a94a]/50 mb-2">
+              Programme ambassadeur
             </p>
-            <div className="flex flex-wrap justify-center gap-4 text-sm">
+            <h2 className="font-['Playfair_Display'] text-xl md:text-2xl text-white/90 mb-4">
+              Partagez l'excellence, <span className="text-[#c8a94a] italic">récoltez les fruits</span>
+            </h2>
+            <p className="text-xs text-white/40 leading-relaxed mb-5">
+              Parrainez vos proches et gagnez jusqu'à 22% de commissions récurrentes
+              sur chaque abonnement et réservation.
+            </p>
+            <div className="grid grid-cols-2 gap-3 mb-6">
               {[
-                { credits: "10", price: "2,99€" },
-                { credits: "50", price: "12,99€" },
-                { credits: "150", price: "29,99€" },
-                { credits: "500", price: "79,99€" },
-              ].map((pack, i) => (
-                <div key={i} className="px-5 py-3 border border-white/10 hover:border-[#c8a94a]/30 transition-colors cursor-pointer">
-                  <span className="text-[#c8a94a] font-medium">{pack.credits}</span>
-                  <span className="text-white/40 ml-1">crédits</span>
-                  <span className="text-white/60 ml-2">{pack.price}</span>
+                "15% sur chaque abonnement",
+                "Commissions niveau 2",
+                "Parcours vérifiés",
+                "Contenu partageable",
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-2">
+                  <Check size={12} className="text-[#c8a94a]/60 mt-0.5 flex-shrink-0" />
+                  <span className="text-[10px] text-white/50">{item}</span>
                 </div>
               ))}
             </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════
-          PROGRAMME AMBASSADEUR
-      ═══════════════════════════════════════════════ */}
-      <section className="py-24 md:py-32 bg-[#0a0f1a]">
-        <div className="max-w-5xl mx-auto px-6">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid md:grid-cols-2 gap-16 items-center"
-          >
-            <motion.div variants={fadeUp}>
-              <p className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-4">
-                Programme ambassadeur
-              </p>
-              <h2 className="font-['Playfair_Display'] text-3xl md:text-4xl mb-6">
-                Partagez l'excellence,{" "}
-                <em className="text-[#c8a94a] not-italic">récoltez les fruits</em>
-              </h2>
-              <p className="text-white/50 font-light leading-relaxed mb-8">
-                Partagez vos parcours, invitez vos proches, et gagnez des commissions
-                sur chaque abonnement et chaque réservation générée grâce à vous.
-                Jusqu'à 22% de commissions récurrentes.
-              </p>
-              <div className="space-y-4">
-                {[
-                  { icon: Users, text: "Parrainez et gagnez 15% sur chaque abonnement" },
-                  { icon: Crown, text: "Commissions de niveau 2 sur les affiliations" },
-                  { icon: Star, text: "Créez et partagez vos parcours vérifiés" },
-                  { icon: Eye, text: "Publiez votre contenu (vidéos, photos, avis)" },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-4">
-                    <item.icon className="h-5 w-5 text-[#c8a94a] shrink-0" />
-                    <span className="text-white/60 text-sm">{item.text}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            <motion.div variants={fadeUp} className="relative">
-              <div className="aspect-square relative overflow-hidden">
-                <img
-                  src={ROOFTOP_IMG}
-                  alt="Ambassador lifestyle"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#080c14] via-transparent to-transparent" />
-              </div>
-              <div className="absolute bottom-6 left-6 right-6 p-6 bg-[#080c14]/80 backdrop-blur-xl border border-white/10">
-                <p className="text-[#c8a94a] font-['Playfair_Display'] text-2xl mb-1">Jusqu'à 22%</p>
-                <p className="text-white/40 text-sm">de commissions récurrentes</p>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════
-          PRESTATAIRES B2B
-      ═══════════════════════════════════════════════ */}
-      <section className="py-24 md:py-32">
-        <div className="max-w-5xl mx-auto px-6 text-center">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-          >
-            <motion.p variants={fadeUp} className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-4">
-              Vous êtes prestataire ?
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="font-['Playfair_Display'] text-3xl md:text-5xl mb-6">
-              Recevez des clients <em className="text-[#c8a94a] not-italic">qualifiés</em>
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-white/50 max-w-2xl mx-auto font-light mb-10 leading-relaxed">
-              Hôtels, restaurants, agences, artisans du luxe : rejoignez notre réseau.
-              Zéro frais d'inscription, commission uniquement sur les réservations confirmées.
-              Nos clients arrivent informés, décidés, prêts à réserver.
-            </motion.p>
-            <motion.div variants={fadeUp} className="flex flex-wrap justify-center gap-6 text-sm text-white/30">
-              {["Hôtellerie", "Gastronomie", "Transport", "Yachts", "Immobilier", "Bien-être", "Mode", "Événementiel", "Expériences"].map(
-                (cat) => (
-                  <span key={cat} className="px-4 py-2 border border-white/10 hover:border-[#c8a94a]/30 hover:text-[#c8a94a] transition-colors cursor-default">
-                    {cat}
-                  </span>
-                )
-              )}
-            </motion.div>
-            <motion.div variants={fadeUp} className="mt-10">
-              <Button className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none px-10 py-5 tracking-wider">
-                Devenir partenaire
-              </Button>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════
-          CTA FINAL
-      ═══════════════════════════════════════════════ */}
-      <section className="relative py-32 overflow-hidden">
-        <div className="absolute inset-0">
-          <img src={SPA_IMG} alt="Luxury spa" className="w-full h-full object-cover opacity-30" />
-          <div className="absolute inset-0 bg-[#080c14]/80" />
-        </div>
-        <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-          >
-            <motion.h2 variants={fadeUp} className="font-['Playfair_Display'] text-3xl md:text-5xl mb-6">
-              Votre prochaine expérience{" "}
-              <em className="text-[#c8a94a] not-italic">commence ici</em>
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-white/50 font-light text-lg mb-10">
-              Rejoignez Maison Baymora et découvrez ce que l'intelligence artificielle
-              peut faire pour sublimer chaque instant de votre vie.
-            </motion.p>
-            <motion.div variants={fadeUp}>
+            <Link href="/ambassadeur">
               <Button
-                asChild
-                size="lg"
-                className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none px-12 py-6 text-base tracking-wider"
+                variant="outline"
+                className="border-[#c8a94a]/20 text-[#c8a94a]/70 hover:text-[#c8a94a] hover:border-[#c8a94a]/40 rounded-none px-6 py-4 text-[11px] tracking-wider uppercase bg-transparent"
               >
-                <a href={isAuthenticated ? "/chat" : getLoginUrl()}>
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Parlez à votre assistant
-                </a>
+                En savoir plus
+                <ArrowRight size={12} className="ml-2" />
               </Button>
-            </motion.div>
-          </motion.div>
+            </Link>
+          </div>
+          <div className="hidden md:block flex-shrink-0">
+            <div className="w-48 h-48 bg-[#c8a94a]/[0.05] border border-[#c8a94a]/10 flex items-center justify-center">
+              <div className="text-center">
+                <span className="text-3xl font-['Playfair_Display'] text-[#c8a94a]">22%</span>
+                <p className="text-[10px] text-white/30 mt-1">commissions récurrentes</p>
+              </div>
+            </div>
+          </div>
         </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          B2B — Prestataires
+      ═══════════════════════════════════════════════ */}
+      <section className="py-8 md:py-16 px-4 md:px-6 border-t border-white/[0.04]">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-[#c8a94a]/50 mb-2">
+            Vous êtes prestataire ?
+          </p>
+          <h2 className="font-['Playfair_Display'] text-xl md:text-2xl text-white/90 mb-3">
+            Recevez des clients <span className="text-[#c8a94a] italic">qualifiés</span>
+          </h2>
+          <p className="text-xs text-white/40 leading-relaxed mb-5 max-w-lg">
+            Hôtels, restaurants, agences : rejoignez notre réseau. Zéro frais d'inscription,
+            commission uniquement sur les réservations confirmées.
+          </p>
+          <div className="flex flex-wrap gap-2 mb-6">
+            {["Hôtellerie", "Gastronomie", "Transport", "Yachts", "Immobilier", "Bien-être", "Mode", "Événementiel"].map(
+              (tag) => (
+                <span
+                  key={tag}
+                  className="text-[10px] px-3 py-1 bg-white/[0.03] border border-white/[0.06] text-white/40"
+                >
+                  {tag}
+                </span>
+              )
+            )}
+          </div>
+          <Button
+            variant="outline"
+            className="border-white/10 text-white/50 hover:text-[#c8a94a] hover:border-[#c8a94a]/30 rounded-none px-6 py-4 text-[11px] tracking-wider uppercase bg-transparent"
+            onClick={() => {
+              import("sonner").then(({ toast }) =>
+                toast("Formulaire prestataire bientôt disponible")
+              );
+            }}
+          >
+            Devenir partenaire
+          </Button>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════
+          FINAL CTA
+      ═══════════════════════════════════════════════ */}
+      <section className="py-12 md:py-20 px-4 md:px-6 border-t border-white/[0.04] text-center">
+        <h2 className="font-['Playfair_Display'] text-xl md:text-3xl text-white/90 mb-3">
+          Votre prochaine expérience{" "}
+          <span className="text-[#c8a94a] italic">commence ici</span>
+        </h2>
+        <p className="text-xs text-white/35 mb-6 max-w-md mx-auto">
+          Rejoignez Maison Baymora et découvrez ce que l'intelligence artificielle
+          peut faire pour sublimer chaque instant.
+        </p>
+        <Link href={isAuthenticated ? "/chat" : getLoginUrl()}>
+          <Button className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-none px-8 py-5 text-sm tracking-wider uppercase font-medium">
+            <MessageCircle size={16} className="mr-2" />
+            Parlez à votre assistant
+          </Button>
+        </Link>
       </section>
 
       {/* ═══════════════════════════════════════════════
           FOOTER
       ═══════════════════════════════════════════════ */}
-      <footer className="border-t border-white/5 py-16">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-12">
+      <footer className="border-t border-white/[0.04] py-8 px-4 md:px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
             <div>
-              <div className="flex items-center gap-3 mb-4">
-                <img src={LOGO} alt="Maison Baymora" className="h-8 w-8 rounded-full object-contain" />
-                <span className="font-['Playfair_Display'] text-[#c8a94a]">Maison Baymora</span>
-              </div>
-              <p className="text-white/30 text-sm font-light leading-relaxed">
-                Votre assistant personnel premium,
-                propulsé par l'intelligence artificielle.
+              <p className="text-[10px] tracking-[0.15em] uppercase text-[#c8a94a]/40 mb-3 font-medium">
+                Explorer
               </p>
+              <div className="space-y-2">
+                <Link href="/destinations" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">Destinations</Link>
+                <Link href="/inspirations" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">Expériences</Link>
+                <Link href="/inspirations" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">Bundles</Link>
+              </div>
             </div>
             <div>
-              <h4 className="text-[#c8a94a] text-xs tracking-[0.2em] uppercase mb-4">Explorer</h4>
-              <ul className="space-y-2 text-sm text-white/30">
-                <li><Link href="/discover" className="hover:text-white/60 transition-colors">Destinations</Link></li>
-                <li><Link href="/discover" className="hover:text-white/60 transition-colors">Expériences</Link></li>
-                <li><Link href="/discover" className="hover:text-white/60 transition-colors">Bundles</Link></li>
-              </ul>
+              <p className="text-[10px] tracking-[0.15em] uppercase text-[#c8a94a]/40 mb-3 font-medium">
+                Membership
+              </p>
+              <div className="space-y-2">
+                <Link href="/pricing" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">Forfaits</Link>
+                <Link href="/ambassadeur" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">Programme Ambassadeur</Link>
+                <Link href="/a-propos#b2b" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">Prestataires</Link>
+              </div>
             </div>
             <div>
-              <h4 className="text-[#c8a94a] text-xs tracking-[0.2em] uppercase mb-4">Maison Baymora</h4>
-              <ul className="space-y-2 text-sm text-white/30">
-                <li><Link href="/pricing" className="hover:text-white/60 transition-colors">Forfaits</Link></li>
-                <li><Link href="/ambassadeur" className="hover:text-white/60 transition-colors">Programme Ambassadeur</Link></li>
-                <li><Link href="/#b2b" className="hover:text-white/60 transition-colors">Prestataires</Link></li>
-              </ul>
+              <p className="text-[10px] tracking-[0.15em] uppercase text-[#c8a94a]/40 mb-3 font-medium">
+                Réseaux
+              </p>
+              <div className="space-y-2">
+                <a href="#" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">Instagram</a>
+                <a href="#" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">TikTok</a>
+                <a href="#" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">YouTube</a>
+              </div>
             </div>
             <div>
-              <h4 className="text-[#c8a94a] text-xs tracking-[0.2em] uppercase mb-4">Suivez-nous</h4>
-              <ul className="space-y-2 text-sm text-white/30">
-                <li><a href="#" className="hover:text-white/60 transition-colors">Instagram</a></li>
-                <li><a href="#" className="hover:text-white/60 transition-colors">TikTok</a></li>
-                <li><a href="#" className="hover:text-white/60 transition-colors">YouTube</a></li>
-              </ul>
+              <p className="text-[10px] tracking-[0.15em] uppercase text-[#c8a94a]/40 mb-3 font-medium">
+                Légal
+              </p>
+              <div className="space-y-2">
+                <a href="#" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">Mentions légales</a>
+                <a href="#" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">Confidentialité</a>
+                <a href="#" className="block text-[11px] text-white/30 hover:text-[#c8a94a] transition-colors">CGU</a>
+              </div>
             </div>
           </div>
-          <div className="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-white/20 text-xs">
-              &copy; {new Date().getFullYear()} Maison Baymora. Tous droits réservés.
-            </p>
-            <div className="flex gap-6 text-white/20 text-xs">
-              <a href="#" className="hover:text-white/40 transition-colors">Mentions légales</a>
-              <a href="#" className="hover:text-white/40 transition-colors">Politique de confidentialité</a>
-              <a href="#" className="hover:text-white/40 transition-colors">CGU</a>
+          <div className="border-t border-white/[0.04] pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 flex items-center justify-center border border-[#c8a94a]/30 rounded-full">
+                <span className="font-['Playfair_Display'] text-xs text-[#c8a94a] font-semibold">B</span>
+              </div>
+              <span className="text-[11px] text-white/20">
+                © {new Date().getFullYear()} Maison Baymora. Tous droits réservés.
+              </span>
             </div>
+            <p className="text-[10px] text-white/15">
+              Propulsé par l'intelligence artificielle
+            </p>
           </div>
         </div>
       </footer>
     </div>
   );
+}
+
+/* ─── Helpers ───────────────────────────────────────── */
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Bonjour";
+  if (hour < 18) return "Bon après-midi";
+  return "Bonsoir";
 }

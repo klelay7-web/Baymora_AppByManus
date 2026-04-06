@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import AppLayout from "./components/AppLayout";
 import Home from "./pages/Home";
 import Chat from "./pages/Chat";
 import Discover from "./pages/Discover";
@@ -16,10 +17,9 @@ import Destinations from "./pages/Destinations";
 import Inspirations from "./pages/Inspirations";
 import Services from "./pages/Services";
 import About from "./pages/About";
-import Navbar from "./components/Navbar";
 import { lazy, Suspense } from "react";
 
-// Lazy load dashboards
+// Lazy load dashboards & heavy pages
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const DashboardClient = lazy(() => import("./pages/DashboardClient"));
 const DashboardAmbassador = lazy(() => import("./pages/DashboardAmbassador"));
@@ -32,13 +32,16 @@ const TeamDashboard = lazy(() => import("./pages/TeamDashboard"));
 const Pilotage = lazy(() => import("./pages/Pilotage"));
 const AdminEmailCenter = lazy(() => import("./pages/AdminEmailCenter"));
 const LenaWorkspace = lazy(() => import("./pages/LenaWorkspace"));
+const MesParcours = lazy(() => import("./pages/MesParcours"));
 
 function LazyPage({ Component }: { Component: React.LazyExoticComponent<any> }) {
   return (
     <Suspense
       fallback={
         <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="text-primary text-sm tracking-wider animate-pulse">Chargement...</div>
+          <div className="text-primary text-sm tracking-wider animate-pulse font-['Playfair_Display']">
+            Maison Baymora
+          </div>
         </div>
       }
     >
@@ -64,24 +67,25 @@ function Router() {
       <Route path="/services" component={Services} />
       <Route path="/a-propos" component={About} />
 
-      {/* Client Dashboards */}
+      {/* Client */}
       <Route path="/profile" component={Profile} />
+      <Route path="/parcours">{() => <LazyPage Component={MesParcours} />}</Route>
       <Route path="/mon-espace">{() => <LazyPage Component={DashboardClient} />}</Route>
       <Route path="/ambassadeur">{() => <LazyPage Component={DashboardAmbassador} />}</Route>
 
-      {/* Team Dashboard */}
+      {/* Team */}
       <Route path="/team/fiches">{() => <LazyPage Component={TeamDashboard} />}</Route>
 
-      {/* Admin Dashboards */}
+      {/* Admin */}
       <Route path="/admin">{() => <LazyPage Component={AdminDashboard} />}</Route>
       <Route path="/admin/command-center">{() => <LazyPage Component={CommandCenter} />}</Route>
       <Route path="/admin/seo-fiches">{() => <LazyPage Component={AdminSeoFiches} />}</Route>
       <Route path="/admin/content-social">{() => <LazyPage Component={AdminContentSocial} />}</Route>
       <Route path="/admin/partners-commissions">{() => <LazyPage Component={AdminPartnersCommissions} />}</Route>
-
-      {/* Pilotage Owner */}
-      <Route path="/pilotage">{() => <LazyPage Component={Pilotage} />}</Route>
       <Route path="/admin/emails">{() => <LazyPage Component={AdminEmailCenter} />}</Route>
+
+      {/* Owner */}
+      <Route path="/pilotage">{() => <LazyPage Component={Pilotage} />}</Route>
       <Route path="/lena-workspace">{() => <LazyPage Component={LenaWorkspace} />}</Route>
 
       <Route path="/404" component={NotFound} />
@@ -97,8 +101,9 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <div className="min-h-screen bg-background text-foreground">
-            <Navbar />
-            <Router />
+            <AppLayout>
+              <Router />
+            </AppLayout>
           </div>
         </TooltipProvider>
       </ThemeProvider>

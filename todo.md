@@ -458,3 +458,65 @@
 - [x] Terrain : layout mobile adapté (déjà responsive avec classes sm/md)
 - [x] Toutes les pages : vérifier breakpoints sm/md/lg
 - [ ] Navigation bottom bar mobile sur toutes les pages internes (optionnel, MobileNav existe mais non monté)
+
+## Sprint 0 — Refonte Mobile-First Complète (Avril 2026)
+
+### S0.1 DB — Nouvelles tables
+- [x] Table `userProfile` enrichie — clientProfiles existait déjà
+- [x] Table `userMemory` (faits mémorisés par ARIA client)
+- [x] Table `userParcours` — userDestinations existait déjà
+- [x] Table `parcoursItems` — steps JSON dans userDestinations
+- [x] Table `userFavorites` — favorites existait déjà
+- [x] Table `baymoraPoints` (solde par utilisateur)
+- [x] Table `pointsTransactions` (historique BP)
+- [x] Table `subscriptionPause` + subscriptions (5 tiers)
+
+### S0.2 Navigation — Bottom Bar Mobile-First
+- [x] Bottom bar 5 onglets (Accueil/Découvrir/ARIA/Parcours/Profil)
+- [x] Pastilles filtre rapide en haut (Tout/Destinations/Bundles/Parcours)
+- [x] Header compact mobile (logo + avatar + notifications)
+- [x] Refonte App.tsx routes et layout global + AppLayout
+
+### S0.3 Accueil Spotify-Style
+- [x] Hero section premium compact mobile + full desktop
+- [x] Section Tendances (scroll horizontal)
+- [x] Section Sélections éditoriales (intégré dans Tendances)
+- [x] Section Bundles (top 5, top 10) dans trending cards
+- [x] Section Destinations (scroll horizontal)
+- [x] Section Nouveautés (intégré dans value prop)
+- [x] Réponse à la douleur visible dès l'accueil (hero + quick actions)
+
+### S0.4 Profil Utilisateur
+- [x] Page profil complète (pseudo, avatar, bio, niveau)
+- [x] Section compagnons (partenaire, enfants, animaux)
+- [x] Section préférences (style, budget, mobilité)
+- [x] Section mémoire ARIA (visible, tab dédié)
+- [x] Section stats (crédits, compagnons, catégories)
+- [x] Section confidentialité (lien accès rapide)
+- [x] Enrichissement progressif par ARIA (message incitatif)
+
+### S0.4b Découvrir Mobile-First
+- [x] Page Découvrir refonte mobile-first (grille 2 colonnes, filtres horizontaux)
+- [x] Recherche intégrée avec icône filtres
+- [x] Cards overlay style (image + texte superposé)
+
+### S0.4c Mes Parcours
+- [x] Page Mes Parcours avec tabs (Mes voyages / Sauvegardes)
+- [x] Intégration tRPC trips.getMyPlans + lena.savedParcours
+- [x] État vide avec CTA vers ARIA
+
+### S0.5 Séparation ARIA Client / DG
+- [ ] System prompt ARIA Client (chaleureux, inspirant)
+- [ ] Table mémoire séparée ARIA Client vs ARIA DG
+- [ ] Middleware bloquant accès croisé
+- [ ] Nommage par plan (assistant Baymora vs ARIA)
+
+### S0.6 Scheduler LÉNA Autonome
+- [ ] Scheduler quotidien 2h du matin
+- [ ] LÉNA crée 3 fiches/nuit automatiquement
+- [ ] Pipeline fiche → contenu social
+
+### S0.7 Responsive Mobile Complet
+- [ ] Pilotage mobile-first
+- [ ] Terrain mobile-first
+- [ ] Toutes les pages breakpoints cohérents
