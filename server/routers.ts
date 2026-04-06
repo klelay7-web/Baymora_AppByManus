@@ -53,9 +53,7 @@ import type { User } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
 import { notifyOwner } from "./_core/notification";
-import { chatWithDG, generateDailyReport, getCarnetsDebord, getDGHistory, ORGANIGRAMME, STRATEGIE, BUDGET_MENSUEL, parseAndCreateTasksFromARIA } from "./services/dgService";
-import { createTaskOrder, listTaskOrders, updateTaskProgress, updateTaskStatus, getActiveTasks, getTaskStats } from "./services/taskOrderService";
-import { saveLenaSession, loadLenaSession, listLenaSessions, closeLenaSession, generateSessionKey } from "./services/lenaSessionService";
+import { chatWithDG, generateDailyReport, getCarnetsDebord, getDGHistory, ORGANIGRAMME, STRATEGIE, BUDGET_MENSUEL } from "./services/dgService";
 import {
   getClientProfile, upsertClientProfile,
   listCompanions, getCompanion, createCompanion, updateCompanion, deleteCompanion,
@@ -1161,7 +1159,7 @@ export const appRouter = router({
   pilotage: router({
     // Chat avec ARIA DG
     chat: ownerProcedure
-      .input(z.object({ message: z.string().min(1).max(20000) }))
+      .input(z.object({ message: z.string().min(1).max(4000) }))
       .mutation(async ({ input }) => {
         const adminStats = await getAdminStats();
         const stats = {
@@ -1179,10 +1177,7 @@ export const appRouter = router({
         const enrichedMessage = missionCtx
           ? `${missionCtx}\n\n---\n\nMessage du fondateur : ${input.message}`
           : input.message;
-        const result = await chatWithDG(enrichedMessage, stats);
-        // Parser et créer les tâches que ARIA a incluses dans sa réponse
-        const createdTasks = await parseAndCreateTasksFromARIA(result.content, "ARIA");
-        return { ...result, createdTasks };
+        return chatWithDG(enrichedMessage, stats);
       }),
     // Rapport journalier
     dailyReport: ownerProcedure
@@ -1230,86 +1225,6 @@ export const appRouter = router({
       .input(z.object({ userId: z.number(), role: z.enum(["user", "team", "admin"]) }))
       .mutation(async ({ input }) => updateUserRoleById(input.userId, input.role)),
 
-    // ─── Task Orders (Tableau de bord tâches agents) ──────────────────────────
-    // Créer une tâche manuellement (fondateur)
-    createTask: ownerProcedure
-      .input(z.object({
-        title: z.string().min(1).max(256),
-        description: z.string().optional(),
-        agent: z.string().min(1),
-        priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
-        linkedMissionId: z.number().optional(),
-        dueAt: z.date().optional(),
-      }))
-      .mutation(async ({ input }) => createTaskOrder(input)),
-    // Lister les tâches
-    listTasks: ownerProcedure
-      .input(z.object({
-        agent: z.string().optional(),
-        status: z.enum(["pending", "in_progress", "completed", "failed", "cancelled"]).optional(),
-        limit: z.number().default(50),
-      }).optional())
-      .query(async ({ input }) => listTaskOrders(input)),
-    // Tâches actives
-    activeTasks: ownerProcedure
-      .query(async () => getActiveTasks(30)),
-    // Stats des tâches
-    taskStats: ownerProcedure
-      .query(async () => getTaskStats()),
-    // Mettre à jour la progression
-    updateTaskProgress: ownerProcedure
-      .input(z.object({
-        id: z.number(),
-        progressPercent: z.number().min(0).max(100),
-        note: z.string().optional(),
-        by: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        await updateTaskProgress(input.id, input.progressPercent, input.note, input.by);
-        return { success: true };
-      }),
-    // Changer le statut
-    updateTaskStatus: ownerProcedure
-      .input(z.object({
-        id: z.number(),
-        status: z.enum(["pending", "in_progress", "completed", "failed", "cancelled"]),
-        result: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        await updateTaskStatus(input.id, input.status, input.result);
-        return { success: true };
-      }),
-    // ─── Sessions LÉNA persistées ──────────────────────────────────────────────
-    saveLenaSession: ownerProcedure
-      .input(z.object({
-        sessionKey: z.string(),
-        session: z.object({
-          establishmentName: z.string().optional(),
-          city: z.string().optional(),
-          currentStep: z.string(),
-          collectedData: z.record(z.string(), z.any()).default({}),
-          scoutBriefing: z.string().optional(),
-          fieldReportId: z.number().optional(),
-        }),
-        history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        await saveLenaSession(ctx.user.id, input.sessionKey, input.session as any, input.history as any);
-        return { success: true };
-      }),
-    loadLenaSession: ownerProcedure
-      .input(z.object({ sessionKey: z.string().optional() }).optional())
-      .query(async ({ ctx, input }) => loadLenaSession(ctx.user.id, input?.sessionKey)),
-    listLenaSessions: ownerProcedure
-      .query(async ({ ctx }) => listLenaSessions(ctx.user.id)),
-    closeLenaSession: ownerProcedure
-      .input(z.object({ sessionKey: z.string() }))
-      .mutation(async ({ ctx, input }) => {
-        await closeLenaSession(ctx.user.id, input.sessionKey);
-        return { success: true };
-      }),
-    newSessionKey: ownerProcedure
-      .query(() => ({ key: generateSessionKey() })),
     // ─── Missions 24h ────────────────────────────────────────────────────
     // Créer une nouvelle mission
     createMission: ownerProcedure
@@ -1567,33 +1482,101 @@ export const appRouter = router({
       .input(z.object({
         pseudo: z.string().max(64).optional(),
         mode: z.enum(["signature", "fantome"]).optional(),
-        dietRegime: z.string().optional(),
-        dietAllergies: z.string().optional(),
-        dietOther: z.string().optional(),
-        travelStyles: z.string().optional(),
-        travelBudget: z.enum(["economique", "confort", "premium", "luxe", "sans_limite"]).optional(),
-        travelGroup: z.enum(["solo", "couple", "famille", "amis", "business"]).optional(),
-        travelMobility: z.enum(["aucune", "pmr", "reduite", "poussette"]).optional(),
-        languages: z.string().optional(),
-        pet: z.enum(["aucun", "chien", "chat", "autre"]).optional(),
-        smoking: z.enum(["non_fumeur", "fumeur", "cigare", "vape"]).optional(),
-        dresscode: z.enum(["casual", "smart_casual", "chic", "formel"]).optional(),
-        ecofriendly: z.boolean().optional(),
+        // Identité
+        birthDate: z.string().max(10).optional(),
+        gender: z.string().max(32).optional(),
+        nationality: z.string().max(64).optional(),
+        locale: z.string().max(8).optional(),
+        // Morphologie
+        height: z.number().optional(),
+        weight: z.number().optional(),
+        shoeSize: z.string().max(8).optional(),
+        clothingSizeTop: z.string().max(16).optional(),
+        clothingSizeBottom: z.string().max(16).optional(),
+        clothingSizeDress: z.string().max(16).optional(),
+        clothingSizeSuit: z.string().max(16).optional(),
+        ringSize: z.string().max(8).optional(),
+        // Permis
+        drivingLicenses: z.string().optional(),
+        drivingSide: z.string().max(16).optional(),
+        transmissionPref: z.string().max(16).optional(),
+        carPrefLuxury: z.string().optional(),
+        carPrefDaily: z.string().optional(),
+        // Logement
         homeCity: z.string().max(128).optional(),
         homeAddress: z.string().optional(),
+        lodgingTypes: z.string().optional(),
+        lodgingSettings: z.string().optional(),
+        lodgingAmenities: z.string().optional(),
+        lodgingLocation: z.string().optional(),
+        transportPref: z.string().optional(),
+        // Aéroport
         preferredAirport: z.string().max(16).optional(),
         airportLounge: z.boolean().optional(),
         priorityLane: z.boolean().optional(),
-        clothingSize: z.string().max(16).optional(),
-        shoeSize: z.string().max(8).optional(),
-        favoriteAlcohol: z.string().max(128).optional(),
-        favoriteCuisine: z.string().max(256).optional(),
+        passportCountry: z.string().max(64).optional(),
+        seatPreference: z.string().max(32).optional(),
+        cabinClass: z.string().max(32).optional(),
+        frequentFlyerPrograms: z.string().optional(),
+        // Style
+        favoriteColors: z.string().optional(),
+        favoriteBrands: z.string().optional(),
+        favoriteShops: z.string().optional(),
+        dresscode: z.enum(["casual", "smart_casual", "chic", "formel"]).optional(),
+        smoking: z.enum(["non_fumeur", "fumeur", "cigare", "vape"]).optional(),
+        ecofriendly: z.boolean().optional(),
+        // Gastronomie
+        favoriteCuisines: z.string().optional(),
+        favoriteDishes: z.string().optional(),
+        dietRegime: z.string().optional(),
+        dietAllergies: z.string().optional(),
+        dietOther: z.string().optional(),
+        favoriteAlcohol: z.string().optional(),
+        favoriteWines: z.string().optional(),
+        coffeeTea: z.string().max(64).optional(),
+        // Santé
+        visionStatus: z.string().max(64).optional(),
+        visionDetails: z.string().optional(),
+        healthConditions: z.string().optional(),
+        handicap: z.string().optional(),
+        travelMobility: z.string().max(32).optional(),
         sleepPreference: z.string().max(128).optional(),
         tempPreference: z.string().max(64).optional(),
+        wellnessPrefs: z.string().optional(),
+        // Animaux
+        pets: z.string().optional(),
+        // Famille
+        relationshipStatus: z.string().max(32).optional(),
+        partnerGender: z.string().max(32).optional(),
+        partnerName: z.string().max(128).optional(),
+        partnerBirthDate: z.string().max(10).optional(),
+        children: z.string().optional(),
+        closeFriends: z.string().optional(),
+        // Religion
+        religiousConsiderations: z.string().max(128).optional(),
+        // Clubs
+        clubMemberships: z.string().optional(),
+        privateAviation: z.string().optional(),
+        yachtBoat: z.string().optional(),
+        conciergePreference: z.string().max(128).optional(),
+        // Lieux
+        favoriteCities: z.string().optional(),
+        favoritePlaces: z.string().optional(),
+        favoriteQuotes: z.string().optional(),
+        bucketList: z.string().optional(),
+        // Voyage
+        travelStyles: z.string().optional(),
+        travelBudget: z.string().max(32).optional(),
+        travelGroup: z.string().max(32).optional(),
+        languages: z.string().optional(),
+        // Notes
         freeNotes: z.string().optional(),
+        // Gamification
+        profileCompletionPct: z.number().optional(),
+        profilePointsEarned: z.number().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        await upsertClientProfile(ctx.user.id, input);
+        await upsertClientProfile(ctx.user.id, input as any);
         return { success: true };
       }),
   }),

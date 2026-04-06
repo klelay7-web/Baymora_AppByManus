@@ -770,44 +770,116 @@ export const clientProfiles = mysqlTable("clientProfiles", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
 
-  // Identité
+  // ===== IDENTITÉ =====
   pseudo: varchar("pseudo", { length: 64 }),
   mode: mysqlEnum("mode", ["signature", "fantome"]).default("signature"),
+  birthDate: varchar("birthDate", { length: 10 }), // YYYY-MM-DD
+  age: int("age"),
+  gender: varchar("gender", { length: 32 }), // homme, femme, non-binaire, autre
+  nationality: varchar("nationality", { length: 64 }),
+  locale: varchar("locale", { length: 8 }).default("fr"), // fr, en, es...
 
-  // Alimentation
-  dietRegime: varchar("dietRegime", { length: 256 }), // JSON array: ["vegetarien","halal",...]
-  dietAllergies: text("dietAllergies"), // JSON array: ["arachides","noix",...]
-  dietOther: text("dietOther"), // texte libre
+  // ===== MORPHOLOGIE & TAILLES =====
+  height: int("height"), // en cm
+  weight: int("weight"), // en kg
+  shoeSize: varchar("shoeSize", { length: 8 }),
+  clothingSizeTop: varchar("clothingSizeTop", { length: 16 }), // S, M, L, XL, 38, 40...
+  clothingSizeBottom: varchar("clothingSizeBottom", { length: 16 }),
+  clothingSizeDress: varchar("clothingSizeDress", { length: 16 }),
+  clothingSizeSuit: varchar("clothingSizeSuit", { length: 16 }), // pour tailleur
+  ringSize: varchar("ringSize", { length: 8 }),
 
-  // Voyage
-  travelStyles: text("travelStyles"), // JSON array: ["detente","gastronomie","culture",...]
-  travelBudget: mysqlEnum("travelBudget", ["economique", "confort", "premium", "luxe", "sans_limite"]).default("confort"),
-  travelGroup: mysqlEnum("travelGroup", ["solo", "couple", "famille", "amis", "business"]).default("couple"),
-  travelMobility: mysqlEnum("travelMobility", ["aucune", "pmr", "reduite", "poussette"]).default("aucune"),
+  // ===== PERMIS & CONDUITE =====
+  drivingLicenses: text("drivingLicenses"), // JSON: ["B","A","bateau","helico","jet_ski"]
+  drivingSide: mysqlEnum("drivingSide", ["droite", "gauche", "les_deux"]).default("droite"),
+  transmissionPref: mysqlEnum("transmissionPref", ["auto", "manuel", "indifferent"]).default("auto"),
+  carPrefLuxury: text("carPrefLuxury"), // JSON: ["Mercedes","BMW","Porsche",...]
+  carPrefDaily: text("carPrefDaily"), // JSON: ["SUV","berline","citadine",...]
 
-  // Lifestyle
-  languages: text("languages"), // JSON array: ["français","anglais",...]
-  pet: mysqlEnum("pet", ["aucun", "chien", "chat", "autre"]).default("aucun"),
-  smoking: mysqlEnum("smoking", ["non_fumeur", "fumeur", "cigare", "vape"]).default("non_fumeur"),
-  dresscode: mysqlEnum("dresscode", ["casual", "smart_casual", "chic", "formel"]).default("smart_casual"),
-  ecofriendly: boolean("ecofriendly").default(false),
-
-  // Logistique
+  // ===== LOGEMENT & HÉBERGEMENT =====
   homeCity: varchar("homeCity", { length: 128 }),
   homeAddress: text("homeAddress"),
-  preferredAirport: varchar("preferredAirport", { length: 16 }), // CDG, ORY, etc.
+  lodgingTypes: text("lodgingTypes"), // JSON: ["hotel","villa","appartement","palace",...]
+  lodgingSettings: text("lodgingSettings"), // JSON: ["ville","campagne","balneaire","montagne",...]
+  lodgingAmenities: text("lodgingAmenities"), // JSON: ["piscine","spa","jacuzzi","salle_sport","plage","vue_mer",...]
+  lodgingLocation: text("lodgingLocation"), // JSON: ["pied_plage","centre_ville","proche_transport","calme",...]
+  transportPref: text("transportPref"), // JSON: ["chauffeur","uber","transport_public","autonome","mix"]
+
+  // ===== AÉROPORT & VOYAGE =====
+  preferredAirport: varchar("preferredAirport", { length: 16 }),
   airportLounge: boolean("airportLounge").default(false),
   priorityLane: boolean("priorityLane").default(false),
+  passportCountry: varchar("passportCountry", { length: 64 }),
+  frequentFlyerPrograms: text("frequentFlyerPrograms"), // JSON: [{"airline":"Air France","number":"...","tier":"Gold"}]
+  seatPreference: varchar("seatPreference", { length: 32 }), // fenetre, couloir, milieu
+  cabinClass: varchar("cabinClass", { length: 32 }), // economie, business, premiere
 
-  // Tailles & goûts
-  clothingSize: varchar("clothingSize", { length: 16 }),
-  shoeSize: varchar("shoeSize", { length: 8 }),
-  favoriteAlcohol: varchar("favoriteAlcohol", { length: 128 }),
-  favoriteCuisine: varchar("favoriteCuisine", { length: 256 }),
+  // ===== STYLE & GOÛTS =====
+  favoriteColors: text("favoriteColors"), // JSON: ["noir","bleu marine","or",...]
+  favoriteBrands: text("favoriteBrands"), // JSON: ["Hermès","Louis Vuitton",...]
+  favoriteShops: text("favoriteShops"), // JSON: ["Le Bon Marché","Harrods",...]
+  dresscode: mysqlEnum("dresscode", ["casual", "smart_casual", "chic", "formel"]).default("smart_casual"),
+  smoking: mysqlEnum("smoking", ["non_fumeur", "fumeur", "cigare", "vape"]).default("non_fumeur"),
+  ecofriendly: boolean("ecofriendly").default(false),
+
+  // ===== GASTRONOMIE =====
+  favoriteCuisines: text("favoriteCuisines"), // JSON: ["française","japonaise","italienne",...]
+  favoriteDishes: text("favoriteDishes"), // JSON: ["risotto","sushi","foie gras",...]
+  dietRegime: varchar("dietRegime", { length: 256 }), // JSON: ["vegetarien","halal","casher",...]
+  dietAllergies: text("dietAllergies"), // JSON: ["arachides","gluten","lactose",...]
+  dietOther: text("dietOther"),
+  favoriteAlcohol: text("favoriteAlcohol"), // JSON: ["champagne","vin rouge","whisky",...]
+  favoriteWines: text("favoriteWines"), // JSON: ["Bordeaux","Bourgogne",...]
+  coffeeTea: varchar("coffeeTea", { length: 64 }), // café noir, latte, thé vert...
+
+  // ===== SANTÉ & BIEN-ÊTRE =====
+  visionStatus: varchar("visionStatus", { length: 64 }), // bonne, lentilles, lunettes, les_deux
+  visionDetails: text("visionDetails"), // correction, marque de lunettes...
+  healthConditions: text("healthConditions"), // JSON: ["asthme","diabète",...]
+  handicap: text("handicap"), // JSON: {"type":"...","details":"...","pmr":true}
+  travelMobility: mysqlEnum("travelMobility", ["aucune", "pmr", "reduite", "poussette"]).default("aucune"),
   sleepPreference: varchar("sleepPreference", { length: 128 }),
   tempPreference: varchar("tempPreference", { length: 64 }),
+  wellnessPrefs: text("wellnessPrefs"), // JSON: ["yoga","meditation","massage","fitness",...]
 
-   // Notes libres
+  // ===== ANIMAUX =====
+  pets: text("pets"), // JSON: [{"type":"chien","race":"Labrador","name":"Max","weight":30,"age":5,"habits":"...","vet":{"name":"Dr Dupont","phone":"+33..."}}]
+
+  // ===== FAMILLE & PROCHES =====
+  relationshipStatus: varchar("relationshipStatus", { length: 32 }), // célibataire, couple, marié(e), pacsé(e)
+  partnerGender: varchar("partnerGender", { length: 32 }), // homme, femme, non-binaire
+  partnerName: varchar("partnerName", { length: 128 }),
+  partnerBirthDate: varchar("partnerBirthDate", { length: 10 }),
+  children: text("children"), // JSON: [{"name":"...","age":8,"schoolLevel":"CE2","allergies":[],"interests":[]}]
+  closeFriends: text("closeFriends"), // JSON: [{"name":"...","relation":"meilleur ami","invited":false}]
+
+  // ===== RELIGION & CROYANCES =====
+  religiousConsiderations: varchar("religiousConsiderations", { length: 128 }), // halal, casher, aucun, autre
+
+  // ===== CLUBS & VIP =====
+  clubMemberships: text("clubMemberships"), // JSON: ["Soho House","Club Med VIP",...]
+  privateAviation: text("privateAviation"), // JSON: {"hasJet":true,"type":"Citation","provider":"NetJets"}
+  yachtBoat: text("yachtBoat"), // JSON: {"hasYacht":true,"name":"...","type":"voilier","length":"15m"}
+  conciergePreference: varchar("conciergePreference", { length: 128 }), // Quintessentially, John Paul...
+
+  // ===== LIEUX & PRÉFÉRENCES =====
+  favoriteCities: text("favoriteCities"), // JSON: ["Paris","New York","Tokyo",...]
+  favoritePlaces: text("favoritePlaces"), // JSON: [{"name":"Café de Flore","city":"Paris","why":"..."}]
+  favoriteQuotes: text("favoriteQuotes"), // JSON: ["La vie est belle","..."]
+  bucketList: text("bucketList"), // JSON: ["Voir les aurores boréales","..."]
+
+  // ===== VOYAGE =====
+  travelStyles: text("travelStyles"), // JSON: ["detente","gastronomie","culture",...]
+  travelBudget: mysqlEnum("travelBudget", ["economique", "confort", "premium", "luxe", "sans_limite"]).default("confort"),
+  travelGroup: mysqlEnum("travelGroup", ["solo", "couple", "famille", "amis", "business"]).default("couple"),
+  languages: text("languages"), // JSON: ["français","anglais",...]
+
+  // ===== GAMIFICATION =====
+  profileCompletionPct: int("profileCompletionPct").default(0), // 0-100
+  profilePointsEarned: int("profilePointsEarned").default(0), // points gagnés en remplissant
+  lastFieldFilledAt: timestamp("lastFieldFilledAt"),
+
+  // ===== NOTES LIBRES =====
   freeNotes: text("freeNotes"),
   // Commandes ARIA — instructions dynamiques injectées dans le prompt système
   ariaInstructions: text("ariaInstructions"), // JSON array: [{id, instruction, addedAt, addedBy}]
@@ -999,94 +1071,3 @@ export const agentTaskOrders = mysqlTable("agentTaskOrders", {
 });
 export type AgentTaskOrder = typeof agentTaskOrders.$inferSelect;
 export type InsertAgentTaskOrder = typeof agentTaskOrders.$inferInsert;
-
-
-// ─── Baymora Points (Solde par utilisateur) ─────────────────────────────────
-export const baymoraPoints = mysqlTable("baymoraPoints", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
-  balance: int("balance").default(0).notNull(),
-  lifetimeEarned: int("lifetimeEarned").default(0).notNull(),
-  lifetimeSpent: int("lifetimeSpent").default(0).notNull(),
-  lifetimeCashedOut: int("lifetimeCashedOut").default(0).notNull(),
-  tier: mysqlEnum("tier", ["bronze", "silver", "gold", "platinum", "diamond"]).default("bronze").notNull(),
-  lastEarnedAt: timestamp("lastEarnedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-export type BaymoraPoints = typeof baymoraPoints.$inferSelect;
-
-// ─── Points Transactions (Historique BP) ────────────────────────────────────
-export const pointsTransactions = mysqlTable("pointsTransactions", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  amount: int("amount").notNull(), // positif = gain, négatif = dépense
-  type: mysqlEnum("type", [
-    "subscription_reward", "referral_bonus", "booking_reward",
-    "review_reward", "social_share", "daily_login",
-    "spend_upgrade", "spend_experience", "spend_gift",
-    "cashout", "admin_adjustment", "welcome_bonus"
-  ]).notNull(),
-  description: text("description"),
-  referenceType: varchar("referenceType", { length: 64 }), // "subscription", "referral", "booking"
-  referenceId: int("referenceId"),
-  balanceAfter: int("balanceAfter").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-export type PointsTransaction = typeof pointsTransactions.$inferSelect;
-
-// ─── Subscription Pause (Système de pause abonnement) ───────────────────────
-export const subscriptionPauses = mysqlTable("subscriptionPauses", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
-  pauseStartDate: timestamp("pauseStartDate").notNull(),
-  pauseEndDate: timestamp("pauseEndDate").notNull(),
-  originalTier: mysqlEnum("originalTier", ["free", "explorer", "duo", "premium", "maison"]).notNull(),
-  reason: text("reason"),
-  status: mysqlEnum("status", ["active", "resumed", "expired", "cancelled"]).default("active").notNull(),
-  autoResumeAt: timestamp("autoResumeAt"),
-  resumedAt: timestamp("resumedAt"),
-  maxPauseDays: int("maxPauseDays").default(90).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-export type SubscriptionPause = typeof subscriptionPauses.$inferSelect;
-
-// ─── User Memory (Mémoire ARIA Client — séparée de DG) ─────────────────────
-export const userMemory = mysqlTable("userMemory", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  memoryType: mysqlEnum("memoryType", [
-    "fact", "preference", "experience", "relationship",
-    "dislike", "dream", "habit", "context"
-  ]).notNull(),
-  content: text("content").notNull(),
-  confidence: decimal("confidence", { precision: 3, scale: 2 }).default("0.80"),
-  source: mysqlEnum("source", ["conversation", "explicit", "inferred", "profile"]).default("conversation").notNull(),
-  conversationId: int("conversationId"),
-  isActive: boolean("isActive").default(true).notNull(),
-  expiresAt: timestamp("expiresAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-export type UserMemory = typeof userMemory.$inferSelect;
-
-// ─── Subscriptions (Plans détaillés 5 tiers) ───────────────────────────────
-export const subscriptions = mysqlTable("subscriptions", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  tier: mysqlEnum("tier", ["free", "explorer", "duo", "premium", "maison"]).notNull(),
-  status: mysqlEnum("status", ["active", "paused", "cancelled", "past_due", "trialing"]).default("active").notNull(),
-  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
-  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
-  currentPeriodStart: timestamp("currentPeriodStart"),
-  currentPeriodEnd: timestamp("currentPeriodEnd"),
-  cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false),
-  monthlyPrice: decimal("monthlyPrice", { precision: 6, scale: 2 }),
-  flexibilityOption: boolean("flexibilityOption").default(false), // +1.90€/mois
-  trialEndsAt: timestamp("trialEndsAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-export type Subscription = typeof subscriptions.$inferSelect;

@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
-import { Shield, ExternalLink, Users, ChevronRight, Zap, Megaphone, Mail, Globe, CheckCircle2, Clock, AlertCircle, XCircle, RefreshCw, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { Shield, ExternalLink, Users, ChevronRight, Zap, Megaphone, Mail, Globe } from "lucide-react";
 import { Link } from "wouter";
 
 interface Message {
@@ -173,6 +173,7 @@ export default function Pilotage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [ariaPanelOverride, setAriaPanelOverride] = useState<{ type: string; data: unknown } | null>(null);
+  const [mobileView, setMobileView] = useState<"chat" | "panel">("panel");
   const [selectedAgent, setSelectedAgent] = useState<typeof AGENTS_IA[0] | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -197,22 +198,6 @@ export default function Pilotage() {
   const { data: missionHistory, refetch: refetchMissionHistory } = trpc.pilotage.missionHistory.useQuery({ limit: 20 });
   const createMissionMutation = trpc.pilotage.createMission.useMutation();
   const closeMissionMutation = trpc.pilotage.closeMission.useMutation();
-
-  // ─── Task Orders ────────────────────────────────────────────────────
-  const { data: activeTasks, refetch: refetchTasks } = trpc.pilotage.activeTasks.useQuery(undefined, { refetchInterval: 15000 });
-  const { data: allTasks, refetch: refetchAllTasks } = trpc.pilotage.listTasks.useQuery({ limit: 100 });
-  const { data: taskStats } = trpc.pilotage.taskStats.useQuery(undefined, { refetchInterval: 15000 });
-  const updateTaskProgressMutation = trpc.pilotage.updateTaskProgress.useMutation();
-  const updateTaskStatusMutation = trpc.pilotage.updateTaskStatus.useMutation();
-  const createTaskMutation = trpc.pilotage.createTask.useMutation();
-  const [taskFilter, setTaskFilter] = useState<"all"|"pending"|"in_progress"|"completed">("all");
-  const [showNewTaskForm, setShowNewTaskForm] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskAgent, setNewTaskAgent] = useState("LÉNA");
-  const [newTaskDesc, setNewTaskDesc] = useState("");
-  const [newTaskPriority, setNewTaskPriority] = useState<"normal"|"high"|"urgent">("normal");
-  const [showTaskPanel, setShowTaskPanel] = useState(true);
-  const [mobileView, setMobileView] = useState<"aria" | "panel">("aria");
 
   useEffect(() => {
     if (history && history.length > 0 && messages.length === 0) {
@@ -315,52 +300,38 @@ export default function Pilotage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col">
-        {/* ─── Header ───────────────────────────────────────────────────── */}
-      <div className="border-b border-white/10 bg-[#0d0d14] px-3 md:px-6 py-2 md:py-3 flex items-center justify-between flex-shrink-0">
+      {/* ─── Header ──────────────────────────────────────────────────────── */}
+      <div className="border-b border-white/10 bg-[#0d0d14] px-3 md:px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2 md:gap-3">
           <Link href="/">
             <button className="text-white/40 hover:text-white/70 transition-colors flex items-center gap-1 text-xs md:text-sm">
-              ← <span className="hidden sm:inline">Accueil</span>
+              ←
             </button>
           </Link>
-          <span className="text-white/20 hidden sm:inline">/</span>
-          <div className="flex items-center gap-1 md:gap-2">
-            <Shield size={12} className="text-amber-400" />
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <Shield size={14} className="text-amber-400" />
             <span className="text-amber-400 font-semibold text-xs md:text-sm uppercase tracking-wider">Pilotage</span>
-            <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs hidden sm:inline-flex">Accès exclusif</Badge>
+            <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs hidden md:inline-flex">Accès exclusif</Badge>
           </div>
         </div>
-        <div className="flex items-center gap-1 md:gap-2 text-xs text-white/40">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
-          <span className="hidden sm:inline">ARIA active · </span>
-          <span className="text-xs">{new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+        <div className="flex items-center gap-2">
+          {/* Toggle mobile chat/panel */}
+          <div className="flex md:hidden gap-1">
+            <button onClick={() => setMobileView("chat")} className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${mobileView === "chat" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-white/5 text-white/50 border-white/10"}`}>💬 ARIA</button>
+            <button onClick={() => setMobileView("panel")} className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${mobileView === "panel" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-white/5 text-white/50 border-white/10"}`}>📊 Panneaux</button>
+          </div>
+          <div className="hidden md:flex items-center gap-2 text-xs text-white/40">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+            ARIA active · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+          </div>
         </div>
       </div>
-      {/* ─── Navigation mobile ───────────────────────────────────────────────────── */}
-      <div className="md:hidden flex border-b border-white/10 bg-[#0d0d14] flex-shrink-0">
-        <button
-          onClick={() => setMobileView("aria")}
-          className={`flex-1 py-2 text-xs font-semibold transition-colors ${
-            mobileView === "aria" ? "text-amber-400 border-b-2 border-amber-400" : "text-white/40"
-          }`}
-        >
-          🧠 ARIA
-        </button>
-        <button
-          onClick={() => setMobileView("panel")}
-          className={`flex-1 py-2 text-xs font-semibold transition-colors ${
-            mobileView === "panel" ? "text-amber-400 border-b-2 border-amber-400" : "text-white/40"
-          }`}
-        >
-          📊 Tableau de bord
-        </button>
-      </div>
-      {/* ─── Corps principal ───────────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* ─── Chat ARIA ───────────────────────────────────────────── */}
-        <div className={`${
-          mobileView === "aria" ? "flex" : "hidden"
-        } md:flex w-full md:w-[400px] md:min-w-[360px] border-r border-white/10 flex-col bg-[#0d0d14] overflow-hidden`} style={{ maxHeight: "calc(100dvh - 100px)" }}>
+
+      {/* ─── Corps principal ───────────────────────────────────────────────── */}
+      <div className="flex flex-1 flex-col md:flex-row" style={{ height: "calc(100vh - 57px)", overflow: "hidden" }}>
+
+        {/* ─── Chat ARIA (gauche) ─────────────────────────────────────── */}
+        <div className={`${mobileView === "chat" ? "flex" : "hidden"} md:flex w-full md:w-[400px] md:min-w-[360px] border-r border-white/10 flex-col bg-[#0d0d14] h-full`}>
           <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-xs font-bold text-black">A</div>
@@ -452,10 +423,9 @@ export default function Pilotage() {
             </div>
           </div>
         </div>
-        {/* ─── Panneau droit (onglets) ────────────────────────────────────────────── */}
-        <div className={`${
-          mobileView === "panel" ? "flex" : "hidden"
-        } md:flex flex-1 flex-col overflow-hidden`} style={{ minHeight: 0 }}>
+
+              {/* ─── Panneau droit (5 onglets) ──────────────────────────── */}
+        <div className={`${mobileView === "panel" ? "flex" : "hidden"} md:flex flex-1 flex-col overflow-hidden h-full`}>
           {ariaPanelOverride && (
             <div className="flex items-center justify-between px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-xs flex-shrink-0">
               <span className="text-amber-400">📌 ARIA a mis à jour ce panneau</span>
@@ -464,8 +434,8 @@ export default function Pilotage() {
           )}
 
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setAriaPanelOverride(null); }} className="flex-1 flex flex-col overflow-hidden">
-            <div className="border-b border-white/10 bg-[#0d0d14] px-4 flex-shrink-0">
-              <TabsList className="bg-transparent border-0 h-12 gap-1">
+            <div className="border-b border-white/10 bg-[#0d0d14] px-2 md:px-4 flex-shrink-0 overflow-x-auto">
+              <TabsList className="bg-transparent border-0 h-10 md:h-12 gap-1 flex-nowrap">
                 {[
                   { value: "dashboard",   label: "📊 Dashboard" },
                   { value: "salle",       label: "🧠 Salle de Réunion" },
@@ -476,7 +446,6 @@ export default function Pilotage() {
                   { value: "affiliation", label: "🤝 Affiliation" },
                   { value: "carnet",      label: "📔 Carnet de Bord" },
                   { value: "missions",    label: "🎯 Missions" },
-                  { value: "taches",      label: "⚙️ Tâches" },
                   { value: "acces",       label: "🔑 Accès" },
                 ].map((tab) => (
                   <TabsTrigger key={tab.value} value={tab.value}
@@ -488,7 +457,7 @@ export default function Pilotage() {
               </TabsList>
             </div>
 
-            <div className="flex-1 overflow-auto p-6">
+            <div className="flex-1 overflow-auto p-3 md:p-6">
 
               {/* ── DASHBOARD ─────────────────────────────────────────── */}
               <TabsContent value="dashboard" className="mt-0 space-y-5">
@@ -916,50 +885,6 @@ export default function Pilotage() {
                 />
               </TabsContent>
 
-              {/* ── TÂCHES AGENTS ───────────────────────────────────────────── */}
-              <TabsContent value="taches" className="mt-0 space-y-4">
-                <TasksPanel
-                  activeTasks={activeTasks ?? []}
-                  allTasks={allTasks ?? []}
-                  taskStats={taskStats}
-                  taskFilter={taskFilter}
-                  setTaskFilter={setTaskFilter}
-                  showNewTaskForm={showNewTaskForm}
-                  setShowNewTaskForm={setShowNewTaskForm}
-                  newTaskTitle={newTaskTitle}
-                  setNewTaskTitle={setNewTaskTitle}
-                  newTaskAgent={newTaskAgent}
-                  setNewTaskAgent={setNewTaskAgent}
-                  newTaskDesc={newTaskDesc}
-                  setNewTaskDesc={setNewTaskDesc}
-                  newTaskPriority={newTaskPriority}
-                  setNewTaskPriority={setNewTaskPriority}
-                  onCreateTask={async () => {
-                    if (!newTaskTitle.trim()) { toast.error("Titre requis"); return; }
-                    try {
-                      await createTaskMutation.mutateAsync({ title: newTaskTitle, agent: newTaskAgent, description: newTaskDesc, priority: newTaskPriority });
-                      toast.success(`✅ Tâche créée pour ${newTaskAgent}`);
-                      setNewTaskTitle(""); setNewTaskDesc(""); setShowNewTaskForm(false);
-                      refetchTasks(); refetchAllTasks();
-                    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erreur"); }
-                  }}
-                  onUpdateStatus={async (id, status) => {
-                    try {
-                      await updateTaskStatusMutation.mutateAsync({ id, status: status as "completed" | "cancelled" | "pending" | "failed" | "in_progress" });
-                      toast.success("Statut mis à jour");
-                      refetchTasks(); refetchAllTasks();
-                    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erreur"); }
-                  }}
-                  onUpdateProgress={async (id, progress) => {
-                    try {
-                      await updateTaskProgressMutation.mutateAsync({ id, progressPercent: progress });
-                      refetchTasks(); refetchAllTasks();
-                    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erreur"); }
-                  }}
-                  isCreating={createTaskMutation.isPending}
-                />
-              </TabsContent>
-
               {/* ── ACCÈS ───────────────────────────────────────────────────── */}
               <TabsContent value="acces" className="mt-0 space-y-4">
                 <div>
@@ -995,21 +920,21 @@ export default function Pilotage() {
                   ) : (
                     <div className="space-y-2">
                       {allUsers.map((u) => (
-                        <div key={u.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm font-semibold text-white/70">
+                        <div key={u.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 gap-2">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm font-semibold text-white/70 flex-shrink-0">
                               {(u.name || u.email || "?")[0].toUpperCase()}
                             </div>
-                            <div>
-                              <p className="text-sm text-white/80 font-medium">{u.name || "Sans nom"}</p>
-                              <p className="text-xs text-white/40">{u.email}</p>
+                            <div className="min-w-0">
+                              <p className="text-sm text-white/80 font-medium truncate">{u.name || "Sans nom"}</p>
+                              <p className="text-xs text-white/40 truncate">{u.email}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-11 sm:ml-0">
                             <select
                               value={u.role}
                               onChange={(e) => updateRole(u.id, e.target.value)}
-                              className="text-xs bg-white/10 border border-white/20 text-white rounded-lg px-2 py-1 focus:border-amber-400/50 focus:outline-none"
+                              className="text-xs bg-white/10 border border-white/20 text-white rounded-lg px-2 py-1.5 focus:border-amber-400/50 focus:outline-none"
                             >
                               <option value="user">Client</option>
                               <option value="team">Terrain</option>
@@ -1030,7 +955,7 @@ export default function Pilotage() {
                     Les "Admin" ont accès au Pilotage complet — ne donnez cet accès qu'à des personnes de confiance absolue.
                   </p>
                 </div>
-               </TabsContent>
+              </TabsContent>
 
             </div>
           </Tabs>
@@ -1039,6 +964,7 @@ export default function Pilotage() {
     </div>
   );
 }
+
 // ─── MANUS DG Panel ───────────────────────────────────────────────────────────
 function ManusPanel({ setInput }: { setInput: (v: string) => void }) {
   const [manusHistory, setManusHistory] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
@@ -1813,13 +1739,25 @@ function MissionsPanel({
                 </details>
 
                 {/* Actions */}
-                <div className="flex gap-2 mt-4">
+                <div className="flex flex-wrap gap-2 mt-4">
                   <button
                     onClick={() => onCloseMission(activeMission.id, "completed")}
                     disabled={isClosing}
                     className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-lg py-2 text-xs font-semibold transition-all disabled:opacity-50"
                   >
-                    {isClosing ? "Génération compte-rendu..." : "✅ Clôturer avec compte-rendu"}
+                    {isClosing ? "Génération compte-rendu..." : "✅ Clôturer"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMissionTitle(activeMission.title + " (relance)");
+                      setMissionContent(activeMission.content);
+                      setMissionPriority(activeMission.priority);
+                      setMissionDuration(activeMission.durationHours ?? 24);
+                      setMissionView("create");
+                    }}
+                    className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 rounded-lg px-3 py-2 text-xs font-semibold transition-all"
+                  >
+                    🔄 Relancer
                   </button>
                   <button
                     onClick={() => onCloseMission(activeMission.id, "cancelled")}
@@ -1991,6 +1929,21 @@ function MissionsPanel({
                     <pre className="text-xs text-white/50 whitespace-pre-wrap font-mono">{historyMission.content}</pre>
                   </div>
                 </details>
+
+                {/* Bouton Relancer */}
+                <button
+                  onClick={() => {
+                    setMissionTitle(historyMission.title + " (relance)");
+                    setMissionContent(historyMission.content);
+                    setMissionPriority(historyMission.priority);
+                    setMissionDuration(historyMission.durationHours ?? 24);
+                    setSelectedHistoryMission(null);
+                    setMissionView("create");
+                  }}
+                  className="mt-3 w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 rounded-lg py-2 text-xs font-semibold transition-all"
+                >
+                  🔄 Relancer cette mission
+                </button>
               </div>
             </div>
           ) : (
@@ -2046,309 +1999,6 @@ function MissionsPanel({
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── TasksPanel — Tableau de bord des tâches agents ──────────────────────────
-type TaskOrder = {
-  id: number;
-  title: string;
-  description?: string | null;
-  agent: string;
-  status: string;
-  priority: string;
-  progressPercent: number;
-  requestedBy?: string | null;
-  result?: string | null;
-  notes?: string | null;
-  createdAt: Date;
-  updatedAt?: Date | null;
-  dueAt?: Date | null;
-};
-
-type TaskStats = {
-  total: number;
-  pending: number;
-  in_progress?: number;
-  inProgress?: number;
-  completed: number;
-  failed: number;
-};
-
-const AGENT_COLORS: Record<string, string> = {
-  "LÉNA":    "text-blue-400 bg-blue-500/10 border-blue-500/30",
-  "PIXEL":   "text-pink-400 bg-pink-500/10 border-pink-500/30",
-  "MAYA":    "text-purple-400 bg-purple-500/10 border-purple-500/30",
-  "NOVA":    "text-cyan-400 bg-cyan-500/10 border-cyan-500/30",
-  "ATLAS":   "text-emerald-400 bg-emerald-500/10 border-emerald-500/30",
-  "JADE":    "text-green-400 bg-green-500/10 border-green-500/30",
-  "TERRAIN": "text-orange-400 bg-orange-500/10 border-orange-500/30",
-  "ARIA":    "text-amber-400 bg-amber-500/10 border-amber-500/30",
-};
-
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  pending:     { label: "En attente",  color: "text-white/50 bg-white/5 border-white/20",        icon: <Clock size={10} /> },
-  in_progress: { label: "En cours",   color: "text-amber-400 bg-amber-500/10 border-amber-500/30", icon: <RefreshCw size={10} className="animate-spin" /> },
-  completed:   { label: "Terminée",   color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30", icon: <CheckCircle2 size={10} /> },
-  failed:      { label: "Échouée",    color: "text-red-400 bg-red-500/10 border-red-500/30",     icon: <XCircle size={10} /> },
-  cancelled:   { label: "Annulée",    color: "text-white/30 bg-white/5 border-white/10",         icon: <XCircle size={10} /> },
-};
-
-const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
-  low:     { label: "Basse",   color: "text-white/40" },
-  normal:  { label: "Normale", color: "text-white/60" },
-  high:    { label: "Haute",   color: "text-amber-400" },
-  urgent:  { label: "Urgente", color: "text-red-400 font-bold" },
-};
-
-function TaskCard({ task, onUpdateStatus, onUpdateProgress }: {
-  task: TaskOrder;
-  onUpdateStatus: (id: number, status: string) => Promise<void>;
-  onUpdateProgress: (id: number, progress: number) => Promise<void>;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.pending;
-  const agentColor = AGENT_COLORS[task.agent] ?? "text-white/60 bg-white/5 border-white/20";
-  const priorityCfg = PRIORITY_CONFIG[task.priority] ?? PRIORITY_CONFIG.normal;
-
-  return (
-    <div className={`bg-white/5 border rounded-xl overflow-hidden transition-all ${task.status === "in_progress" ? "border-amber-500/30" : task.status === "completed" ? "border-emerald-500/20" : "border-white/10"}`}>
-      <div className="p-3">
-        <div className="flex items-start gap-3">
-          {/* Agent badge */}
-          <span className={`text-xs px-2 py-0.5 rounded-lg border font-semibold flex-shrink-0 ${agentColor}`}>
-            {task.agent}
-          </span>
-          {/* Title + priority */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-white font-medium truncate">{task.title}</span>
-              <span className={`text-xs ${priorityCfg.color}`}>{task.priority === "urgent" ? "🔴" : task.priority === "high" ? "🟠" : ""}</span>
-            </div>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <span className={`text-xs px-1.5 py-0.5 rounded-md border flex items-center gap-1 ${statusCfg.color}`}>
-                {statusCfg.icon} {statusCfg.label}
-              </span>
-              <span className="text-xs text-white/30">{new Date(task.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-            </div>
-          </div>
-          {/* Expand button */}
-          <button onClick={() => setExpanded(!expanded)} className="text-white/30 hover:text-white/70 flex-shrink-0">
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        </div>
-
-        {/* Progress bar */}
-        {task.status !== "pending" && (
-          <div className="mt-2">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-white/40">Avancement</span>
-              <span className="text-xs text-white/60 font-mono">{task.progressPercent}%</span>
-            </div>
-            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${task.status === "completed" ? "bg-emerald-400" : "bg-amber-400"}`}
-                style={{ width: `${task.progressPercent}%` }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Expanded details */}
-      {expanded && (
-        <div className="border-t border-white/10 p-3 space-y-3">
-          {task.description && (
-            <p className="text-xs text-white/50 leading-relaxed">{task.description}</p>
-          )}
-          {task.result && (
-            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2">
-              <p className="text-xs text-emerald-400 font-semibold mb-1">✅ Résultat</p>
-              <p className="text-xs text-white/60">{task.result}</p>
-            </div>
-          )}
-          {task.notes && (
-            <div className="bg-white/5 rounded-lg p-2">
-              <p className="text-xs text-white/40 font-semibold mb-1">📝 Notes</p>
-              <p className="text-xs text-white/50">{task.notes}</p>
-            </div>
-          )}
-          {/* Actions */}
-          {task.status !== "completed" && task.status !== "cancelled" && (
-            <div className="flex flex-wrap gap-2">
-              {task.status === "pending" && (
-                <button onClick={() => onUpdateStatus(task.id, "in_progress")}
-                  className="text-xs px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 transition-all">
-                  ▶ Démarrer
-                </button>
-              )}
-              {task.status === "in_progress" && (
-                <>
-                  {[25, 50, 75, 100].map(p => (
-                    <button key={p} onClick={() => p === 100 ? onUpdateStatus(task.id, "completed") : onUpdateProgress(task.id, p)}
-                      className={`text-xs px-2 py-1 rounded-lg border transition-all ${p === 100 ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30" : "bg-white/5 text-white/60 border-white/20 hover:bg-white/10"}`}>
-                      {p === 100 ? "✅ Terminé" : `${p}%`}
-                    </button>
-                  ))}
-                </>
-              )}
-              <button onClick={() => onUpdateStatus(task.id, "cancelled")}
-                className="text-xs px-2 py-1 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all">
-                ✕ Annuler
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TasksPanel({
-  activeTasks, allTasks, taskStats, taskFilter, setTaskFilter,
-  showNewTaskForm, setShowNewTaskForm, newTaskTitle, setNewTaskTitle,
-  newTaskAgent, setNewTaskAgent, newTaskDesc, setNewTaskDesc,
-  newTaskPriority, setNewTaskPriority, onCreateTask, onUpdateStatus, onUpdateProgress, isCreating,
-}: {
-  activeTasks: unknown[];
-  allTasks: unknown[];
-  taskStats?: { total: number; pending: number; inProgress?: number; in_progress?: number; completed: number; failed: number } | null;
-  taskFilter: "all" | "pending" | "in_progress" | "completed";
-  setTaskFilter: (v: "all" | "pending" | "in_progress" | "completed") => void;
-  showNewTaskForm: boolean;
-  setShowNewTaskForm: (v: boolean) => void;
-  newTaskTitle: string; setNewTaskTitle: (v: string) => void;
-  newTaskAgent: string; setNewTaskAgent: (v: string) => void;
-  newTaskDesc: string; setNewTaskDesc: (v: string) => void;
-  newTaskPriority: "normal" | "high" | "urgent"; setNewTaskPriority: (v: "normal" | "high" | "urgent") => void;
-  onCreateTask: () => Promise<void>;
-  onUpdateStatus: (id: number, status: string) => Promise<void>;
-  onUpdateProgress: (id: number, progress: number) => Promise<void>;
-  isCreating: boolean;
-}) {
-  const typedTasks = allTasks as TaskOrder[];
-  const typedActive = activeTasks as TaskOrder[];
-  const filteredTasks = taskFilter === "all" ? typedTasks : typedTasks.filter(t => t.status === taskFilter);
-
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-white">⚙️ Tableau des Tâches</h2>
-          <p className="text-sm text-white/40">Toutes les tâches assignées aux agents IA</p>
-        </div>
-        <button onClick={() => setShowNewTaskForm(!showNewTaskForm)}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 transition-all font-semibold">
-          <Plus size={12} /> Nouvelle tâche
-        </button>
-      </div>
-
-      {/* Stats rapides */}
-      {taskStats && (
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { label: "Total", value: taskStats.total, color: "text-white/70" },
-            { label: "En attente", value: taskStats.pending, color: "text-white/50" },
-            { label: "En cours", value: taskStats.in_progress, color: "text-amber-400" },
-            { label: "Terminées", value: taskStats.completed, color: "text-emerald-400" },
-          ].map(s => (
-            <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-              <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-xs text-white/40 mt-0.5">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Formulaire nouvelle tâche */}
-      {showNewTaskForm && (
-        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-amber-400">➕ Nouvelle tâche manuelle</h3>
-          <input
-            value={newTaskTitle}
-            onChange={e => setNewTaskTitle(e.target.value)}
-            placeholder="Titre de la tâche..."
-            className="w-full text-sm bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-amber-400/50 focus:outline-none placeholder:text-white/30"
-          />
-          <textarea
-            value={newTaskDesc}
-            onChange={e => setNewTaskDesc(e.target.value)}
-            placeholder="Description (optionnelle)..."
-            rows={2}
-            className="w-full text-sm bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-amber-400/50 focus:outline-none placeholder:text-white/30 resize-none"
-          />
-          <div className="flex gap-2">
-            <select value={newTaskAgent} onChange={e => setNewTaskAgent(e.target.value)}
-              className="flex-1 text-sm bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-amber-400/50 focus:outline-none">
-              {["LÉNA", "PIXEL", "MAYA", "NOVA", "ATLAS", "JADE", "TERRAIN"].map(a => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
-            <select value={newTaskPriority} onChange={e => setNewTaskPriority(e.target.value as "normal" | "high" | "urgent")}
-              className="flex-1 text-sm bg-white/5 border border-white/20 text-white rounded-lg px-3 py-2 focus:border-amber-400/50 focus:outline-none">
-              <option value="normal">Normale</option>
-              <option value="high">Haute</option>
-              <option value="urgent">Urgente</option>
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={onCreateTask} disabled={isCreating || !newTaskTitle.trim()}
-              className="flex-1 text-sm py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold transition-all disabled:opacity-50">
-              {isCreating ? "Création..." : "✅ Créer la tâche"}
-            </button>
-            <button onClick={() => setShowNewTaskForm(false)}
-              className="px-4 text-sm py-2 rounded-lg bg-white/5 border border-white/20 text-white/60 hover:text-white transition-all">
-              Annuler
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Tâches actives en cours */}
-      {typedActive.length > 0 && (
-        <div>
-          <h3 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <RefreshCw size={10} className="animate-spin" /> En cours ({activeTasks.length})
-          </h3>
-          <div className="space-y-2">
-            {typedActive.map(t => (
-              <TaskCard key={t.id} task={t} onUpdateStatus={onUpdateStatus} onUpdateProgress={onUpdateProgress} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Filtres */}
-      <div className="flex gap-1.5 flex-wrap">
-        {[
-          { value: "all", label: "Toutes" },
-          { value: "pending", label: "En attente" },
-          { value: "in_progress", label: "En cours" },
-          { value: "completed", label: "Terminées" },
-        ].map(f => (
-          <button key={f.value} onClick={() => setTaskFilter(f.value as typeof taskFilter)}
-            className={`text-xs px-3 py-1 rounded-lg border transition-all ${taskFilter === f.value ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-white/5 text-white/50 border-white/10 hover:bg-white/10 hover:text-white/70"}`}>
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Liste filtrée */}
-      <div className="space-y-2">
-        {filteredTasks.length === 0 ? (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
-            <p className="text-3xl mb-2">⚙️</p>
-            <p className="text-white/50 text-sm">Aucune tâche {taskFilter !== "all" ? `"${taskFilter}"` : ""}.</p>
-            <p className="text-white/30 text-xs mt-1">Parlez à ARIA pour qu'elle assigne des tâches automatiquement.</p>
-          </div>
-        ) : (
-          filteredTasks.map(t => (
-            <TaskCard key={t.id} task={t} onUpdateStatus={onUpdateStatus} onUpdateProgress={onUpdateProgress} />
-          ))
-        )}
-      </div>
     </div>
   );
 }

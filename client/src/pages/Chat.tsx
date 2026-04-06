@@ -867,6 +867,28 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-activer la géolocalisation au chargement
+  useEffect(() => {
+    if (navigator.geolocation && !userLocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            // Reverse geocoding via Nominatim (gratuit)
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=fr`);
+            const data = await res.json();
+            const city = data.address?.city || data.address?.town || data.address?.village || data.address?.municipality;
+            const country = data.address?.country;
+            setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, city, country });
+          } catch {
+            setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, city: undefined });
+          }
+        },
+        () => { /* géoloc refusée — silencieux */ },
+        { timeout: 8000, maximumAge: 300000 }
+      );
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Collect all places from conversation
   const allPlaces = useMemo(() => {
     const places: Place[] = [];

@@ -82,15 +82,15 @@ export default function TeamDashboard() {
     <div className="min-h-screen bg-background pt-20">
       <div className="border-b border-border/50">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-primary text-sm tracking-widest uppercase mb-1">Espace Équipe</p>
-              <h1 className="text-2xl sm:text-3xl font-serif text-foreground">Rapports Terrain</h1>
+              <h1 className="text-3xl font-serif text-foreground">Rapports Terrain</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 Documentez vos visites d'établissements pour enrichir le catalogue Baymora
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
               {view !== "lena" && (
                 <Button
                   variant="outline"
@@ -1246,9 +1246,13 @@ const LENA_STEPS: { key: LenaStep; label: string; short: string }[] = [
   { key: "VALIDATION_ARIA", label: "Validation ARIA", short: "10" },
 ];
 
-const SESSION_KEY = "lena-terrain-session";
 function LenaAssistant() {
-  const [messages, setMessages] = useState<LenaMessage[]>([]);
+  const [messages, setMessages] = useState<LenaMessage[]>([
+    {
+      role: "assistant",
+      content: "Bonjour ! Je suis **LÉNA**, ton assistante terrain Baymora. 👋\n\nJe vais te guider étape par étape pour créer une fiche établissement complète et SEO-optimisée.\n\nOn travaille sur quelle adresse aujourd'hui ?",
+    },
+  ]);
   const [session, setSession] = useState<LenaSession>({
     currentStep: "ACCUEIL",
     collectedData: {},
@@ -1257,37 +1261,15 @@ function LenaAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [draftFiche, setDraftFiche] = useState<Record<string, unknown> | null>(null);
-  const [sessionLoaded, setSessionLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
   const lenaChat = trpc.lena.chat.useMutation();
   const transcribeVoice = trpc.lena.transcribeForLena.useMutation();
   const generateFiche = trpc.lena.generateFiche.useMutation();
   const uploadMedia = trpc.fieldReports.getUploadUrl.useMutation();
-  const saveLenaSession = trpc.pilotage.saveLenaSession.useMutation();
-  // Charger la session persistée depuis la DB
-  const { data: savedSession } = trpc.pilotage.loadLenaSession.useQuery(
-    { sessionKey: SESSION_KEY },
-    { enabled: true }
-  );
-  // Restaurer la session au chargement
-  useEffect(() => {
-    if (savedSession && !sessionLoaded) {
-      setSessionLoaded(true);
-      if (savedSession.history && savedSession.history.length > 0) {
-        setMessages(savedSession.history as LenaMessage[]);
-      } else {
-        setMessages([{ role: "assistant", content: "Bonjour ! Je suis **LÉNA**, ton assistante terrain Baymora. 👋\n\nJe vais te guider étape par étape pour créer une fiche établissement complète et SEO-optimisée.\n\nOn travaille sur quelle adresse aujourd'hui ?" }]);
-      }
-      if (savedSession.session) {
-        setSession(savedSession.session as LenaSession);
-      }
-    } else if (savedSession === null && !sessionLoaded) {
-      setSessionLoaded(true);
-      setMessages([{ role: "assistant", content: "Bonjour ! Je suis **LÉNA**, ton assistante terrain Baymora. 👋\n\nJe vais te guider étape par étape pour créer une fiche établissement complète et SEO-optimisée.\n\nOn travaille sur quelle adresse aujourd'hui ?" }]);
-    }
-  }, [savedSession, sessionLoaded]);
+
   // Scroll automatique
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1328,21 +1310,13 @@ function LenaAssistant() {
       if (result.shouldLaunchScout) {
         toast.info("SCOUT effectue des recherches web...", { duration: 3000 });
       }
-      // Sauvegarder la session en DB (persistance cross-device)
-      const updatedMessages = [...messages, userMsg, { role: "assistant" as const, content: result.content }];
-      const updatedSession = { ...session, currentStep: result.step as LenaStep };
-      saveLenaSession.mutate({
-        sessionKey: SESSION_KEY,
-        session: updatedSession,
-        history: updatedMessages,
-      });
     } catch (err: unknown) {
       const error = err as { message?: string };
       toast.error("Erreur LÉNA : " + (error?.message || "Réessayez"));
     } finally {
       setIsLoading(false);
     }
-  }, [messages, session, lenaChat, isLoading, saveLenaSession]);
+  }, [messages, session, lenaChat, isLoading]);
 
   // Enregistrement vocal
   const startRecording = useCallback(async () => {

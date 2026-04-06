@@ -1,77 +1,41 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Link, useLocation } from "wouter";
-import { Bell, Search } from "lucide-react";
-import { getLoginUrl } from "@/const";
+import { useLocation, Link } from "wouter";
+import { Bell } from "lucide-react";
+import { useAuth } from "../_core/hooks/useAuth";
+
+const HIDDEN_PATHS = ["/chat", "/pilotage", "/admin", "/team", "/lena"];
 
 export default function MobileHeader() {
-  const { user, isAuthenticated } = useAuth();
   const [location] = useLocation();
+  const { user } = useAuth();
 
-  // Hide on admin/pilotage/team/chat pages (they have their own headers)
-  if (
-    location.startsWith("/admin") ||
-    location.startsWith("/pilotage") ||
-    location.startsWith("/team") ||
-    location.startsWith("/chat")
-  )
-    return null;
+  const shouldHide = HIDDEN_PATHS.some((p) => location.startsWith(p));
+  if (shouldHide) return null;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 md:hidden">
-      <div className="bg-[#080c14]/95 backdrop-blur-xl border-b border-white/[0.04]">
-        <div className="flex items-center justify-between px-4 h-14">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 flex items-center justify-center border border-[#c8a94a]/40 rounded-full">
-              <span className="font-['Playfair_Display'] text-base text-[#c8a94a] font-semibold leading-none">
-                B
-              </span>
-            </div>
-            <span className="font-['Playfair_Display'] text-sm text-[#c8a94a] tracking-wide">
-              Baymora
-            </span>
-          </Link>
-
-          {/* Right actions */}
+    <header className="fixed top-0 left-0 right-0 z-50 md:hidden bg-[#0d0d14]/95 backdrop-blur-xl border-b border-white/10 pt-[env(safe-area-inset-top)]">
+      <div className="flex items-center justify-between h-12 px-4">
+        <Link href="/">
           <div className="flex items-center gap-2">
-            <Link
-              href="/discover"
-              className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-[#c8a94a] transition-colors"
-            >
-              <Search size={18} strokeWidth={1.5} />
-            </Link>
-
-            {isAuthenticated ? (
-              <>
-                <button className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-[#c8a94a] transition-colors relative">
-                  <Bell size={18} strokeWidth={1.5} />
-                  {/* Notification dot */}
-                  <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#c8a94a] rounded-full" />
-                </button>
-                <Link href="/profile" className="ml-1">
-                  {user?.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt=""
-                      className="w-7 h-7 rounded-full border border-[#c8a94a]/30 object-cover"
-                    />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-[#c8a94a]/15 border border-[#c8a94a]/30 flex items-center justify-center">
-                      <span className="text-[10px] text-[#c8a94a] font-semibold">
-                        {user?.name?.charAt(0)?.toUpperCase() || "?"}
-                      </span>
-                    </div>
-                  )}
-                </Link>
-              </>
-            ) : (
-              <a href={getLoginUrl()}>
-                <div className="px-3 py-1.5 bg-[#c8a94a]/15 border border-[#c8a94a]/30 text-[#c8a94a] text-[11px] font-medium tracking-wider uppercase">
-                  Connexion
-                </div>
-              </a>
-            )}
+            <div className="w-7 h-7 rounded-full border border-amber-500/30 flex items-center justify-center">
+              <span className="text-amber-400 font-bold text-sm" style={{ fontFamily: "'Playfair Display', serif" }}>B</span>
+            </div>
+            <span className="text-white/90 font-semibold text-sm" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Maison Baymora
+            </span>
           </div>
+        </Link>
+        <div className="flex items-center gap-3">
+          <button className="relative text-white/50 hover:text-white">
+            <Bell size={18} />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400" />
+          </button>
+          {user && (
+            <Link href="/profile">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-xs font-bold text-black">
+                {(user.name || user.email || "?")[0].toUpperCase()}
+              </div>
+            </Link>
+          )}
         </div>
       </div>
     </header>

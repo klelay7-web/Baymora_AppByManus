@@ -434,91 +434,84 @@
 ## Phase 18 — Corrections Critiques (06/04/2026)
 
 ### 18.1 Persistance session LÉNA cross-device
-- [x] Créer table `lenaSessions` en DB pour persister session, étape, données collectées
-- [x] Endpoint tRPC : saveSession, loadSession par userId
-- [x] Frontend Terrain : charger la session depuis DB au démarrage, sauvegarder à chaque message
-- [x] LÉNA reprend automatiquement où elle s'est arrêtée, même depuis un autre appareil
+- [ ] Créer table `lenaSessions` en DB pour persister session, étape, données collectées
+- [ ] Endpoint tRPC : saveSession, loadSession par userId
+- [ ] Frontend Terrain : charger la session depuis DB au démarrage, sauvegarder à chaque message
+- [ ] LÉNA reprend automatiquement où elle s'est arrêtée, même depuis un autre appareil
 
 ### 18.2 Tableau de bord des tâches agents
-- [x] Enrichir table `agentTasks` : ajouter champs title, description, requestedBy, progressPercent, notes
-- [x] Endpoint tRPC : createTask, updateTaskProgress, listTasks (filtrés par agent/statut)
-- [x] Quand LÉNA reçoit une demande autonome, créer une tâche traçable en DB
-- [x] Quand ARIA donne un ordre, créer une tâche traçable en DB
-- [x] Onglet "Tâches" dans Pilotage : liste toutes les tâches avec %, agent, statut, date
+- [ ] Enrichir table `agentTasks` : ajouter champs title, description, requestedBy, progressPercent, notes
+- [ ] Endpoint tRPC : createTask, updateTaskProgress, listTasks (filtrés par agent/statut)
+- [ ] Quand LÉNA reçoit une demande autonome, créer une tâche traçable en DB
+- [ ] Quand ARIA donne un ordre, créer une tâche traçable en DB
+- [ ] Onglet "Tâches" dans Pilotage : liste toutes les tâches avec %, agent, statut, date
 
 ### 18.3 ARIA conversationnelle et exécutrice
-- [x] Refondre DG_SYSTEM_PROMPT : ARIA répond court, direct, conversationnel
-- [x] ARIA crée une tâche DB quand elle donne un ordre (via tag structuré parsé)
-- [x] ARIA ne renvoie JAMAIS vers Manus (l'IA externe) pour des actions internes
-- [x] ARIA peut lancer LÉNA en autonomie sur une fiche (créer la tâche + notifier)
-- [x] Réponses max 3-4 lignes sauf si rapport demandé explicitement
+- [ ] Refondre DG_SYSTEM_PROMPT : ARIA répond court, direct, conversationnel
+- [ ] ARIA crée une tâche DB quand elle donne un ordre (via tool call ou tag structuré)
+- [ ] ARIA ne renvoie JAMAIS vers Manus (l'IA externe) pour des actions internes
+- [ ] ARIA peut lancer LÉNA en autonomie sur une fiche (créer la tâche + notifier)
+- [ ] Réponses max 3-4 lignes sauf si rapport demandé explicitement
 
 ### 18.4 Responsive mobile complet
-- [x] Pilotage : layout mobile (toggle ARIA / Tableau de bord, chat plein écran, header compact)
-- [x] Terrain : layout mobile adapté (déjà responsive avec classes sm/md)
-- [x] Toutes les pages : vérifier breakpoints sm/md/lg
-- [ ] Navigation bottom bar mobile sur toutes les pages internes (optionnel, MobileNav existe mais non monté)
+- [ ] Pilotage : layout mobile (colonne unique, chat plein écran, onglets scrollables)
+- [ ] Terrain : layout mobile adapté
+- [ ] Toutes les pages : vérifier breakpoints sm/md/lg
+- [ ] Navigation bottom bar mobile sur toutes les pages internes
 
-## Sprint 0 — Refonte Mobile-First Complète (Avril 2026)
+## Sprint 0.5 — Corrections & Ajouts (06/04/2026)
 
-### S0.1 DB — Nouvelles tables
-- [x] Table `userProfile` enrichie — clientProfiles existait déjà
-- [x] Table `userMemory` (faits mémorisés par ARIA client)
-- [x] Table `userParcours` — userDestinations existait déjà
-- [x] Table `parcoursItems` — steps JSON dans userDestinations
-- [x] Table `userFavorites` — favorites existait déjà
-- [x] Table `baymoraPoints` (solde par utilisateur)
-- [x] Table `pointsTransactions` (historique BP)
-- [x] Table `subscriptionPause` + subscriptions (5 tiers)
+### Corrections visuelles
+- [x] Hero : overlay plus sombre + text-shadow pour lisibilité B et texte
+- [x] Hero : B stylisé (Playfair Display) remplace le logo image
+- [x] Forfaits : mise en pause visible sur chaque plan (1 mois/an, 2 mois/an, illimitée)
+- [x] Forfaits : conciergerie par chat ajoutée dans Premium
+- [x] Chat mobile : word-break + overflow-wrap sur messages ARIA
+- [x] Chat mobile : quick actions scroll horizontal + input compacté
+- [x] Pilotage responsive mobile : toggle ARIA/Panneaux, tabs scrollables, cards empilées
+- [x] Pilotage : bouton Relancer dans l'historique des missions
 
-### S0.2 Navigation — Bottom Bar Mobile-First
-- [x] Bottom bar 5 onglets (Accueil/Découvrir/ARIA/Parcours/Profil)
-- [x] Pastilles filtre rapide en haut (Tout/Destinations/Bundles/Parcours)
-- [x] Header compact mobile (logo + avatar + notifications)
-- [x] Refonte App.tsx routes et layout global + AppLayout
+### Nouvelles pages et contenus
+- [x] Page /ambassadeur-info : explicatif complet programme ambassadeur (niveaux, FAQ, CTA)
+- [x] Boutons "En savoir plus" + "Mon dashboard" dans section ambassadeur homepage
+- [x] Catégories Conciergerie, Social Clubs, Mariages & VIP, Yachts dans Discover
+- [x] Tags Conciergerie, Social Clubs, Mariages & VIP dans section prestataires homepage
 
-### S0.3 Accueil Spotify-Style
-- [x] Hero section premium compact mobile + full desktop
-- [x] Section Tendances (scroll horizontal)
-- [x] Section Sélections éditoriales (intégré dans Tendances)
-- [x] Section Bundles (top 5, top 10) dans trending cards
-- [x] Section Destinations (scroll horizontal)
-- [x] Section Nouveautés (intégré dans value prop)
-- [x] Réponse à la douleur visible dès l'accueil (hero + quick actions)
+### Navigation mobile-first
+- [x] AppLayout : header mobile + navbar desktop + bottom nav 5 onglets
+- [x] MobileBottomNav : Accueil / Découvrir / ARIA / Parcours / Profil
+- [x] MobileHeader : logo B + notifications + avatar
+- [x] MobileBackButton : retour sur toutes les sous-pages
+- [x] Route /mes-parcours avec page MesParcours
 
-### S0.4 Profil Utilisateur
-- [x] Page profil complète (pseudo, avatar, bio, niveau)
-- [x] Section compagnons (partenaire, enfants, animaux)
-- [x] Section préférences (style, budget, mobilité)
-- [x] Section mémoire ARIA (visible, tab dédié)
-- [x] Section stats (crédits, compagnons, catégories)
-- [x] Section confidentialité (lien accès rapide)
-- [x] Enrichissement progressif par ARIA (message incitatif)
+### En cours
+- [ ] Section Bundles visible sur la homepage (scroll horizontal)
+- [ ] Tendances : générer du contenu réel pour remplir les cliquables vides
+- [ ] Système invitation opérateurs terrain par email (lien profil + forfait + dashboard)
+- [ ] Vue "Mon Équipe" dans Pilotage pour voir les dashboards terrain
 
-### S0.4b Découvrir Mobile-First
-- [x] Page Découvrir refonte mobile-first (grille 2 colonnes, filtres horizontaux)
-- [x] Recherche intégrée avec icône filtres
-- [x] Cards overlay style (image + texte superposé)
+## Sprint 0.6 — Qualification IA + Fiche Client Ultra-Complète
 
-### S0.4c Mes Parcours
-- [x] Page Mes Parcours avec tabs (Mes voyages / Sauvegardes)
-- [x] Intégration tRPC trips.getMyPlans + lena.savedParcours
-- [x] État vide avec CTA vers ARIA
+### A. System prompt assistant client
+- [x] L'IA doit TOUJOURS qualifier avant de proposer (localisation, contexte, budget, accompagnants)
+- [x] "Surprends-moi" = 3-4 questions rapides PUIS proposition ciblée
+- [x] L'IA ne propose JAMAIS une destination lointaine sans vérifier où est le client
+- [ ] L'IA remplit discrètement la fiche client au fil des conversations
+- [ ] L'IA propose d'inviter les proches mentionnés (lien parrainage)
 
-### S0.5 Séparation ARIA Client / DG
-- [ ] System prompt ARIA Client (chaleureux, inspirant)
-- [ ] Table mémoire séparée ARIA Client vs ARIA DG
-- [ ] Middleware bloquant accès croisé
-- [ ] Nommage par plan (assistant Baymora vs ARIA)
-
-### S0.6 Scheduler LÉNA Autonome
-- [ ] Scheduler quotidien 2h du matin
-- [ ] LÉNA crée 3 fiches/nuit automatiquement
-- [ ] Pipeline fiche → contenu social
-
-### S0.7 Responsive Mobile Complet
-- [ ] Pilotage mobile-first
-- [ ] Terrain mobile-first
-- [ ] Toutes les pages breakpoints cohérents
-
-- [x] Retirer le logo Baymora du hero homepage, garder uniquement le B stylisé
+### B. Fiche client ultra-complète (50+ champs)
+- [x] Identité : âge, anniversaire, taille, poids, pointure, tailles vêtements
+- [x] Permis : types (B, A, bateau, hélico), conduite droite/gauche, manuel/auto
+- [x] Véhicules : préférence luxe, quotidien, location
+- [x] Logement : préf ville/campagne/balnéaire, appart/villa, piscine/spa/jacuzzi/salle sport
+- [x] Localisation : plage/pied plage/centre/transports, chauffeur/uber/autonome (multi-sélection)
+- [x] Style : couleurs préférées, goûts, marques préférées, boutiques préférées
+- [x] Gastronomie : plats préférés, allergies, régime alimentaire, croyance/religion
+- [x] Santé : vue (bonne/mauvaise, lentilles/lunettes), handicap, problèmes spécifiques
+- [x] Animaux : race, poids, taille, âge, nom, habitudes, vétérinaire de référence
+- [x] Famille : conjoint(e) (homme/femme/non-binaire, couple homo/mixte), enfants (âge, niveau scolaire)
+- [x] Clubs & VIP : membre de clubs, avion privé, jet, yacht, bateau, conciergerie préférée
+- [x] Préférences : lieux préférés, villes préférées, citations préférées, amis proches
+- [x] Gamification : points gagnés en remplissant la fiche, barre de progression
+- [x] Adaptation FR/US : questions différentes selon la locale (champs adaptés)
+- [x] L'IA peut remplir automatiquement les champs via les conversations (system prompt mis à jour)

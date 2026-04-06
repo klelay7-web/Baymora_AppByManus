@@ -3,52 +3,36 @@ import Navbar from "./Navbar";
 import MobileHeader from "./MobileHeader";
 import MobileBottomNav from "./MobileBottomNav";
 
-interface AppLayoutProps {
-  children: React.ReactNode;
-}
+const FULLSCREEN_PATHS = ["/chat", "/pilotage", "/admin", "/team", "/lena"];
+const NO_BOTTOM_NAV_PATHS = ["/chat", "/pilotage", "/admin", "/team", "/lena"];
 
-/**
- * AppLayout — Orchestrates the navigation system:
- * - Mobile: MobileHeader (top) + MobileBottomNav (bottom)
- * - Desktop: Navbar (top, full Quintessentially-style)
- * 
- * Pages that manage their own chrome (admin, pilotage, team, chat)
- * have their headers hidden automatically by the child components.
- */
-export default function AppLayout({ children }: AppLayoutProps) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
 
-  // Full-chrome pages that handle their own layout
-  const isFullChrome =
-    location.startsWith("/admin") ||
-    location.startsWith("/pilotage") ||
-    location.startsWith("/team");
+  const isFullscreen = FULLSCREEN_PATHS.some((p) => location.startsWith(p));
+  const showBottomNav = !NO_BOTTOM_NAV_PATHS.some((p) => location.startsWith(p));
 
-  // Chat has its own mobile header but needs bottom nav hidden
-  const isChat = location.startsWith("/chat");
+  if (isFullscreen) {
+    return <>{children}</>;
+  }
 
   return (
-    <>
-      {/* Desktop navbar — hidden on mobile via internal lg:hidden */}
+    <div className="min-h-screen bg-[#0a0a0f]">
+      {/* Desktop navbar */}
       <div className="hidden md:block">
         <Navbar />
       </div>
 
-      {/* Mobile header — visible only on mobile, hidden on special pages */}
+      {/* Mobile header */}
       <MobileHeader />
 
-      {/* Main content area */}
-      <main
-        className={`
-          ${!isFullChrome && !isChat ? "pt-14 md:pt-[72px]" : "md:pt-[72px]"}
-          ${!isFullChrome ? "pb-20 md:pb-0" : ""}
-        `}
-      >
+      {/* Main content — padding for mobile header and bottom nav */}
+      <main className="pt-12 md:pt-0 pb-16 md:pb-0">
         {children}
       </main>
 
-      {/* Mobile bottom nav — visible only on mobile */}
-      <MobileBottomNav />
-    </>
+      {/* Mobile bottom nav */}
+      {showBottomNav && <MobileBottomNav />}
+    </div>
   );
 }
