@@ -2070,7 +2070,7 @@ function CreateRoute({ onDone }: { onDone: () => void }) {
   }, [form, steps]);
 
   const setFormSave = (updater: (p: typeof form) => typeof form) =>
-    setForm(prev => { const next = updater(prev); setTimeout(() => saveDraft(next, steps), 0); return next; });
+    setForm((prev: typeof form) => { const next = updater(prev); setTimeout(() => saveDraft(next, steps), 0); return next; });
   const setStepsSave = (updater: (p: typeof steps) => typeof steps) =>
     setSteps((prev: typeof steps) => { const next = updater(prev); setTimeout(() => saveDraft(form, next), 0); return next; });
 
