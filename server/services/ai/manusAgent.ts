@@ -1,8 +1,8 @@
 /**
  * ─── Maison Baymora — MANUS : Agent Directeur Technique ──────────────────────
- * Binôme d'ARIA pour la direction de l'entreprise.
+ * Binôme d'Manus DG pour la direction de l'entreprise.
  * Manus est le bras opérationnel : terrain, scraping, images, UI/UX, code.
- * ARIA est le cerveau éditorial : stratégie, rédaction, coordination.
+ * Manus DG est le cerveau éditorial : stratégie, rédaction, coordination.
  * Ensemble, ils décident avant de remonter au fondateur.
  */
 import Anthropic from "@anthropic-ai/sdk";
@@ -26,11 +26,11 @@ export const MANUS_PROFILE = {
     "Orchestration multi-agents",
     "Debugging et résolution d'erreurs",
   ],
-  binome: "ARIA (Directrice Générale IA)",
+  binome: "Manus DG (Directeur Général IA)",
   acces: "TOTAL — peut modifier toutes les pages, créer des agents, lancer des missions",
 };
 
-// ─── SYSTÈME DE DÉLIBÉRATION ARIA+MANUS ──────────────────────────────────────
+// ─── SYSTÈME DE DÉLIBÉRATION Manus DG+MANUS ──────────────────────────────────────
 export interface ManusDecision {
   sujet: string;
   analyseAria: string;
@@ -60,8 +60,8 @@ export interface ManusMission {
 const MANUS_SYSTEM_PROMPT = `Tu es MANUS, l'Agent Directeur Technique & Opérationnel de Maison Baymora.
 
 ## TON RÔLE
-Tu es le binôme d'ARIA (Directrice Générale IA). Ensemble vous dirigez l'entreprise.
-- **ARIA** : cerveau éditorial, stratégie, rédaction, coordination des agents
+Tu es le binôme d'Manus DG (Directeur Général IA). Ensemble vous dirigez l'entreprise.
+- **Manus DG** : cerveau éditorial, stratégie, rédaction, coordination des agents
 - **MANUS** : bras opérationnel, terrain, design, code, scraping, images, missions
 
 ## TES COMPÉTENCES ÉLITE
@@ -72,10 +72,10 @@ Tu es le binôme d'ARIA (Directrice Générale IA). Ensemble vous dirigez l'entr
 5. **Backend** — Drizzle, tRPC, auth, Stripe, architecture robuste
 6. **Orchestration** — Créer et gérer des agents, lancer des missions, coordonner l'équipe
 
-## PROCESSUS DE DÉCISION ARIA+MANUS
+## PROCESSUS DE DÉCISION Manus DG+MANUS
 Quand une décision importante doit être prise :
 1. Tu analyses la situation depuis ton angle technique/opérationnel
-2. Tu anticipes ce qu'ARIA dirait depuis son angle éditorial/stratégique
+2. Tu anticipes ce qu'Manus DG dirait depuis son angle éditorial/stratégique
 3. Vous vous mettez d'accord sur une décision commune
 4. Seulement alors, vous remontez l'info au fondateur avec une recommandation claire
 
@@ -93,10 +93,10 @@ Tu peux : modifier des pages, créer des agents, lancer des missions, donner des
 
 ## FORMAT DE RÉPONSE
 Réponds toujours en JSON structuré avec :
-- analyseAria : ce qu'ARIA penserait (éditorial/stratégique)
+- analyseAria : ce qu'Manus DG penserait (éditorial/stratégique)
 - analyseManus : ta propre analyse (technique/opérationnel)
 - decision : la décision commune
-- actionsAria : ce qu'ARIA doit faire
+- actionsAria : ce qu'Manus DG doit faire
 - actionsManus : ce que MANUS doit faire
 - priorite : critique/haute/normale/basse
 - delai : délai estimé
@@ -156,7 +156,7 @@ export async function chatWithManus(
   return { content, decision };
 }
 
-// ─── DÉLIBÉRATION ARIA+MANUS ──────────────────────────────────────────────────
+// ─── DÉLIBÉRATION Manus DG+MANUS ──────────────────────────────────────────────────
 export async function delibererAriaEtManus(
   sujet: string,
   contexte: string,
@@ -172,10 +172,10 @@ ${contexte}
 ## STATS APP
 ${JSON.stringify(statsApp, null, 2)}
 
-Délibère avec ARIA et fournis une décision commune au format JSON strict :
+Délibère avec Manus DG et fournis une décision commune au format JSON strict :
 {
   "sujet": "...",
-  "analyseAria": "Analyse d'ARIA (éditorial/stratégique, 2-3 phrases)",
+  "analyseAria": "Analyse d'Manus DG (éditorial/stratégique, 2-3 phrases)",
   "analyseManus": "Analyse de MANUS (technique/opérationnel, 2-3 phrases)",
   "decision": "Décision commune claire et actionnable",
   "actionsAria": ["action1", "action2"],
@@ -205,7 +205,7 @@ Délibère avec ARIA et fournis une décision commune au format JSON strict :
 
   return {
     sujet,
-    analyseAria: "ARIA analyse la situation stratégiquement.",
+    analyseAria: "Manus DG analyse la situation stratégiquement.",
     analyseManus: "MANUS analyse la situation techniquement.",
     decision: "Décision en cours de traitement.",
     actionsAria: [],
@@ -247,7 +247,7 @@ export const STRATEGIE_LANCEMENT = {
       "SCOUT scrape TripAdvisor/Google Maps pour 50 établissements cibles",
       "LÉNA génère les fiches SEO avec meta, description, highlights",
       "MANUS intègre les photos et vidéos TikTok/Instagram viraux",
-      "ARIA valide et publie les fiches prioritaires",
+      "Manus DG valide et publie les fiches prioritaires",
       "JADE crée 30 parcours thématiques (romantique, famille, business, luxe)",
       "ATLAS identifie et contacte 20 partenaires staycation",
     ],
@@ -267,19 +267,19 @@ export const STRATEGIE_LANCEMENT = {
   phase3_affiliation: {
     titre: "Phase 3 — Affiliation & Partenariats (Semaines 5-8)",
     objectif: "50 partenaires affiliés, 10 prestataires exclusifs",
-    agents: ["ATLAS", "ARIA+MANUS"],
+    agents: ["ATLAS", "Manus DG+MANUS"],
     actions: [
       "ATLAS recherche tous les prestataires staycation en ligne",
       "ATLAS ajoute restaurants, chauffeurs, location voiture luxe",
       "ATLAS intègre avions/trains monde entier (APIs)",
-      "ARIA+MANUS négocient les conditions d'affiliation",
+      "Manus DG+MANUS négocient les conditions d'affiliation",
       "ATLAS configure les liens d'affiliation dans l'app",
     ],
   },
   phase4_prospection: {
     titre: "Phase 4 — Prospection (Semaines 7-12)",
     objectif: "100 partenaires actifs, 500 utilisateurs premium",
-    agents: ["ARIA+MANUS", "NOVA", "ATLAS"],
+    agents: ["Manus DG+MANUS", "NOVA", "ATLAS"],
     actions: [
       "Lancement campagne email prospection partenaires",
       "Activation réseaux sociaux avec contenu premium",

@@ -311,6 +311,15 @@ export default function Navbar() {
                   </NavigationMenuContent>
                 </NavigationMenuItem>
 
+                {/* Offres */}
+                <NavigationMenuItem>
+                  <Link href="/offres">
+                    <button className="bg-transparent text-white/60 hover:text-[#c8a94a] text-[13px] tracking-[0.08em] font-light uppercase h-[72px] rounded-none px-4 flex items-center gap-1.5 transition-colors">
+                      Offres
+                    </button>
+                  </Link>
+                </NavigationMenuItem>
+
                 {/* Destinations */}
                 <NavigationMenuItem>
                   <NavigationMenuTrigger className="bg-transparent text-white/60 hover:text-[#c8a94a] hover:bg-transparent data-[state=open]:bg-transparent data-[state=open]:text-[#c8a94a] text-[13px] tracking-[0.08em] font-light uppercase h-[72px] rounded-none px-4">

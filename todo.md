@@ -614,3 +614,100 @@
 - [x] Onglet MANUS DG : flex-wrap header buttons + grid-cols-1 sm:grid-cols-2 md:grid-cols-3
 - [x] Tabs navigation : overflow-x-auto scrollbar-hide + min-w-max sur TabsList
 - [x] Zéro erreur TypeScript
+
+## Phase 26 — Livraison 100% Opérationnelle
+
+### 26.1 Renommage ARIA → Manus DG
+- [ ] Renommer ARIA → "Manus DG" dans dgService.ts (system prompt, identité)
+- [ ] Renommer dans Pilotage.tsx (tous les labels, onglets, messages)
+- [ ] Renommer dans routers.ts (commentaires, logs)
+- [ ] Renommer dans MobileHeader.tsx si mentionné
+- [ ] Intégrer clé Runway API dans les secrets (RUNWAY_API_KEY)
+- [ ] Créer runwayService.ts (génération vidéo depuis script texte)
+- [ ] Module vidéo dans Pilotage : bouton "Générer vidéo" sur chaque script social
+
+### 26.2 Modèle Freemium Spotify
+- [ ] Accès gratuit : fiches établissements avec réductions (grandes villes, 5 étoiles uniquement)
+- [ ] Paywall parcours IA : "Créer un parcours" → consomme crédits ou forfait payant
+- [ ] Logique crédits : N échanges IA gratuits/mois, puis paywall
+- [ ] Badge "Avec réduction" sur les fiches accessibles gratuitement
+- [ ] Badge "Plan Premium requis" sur les fiches sans réduction
+- [ ] CTA "Voulez-vous créer un parcours ?" après sélection d'établissements
+- [ ] Parcours payant : inclut chauffeur, resto, transport, avion, expériences sur place
+- [ ] Sélection limitée premium même en gratuit (pas de lowcost, uniquement 5 étoiles avec réductions)
+
+### 26.3 Refonte MAYA 6 modes
+- [ ] System prompt MAYA : 6 modes (Avant/Live/Retour/Business/Lifestyle/Explorer)
+- [ ] Détection automatique du mode selon les premiers mots du client
+- [ ] Popup localisation au démarrage (proposition directe, pas dans les paramètres)
+- [ ] Budget VIP : option "illimité" → plus de prix, uniquement valeur et expérience
+- [ ] Carte supprimée du chat → uniquement dans les fiches établissements
+- [ ] Parcours modifiables : Modifier / Supprimer étape / Déplacer / Remplacer / Ajouter
+- [ ] 3 scénarios budget dans panneau droit (inférieur -15% / respecté / supérieur +15%)
+- [ ] Profil animaux : filtre pet-friendly automatique si animal détecté
+- [ ] Mode Business : hébergement, transport, rappels RDV, salle sport, squash, piscine
+- [ ] Ce que MAYA ne sait pas faire : 3 alternatives proposées (faire soi-même / transmettre équipe / conciergerie)
+- [ ] Filtre hors-sujet : réponse fixe si demande inappropriée
+
+### 26.4 Pilotage Kanban + accès mobile
+- [ ] Supprimer chat ARIA/Manus DG de Pilotage (remplacé par rapports automatiques)
+- [ ] Kanban : colonnes En attente / En cours / Effectué
+- [ ] Lien Pilotage dans nav mobile (owner/admin uniquement)
+- [ ] Lien Terrain dans nav mobile (team/admin/owner)
+- [ ] Mémoire MANUS persistante en DB (historique conversations entre sessions)
+
+### 26.5 Cron jobs production
+- [ ] Rapport hebdomadaire lundi 6h00 → email + notification Kevin
+- [ ] Vérification fiches sans photos réelles chaque jour 8h → alerte si manquant
+- [ ] Génération 3 contenus sociaux/jour (9h, 13h, 18h) → file de validation
+- [ ] Résumé quotidien 22h → notification Kevin
+
+### 26.6 Notifications + Runway
+- [ ] Push notifications PWA (manifest, service worker, permission)
+- [ ] Notification iPhone à chaque contenu en attente de validation
+- [ ] Notification rapport hebdomadaire lundi 6h
+- [ ] Module Runway : runwayService.ts + procédure tRPC + UI Pilotage
+- [ ] File de validation vidéo dans Pilotage Kanban
+
+### 26.7 Photos réelles + Découverte
+- [ ] Google Places API : récupérer photos officielles pour chaque établissement
+- [ ] Remplacer photos IA par photos réelles dans les 24 fiches
+- [ ] Refonte page Découverte : parcours thématiques, bons plans, lieux secrets
+- [ ] Supprimer les établissements/services de la page Découverte
+
+### 26.8 Bugs + Dashboard terrain
+- [ ] BUG-1 : 404 invitation → vérifier route /invite/:token
+- [ ] BUG-2 : Forfait gratuit non attribué à l'inscription via invitation
+- [ ] BUG-3 : Opérateur n'apparaît pas dans dashboard terrain après acceptation
+- [ ] BUG-4 : WhatsApp → envoyer directement au numéro saisi
+- [ ] BUG-5 : Email envoyé directement depuis Resend sur l'email saisi
+- [ ] BUG-6 : Tags JSON/markdown bruts dans le chat → rendu propre
+- [ ] BUG-7 : QR cliquables partiels → tous les QR doivent être cliquables
+- [ ] BUG-8 : Flèche retour arrière manquante sur pages terrain
+- [ ] Dashboard opérateur : voir son travail publié, modifier, valider, pousser
+- [ ] Accès forfait gratuit opérateurs depuis Pilotage (Kevin attribue le forfait)
+- [ ] Blocage compte opérateur depuis Pilotage
+
+## Phase 26 — Précisions modèle freemium (08/04/2026)
+
+### Accès gratuit
+- [ ] Toutes les offres avec réductions : grandes villes + lieux de prestige (Saint-Tropez, Nice, Cannes, Monaco, Courchevel, Megève, Saint-Barth, Ibiza, Mykonos, Portofino, Capri, Marbella, Miami Beach, LA, Hamptons, Aspen, Dubai, Bali, Phuket, Marrakech...)
+- [ ] Liste `PREMIUM_DESTINATIONS` dans shared/constants.ts — éditable depuis Pilotage
+- [ ] Réservation style Staycation : offres packagées 1/2/3 nuits avec prix réduit affiché
+- [ ] IA limitée : 5 échanges/mois puis paywall
+- [ ] 3 essais création parcours puis paywall
+- [ ] Aperçu verrouillé des bundles luxe et sélections VIP
+
+### Accès payant
+- [ ] IA illimitée + parcours complets
+- [ ] Bundles luxe et sélections VIP déverrouillés
+- [ ] Accès aux deux modes : réductions OU Premium/VIP (choix mémorisé dans profil)
+- [ ] MAYA pose la question au démarrage du parcours : "Voulez-vous voir les offres avec réductions ou uniquement les sélections Premium/VIP ?"
+- [ ] Préférence sauvegardée dans userPreferences.contentMode ('discount' | 'premium' | 'both')
+- [ ] Changeable à tout moment depuis le profil
+
+### Notification mode réductions (membres payants)
+- [ ] Bannière contextuelle quand membre payant navigue dans sélection réductions : "Vous êtes dans la sélection avec réductions — Continuer | Passer en espace VIP Premium"
+- [ ] Villas de prestige avec réduction dans la sélection gratuite/réductions (ex : villa Saint-Tropez 12 500€/sem au lieu de 15 000€)
+- [ ] Champ `originalPrice` + `discountedPrice` + `discountPercent` dans les fiches établissements
+- [ ] Badge "−X%" affiché sur les fiches avec réduction

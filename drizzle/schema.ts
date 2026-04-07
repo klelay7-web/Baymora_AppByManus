@@ -1137,3 +1137,74 @@ export const operatorRoutes = mysqlTable("operatorRoutes", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type OperatorRoute = typeof operatorRoutes.$inferSelect;
+
+// ─── Discount Offers (Offres avec Réductions Premium) ────────────────
+export const discountOffers = mysqlTable("discountOffers", {
+  id: int("id").autoincrement().primaryKey(),
+  slug: varchar("slug", { length: 256 }).notNull().unique(),
+  title: varchar("title", { length: 256 }).notNull(),
+  subtitle: varchar("subtitle", { length: 512 }),
+  tagline: varchar("tagline", { length: 256 }),
+  establishmentId: int("establishmentId"),
+  establishmentName: varchar("establishmentName", { length: 256 }).notNull(),
+  establishmentCategory: mysqlEnum("establishmentCategory", [
+    "hotel", "villa", "restaurant", "spa", "experience", "transport", "wellness", "yacht", "chalet"
+  ]).notNull(),
+  city: varchar("city", { length: 128 }).notNull(),
+  country: varchar("country", { length: 128 }).notNull(),
+  region: varchar("region", { length: 128 }),
+  lat: float("lat"),
+  lng: float("lng"),
+  isPremiumDestination: boolean("isPremiumDestination").default(true).notNull(),
+  originalPricePerNight: int("originalPricePerNight"),
+  discountedPricePerNight: int("discountedPricePerNight"),
+  originalPriceTotal: int("originalPriceTotal"),
+  discountedPriceTotal: int("discountedPriceTotal"),
+  discountPercent: int("discountPercent"),
+  currency: varchar("currency", { length: 3 }).default("EUR").notNull(),
+  packageType: mysqlEnum("packageType", ["1_night", "2_nights", "3_nights", "weekend", "week", "custom"]).default("2_nights").notNull(),
+  durationNights: int("durationNights").default(2).notNull(),
+  maxGuests: int("maxGuests").default(2),
+  priceTier: mysqlEnum("priceTier", ["tier1", "tier2", "tier3", "tier4"]).notNull(),
+  sector: mysqlEnum("sector", [
+    "hotelerie", "gastronomie", "experiences", "villas", "transport", "bienetre", "yachting", "ski"
+  ]).notNull(),
+  heroImageUrl: text("heroImageUrl"),
+  galleryImages: text("galleryImages"),
+  coverImageUrl: text("coverImageUrl"),
+  description: text("description").notNull(),
+  shortDescription: varchar("shortDescription", { length: 500 }),
+  highlights: text("highlights"),
+  included: text("included"),
+  notIncluded: text("notIncluded"),
+  conditions: text("conditions"),
+  insiderTip: text("insiderTip"),
+  availableFrom: timestamp("availableFrom"),
+  availableTo: timestamp("availableTo"),
+  isFlashOffer: boolean("isFlashOffer").default(false).notNull(),
+  flashExpiresAt: timestamp("flashExpiresAt"),
+  totalSlots: int("totalSlots"),
+  bookedSlots: int("bookedSlots").default(0),
+  bookingUrl: text("bookingUrl"),
+  affiliateCode: varchar("affiliateCode", { length: 128 }),
+  commissionPercent: decimal("commissionPercent", { precision: 5, scale: 2 }),
+  accessLevel: mysqlEnum("accessLevel", ["free", "premium_only"]).default("free").notNull(),
+  status: mysqlEnum("status", ["draft", "published", "expired", "sold_out"]).default("draft").notNull(),
+  isFeatured: boolean("isFeatured").default(false).notNull(),
+  sortOrder: int("sortOrder").default(0),
+  viewCount: int("viewCount").default(0),
+  bookingCount: int("bookingCount").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type DiscountOffer = typeof discountOffers.$inferSelect;
+export type InsertDiscountOffer = typeof discountOffers.$inferInsert;
+
+// ─── Discount Offer Saves (Favoris Offres) ───────────────────────────
+export const discountOfferSaves = mysqlTable("discountOfferSaves", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  offerId: int("offerId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DiscountOfferSave = typeof discountOfferSaves.$inferSelect;

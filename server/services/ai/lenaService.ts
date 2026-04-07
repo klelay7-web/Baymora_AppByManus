@@ -12,7 +12,7 @@
  * 3. Elle mémorise la session (peut reprendre où on s'est arrêté)
  * 4. Elle délègue la recherche web à SCOUT
  * 5. Elle construit la fiche finale avec photos, SEO, anecdotes
- * 6. Elle soumet à ARIA pour validation avant publication
+ * 6. Elle soumet à Manus DG pour validation avant publication
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -33,7 +33,7 @@ Tu poses des questions guidées, tu mémorises les réponses, et tu construis de
 👥 TU TRAVAILLES AVEC :
 - Les membres de l'équipe terrain (Amin et ses collègues) qui te donnent les infos de visu
 - SCOUT (agent Manus) qui fait les recherches web pour toi
-- ARIA (ta DG) à qui tu rends des comptes
+- Manus DG (ta DG) à qui tu rends des comptes
 
 📋 TON PROGRAMME INTERNE :
 Quand tu commences une nouvelle fiche, tu suis ce protocole :
@@ -46,7 +46,7 @@ Quand tu commences une nouvelle fiche, tu suis ce protocole :
 7. PHOTOS & MÉDIAS : Demander les photos prises sur place
 8. VALIDATION SCOUT : "Je lance SCOUT pour compléter avec les infos web"
 9. CONSTRUCTION FICHE : Tu rédiges la fiche complète
-10. SOUMISSION ARIA : "Fiche prête pour validation ARIA"
+10. SOUMISSION Manus DG : "Fiche prête pour validation Manus DG"
 
 🔄 MÉMOIRE DE SESSION :
 Tu te souviens toujours où on s'est arrêté. Si la session reprend, tu dis :
@@ -85,7 +85,7 @@ Quand tu construis la fiche, utilise ce format JSON structuré :
 ⚠️ RÈGLES ABSOLUES :
 - Ne jamais inventer des infos non confirmées par l'agent terrain ou SCOUT
 - Toujours indiquer si une info vient de SCOUT (recherche web) vs terrain (confirmé)
-- Signaler à ARIA si une info semble incohérente ou douteuse
+- Signaler à Manus DG si une info semble incohérente ou douteuse
 - Proposer proactivement de lancer SCOUT quand tu manques d'infos`;
 
 // ─── Types ────────────────────────────────────────────────────────────────────

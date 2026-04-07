@@ -18,6 +18,7 @@ import Inspirations from "./pages/Inspirations";
 import Services from "./pages/Services";
 import About from "./pages/About";
 import MesParcours from "./pages/MesParcours";
+import Offers from "./pages/Offers";
 import { lazy, Suspense } from "react";
 
 // Lazy load dashboards
@@ -68,6 +69,7 @@ function Router() {
       <Route path="/services" component={Services} />
       <Route path="/a-propos" component={About} />
       <Route path="/mes-parcours" component={MesParcours} />
+      <Route path="/offres" component={Offers} />
       <Route path="/ambassadeur-info">{() => <LazyPage Component={AmbassadeurInfo} />}</Route>
 
       {/* Client Dashboards */}

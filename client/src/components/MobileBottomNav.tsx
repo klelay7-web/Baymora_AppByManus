@@ -1,11 +1,11 @@
 import { useLocation, Link } from "wouter";
-import { Home, Compass, MessageCircle, Map, User } from "lucide-react";
+import { Home, Compass, MessageCircle, Tag, User } from "lucide-react";
 
 const tabs = [
   { path: "/", icon: Home, label: "Accueil" },
   { path: "/discover", icon: Compass, label: "Découvrir" },
-  { path: "/chat", icon: MessageCircle, label: "ARIA", accent: true },
-  { path: "/mes-parcours", icon: Map, label: "Parcours" },
+  { path: "/chat", icon: MessageCircle, label: "MAYA", accent: true },
+  { path: "/offres", icon: Tag, label: "Offres" },
   { path: "/profile", icon: User, label: "Profil" },
 ];
 

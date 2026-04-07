@@ -2,7 +2,7 @@
  * ORCHESTRATEUR MULTI-AGENTS BAYMORA
  * 
  * Architecture bi-cerveau :
- * - Claude (ARIA, LÉNA, MAYA...) = éditorial, rédaction, SEO, conversation
+ * - Claude (Manus DG, LÉNA, MAYA...) = éditorial, rédaction, SEO, conversation
  * - Manus/Scout (Perplexity) = terrain, recherche web, données fraîches, images
  * 
  * 3 scénarios selon complexité :

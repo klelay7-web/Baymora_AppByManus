@@ -1,7 +1,7 @@
 /**
  * ─── Task Order Service ───────────────────────────────────────────────────────
- * Gestion des ordres de tâches traçables pour les agents ARIA, LÉNA, MANUS, etc.
- * Chaque demande du fondateur ou ordre d'ARIA crée une entrée persistante en DB.
+ * Gestion des ordres de tâches traçables pour les agents Manus DG, LÉNA, MANUS, etc.
+ * Chaque demande du fondateur ou ordre d'Manus DG crée une entrée persistante en DB.
  */
 import { getDb } from "../db";
 import { agentTaskOrders } from "../../drizzle/schema";

@@ -1528,7 +1528,7 @@ const LENA_STEPS: { key: LenaStep; label: string; short: string }[] = [
   { key: "PHOTOS", label: "Photos", short: "7" },
   { key: "SCOUT_RECHERCHE", label: "Recherche SCOUT", short: "8" },
   { key: "CONSTRUCTION_FICHE", label: "Fiche SEO", short: "9" },
-  { key: "VALIDATION_ARIA", label: "Validation ARIA", short: "10" },
+  { key: "VALIDATION_ARIA", label: "Validation Manus DG", short: "10" },
 ];
 
 function LenaAssistant() {
@@ -1872,10 +1872,10 @@ function LenaAssistant() {
               variant="outline"
               size="sm"
               className="w-full gap-2 text-xs border-green-500/20 text-green-400 hover:bg-green-500/10"
-              onClick={() => sendMessage("C'est bon, soumet la fiche à ARIA pour validation")}
+              onClick={() => sendMessage("C'est bon, soumet la fiche à Manus DG pour validation")}
               disabled={isLoading || !draftFiche}
             >
-              <CheckCircle2 className="w-3 h-3" /> Soumettre à ARIA
+              <CheckCircle2 className="w-3 h-3" /> Soumettre à Manus DG
             </Button>
           </div>
         </div>

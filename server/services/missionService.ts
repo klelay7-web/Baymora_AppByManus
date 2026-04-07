@@ -1,13 +1,13 @@
 /**
  * ─── Maison Baymora — Mission Service ────────────────────────────────────────
- * Gestion des missions 24h du fondateur vers ARIA.
+ * Gestion des missions 24h du fondateur vers Manus DG.
  * 
  * Flux :
  *   1. Fondateur colle une directive → createMission()
- *   2. ARIA reçoit la mission comme contexte dans son system prompt
- *   3. ARIA génère un accusé de réception (ariaAck)
+ *   2. Manus DG reçoit la mission comme contexte dans son system prompt
+ *   3. Manus DG génère un accusé de réception (ariaAck)
  *   4. La mission expire après durationHours (défaut 24h)
- *   5. À l'expiration, ARIA génère un compte-rendu final avec score de succès
+ *   5. À l'expiration, Manus DG génère un compte-rendu final avec score de succès
  *   6. La mission passe en historique (status: completed/expired)
  */
 
@@ -65,7 +65,7 @@ export async function createMission(input: MissionInput) {
 
   const missionId = (result as { insertId: number }).insertId;
 
-  // ARIA génère un accusé de réception
+  // Manus DG génère un accusé de réception
   const ack = await generateAriaAck(input.title, input.content, durationHours);
 
   await db
@@ -176,7 +176,7 @@ export async function closeMission(
 
   const mission = rows[0];
 
-  // ARIA génère le compte-rendu final
+  // Manus DG génère le compte-rendu final
   const { report, score } = await generateFinalReport(mission);
 
   await db
@@ -194,7 +194,7 @@ export async function closeMission(
   return { report, score };
 }
 
-// ─── Construire le contexte mission pour le system prompt ARIA ───────────────
+// ─── Construire le contexte mission pour le system prompt Manus DG ───────────────
 export async function buildMissionContext(): Promise<string> {
   const mission = await getActiveMission();
   if (!mission) return "";
@@ -208,7 +208,7 @@ export async function buildMissionContext(): Promise<string> {
     : [];
 
   const lastNotes = progress.slice(-3).map(p =>
-    `[${p.agent ?? "ARIA"}] ${p.note}`
+    `[${p.agent ?? "Manus DG"}] ${p.note}`
   ).join("\n");
 
   return `
@@ -226,7 +226,7 @@ ${lastNotes ? `### DERNIÈRES NOTES DE PROGRESSION :\n${lastNotes}` : ""}
 `;
 }
 
-// ─── Générer l'accusé de réception ARIA ──────────────────────────────────────
+// ─── Générer l'accusé de réception Manus DG ──────────────────────────────────────
 async function generateAriaAck(
   title: string,
   content: string,
@@ -236,12 +236,12 @@ async function generateAriaAck(
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 600,
-      system: `Tu es ARIA, Directrice Générale IA de Maison Baymora. Tu viens de recevoir une directive de mission du fondateur. Génère un accusé de réception concis (max 300 mots) qui :
+      system: `Tu es Manus DG, Directeur Général IA de Maison Baymora. Tu viens de recevoir une directive de mission du fondateur. Génère un accusé de réception concis (max 300 mots) qui :
 1. Confirme ta compréhension des objectifs principaux
 2. Identifie les 3 priorités critiques
 3. Nomme les agents que tu vas mobiliser
 4. Confirme le planning sur ${durationHours}h
-5. Signe : **— ARIA, DG Maison Baymora**
+5. Signe : **— Manus DG, DG Maison Baymora**
 Sois directe, professionnelle, et montre que tu as bien compris la mission.`,
       messages: [{
         role: "user",
@@ -250,7 +250,7 @@ Sois directe, professionnelle, et montre que tu as bien compris la mission.`,
     });
     return response.content[0].type === "text" ? response.content[0].text : "Mission reçue et enregistrée.";
   } catch {
-    return `✅ Mission "${title}" reçue et enregistrée. Durée : ${durationHours}h. Démarrage immédiat.\n\n— ARIA, DG Maison Baymora`;
+    return `✅ Mission "${title}" reçue et enregistrée. Durée : ${durationHours}h. Démarrage immédiat.\n\n— Manus DG, DG Maison Baymora`;
   }
 }
 
@@ -273,14 +273,14 @@ async function generateFinalReport(mission: {
   );
 
   const progressSummary = progress.map(p =>
-    `[${new Date(p.timestamp).toLocaleTimeString("fr-FR")}] ${p.agent ?? "ARIA"}: ${p.note}`
+    `[${new Date(p.timestamp).toLocaleTimeString("fr-FR")}] ${p.agent ?? "Manus DG"}: ${p.note}`
   ).join("\n");
 
   try {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-5",
       max_tokens: 1200,
-      system: `Tu es ARIA, Directrice Générale IA de Maison Baymora. Tu dois rédiger le compte-rendu de clôture d'une mission. Structure :
+      system: `Tu es Manus DG, Directeur Général IA de Maison Baymora. Tu dois rédiger le compte-rendu de clôture d'une mission. Structure :
 **📅 COMPTE-RENDU DE MISSION — [DATE]**
 **Mission :** [titre]
 **Durée :** [X]h | **Score de succès :** [X]/100
@@ -300,7 +300,7 @@ async function generateFinalReport(mission: {
 **💡 RECOMMANDATIONS POUR LA PROCHAINE MISSION**
 [3 recommandations concrètes]
 
-**— ARIA, DG Maison Baymora**
+**— Manus DG, DG Maison Baymora**
 
 À la fin, sur une ligne séparée, écris uniquement : SCORE:[chiffre entre 0 et 100]`,
       messages: [{
@@ -324,7 +324,7 @@ Objectifs initiaux :\n${mission.content.slice(0, 2000)}`,
       ? Math.round(((mission.completedTasks ?? 0) / mission.totalTasks) * 100)
       : 50;
     return {
-      report: `**Compte-rendu de mission "${mission.title}"**\nTâches complétées : ${mission.completedTasks ?? 0}/${mission.totalTasks ?? "?"}\n\n— ARIA, DG Maison Baymora`,
+      report: `**Compte-rendu de mission "${mission.title}"**\nTâches complétées : ${mission.completedTasks ?? 0}/${mission.totalTasks ?? "?"}\n\n— Manus DG, DG Maison Baymora`,
       score,
     };
   }

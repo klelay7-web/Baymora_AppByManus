@@ -1,7 +1,7 @@
 /**
  * ─── Maison Baymora — PILOTAGE ──────────────────────────────────────────────
  * Centre de contrôle exclusif du fondateur.
- * ARIA (DG IA Claude Opus) à gauche + 5 onglets à droite :
+ * Manus DG (DG IA Claude Opus) à gauche + 5 onglets à droite :
  *   Dashboard | Salle de Réunion | Terrain | Carnet de Bord | Accès
  */
 import { useState, useRef, useEffect } from "react";
@@ -31,11 +31,11 @@ interface Message {
 const AGENTS_IA = [
   {
     id: "aria",
-    nom: "ARIA",
+    nom: "Manus DG",
     emoji: "🧠",
     couleur: "amber",
     modele: "Claude Opus",
-    role: "Directrice Générale IA",
+    role: "Directeur Général IA",
     description: "Supervise toutes les équipes, carnet de bord, rapports, budget, stratégie. Seule IA à qui vous parlez directement.",
     fonctions: [
       "Rapports journaliers datés",
@@ -254,7 +254,7 @@ export default function Pilotage() {
     toast.success("Lien copié !");
   };
 
-  // ─── Mutations accès total ARIA en écriture ───────────────────────────────────────────────────────────────────────
+  // ─── Mutations accès total Manus DG en écriture ───────────────────────────────────────────────────────────────────────
   const createSeoCardMutation = trpc.aria.createSeoCardAria.useMutation({
     onSuccess: (d) => toast.success(`✅ Fiche SEO créée en base (ID: ${d.id})`),
     onError: (e) => toast.error(e.message),
@@ -269,13 +269,13 @@ export default function Pilotage() {
   });
   const [savingMsgIdx, setSavingMsgIdx] = useState<number | null>(null);
 
-  // Sauvegarde intelligente : détecte le type de contenu ARIA et enregistre en base
+  // Sauvegarde intelligente : détecte le type de contenu Manus DG et enregistre en base
   const saveAriaOutput = async (msgContent: string, msgIdx: number) => {
     setSavingMsgIdx(msgIdx);
     try {
       const lower = msgContent.toLowerCase();
       const today = new Date().toISOString().split("T")[0];
-      const titleLine = msgContent.split("\n")[0].replace(/[#*]/g, "").replace(/[\uD800-\uDFFF]/g, "").trim().slice(0, 80) || "Contenu ARIA";
+      const titleLine = msgContent.split("\n")[0].replace(/[#*]/g, "").replace(/[\uD800-\uDFFF]/g, "").trim().slice(0, 80) || "Contenu Manus DG";
       if (lower.includes("reel") || lower.includes("tiktok") || lower.includes("script") || lower.includes("vidéo")) {
         const platform = lower.includes("tiktok") ? "tiktok" : "instagram";
         const contentType = lower.includes("reel") ? "reel" : "script";
@@ -305,7 +305,7 @@ export default function Pilotage() {
     } else if (!history && messages.length === 0) {
       setMessages([{
         role: "assistant",
-        content: `👋 Bonjour, je suis **ARIA**\nDirectrice Générale IA de Maison Baymora. Je supervise vos **7 agents IA** et l'ensemble des opérations.\n\nJe suis ici pour :\n📊 Vous présenter les rapports et métriques\n📋 Donner des ordres aux agents\n💡 Proposer des stratégies et améliorations\n🔴 Vous alerter en cas de problème\n💰 Gérer les budgets et les objectifs\n\nQue souhaitez-vous faire aujourd'hui ?\n— **ARIA, DG Maison Baymora**`,
+        content: `👋 Bonjour, je suis **Manus DG**\nDirecteur Général IA de Maison Baymora. Je supervise vos **7 agents IA** et l'ensemble des opérations.\n\nJe suis ici pour :\n📊 Vous présenter les rapports et métriques\n📋 Donner des ordres aux agents\n💡 Proposer des stratégies et améliorations\n🔴 Vous alerter en cas de problème\n💰 Gérer les budgets et les objectifs\n\nQue souhaitez-vous faire aujourd'hui ?\n— **Manus DG, DG Maison Baymora**`,
         actionType: undefined,
         timestamp: new Date(),
       }]);
@@ -346,7 +346,7 @@ export default function Pilotage() {
       }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : "Erreur inconnue";
-      toast.error(`ARIA : ${errorMsg}`);
+      toast.error(`Manus DG : ${errorMsg}`);
     } finally {
       setIsLoading(false);
     }
@@ -358,7 +358,7 @@ export default function Pilotage() {
       const report = await reportMutation.mutateAsync();
       setMessages((prev) => [...prev, { role: "assistant", content: report, actionType: "report", timestamp: new Date() }]);
       setActiveTab("carnet");
-      toast.success("Rapport généré par ARIA");
+      toast.success("Rapport généré par Manus DG");
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : "Erreur inconnue";
       toast.error(`Erreur : ${errorMsg}`);
@@ -417,12 +417,12 @@ export default function Pilotage() {
         <div className="flex items-center gap-2">
           {/* Toggle mobile chat/panel */}
           <div className="flex md:hidden gap-1">
-            <button onClick={() => setMobileView("chat")} className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${mobileView === "chat" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-white/5 text-white/50 border-white/10"}`}>💬 ARIA</button>
+            <button onClick={() => setMobileView("chat")} className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${mobileView === "chat" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-white/5 text-white/50 border-white/10"}`}>💬 Manus DG</button>
             <button onClick={() => setMobileView("panel")} className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${mobileView === "panel" ? "bg-amber-500/20 text-amber-300 border-amber-500/30" : "bg-white/5 text-white/50 border-white/10"}`}>📊 Panneaux</button>
           </div>
           <div className="hidden md:flex items-center gap-2 text-xs text-white/40">
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-            ARIA active · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+            Manus DG active · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
           </div>
         </div>
       </div>
@@ -430,13 +430,13 @@ export default function Pilotage() {
       {/* ─── Corps principal ───────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col md:flex-row" style={{ height: "calc(100vh - 57px)", overflow: "hidden" }}>
 
-        {/* ─── Chat ARIA (gauche) ─────────────────────────────────────── */}
+        {/* ─── Chat Manus DG (gauche) ─────────────────────────────────────── */}
         <div className={`${mobileView === "chat" ? "flex" : "hidden"} md:flex w-full md:w-[400px] md:min-w-[360px] md:max-w-[400px] border-r border-white/10 flex-col bg-[#0d0d14] h-full overflow-hidden`}>
           <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-xs font-bold text-black">A</div>
               <div>
-                <span className="text-sm font-semibold text-amber-400">ARIA</span>
+                <span className="text-sm font-semibold text-amber-400">Manus DG</span>
                 <span className="text-xs text-white/30 ml-2">Claude Opus · DG IA</span>
               </div>
             </div>
@@ -456,7 +456,7 @@ export default function Pilotage() {
                     {msg.role === "assistant" && (
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-xs font-bold text-black">A</div>
-                        <span className="text-xs text-amber-400 font-medium">ARIA</span>
+                        <span className="text-xs text-amber-400 font-medium">Manus DG</span>
                         {actionBadge(msg.actionType)}
                         {msg.timestamp && <span className="text-xs text-white/30">{msg.timestamp.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>}
                       </div>
@@ -474,7 +474,7 @@ export default function Pilotage() {
                         <p>{msg.content}</p>
                       )}
                     </div>
-                    {/* Bouton Enregistrer en base — uniquement sur les messages ARIA longs */}
+                    {/* Bouton Enregistrer en base — uniquement sur les messages Manus DG longs */}
                     {msg.role === "assistant" && msg.content.length > 200 && (
                       <div className="mt-1.5 flex items-center gap-2">
                         <button
@@ -506,7 +506,7 @@ export default function Pilotage() {
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: "0ms" }} />
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: "150ms" }} />
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-                      <span className="text-xs text-white/40 ml-2">ARIA réfléchit...</span>
+                      <span className="text-xs text-white/40 ml-2">Manus DG réfléchit...</span>
                     </div>
                   </div>
                 </div>
@@ -533,7 +533,7 @@ export default function Pilotage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                placeholder="Parlez à ARIA... (Entrée pour envoyer)"
+                placeholder="Parlez à Manus DG... (Entrée pour envoyer)"
                 className="min-h-[60px] max-h-[120px] bg-white/5 border-white/20 text-white placeholder:text-white/30 resize-none text-sm focus:border-amber-400/50"
                 disabled={isLoading}
               />
@@ -550,7 +550,7 @@ export default function Pilotage() {
         <div className={`${mobileView === "panel" ? "flex" : "hidden"} md:flex flex-1 flex-col overflow-hidden h-full`}>
           {ariaPanelOverride && (
             <div className="flex items-center justify-between px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-xs flex-shrink-0">
-              <span className="text-amber-400">📌 ARIA a mis à jour ce panneau</span>
+              <span className="text-amber-400">📌 Manus DG a mis à jour ce panneau</span>
               <button onClick={() => setAriaPanelOverride(null)} className="text-white/40 hover:text-white/70 ml-4">✕</button>
             </div>
           )}
@@ -642,7 +642,7 @@ export default function Pilotage() {
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${alert.priority === "critique" ? "bg-red-500" : alert.priority === "haute" ? "bg-orange-500" : "bg-yellow-500"}`} />
                           <span className="text-xs md:text-sm text-white/80 truncate">{alert.label}</span>
                         </div>
-                        <button onClick={() => { setInput(`ARIA, ${alert.action}`); }} className="text-xs text-amber-400 hover:text-amber-300 underline flex-shrink-0 ml-2">{alert.action} →</button>
+                        <button onClick={() => { setInput(`Manus DG, ${alert.action}`); }} className="text-xs text-amber-400 hover:text-amber-300 underline flex-shrink-0 ml-2">{alert.action} →</button>
                       </div>
                     ))}
                   </div>
@@ -683,17 +683,17 @@ export default function Pilotage() {
               <TabsContent value="salle" className="mt-0 space-y-4">
                 <div>
                   <h2 className="text-lg font-bold text-white">Salle de Réunion — Agents IA</h2>
-                  <p className="text-sm text-white/50">7 agents IA spécialisés · Tous sous la direction d'ARIA · Aucun humain fictif</p>
+                  <p className="text-sm text-white/50">7 agents IA spécialisés · Tous sous la direction d'Manus DG · Aucun humain fictif</p>
                 </div>
 
-                {/* ARIA en chef */}
+                {/* Manus DG en chef */}
                 <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/10 border border-amber-500/30 rounded-xl p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-xl font-bold text-black">A</div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-amber-400 text-lg">ARIA</span>
-                        <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs">Directrice Générale IA</Badge>
+                        <span className="font-bold text-amber-400 text-lg">Manus DG</span>
+                        <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs">Directeur Général IA</Badge>
                         <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 text-xs">Claude Opus</Badge>
                         <span className="w-2 h-2 rounded-full bg-emerald-400" />
                         <span className="text-xs text-emerald-400">Active</span>
@@ -745,10 +745,10 @@ export default function Pilotage() {
                             <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
                               <span className="text-xs text-white/30">Modèle : {agent.modele}</span>
                               <button
-                                onClick={(e) => { e.stopPropagation(); setInput(`ARIA, donne un ordre à ${agent.nom} :`); }}
+                                onClick={(e) => { e.stopPropagation(); setInput(`Manus DG, donne un ordre à ${agent.nom} :`); }}
                                 className={`text-xs px-2 py-1 rounded-lg ${c.bg} ${c.text} border ${c.border} hover:opacity-80`}
                               >
-                                Ordonner via ARIA →
+                                Ordonner via Manus DG →
                               </button>
                             </div>
                           </div>
@@ -772,7 +772,7 @@ export default function Pilotage() {
                               <div key={t} className="flex items-center gap-2 text-xs text-white/50">
                                 <span className="w-1 h-1 rounded-full bg-white/30 flex-shrink-0" />
                                 <span className="flex-1">{t}</span>
-                                <button onClick={() => setInput(`ARIA, donne l'ordre : ${t}`)} className="text-amber-400/60 hover:text-amber-400 underline flex-shrink-0">→</button>
+                                <button onClick={() => setInput(`Manus DG, donne l'ordre : ${t}`)} className="text-amber-400/60 hover:text-amber-400 underline flex-shrink-0">→</button>
                               </div>
                             ))}
                           </div>
@@ -1299,8 +1299,8 @@ export default function Pilotage() {
               {/* ── CARNET DE BORD ──────────────────────────────────────────────────────── */}           <TabsContent value="carnet" className="mt-0 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-bold text-white">Carnet de Bord ARIA</h2>
-                    <p className="text-sm text-white/50">Rapports datés et alertes archivés par ARIA</p>
+                    <h2 className="text-lg font-bold text-white">Carnet de Bord Manus DG</h2>
+                    <p className="text-sm text-white/50">Rapports datés et alertes archivés par Manus DG</p>
                   </div>
                   <Button onClick={generateReport} disabled={isLoading} className="bg-amber-500 hover:bg-amber-400 text-black text-sm font-semibold">
                     📊 Générer rapport
@@ -1324,9 +1324,9 @@ export default function Pilotage() {
                   <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
                     <p className="text-4xl mb-3">📔</p>
                     <p className="text-white/60 text-sm">Aucun rapport dans le carnet de bord.</p>
-                    <p className="text-white/40 text-xs mt-1">Cliquez sur "Générer rapport" pour créer le premier rapport journalier d'ARIA.</p>
+                    <p className="text-white/40 text-xs mt-1">Cliquez sur "Générer rapport" pour créer le premier rapport journalier d'Manus DG.</p>
                     <Button onClick={generateReport} disabled={isLoading} className="mt-4 bg-amber-500 hover:bg-amber-400 text-black text-sm font-semibold">
-                      📊 Premier rapport ARIA
+                      📊 Premier rapport Manus DG
                     </Button>
                   </div>
                 )}
@@ -1353,10 +1353,10 @@ export default function Pilotage() {
                     if (!missionTitle.trim() || !missionContent.trim()) { toast.error("Titre et contenu requis"); return; }
                     try {
                       const res = await createMissionMutation.mutateAsync({ title: missionTitle, content: missionContent, priority: missionPriority, durationHours: missionDuration });
-                      toast.success("🎯 Mission lancée ! ARIA a pris connaissance.");
+                      toast.success("🎯 Mission lancée ! Manus DG a pris connaissance.");
                       setMissionTitle(""); setMissionContent(""); setMissionView("active");
                       await refetchActiveMission(); await refetchMissionHistory();
-                      // Afficher l'accusé de réception dans le chat ARIA
+                      // Afficher l'accusé de réception dans le chat Manus DG
                       if (res.ariaAck) setMessages(prev => [...prev, { role: "assistant", content: res.ariaAck, actionType: "mission", timestamp: new Date() }]);
                     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Erreur"); }
                   }}
@@ -1486,11 +1486,11 @@ function ManusPanel({ setInput }: { setInput: (v: string) => void }) {
         sujet: "Prochaines priorités de Maison Baymora",
         contexte: "Analyser l'état actuel et proposer les 3 actions les plus urgentes",
       });
-      const summary = `**Délibération ARIA+MANUS**\n\n**ARIA :** ${res.analyseAria}\n\n**MANUS :** ${res.analyseManus}\n\n**Décision commune :** ${res.decision}\n\n**Actions ARIA :** ${res.actionsAria.join(", ")}\n\n**Actions MANUS :** ${res.actionsManus.join(", ")}\n\n**Délai :** ${res.delai}`;
+      const summary = `**Délibération Manus DG+MANUS**\n\n**Manus DG :** ${res.analyseAria}\n\n**MANUS :** ${res.analyseManus}\n\n**Décision commune :** ${res.decision}\n\n**Actions Manus DG :** ${res.actionsAria.join(", ")}\n\n**Actions MANUS :** ${res.actionsManus.join(", ")}\n\n**Délai :** ${res.delai}`;
       setManusHistory((prev) => [...prev, { role: "assistant", content: summary }]);
       setActiveManusTab("chat");
       if (res.messageFoundateur) {
-        setInput(`ARIA, MANUS dit : ${res.messageFoundateur}`);
+        setInput(`Manus DG, MANUS dit : ${res.messageFoundateur}`);
       }
     } catch (err: unknown) {
       toast.error("Erreur délibération : " + (err instanceof Error ? err.message : "Inconnue"));
@@ -1507,7 +1507,7 @@ function ManusPanel({ setInput }: { setInput: (v: string) => void }) {
             <Zap size={18} className="text-yellow-400" />
             MANUS — Agent Directeur Technique
           </h2>
-          <p className="text-sm text-white/50">Binôme d'ARIA · Décisions partagées · Accès total</p>
+          <p className="text-sm text-white/50">Binôme d'Manus DG · Décisions partagées · Accès total</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <button
@@ -1609,7 +1609,7 @@ function ManusPanel({ setInput }: { setInput: (v: string) => void }) {
                     <li key={i} className="flex items-start gap-2 text-xs text-white/60">
                       <ChevronRight size={10} className="mt-0.5 flex-shrink-0 text-yellow-400" />
                       <span>{action}</span>
-                      <button onClick={() => setInput(`ARIA, lance cette action : ${action}`)} className="ml-auto text-yellow-400/50 hover:text-yellow-400 flex-shrink-0">→ ARIA</button>
+                      <button onClick={() => setInput(`Manus DG, lance cette action : ${action}`)} className="ml-auto text-yellow-400/50 hover:text-yellow-400 flex-shrink-0">→ Manus DG</button>
                     </li>
                   ))}
                 </ul>
@@ -2136,8 +2136,8 @@ function MissionsPanel({
       {/* Header + Navigation */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-white">🎯 Missions ARIA</h2>
-          <p className="text-xs text-white/50">Directives 24h · ARIA les intègre automatiquement</p>
+          <h2 className="text-lg font-bold text-white">🎯 Missions Manus DG</h2>
+          <p className="text-xs text-white/50">Directives 24h · Manus DG les intègre automatiquement</p>
         </div>
         <div className="flex gap-1">
           {(["active", "create", "history"] as const).map(v => (
@@ -2206,10 +2206,10 @@ function MissionsPanel({
                   </div>
                 )}
 
-                {/* Accusé de réception ARIA */}
+                {/* Accusé de réception Manus DG */}
                 {activeMission.ariaAck && (
                   <div className="bg-black/30 border border-amber-500/20 rounded-lg p-3 mb-3">
-                    <p className="text-xs text-amber-400 font-semibold mb-1">✅ Accusé de réception ARIA</p>
+                    <p className="text-xs text-amber-400 font-semibold mb-1">✅ Accusé de réception Manus DG</p>
                     <div className="prose prose-invert prose-xs max-w-none text-white/70 text-xs">
                       <ReactMarkdown>{activeMission.ariaAck}</ReactMarkdown>
                     </div>
@@ -2258,7 +2258,7 @@ function MissionsPanel({
               </div>
 
               <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                <p className="text-xs text-white/40">ARIA intègre cette mission dans chaque réponse automatiquement.</p>
+                <p className="text-xs text-white/40">Manus DG intègre cette mission dans chaque réponse automatiquement.</p>
                 <p className="text-xs text-white/30 mt-0.5">Pour lancer une nouvelle mission, clôturez d'abord celle-ci.</p>
               </div>
             </>
@@ -2266,7 +2266,7 @@ function MissionsPanel({
             <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
               <p className="text-4xl mb-3">🎯</p>
               <p className="text-white/60 text-sm font-semibold">Aucune mission active</p>
-              <p className="text-white/40 text-xs mt-1 mb-4">Créez une directive pour qu'ARIA et toute l'équipe travaillent dessus pendant 24h.</p>
+              <p className="text-white/40 text-xs mt-1 mb-4">Créez une directive pour qu'Manus DG et toute l'équipe travaillent dessus pendant 24h.</p>
               <button onClick={() => setMissionView("create")}
                 className="bg-amber-500 hover:bg-amber-400 text-black font-bold px-4 py-2 rounded-lg text-sm"
               >
@@ -2333,7 +2333,7 @@ function MissionsPanel({
             <textarea
               value={missionContent}
               onChange={e => setMissionContent(e.target.value)}
-              placeholder="Collez ici votre directive complète pour ARIA et les agents...&#10;&#10;Exemple :&#10;MISSION : Créer 15 fiches SEO Paris ce soir&#10;AGENTS : LÉNA, MANUS&#10;OBJECTIFS : ...&#10;DEADLINES : ..."
+              placeholder="Collez ici votre directive complète pour Manus DG et les agents...&#10;&#10;Exemple :&#10;MISSION : Créer 15 fiches SEO Paris ce soir&#10;AGENTS : LÉNA, MANUS&#10;OBJECTIFS : ...&#10;DEADLINES : ..."
               rows={14}
               className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/30 rounded-lg px-3 py-2 text-sm focus:border-amber-400/50 focus:outline-none resize-none font-mono"
             />
@@ -2345,7 +2345,7 @@ function MissionsPanel({
               disabled={isCreating || !missionTitle.trim() || !missionContent.trim()}
               className="flex-1 bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg text-sm disabled:opacity-50 transition-all"
             >
-              {isCreating ? "🔄 ARIA prend connaissance..." : "🚀 Lancer la mission"}
+              {isCreating ? "🔄 Manus DG prend connaissance..." : "🚀 Lancer la mission"}
             </button>
             <button onClick={() => setMissionView("active")}
               className="bg-white/5 hover:bg-white/10 text-white/60 border border-white/10 rounded-lg px-4 py-2 text-sm"
@@ -2355,7 +2355,7 @@ function MissionsPanel({
           </div>
 
           <p className="text-xs text-white/30 text-center">
-            ARIA génèrera un accusé de réception et intégrera cette directive dans toutes ses réponses pendant {missionDuration}h.
+            Manus DG génèrera un accusé de réception et intégrera cette directive dans toutes ses réponses pendant {missionDuration}h.
           </p>
         </div>
       )}
@@ -2390,7 +2390,7 @@ function MissionsPanel({
                       {historyMission.successScore}/100
                     </div>
                     <div>
-                      <p className="text-xs text-white/60 font-semibold">Score de succès ARIA</p>
+                      <p className="text-xs text-white/60 font-semibold">Score de succès Manus DG</p>
                       {(historyMission.totalTasks ?? 0) > 0 && (
                         <p className="text-xs text-white/40">{historyMission.completedTasks ?? 0}/{historyMission.totalTasks} tâches</p>
                       )}
@@ -2401,7 +2401,7 @@ function MissionsPanel({
                 {/* Compte-rendu final */}
                 {historyMission.finalReport && (
                   <div className="bg-black/20 border border-white/10 rounded-lg p-3 mb-3">
-                    <p className="text-xs text-white/60 font-semibold mb-2">📊 Compte-rendu ARIA</p>
+                    <p className="text-xs text-white/60 font-semibold mb-2">📊 Compte-rendu Manus DG</p>
                     <div className="prose prose-invert prose-xs max-w-none text-white/70 text-xs max-h-64 overflow-auto">
                       <ReactMarkdown>{historyMission.finalReport}</ReactMarkdown>
                     </div>

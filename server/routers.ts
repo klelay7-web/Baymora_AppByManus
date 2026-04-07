@@ -91,7 +91,7 @@ const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
   const isOwner = ENV.ownerOpenId && ctx.user.openId === ENV.ownerOpenId;
   const isAdmin = ctx.user.role === "admin";
   if (!isOwner && !isAdmin) {
-    console.log("[ARIA] Access denied - user.openId:", ctx.user.openId, "ownerOpenId:", ENV.ownerOpenId, "role:", ctx.user.role);
+    console.log("[Manus DG] Access denied - user.openId:", ctx.user.openId, "ownerOpenId:", ENV.ownerOpenId, "role:", ctx.user.role);
     throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé au propriétaire" });
   }
   return next({ ctx });
@@ -1196,9 +1196,9 @@ export const appRouter = router({
         return triggerTeamWeeklyReport(input.teamEmail, input.stats as Record<string, number>);
       }),
   }),
-  // ─── Pilotage (ARIA DG — Owner Only) ──────────────────────────────────────────
+  // ─── Pilotage (Manus DG — Owner Only) ──────────────────────────────────────────
   pilotage: router({
-    // Chat avec ARIA DG
+    // Chat avec Manus DG
     chat: ownerProcedure
       .input(z.object({ message: z.string().min(1).max(4000) }))
       .mutation(async ({ input }) => {
@@ -1298,7 +1298,7 @@ export const appRouter = router({
         await addMissionProgress(input.missionId, input.note, input.agent, input.completedTasks, input.totalTasks);
         return { success: true };
       }),
-    // Clôturer une mission avec compte-rendu ARIA
+    // Clôturer une mission avec compte-rendu Manus DG
     closeMission: ownerProcedure
       .input(z.object({
         missionId: z.number(),
@@ -1991,7 +1991,7 @@ export const appRouter = router({
         return { success: true, content };
       }),
   }),
-  // ─── MANUSS — Agent Directeur Technique (binôme ARIA) ─────────────────────────────
+  // ─── MANUSS — Agent Directeur Technique (binôme Manus DG) ─────────────────────────────
   manus: router({  // Chat avec MANUS
     chat: ownerProcedure
       .input(z.object({
@@ -2007,7 +2007,7 @@ export const appRouter = router({
           totalParcours: stats.totalTripPlans,
         });
       }),
-    // Délibération ARIA+MANUS
+    // Délibération Manus DG+MANUS
     deliberer: ownerProcedure
       .input(z.object({
         sujet: z.string().min(1),
@@ -2113,9 +2113,9 @@ export const appRouter = router({
       )),
   }),
 
-  // ─── ARIA — Commandes dynamiques & profil intelligent ─────────────────────
+  // ─── Manus DG — Commandes dynamiques & profil intelligent ─────────────────────
   aria: router({
-    // Ajouter une instruction ARIA pour un client
+    // Ajouter une instruction Manus DG pour un client
     addInstruction: ownerProcedure
       .input(z.object({
         userId: z.number(),
@@ -2127,7 +2127,7 @@ export const appRouter = router({
         return { success: true, instruction: result };
       }),
 
-    // Voir les instructions ARIA actives pour un client
+    // Voir les instructions Manus DG actives pour un client
     getInstructions: ownerProcedure
       .input(z.object({ userId: z.number() }))
       .query(async ({ input }) => {
@@ -2135,7 +2135,7 @@ export const appRouter = router({
         return { instructions };
       }),
 
-    // Désactiver une instruction ARIA
+    // Désactiver une instruction Manus DG
     removeInstruction: ownerProcedure
       .input(z.object({ userId: z.number(), instructionId: z.string() }))
       .mutation(async ({ input }) => {
@@ -2143,7 +2143,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Extraire le profil depuis une conversation (déclenché manuellement par ARIA)
+    // Extraire le profil depuis une conversation (déclenché manuellement par Manus DG)
     extractProfile: ownerProcedure
       .input(z.object({
         userId: z.number(),
@@ -2157,7 +2157,7 @@ export const appRouter = router({
         return { success: true, extracted };
       }),
 
-    // Voir le profil enrichi d'un client (pour ARIA)
+    // Voir le profil enrichi d'un client (pour Manus DG)
     getClientProfile: ownerProcedure
       .input(z.object({ userId: z.number() }))
       .query(async ({ input }) => {
@@ -2166,8 +2166,8 @@ export const appRouter = router({
         return { profile, ariaInstructions: instructions };
       }),
 
-    // ─── ACCÈS TOTAL ARIA EN ÉCRITURE ─────────────────────────────────────────
-    // ARIA peut lire toutes les fiches SEO
+    // ─── ACCÈS TOTAL Manus DG EN ÉCRITURE ─────────────────────────────────────────
+    // Manus DG peut lire toutes les fiches SEO
     getAllSeoCardsAria: ownerProcedure.query(async () => {
       const { drizzle } = await import("drizzle-orm/mysql2");
       const { desc } = await import("drizzle-orm");
@@ -2196,7 +2196,7 @@ export const appRouter = router({
       return cards;
     }),
 
-    // ARIA peut lire tous les établissements
+    // Manus DG peut lire tous les établissements
     getAllEstablishmentsAria: ownerProcedure.query(async () => {
       const { drizzle } = await import("drizzle-orm/mysql2");
       const { desc } = await import("drizzle-orm");
@@ -2224,7 +2224,7 @@ export const appRouter = router({
       return rows;
     }),
 
-    // ARIA peut enrichir une fiche SEO existante directement
+    // Manus DG peut enrichir une fiche SEO existante directement
     enrichSeoCard: ownerProcedure
       .input(z.object({
         id: z.number(),
@@ -2262,7 +2262,7 @@ export const appRouter = router({
         return { success: true, card: updated };
       }),
 
-    // ARIA peut créer une fiche SEO complète
+    // Manus DG peut créer une fiche SEO complète
     createSeoCardAria: ownerProcedure
       .input(z.object({
         establishmentId: z.number().optional(),
@@ -2299,7 +2299,7 @@ export const appRouter = router({
         return { success: true, id: (result as any).insertId };
       }),
 
-    // ARIA peut créer un établissement directement
+    // Manus DG peut créer un établissement directement
     createEstablishmentAria: ownerProcedure
       .input(z.object({
         name: z.string(),
@@ -2340,7 +2340,7 @@ export const appRouter = router({
         return { success: true, id: (result as any).insertId };
       }),
 
-    // ARIA peut mettre à jour un établissement existant
+    // Manus DG peut mettre à jour un établissement existant
     updateEstablishmentAria: ownerProcedure
       .input(z.object({
         id: z.number(),
@@ -2386,7 +2386,7 @@ export const appRouter = router({
         return { success: true, establishment: updated };
       }),
 
-    // ARIA peut enregistrer un post social media (script vidéo, carrousel, reel...)
+    // Manus DG peut enregistrer un post social media (script vidéo, carrousel, reel...)
     saveSocialPostAria: ownerProcedure
       .input(z.object({
         seoCardId: z.number().optional(),
@@ -2410,7 +2410,7 @@ export const appRouter = router({
         return { success: true, id: (result as any).insertId };
       }),
 
-    // ARIA peut créer un contenu dans le calendrier éditorial
+    // Manus DG peut créer un contenu dans le calendrier éditorial
     createContentItemAria: ownerProcedure
       .input(z.object({
         title: z.string(),
@@ -2439,7 +2439,7 @@ export const appRouter = router({
         return { success: true, id: (result as any).insertId };
       }),
 
-    // ARIA peut lire le calendrier éditorial complet
+    // Manus DG peut lire le calendrier éditorial complet
     getContentCalendarAria: ownerProcedure.query(async () => {
       const { drizzle } = await import("drizzle-orm/mysql2");
       const { desc } = await import("drizzle-orm");
@@ -2452,7 +2452,7 @@ export const appRouter = router({
       return rows;
     }),
 
-    // ARIA peut mettre à jour le statut d'un contenu calendrier
+    // Manus DG peut mettre à jour le statut d'un contenu calendrier
     updateContentStatusAria: ownerProcedure
       .input(z.object({
         id: z.number(),
@@ -2914,6 +2914,189 @@ export const appRouter = router({
         await conn.end();
         return { success: true };
       }),
+  }),
+
+  // ─── Discount Offers (Offres avec Réductions Premium) ─────────────────────
+  offers: router({
+    list: publicProcedure
+      .input(z.object({
+        sector: z.string().optional(),
+        priceTier: z.enum(["tier1", "tier2", "tier3", "tier4"]).optional(),
+        city: z.string().optional(),
+        isFeatured: z.boolean().optional(),
+        isFlash: z.boolean().optional(),
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+      }).optional())
+      .query(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq, and, desc } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const conditions: any[] = [eq(schema.discountOffers.status, "published")];
+        if (input?.sector) conditions.push(eq(schema.discountOffers.sector, input.sector as any));
+        if (input?.priceTier) conditions.push(eq(schema.discountOffers.priceTier, input.priceTier));
+        if (input?.city) conditions.push(eq(schema.discountOffers.city, input.city));
+        if (input?.isFeatured) conditions.push(eq(schema.discountOffers.isFeatured, true));
+        if (input?.isFlash) conditions.push(eq(schema.discountOffers.isFlashOffer, true));
+        const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+        const offers = await db.select().from(schema.discountOffers)
+          .where(whereClause)
+          .orderBy(desc(schema.discountOffers.isFeatured), desc(schema.discountOffers.sortOrder), desc(schema.discountOffers.createdAt))
+          .limit(input?.limit ?? 50)
+          .offset(input?.offset ?? 0);
+        await conn.end();
+        return offers;
+      }),
+
+    getBySlug: publicProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const [offer] = await db.select().from(schema.discountOffers)
+          .where(eq(schema.discountOffers.slug, input.slug));
+        if (offer) {
+          await db.update(schema.discountOffers)
+            .set({ viewCount: (offer.viewCount ?? 0) + 1 })
+            .where(eq(schema.discountOffers.id, offer.id));
+        }
+        await conn.end();
+        return offer ?? null;
+      }),
+
+    create: ownerProcedure
+      .input(z.object({
+        slug: z.string(),
+        title: z.string(),
+        subtitle: z.string().optional(),
+        tagline: z.string().optional(),
+        establishmentName: z.string(),
+        establishmentCategory: z.enum(["hotel","villa","restaurant","spa","experience","transport","wellness","yacht","chalet"]),
+        city: z.string(),
+        country: z.string(),
+        region: z.string().optional(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
+        originalPricePerNight: z.number().optional(),
+        discountedPricePerNight: z.number().optional(),
+        originalPriceTotal: z.number().optional(),
+        discountedPriceTotal: z.number().optional(),
+        discountPercent: z.number().optional(),
+        packageType: z.enum(["1_night","2_nights","3_nights","weekend","week","custom"]).default("2_nights"),
+        durationNights: z.number().default(2),
+        maxGuests: z.number().optional(),
+        priceTier: z.enum(["tier1","tier2","tier3","tier4"]),
+        sector: z.enum(["hotelerie","gastronomie","experiences","villas","transport","bienetre","yachting","ski"]),
+        heroImageUrl: z.string().optional(),
+        galleryImages: z.string().optional(),
+        coverImageUrl: z.string().optional(),
+        description: z.string(),
+        shortDescription: z.string().optional(),
+        highlights: z.string().optional(),
+        included: z.string().optional(),
+        notIncluded: z.string().optional(),
+        conditions: z.string().optional(),
+        insiderTip: z.string().optional(),
+        bookingUrl: z.string().optional(),
+        accessLevel: z.enum(["free","premium_only"]).default("free"),
+        isFeatured: z.boolean().default(false),
+        isFlashOffer: z.boolean().default(false),
+        status: z.enum(["draft","published","expired","sold_out"]).default("draft"),
+      }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        await db.insert(schema.discountOffers).values(input as any);
+        await conn.end();
+        return { success: true };
+      }),
+
+    update: ownerProcedure
+      .input(z.object({ id: z.number(), data: z.record(z.string(), z.any()) }))
+      .mutation(async ({ input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        await db.update(schema.discountOffers).set(input.data).where(eq(schema.discountOffers.id, input.id));
+        await conn.end();
+        return { success: true };
+      }),
+
+    toggleSave: protectedProcedure
+      .input(z.object({ offerId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const { drizzle } = await import("drizzle-orm/mysql2");
+        const { eq, and } = await import("drizzle-orm");
+        const mysql = await import("mysql2/promise");
+        const schema = await import("../drizzle/schema");
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const db = drizzle(conn);
+        const [existing] = await db.select().from(schema.discountOfferSaves)
+          .where(and(eq(schema.discountOfferSaves.userId, ctx.user.id), eq(schema.discountOfferSaves.offerId, input.offerId)));
+        if (existing) {
+          await db.delete(schema.discountOfferSaves).where(eq(schema.discountOfferSaves.id, existing.id));
+          await conn.end();
+          return { saved: false };
+        } else {
+          await db.insert(schema.discountOfferSaves).values({ userId: ctx.user.id, offerId: input.offerId });
+          await conn.end();
+          return { saved: true };
+        }
+      }),
+
+    getSaved: protectedProcedure.query(async ({ ctx }) => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { eq, desc } = await import("drizzle-orm");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const saves = await db.select().from(schema.discountOfferSaves)
+        .where(eq(schema.discountOfferSaves.userId, ctx.user.id))
+        .orderBy(desc(schema.discountOfferSaves.createdAt));
+      await conn.end();
+      return saves.map(s => s.offerId);
+    }),
+
+    seed: ownerProcedure.mutation(async () => {
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const mysql = await import("mysql2/promise");
+      const schema = await import("../drizzle/schema");
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const db = drizzle(conn);
+      const seedOffers = [
+        { slug: "hotel-de-paris-monaco-weekend", title: "H\u00f4tel de Paris Monte-Carlo", subtitle: "Suite Deluxe avec vue mer \u2014 Weekend d'exception", tagline: "L'adresse mythique de la Principaut\u00e9", establishmentName: "H\u00f4tel de Paris Monte-Carlo", establishmentCategory: "hotel" as const, city: "Monaco", country: "Monaco", region: "C\u00f4te d'Azur", lat: 43.7396, lng: 7.4278, originalPricePerNight: 2800, discountedPricePerNight: 1960, originalPriceTotal: 5600, discountedPriceTotal: 3920, discountPercent: 30, currency: "EUR", packageType: "weekend" as const, durationNights: 2, maxGuests: 2, priceTier: "tier3" as const, sector: "hotelerie" as const, heroImageUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600&q=90", description: "Symbole absolu du luxe mon\u00e9gasque depuis 1864, l'H\u00f4tel de Paris incarne l'excellence \u00e0 la fran\u00e7aise sur la Place du Casino.", shortDescription: "Suite Deluxe vue mer, petit-d\u00e9jeuner Ducasse, spa Thermes Marins inclus.", highlights: JSON.stringify(["Vue panoramique sur la M\u00e9diterran\u00e9e","Petit-d\u00e9jeuner au Louis XV d'Alain Ducasse","Acc\u00e8s spa Thermes Marins Monte-Carlo","Service conciergerie 24h/24","Parking voiturier inclus"]), included: JSON.stringify(["2 nuits en Suite Deluxe","Petit-d\u00e9jeuner gastronomique x2","Acc\u00e8s spa illimit\u00e9","Bouteille de champagne \u00e0 l'arriv\u00e9e","Late check-out 14h"]), insiderTip: "Demandez la Suite M\u00e9diterran\u00e9e au 5\u00e8me \u00e9tage \u2014 la vue sur le port de Monaco au coucher du soleil est \u00e0 couper le souffle.", accessLevel: "free" as const, status: "published" as const, isFeatured: true, isFlashOffer: false, sortOrder: 10 },
+        { slug: "villa-saint-tropez-semaine", title: "Villa Priv\u00e9e Saint-Tropez", subtitle: "Villa 5 chambres avec piscine \u00e0 d\u00e9bordement \u2014 Semaine prestige", tagline: "L'art de vivre trop\u00e9zien dans votre villa priv\u00e9e", establishmentName: "Villa Les Palmiers", establishmentCategory: "villa" as const, city: "Saint-Tropez", country: "France", region: "Provence-Alpes-C\u00f4te d'Azur", lat: 43.2677, lng: 6.6402, originalPriceTotal: 35000, discountedPriceTotal: 24500, originalPricePerNight: 5000, discountedPricePerNight: 3500, discountPercent: 30, currency: "EUR", packageType: "week" as const, durationNights: 7, maxGuests: 10, priceTier: "tier4" as const, sector: "villas" as const, heroImageUrl: "https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1600&q=90", description: "Nich\u00e9e dans les hauteurs de Saint-Tropez avec vue \u00e0 180\u00b0 sur la baie, cette villa d'exception de 600m\u00b2 dispose de 5 suites.", shortDescription: "Villa 600m\u00b2, 5 suites, piscine \u00e0 d\u00e9bordement, vue mer 180\u00b0, chef priv\u00e9 disponible.", highlights: JSON.stringify(["Vue panoramique 180\u00b0 sur la baie","Piscine \u00e0 d\u00e9bordement chauff\u00e9e","5 suites avec salle de bain privative","Chef priv\u00e9 sur demande","Acc\u00e8s plage de Pampelonne"]), included: JSON.stringify(["7 nuits en villa priv\u00e9e","Service de m\u00e9nage quotidien","Voiturier","Accueil champagne","Conciergerie Baymora d\u00e9di\u00e9e"]), insiderTip: "R\u00e9servez le chef priv\u00e9 d\u00e8s l'arriv\u00e9e pour un d\u00eener sur la terrasse au coucher du soleil.", accessLevel: "free" as const, status: "published" as const, isFeatured: true, isFlashOffer: false, sortOrder: 9 },
+        { slug: "le-bristol-paris-suite", title: "Le Bristol Paris", subtitle: "Suite Royale \u2014 3 nuits au c\u0153ur du Triangle d'Or", tagline: "Le palace parisien par excellence", establishmentName: "Le Bristol Paris", establishmentCategory: "hotel" as const, city: "Paris", country: "France", region: "\u00cele-de-France", lat: 48.8706, lng: 2.3116, originalPricePerNight: 3500, discountedPricePerNight: 2450, originalPriceTotal: 10500, discountedPriceTotal: 7350, discountPercent: 30, currency: "EUR", packageType: "3_nights" as const, durationNights: 3, maxGuests: 2, priceTier: "tier4" as const, sector: "hotelerie" as const, heroImageUrl: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1600&q=90", description: "\u00c9rig\u00e9 en 1925 rue du Faubourg Saint-Honor\u00e9, Le Bristol Paris est le seul palace parisien \u00e0 poss\u00e9der une piscine en plein air.", shortDescription: "Suite Royale 200m\u00b2, Epicure 3 \u00e9toiles, spa Sisley, shopping priv\u00e9 inclus.", highlights: JSON.stringify(["Suite Royale 200m\u00b2 vue jardins","Petit-d\u00e9jeuner Epicure 3 \u00e9toiles Michelin","Acc\u00e8s spa Sisley Paris","Piscine en plein air","Service shopping priv\u00e9 rue du Faubourg"]), included: JSON.stringify(["3 nuits en Suite Royale","Petit-d\u00e9jeuner gastronomique x3","Acc\u00e8s spa illimit\u00e9","Transfert a\u00e9roport en berline","Bouteille de Krug \u00e0 l'arriv\u00e9e"]), insiderTip: "Demandez une table au jardin pour le brunch du dimanche.", accessLevel: "free" as const, status: "published" as const, isFeatured: true, isFlashOffer: false, sortOrder: 8 },
+        { slug: "four-seasons-george-v-paris", title: "Four Seasons George V Paris", subtitle: "Chambre Sup\u00e9rieure \u2014 2 nuits avec d\u00eener au Cinq", tagline: "L'avenue George V, l'adresse de l\u00e9gende", establishmentName: "Four Seasons Hotel George V", establishmentCategory: "hotel" as const, city: "Paris", country: "France", region: "\u00cele-de-France", lat: 48.8698, lng: 2.3025, originalPricePerNight: 1800, discountedPricePerNight: 1260, originalPriceTotal: 3600, discountedPriceTotal: 2520, discountPercent: 30, currency: "EUR", packageType: "2_nights" as const, durationNights: 2, maxGuests: 2, priceTier: "tier3" as const, sector: "hotelerie" as const, heroImageUrl: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1600&q=90", description: "Inaugur\u00e9 en 1928 sur l'avenue George V, ce palace iconique est c\u00e9l\u00e8bre pour ses compositions florales spectaculaires.", shortDescription: "2 nuits, d\u00eener au Cinq 3 \u00e9toiles, spa, conciergerie Paris inclus.", highlights: JSON.stringify(["D\u00eener gastronomique au Cinq 3 \u00e9toiles","Compositions florales iconiques","Spa avec piscine int\u00e9rieure","Vue sur cour int\u00e9rieure","Acc\u00e8s VIP galeries d'art"]), included: JSON.stringify(["2 nuits en Chambre Sup\u00e9rieure","Petit-d\u00e9jeuner continental x2","D\u00eener au Cinq pour 2 personnes","Acc\u00e8s spa","Bouteille de champagne"]), insiderTip: "Les arrangements floraux changent chaque semaine \u2014 demandez \u00e0 rencontrer Jeff Leatham.", accessLevel: "free" as const, status: "published" as const, isFeatured: false, isFlashOffer: true, sortOrder: 7 },
+        { slug: "burj-al-arab-dubai-suite", title: "Burj Al Arab Jumeirah", subtitle: "Suite Deluxe \u2014 2 nuits dans l'h\u00f4tel le plus luxueux du monde", tagline: "L'ic\u00f4ne de Dubai, votre suite dans les nuages", establishmentName: "Burj Al Arab Jumeirah", establishmentCategory: "hotel" as const, city: "Dubai", country: "\u00c9mirats Arabes Unis", region: "Dubai", lat: 25.1412, lng: 55.1853, originalPricePerNight: 4500, discountedPricePerNight: 3150, originalPriceTotal: 9000, discountedPriceTotal: 6300, discountPercent: 30, currency: "EUR", packageType: "2_nights" as const, durationNights: 2, maxGuests: 2, priceTier: "tier4" as const, sector: "hotelerie" as const, heroImageUrl: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1600&q=90", description: "\u00c9rig\u00e9 sur une \u00eele artificielle en forme de voile, le Burj Al Arab est le symbole absolu du luxe \u00e0 Dubai.", shortDescription: "Suite duplex 170m\u00b2, majordome priv\u00e9, transfert Rolls-Royce, d\u00eener Al Muntaha.", highlights: JSON.stringify(["Suite duplex 170m\u00b2 minimum","Majordome priv\u00e9 24h/24","Transfert en Rolls-Royce ou h\u00e9licopt\u00e8re","D\u00eener au Al Muntaha 27\u00e8me \u00e9tage","Beach club priv\u00e9 exclusif"]), included: JSON.stringify(["2 nuits en Suite Deluxe","Petit-d\u00e9jeuner gastronomique x2","Transfert a\u00e9roport Rolls-Royce","D\u00eener Al Muntaha pour 2","Acc\u00e8s beach club"]), insiderTip: "R\u00e9servez l'h\u00e9licopt\u00e8re pour l'arriv\u00e9e \u2014 atterrir sur le h\u00e9lipad est unique au monde.", accessLevel: "free" as const, status: "published" as const, isFeatured: true, isFlashOffer: false, sortOrder: 6 },
+        { slug: "experience-gastronomique-monaco", title: "Louis XV \u2014 Alain Ducasse \u00e0 Monaco", subtitle: "D\u00eener priv\u00e9 pour 2 + suite au M\u00e9tropole \u2014 Package Prestige", tagline: "La table des tables sur la C\u00f4te d'Azur", establishmentName: "Le Louis XV \u2014 Alain Ducasse", establishmentCategory: "restaurant" as const, city: "Monaco", country: "Monaco", region: "C\u00f4te d'Azur", lat: 43.7396, lng: 7.4278, originalPriceTotal: 2800, discountedPriceTotal: 1960, discountPercent: 30, currency: "EUR", packageType: "1_night" as const, durationNights: 1, maxGuests: 2, priceTier: "tier3" as const, sector: "gastronomie" as const, heroImageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1600&q=90", description: "Le Louis XV d'Alain Ducasse \u00e0 l'H\u00f4tel de Paris est la table la plus mythique de la M\u00e9diterran\u00e9e. 3 \u00e9toiles Michelin depuis 1990.", shortDescription: "D\u00eener 3 \u00e9toiles Michelin pour 2, accord vins, suite M\u00e9tropole, berline priv\u00e9e.", highlights: JSON.stringify(["3 \u00e9toiles Michelin depuis 1990","Menu d\u00e9gustation 8 services","Cave \u00e0 vins exceptionnelle","Nuit en suite au M\u00e9tropole","Vue sur la Place du Casino"]), included: JSON.stringify(["D\u00eener gastronomique 8 services pour 2","Accord mets-vins","1 nuit en suite M\u00e9tropole","Transfert berline priv\u00e9e","Champagne de bienvenue"]), insiderTip: "Demandez la table 12 \u2014 vue directe sur les jardins et la mer.", accessLevel: "free" as const, status: "published" as const, isFeatured: true, isFlashOffer: false, sortOrder: 5 },
+        { slug: "spa-cheval-blanc-paris", title: "Spa Cheval Blanc Paris", subtitle: "Journ\u00e9e Spa Prestige \u2014 Soins signature + d\u00e9jeuner gastronomique", tagline: "Le spa le plus exclusif de Paris", establishmentName: "Spa Cheval Blanc Paris", establishmentCategory: "spa" as const, city: "Paris", country: "France", region: "\u00cele-de-France", lat: 48.8566, lng: 2.3522, originalPriceTotal: 1200, discountedPriceTotal: 840, discountPercent: 30, currency: "EUR", packageType: "1_night" as const, durationNights: 1, maxGuests: 2, priceTier: "tier2" as const, sector: "bienetre" as const, heroImageUrl: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1600&q=90", description: "Nich\u00e9 au c\u0153ur du Cheval Blanc Paris (palace LVMH), le spa Guerlain de 1400m\u00b2 est consid\u00e9r\u00e9 comme le plus beau spa de Paris.", shortDescription: "Soin Guerlain 90min, piscine 25m, acc\u00e8s aquatique, d\u00e9jeuner Limbar inclus.", highlights: JSON.stringify(["Spa Guerlain 1400m\u00b2","Piscine int\u00e9rieure 25m","Soin signature 90 minutes","D\u00e9jeuner au Limbar","Vue sur la Seine"]), included: JSON.stringify(["Soin signature Guerlain 90min","Acc\u00e8s spa illimit\u00e9","D\u00e9jeuner au Limbar pour 2","Peignoir et chaussons","Produits Guerlain offerts"]), insiderTip: "Arrivez \u00e0 10h pour profiter de la piscine avant l'affluence.", accessLevel: "free" as const, status: "published" as const, isFeatured: false, isFlashOffer: false, sortOrder: 4 },
+        { slug: "yacht-cannes-journee", title: "Yacht Priv\u00e9 \u2014 C\u00f4te d'Azur", subtitle: "Journ\u00e9e en mer de Cannes \u00e0 Monaco \u2014 Yacht 24m avec \u00e9quipage", tagline: "La M\u00e9diterran\u00e9e comme terrain de jeu", establishmentName: "Baymora Yachting", establishmentCategory: "yacht" as const, city: "Cannes", country: "France", region: "Provence-Alpes-C\u00f4te d'Azur", lat: 43.5528, lng: 7.0174, originalPriceTotal: 8500, discountedPriceTotal: 5950, discountPercent: 30, currency: "EUR", packageType: "1_night" as const, durationNights: 1, maxGuests: 8, priceTier: "tier4" as const, sector: "yachting" as const, heroImageUrl: "https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=1600&q=90", description: "Embarquez pour une journ\u00e9e inoubliable \u00e0 bord d'un yacht de 24m avec \u00e9quipage complet. D\u00e9part de Cannes, escale aux \u00celes de L\u00e9rins.", shortDescription: "Yacht 24m, \u00e9quipage 3 personnes, d\u00e9jeuner \u00e0 bord, Cannes-Monaco, criques secr\u00e8tes.", highlights: JSON.stringify(["Yacht 24m avec \u00e9quipage complet","D\u00e9jeuner gastronomique \u00e0 bord","Criques secr\u00e8tes et baignade","Itin\u00e9raire Cannes-Monaco","Champagne et open bar"]), included: JSON.stringify(["Journ\u00e9e compl\u00e8te (10h-20h)","\u00c9quipage 3 personnes","D\u00e9jeuner gastronomique","Open bar champagne et vins","\u00c9quipements nautiques"]), insiderTip: "Demandez \u00e0 stopper \u00e0 la Calanque de l'Esterel au coucher du soleil.", accessLevel: "free" as const, status: "published" as const, isFeatured: true, isFlashOffer: false, sortOrder: 3 },
+        { slug: "chalet-courchevel-1850-ski", title: "Chalet Priv\u00e9 Courchevel 1850", subtitle: "Chalet 6 chambres \u2014 Semaine ski prestige avec chef et spa", tagline: "Le sommet du ski de luxe dans les Alpes", establishmentName: "Chalet Les Neiges \u00c9ternelles", establishmentCategory: "chalet" as const, city: "Courchevel", country: "France", region: "Savoie", lat: 45.4152, lng: 6.6337, originalPriceTotal: 42000, discountedPriceTotal: 29400, originalPricePerNight: 6000, discountedPricePerNight: 4200, discountPercent: 30, currency: "EUR", packageType: "week" as const, durationNights: 7, maxGuests: 12, priceTier: "tier4" as const, sector: "ski" as const, heroImageUrl: "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=1600&q=90", description: "Au c\u0153ur de Courchevel 1850, station la plus exclusive des Alpes, ce chalet de 700m\u00b2 dispose de 6 suites avec vue sur les pistes.", shortDescription: "Chalet 700m\u00b2, ski-in/ski-out, chef \u00e9toil\u00e9, spa, moniteur priv\u00e9, 6 suites.", highlights: JSON.stringify(["Ski-in/ski-out direct sur les pistes","Chef \u00e9toil\u00e9 r\u00e9sidentiel","Spa avec hammam et sauna","Moniteur de ski priv\u00e9","Cave \u00e0 vins 500 bouteilles"]), included: JSON.stringify(["7 nuits en chalet priv\u00e9","Chef \u00e9toil\u00e9 3 repas/jour","Spa et bien-\u00eatre illimit\u00e9","Moniteur ski 5 jours","Transfert a\u00e9roport en h\u00e9licopt\u00e8re"]), insiderTip: "R\u00e9servez une sortie hors-piste vers la Combe de la Saulire \u2014 inaccessible sans guide.", accessLevel: "free" as const, status: "published" as const, isFeatured: true, isFlashOffer: false, sortOrder: 2 },
+        { slug: "experience-bali-villa-ubud", title: "Villa Priv\u00e9e Ubud \u2014 Bali", subtitle: "Villa avec piscine \u00e0 d\u00e9bordement sur jungle \u2014 5 nuits retraite", tagline: "La s\u00e9r\u00e9nit\u00e9 absolue au c\u0153ur de la jungle balinaise", establishmentName: "Villa Karma Kandara Ubud", establishmentCategory: "villa" as const, city: "Ubud", country: "Indon\u00e9sie", region: "Bali", lat: -8.5069, lng: 115.2625, originalPricePerNight: 1200, discountedPricePerNight: 840, originalPriceTotal: 6000, discountedPriceTotal: 4200, discountPercent: 30, currency: "EUR", packageType: "custom" as const, durationNights: 5, maxGuests: 4, priceTier: "tier2" as const, sector: "villas" as const, heroImageUrl: "https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=1600&q=90", description: "Perch\u00e9e au-dessus de la vall\u00e9e de l'Ayung \u00e0 Ubud, cette villa de 3 pavillons dispose d'une piscine \u00e0 d\u00e9bordement avec vue sur la jungle tropicale.", shortDescription: "3 pavillons, piscine jungle, yoga quotidien, massages, cuisine v\u00e9g\u00e9tarienne gastronomique.", highlights: JSON.stringify(["Piscine \u00e0 d\u00e9bordement vue jungle","Cours de yoga quotidiens","Massages balinais inclus","Cuisine v\u00e9g\u00e9tarienne gastronomique","Excursions culturelles priv\u00e9es"]), included: JSON.stringify(["5 nuits en villa priv\u00e9e","Petits-d\u00e9jeuners et d\u00eeners","Cours de yoga x5","Massages x5","Excursion temple et rizi\u00e8res"]), insiderTip: "R\u00e9veillez-vous \u00e0 5h30 pour le yoga au lever du soleil \u2014 la brume matinale sur la jungle est magique.", accessLevel: "free" as const, status: "published" as const, isFeatured: false, isFlashOffer: true, sortOrder: 1 },
+      ];
+      let inserted = 0;
+      for (const offer of seedOffers) {
+        try { await db.insert(schema.discountOffers).values(offer as any); inserted++; }
+        catch (e: any) { if (!e.message?.includes('Duplicate')) throw e; }
+      }
+      await conn.end();
+      return { success: true, inserted };
+    }),
   }),
 
 });
