@@ -755,3 +755,45 @@
 - [ ] Intégration FilterBar dans page Discover
 - [ ] Filtres persistés dans URL (query params) pour partage direct
 - [ ] Page publique /parcours/:shareToken pour affichage sans connexion
+
+## Sprint — VERSION FINALE V1
+
+### Navigation Mobile (style Spotify)
+- [x] Barre haut pilules : Logo B | Maison | IA/Parcours (double) | Offres remises | Bundles
+- [x] Barre bas 5 icônes : Maison | Rechercher | Maya (centre) | Premium | Créer
+- [ ] Bouton IA/Parcours qui s'ouvre en 2 (puis 3 avec offres)
+- [x] Navigation desktop cohérente
+
+### Page Maison (Landing SEO)
+- [x] Hero accroche SEO optimisé
+- [x] Bundles carrousel style magazine/insta
+- [x] Offres flash section
+- [x] Section partenaires B2B
+- [x] FAQ GEO/SEO stratégique
+
+### Système Forfaits
+- [x] Gratuit : offres remisées + essai parcours limité (3 parcours, 1 enregistrable)
+- [x] Social Club Standard 9.90€/14.30€ (15/25 crédits) + Illimité 29.90€/37€
+- [x] Club Privé : visible avec liste d'attente / invitation
+- [x] Page pricing refaite avec 4 tiers + toggle Solo/Duo + recharges crédits
+
+### Espace Logo B (profil client)
+- [ ] Forfait + points + solde
+- [ ] Profil complet (manuel ou avec Maya)
+- [ ] Mes parcours (brouillons, enregistrés, favoris)
+- [ ] Parcours partagés / groupes collaboratifs
+- [ ] Paramètres forfait (pause, accumulation, parrainage)
+
+### Bundles
+- [ ] Table DB bundles + bundleItems
+- [x] Page bundles carrousel magazine
+- [x] Fiches inspirantes (3 rooftops Paris, 5 spas montagne, etc.)
+- [ ] Favoris (gratuit=0, compte=3, payant=illimité)
+- [ ] Backend CRUD bundles
+
+### SEO Complet
+- [x] Meta tags FR optimisés
+- [x] Open Graph + Twitter Cards
+- [x] Schema.org (Organization, FAQ, Product, SoftwareApplication)
+- [x] FAQ GEO pour IA
+- [x] Sitemap.xml + Robots.txt

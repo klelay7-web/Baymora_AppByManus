@@ -1,40 +1,48 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, Crown, Sparkles, Brain, Globe, Shield, Clock, Zap, Star } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowLeft, Check, Crown, Sparkles, Brain, Globe, Shield, Clock,
+  Zap, Star, Users, Lock, CreditCard, Gift, ChevronDown, ChevronUp
+} from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
 
 const FREE_FEATURES = [
-  "15 messages avec l'assistant IA",
-  "1 à 2 parcours complets",
-  "Accès au feed d'inspirations",
-  "Consultation des fiches locales",
+  "Accès aux offres remisées",
+  "3 parcours maximum (1 enregistrable)",
+  "Essai IA Maya limité",
+  "Pseudo, email et parcours enregistré conservés",
+  "Destinations réservées visibles dans le profil",
 ];
 
-const EXPLORER_FEATURES = [
-  "20 messages assistant IA / mois",
-  "Accès aux fiches & bundles publics",
-  "Offres exclusives premier prix",
-  "Sauvegarde de 5 favoris",
-  "1 parcours par mois",
+const SOCIAL_STANDARD_FEATURES = [
+  "15 crédits / mois (≈ 5 parcours)",
+  "1 parcours = 3 crédits (3 propositions)",
+  "1 recherche simple Maya = 1 crédit",
+  "Profil enrichi + mémoire IA",
+  "Offres remisées + bundles",
+  "Sauvegarde illimitée de favoris",
+  "Partage de parcours",
   "Mise en pause possible (1 mois/an)",
 ];
 
-const PREMIUM_FEATURES = [
-  "Messages illimités",
-  "Parcours personnalisés avec carte GPS",
+const SOCIAL_UNLIMITED_FEATURES = [
+  "Crédits illimités",
+  "Parcours personnalisés illimités",
+  "Carte GPS interactive",
+  "Mémoire client complète",
   "Fiches détaillées & secrets d'initiés",
-  "Mémoire client & profil enrichi",
-  "Favoris & collections illimités",
-  "Accès programme ambassadeur",
+  "Collections & favoris illimités",
+  "Programme ambassadeur",
   "Conciergerie par chat",
   "Mise en pause possible (2 mois/an)",
 ];
 
-const ELITE_FEATURES = [
-  "Tout Premium inclus",
+const CLUB_PRIVE_FEATURES = [
+  "Tout Social Club Illimité inclus",
   "Recommandations proactives",
   "Accès off-market exclusif",
   "Mode Fantôme (anonymat total)",
@@ -44,166 +52,302 @@ const ELITE_FEATURES = [
   "Mise en pause illimitée",
 ];
 
+const CREDIT_PACKS = [
+  { credits: 5, price: "4,90€", perCredit: "0,98€" },
+  { credits: 15, price: "11,90€", perCredit: "0,79€" },
+  { credits: 30, price: "19,90€", perCredit: "0,66€" },
+];
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+};
+
 export default function Pricing() {
   const { isAuthenticated } = useAuth();
+  const [billingMode, setBillingMode] = useState<"solo" | "duo">("solo");
+  const [showCredits, setShowCredits] = useState(false);
 
   const handleSubscribe = (planName: string) => {
     if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
+      window.location.href = getLoginUrl("/pricing");
       return;
     }
     toast.info(`L'abonnement ${planName} sera bientôt disponible. Stripe en cours d'intégration.`);
   };
 
+  const handleWaitlist = () => {
+    if (!isAuthenticated) {
+      window.location.href = getLoginUrl("/pricing");
+      return;
+    }
+    toast.success("Vous êtes inscrit sur la liste d'attente du Club Privé. Nous vous contacterons.");
+  };
+
   return (
-    <div className="min-h-screen">
-      <header className="glass-card border-b border-gold/10 px-4 py-3 sticky top-0 z-20">
-        <div className="container flex items-center gap-3">
+    <div className="min-h-screen bg-[#0a0a0f]">
+      <header className="sticky top-0 z-20 bg-[#0a0a0f]/90 backdrop-blur-xl border-b border-white/5 px-4 py-3">
+        <div className="max-w-6xl mx-auto flex items-center gap-3">
           <Link href="/">
-            <ArrowLeft size={20} className="text-muted-foreground hover:text-gold transition-colors" />
+            <button className="text-white/40 hover:text-white transition-colors">
+              <ArrowLeft size={18} />
+            </button>
           </Link>
-          <h1 className="font-serif text-lg font-semibold">Tarifs</h1>
+          <h1 className="text-white font-semibold text-sm" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Forfaits & Crédits
+          </h1>
         </div>
       </header>
 
-      <div className="container max-w-5xl mx-auto px-4 py-12">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
-          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-            Votre concierge IA,<br />
-            <span className="text-gradient-gold">sans limites</span>
+      <div className="max-w-6xl mx-auto px-4 py-10 md:py-16">
+        {/* Titre */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} className="text-center mb-10">
+          <p className="text-amber-400 tracking-[0.3em] uppercase text-xs mb-3">Tarifs</p>
+          <h2 className="text-white text-3xl md:text-4xl font-bold mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Choisissez votre expérience
           </h2>
-          <p className="text-muted-foreground max-w-md mx-auto">Des forfaits pensés pour chaque ambition de voyage.</p>
+          <p className="text-white/50 text-sm max-w-lg mx-auto">
+            De l'essai gratuit au Club Privé sur mesure — trouvez le forfait qui correspond à votre style de voyage.
+          </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {/* Explorer */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card rounded-xl p-7 flex flex-col">
-            <div className="mb-5">
-              <div className="flex items-center gap-2 mb-1">
-                <Zap size={16} className="text-muted-foreground" />
-                <h3 className="font-serif text-xl font-semibold">Explorer</h3>
-              </div>
-              <p className="text-xs text-muted-foreground">Découvrez le luxe accessible</p>
-            </div>
-            <div className="mb-5">
-              <span className="text-4xl font-bold">9,90€</span>
-              <span className="text-muted-foreground text-sm">/mois</span>
-            </div>
-            <ul className="space-y-2.5 mb-7 flex-1">
-              {EXPLORER_FEATURES.map((f, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm">
-                  <Check size={14} className="text-muted-foreground shrink-0 mt-0.5" />
-                  <span className="text-muted-foreground">{f}</span>
-                </li>
-              ))}
-            </ul>
-            <Button variant="outline" className="w-full border-border text-foreground hover:border-gold/30" onClick={() => handleSubscribe("Explorer")}>
-              Commencer l'aventure
-            </Button>
-          </motion.div>
+        {/* Toggle Solo / Duo */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} className="flex justify-center mb-10">
+          <div className="flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/10">
+            <button
+              onClick={() => setBillingMode("solo")}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                billingMode === "solo"
+                  ? "bg-gradient-to-r from-amber-400 to-orange-500 text-black"
+                  : "text-white/50 hover:text-white"
+              }`}
+            >
+              Solo
+            </button>
+            <button
+              onClick={() => setBillingMode("duo")}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${
+                billingMode === "duo"
+                  ? "bg-gradient-to-r from-amber-400 to-orange-500 text-black"
+                  : "text-white/50 hover:text-white"
+              }`}
+            >
+              <Users size={14} />
+              Duo
+            </button>
+          </div>
+        </motion.div>
 
-          {/* Premium */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card gold-glow rounded-xl p-7 border-gold/30 relative flex flex-col">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gold text-navy-dark text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-              Le plus populaire
-            </div>
+        {/* Grille forfaits */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+          {/* Gratuit */}
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0 }}
+            className="rounded-2xl p-6 bg-white/[0.02] border border-white/8 flex flex-col">
             <div className="mb-5">
               <div className="flex items-center gap-2 mb-1">
-                <Crown size={16} className="text-gold" />
-                <h3 className="font-serif text-xl font-semibold">Premium</h3>
+                <Zap size={16} className="text-white/40" />
+                <h3 className="text-white font-semibold text-lg" style={{ fontFamily: "'Playfair Display', serif" }}>Gratuit</h3>
               </div>
-              <p className="text-xs text-muted-foreground">L'expérience complète</p>
+              <p className="text-white/40 text-xs">Découvrez Baymora sans engagement</p>
             </div>
             <div className="mb-5">
-              <span className="text-4xl font-bold text-gold">29,90€</span>
-              <span className="text-muted-foreground text-sm">/mois</span>
-              <p className="text-[10px] text-muted-foreground mt-1">Sans engagement — Annulable à tout moment</p>
+              <span className="text-white text-3xl font-bold">0€</span>
             </div>
             <ul className="space-y-2.5 mb-7 flex-1">
-              {PREMIUM_FEATURES.map((f, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm">
-                  <Check size={14} className="text-gold shrink-0 mt-0.5" />
+              {FREE_FEATURES.map((f, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-white/60">
+                  <Check size={14} className="text-white/30 shrink-0 mt-0.5" />
                   <span>{f}</span>
                 </li>
               ))}
             </ul>
-            <Button className="w-full bg-gold text-navy-dark hover:bg-gold-light font-semibold gap-2" onClick={() => handleSubscribe("Premium")}>
-              <Sparkles size={16} />
-              Devenir Premium
+            <Link href="/chat">
+              <Button variant="outline" className="w-full border-white/10 text-white/60 hover:border-white/20 hover:text-white">
+                Essayer gratuitement
+              </Button>
+            </Link>
+          </motion.div>
+
+          {/* Social Club Standard */}
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0.1 }}
+            className="rounded-2xl p-6 bg-white/[0.03] border border-amber-400/15 flex flex-col">
+            <div className="mb-5">
+              <div className="flex items-center gap-2 mb-1">
+                <Crown size={16} className="text-amber-400" />
+                <h3 className="text-white font-semibold text-lg" style={{ fontFamily: "'Playfair Display', serif" }}>Social Club</h3>
+              </div>
+              <p className="text-amber-400/60 text-xs">Standard — 15 crédits/mois</p>
+            </div>
+            <div className="mb-5">
+              <span className="text-amber-400 text-3xl font-bold">{billingMode === "solo" ? "9,90€" : "14,30€"}</span>
+              <span className="text-white/40 text-sm">/mois</span>
+              {billingMode === "duo" && (
+                <p className="text-amber-400/50 text-xs mt-1 flex items-center gap-1">
+                  <Users size={11} /> 25 crédits partagés
+                </p>
+              )}
+            </div>
+            <ul className="space-y-2.5 mb-7 flex-1">
+              {SOCIAL_STANDARD_FEATURES.map((f, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-white/70">
+                  <Check size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <Button
+              className="w-full bg-amber-400/10 text-amber-400 border border-amber-400/20 hover:bg-amber-400/20 font-semibold gap-2"
+              onClick={() => handleSubscribe("Social Club Standard")}
+            >
+              <CreditCard size={16} />
+              Choisir Standard
             </Button>
           </motion.div>
 
-          {/* Élite */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-xl p-7 border-purple-500/20 relative flex flex-col opacity-80">
+          {/* Social Club Illimité */}
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0.2 }}
+            className="rounded-2xl p-6 bg-gradient-to-b from-amber-400/5 to-transparent border border-amber-400/30 flex flex-col relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-black text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+              Populaire
+            </div>
+            <div className="mb-5">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles size={16} className="text-amber-400" />
+                <h3 className="text-white font-semibold text-lg" style={{ fontFamily: "'Playfair Display', serif" }}>Social Club</h3>
+              </div>
+              <p className="text-amber-400/60 text-xs">Illimité — crédits sans limite</p>
+            </div>
+            <div className="mb-5">
+              <span className="text-amber-400 text-3xl font-bold">{billingMode === "solo" ? "29,90€" : "37€"}</span>
+              <span className="text-white/40 text-sm">/mois</span>
+              {billingMode === "duo" && (
+                <p className="text-amber-400/50 text-xs mt-1 flex items-center gap-1">
+                  <Users size={11} /> Crédits illimités pour 2
+                </p>
+              )}
+            </div>
+            <ul className="space-y-2.5 mb-7 flex-1">
+              {SOCIAL_UNLIMITED_FEATURES.map((f, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-white/80">
+                  <Check size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <Button
+              className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:shadow-lg hover:shadow-amber-500/20 font-semibold gap-2"
+              onClick={() => handleSubscribe("Social Club Illimité")}
+            >
+              <Sparkles size={16} />
+              Devenir Illimité
+            </Button>
+          </motion.div>
+
+          {/* Club Privé */}
+          <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0.3 }}
+            className="rounded-2xl p-6 bg-white/[0.02] border border-purple-500/20 flex flex-col relative">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap border border-purple-500/30">
-              Bientôt disponible
+              Sur invitation
             </div>
             <div className="mb-5">
               <div className="flex items-center gap-2 mb-1">
                 <Star size={16} className="text-purple-400" />
-                <h3 className="font-serif text-xl font-semibold">Élite</h3>
+                <h3 className="text-white font-semibold text-lg" style={{ fontFamily: "'Playfair Display', serif" }}>Club Privé</h3>
               </div>
-              <p className="text-xs text-muted-foreground">Le privilège absolu</p>
+              <p className="text-purple-400/60 text-xs">Le privilège absolu — sur mesure</p>
             </div>
             <div className="mb-5">
-              <span className="text-4xl font-bold text-purple-400">89,90€</span>
-              <span className="text-muted-foreground text-sm">/mois</span>
+              <span className="text-purple-400 text-2xl font-bold">Sur mesure</span>
+              <p className="text-white/30 text-xs mt-1">Tarif personnalisé selon vos besoins</p>
             </div>
             <ul className="space-y-2.5 mb-7 flex-1">
-              {ELITE_FEATURES.map((f, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm">
+              {CLUB_PRIVE_FEATURES.map((f, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-white/50">
                   <Check size={14} className="text-purple-400 shrink-0 mt-0.5" />
-                  <span className="text-muted-foreground">{f}</span>
+                  <span>{f}</span>
                 </li>
               ))}
             </ul>
-            <Button variant="outline" className="w-full border-purple-500/30 text-purple-300 cursor-not-allowed" disabled>
-              Bientôt disponible
+            <Button
+              variant="outline"
+              className="w-full border-purple-500/30 text-purple-300 hover:border-purple-500/50 hover:text-purple-200 gap-2"
+              onClick={handleWaitlist}
+            >
+              <Lock size={14} />
+              Liste d'attente
             </Button>
           </motion.div>
         </div>
 
-        {/* Forfait Découverte gratuit */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-card rounded-xl p-6 mb-12 border-white/5">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <h3 className="font-serif text-lg font-semibold mb-1">Découverte — Gratuit</h3>
-              <p className="text-sm text-muted-foreground">Essayez Baymora sans carte bancaire</p>
-              <ul className="flex flex-wrap gap-x-6 gap-y-1 mt-3">
-                {FREE_FEATURES.map((f, i) => (
-                  <li key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Check size={12} className="text-muted-foreground shrink-0" />
-                    {f}
-                  </li>
+        {/* Recharges crédits */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0.4 }}>
+          <button
+            onClick={() => setShowCredits(!showCredits)}
+            className="w-full flex items-center justify-center gap-2 text-white/40 text-sm hover:text-white/60 transition-colors mb-4"
+          >
+            <CreditCard size={14} />
+            Recharges de crédits à la carte
+            {showCredits ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          {showCredits && (
+            <div className="rounded-2xl bg-white/[0.02] border border-white/8 p-6 mb-8">
+              <p className="text-white/50 text-xs mb-4 text-center">
+                Pour les membres Social Club Standard — rechargez vos crédits sans changer de forfait
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {CREDIT_PACKS.map((pack) => (
+                  <button
+                    key={pack.credits}
+                    onClick={() => toast.info("Les recharges seront disponibles prochainement.")}
+                    className="flex flex-col items-center gap-2 p-5 rounded-xl border border-white/8 hover:border-amber-400/20 hover:bg-amber-400/5 transition-all"
+                  >
+                    <span className="text-amber-400 text-2xl font-bold">{pack.credits}</span>
+                    <span className="text-white/40 text-xs">crédits</span>
+                    <span className="text-white font-semibold text-lg">{pack.price}</span>
+                    <span className="text-white/30 text-[10px]">{pack.perCredit}/crédit</span>
+                  </button>
                 ))}
-              </ul>
+              </div>
+              <p className="text-white/25 text-[10px] text-center mt-4">
+                Astuce : si vous rechargez souvent, passez à l'Illimité — c'est plus rentable dès 2 recharges/mois.
+              </p>
             </div>
-            <Link href="/chat">
-              <Button variant="outline" className="border-border text-foreground hover:border-gold/30 shrink-0">
-                Essayer gratuitement
-              </Button>
-            </Link>
-          </div>
+          )}
         </motion.div>
 
-        {/* Crédits one-shot */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="text-center mb-12">
-          <p className="text-sm text-muted-foreground mb-4">Pas d'abonnement ? Achetez des crédits à la carte</p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {[{ credits: "10", price: "2,99€" }, { credits: "50", price: "9,99€" }, { credits: "150", price: "24,99€" }].map((pack) => (
-              <button key={pack.credits} onClick={() => toast.info("Les crédits à la carte seront disponibles prochainement.")} className="px-5 py-2.5 rounded-full border border-gold/20 text-sm hover:border-gold/50 transition-colors">
-                <span className="text-gold font-semibold">{pack.credits} crédits</span>
-                <span className="text-muted-foreground ml-2">{pack.price}</span>
-              </button>
-            ))}
-          </div>
+        {/* 1 parcours offert */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0.5 }}
+          className="rounded-2xl bg-gradient-to-r from-amber-400/5 to-orange-500/5 border border-amber-400/15 p-6 mb-12 text-center">
+          <Gift size={24} className="text-amber-400 mx-auto mb-3" />
+          <h3 className="text-white font-semibold text-lg mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+            1 parcours offert à la création de profil
+          </h3>
+          <p className="text-white/50 text-sm max-w-md mx-auto mb-4">
+            Créez votre profil gratuitement et recevez un parcours complet offert pour découvrir la puissance de Maya.
+          </p>
+          {!isAuthenticated && (
+            <a
+              href={getLoginUrl("/pricing")}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-black text-sm font-semibold hover:shadow-lg hover:shadow-amber-500/20 transition-all"
+            >
+              <Sparkles size={14} />
+              Créer mon profil
+            </a>
+          )}
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[{ icon: Brain, label: "IA de pointe" }, { icon: Globe, label: "Couverture mondiale" }, { icon: Shield, label: "Données sécurisées" }, { icon: Clock, label: "Disponible 24/7" }].map((item, i) => (
+        {/* Trust badges */}
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ delay: 0.6 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+          {[
+            { icon: Brain, label: "IA de pointe" },
+            { icon: Globe, label: "Couverture mondiale" },
+            { icon: Shield, label: "Données sécurisées" },
+            { icon: Clock, label: "Disponible 24/7" },
+          ].map((item, i) => (
             <div key={i} className="text-center py-4">
-              <item.icon size={20} className="text-gold mx-auto mb-2" />
-              <p className="text-xs text-muted-foreground">{item.label}</p>
+              <item.icon size={20} className="text-amber-400/50 mx-auto mb-2" />
+              <p className="text-white/40 text-xs">{item.label}</p>
             </div>
           ))}
         </motion.div>
