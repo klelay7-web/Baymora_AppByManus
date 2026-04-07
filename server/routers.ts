@@ -3239,9 +3239,84 @@ export const appRouter = router({
         const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
         await conn.execute('DELETE FROM tripPlans WHERE id = ? AND userId = ?', [input.id, ctx.user.id]);
         await conn.end();
-        return { success: true };
+         return { success: true };
       }),
   }),
 
+  // ─── Share Router ─────────────────────────────────────────────────────────
+  share: router({
+    generateLink: protectedProcedure
+      .input(z.object({
+        type: z.enum(['trip', 'offer', 'destination']),
+        resourceId: z.number(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        coverImage: z.string().optional(),
+        expiresInDays: z.number().min(1).max(365).optional().default(30),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          const [existing] = await conn.execute(
+            'SELECT token FROM shareLinks WHERE userId = ? AND type = ? AND resourceId = ? AND (expiresAt IS NULL OR expiresAt > NOW()) LIMIT 1',
+            [ctx.user.id, input.type, input.resourceId]
+          ) as any[];
+          if (existing.length > 0) return { token: existing[0].token, isNew: false };
+          const crypto = await import('crypto');
+          const token = crypto.default.randomBytes(16).toString('hex');
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + (input.expiresInDays ?? 30));
+          await conn.execute(
+            'INSERT INTO shareLinks (token, type, resourceId, userId, title, description, coverImage, expiresAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [token, input.type, input.resourceId, ctx.user.id, input.title ?? null, input.description ?? null, input.coverImage ?? null, expiresAt]
+          );
+          return { token, isNew: true };
+        } finally { await conn.end(); }
+      }),
+
+    getSharedContent: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          const [links] = await conn.execute(
+            'SELECT * FROM shareLinks WHERE token = ? AND (expiresAt IS NULL OR expiresAt > NOW()) LIMIT 1',
+            [input.token]
+          ) as any[];
+          if (!links.length) return null;
+          const link = links[0];
+          await conn.execute('UPDATE shareLinks SET viewCount = viewCount + 1 WHERE token = ?', [input.token]);
+          if (link.type === 'trip') {
+            const [trips] = await conn.execute(
+              'SELECT id, title, destination, startDate, totalDays, tripType, status, coverImage, summary FROM tripPlans WHERE id = ? LIMIT 1',
+              [link.resourceId]
+            ) as any[];
+            return { link, resource: trips[0] || null };
+          } else if (link.type === 'offer') {
+            const [offers] = await conn.execute(
+              'SELECT id, name, category, location, originalPrice, discountedPrice, discountPercent, coverImage, shortDescription FROM discountOffers WHERE id = ? LIMIT 1',
+              [link.resourceId]
+            ) as any[];
+            return { link, resource: offers[0] || null };
+          }
+          return { link, resource: null };
+        } finally { await conn.end(); }
+      }),
+
+    getMyLinks: protectedProcedure
+      .query(async ({ ctx }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          const [rows] = await conn.execute(
+            'SELECT * FROM shareLinks WHERE userId = ? ORDER BY createdAt DESC LIMIT 50',
+            [ctx.user.id]
+          ) as any[];
+          return rows;
+        } finally { await conn.end(); }
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

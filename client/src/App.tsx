@@ -19,6 +19,7 @@ import Services from "./pages/Services";
 import About from "./pages/About";
 import MesParcours from "./pages/MesParcours";
 import Offers from "./pages/Offers";
+import SharedContent from "./pages/SharedContent";
 import { lazy, Suspense } from "react";
 
 // Lazy load dashboards
@@ -96,6 +97,9 @@ function Router() {
 
       {/* Invitation Terrain */}
       <Route path="/invite/:token">{() => <LazyPage Component={AcceptInvite} />}</Route>
+
+      {/* Partage public */}
+      <Route path="/partage/:token" component={SharedContent} />
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

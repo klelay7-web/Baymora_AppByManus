@@ -3,9 +3,10 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { BottomSheet, PillFilter } from "@/components/BottomSheet";
 import { MapView } from "@/components/Map";
+import { ShareModal, useShareModal } from "@/components/ShareModal";
 import {
   MapPin, Heart, Tag, Flame, Star, ChevronRight, SlidersHorizontal,
-  Map as MapIcon, Grid3X3, ArrowLeft, Clock, Users, Sparkles, X
+  Map as MapIcon, Grid3X3, ArrowLeft, Clock, Users, Sparkles, X, Share2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
@@ -177,12 +178,13 @@ function OfferCard({ offer, onOpen, isSaved, onToggleSave }: {
 }
 
 // ─── Offer Detail Sheet ───────────────────────────────────────────────────────
-function OfferDetailSheet({ offer, isOpen, onClose, isSaved, onToggleSave }: {
+function OfferDetailSheet({ offer, isOpen, onClose, isSaved, onToggleSave, onShare }: {
   offer: any | null;
   isOpen: boolean;
   onClose: () => void;
   isSaved: boolean;
   onToggleSave: (id: number) => void;
+  onShare?: (offer: any) => void;
 }) {
    const [tab, setTab] = useState<"overview" | "inclus" | "infos">("overview");
   const highlights = useMemo(() => {
@@ -233,15 +235,25 @@ function OfferDetailSheet({ offer, isOpen, onClose, isSaved, onToggleSave }: {
               )}
             </div>
 
-            {/* Save */}
-            <button
-              className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg ${
-                isSaved ? "bg-[#c9a96e] text-[#0a0a0f]" : "bg-black/50 text-white hover:bg-black/70"
-              }`}
-              onClick={() => onToggleSave(offer.id)}
-            >
-              <Heart size={18} fill={isSaved ? "currentColor" : "none"} />
-            </button>
+            {/* Actions top-right */}
+            <div className="absolute top-4 right-4 flex gap-2">
+              {onShare && (
+                <button
+                  className="w-10 h-10 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center transition-all shadow-lg"
+                  onClick={() => onShare(offer)}
+                >
+                  <Share2 size={16} />
+                </button>
+              )}
+              <button
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg ${
+                  isSaved ? "bg-[#c9a96e] text-[#0a0a0f]" : "bg-black/50 text-white hover:bg-black/70"
+                }`}
+                onClick={() => onToggleSave(offer.id)}
+              >
+                <Heart size={18} fill={isSaved ? "currentColor" : "none"} />
+              </button>
+            </div>
           </div>
 
           {/* Info below hero */}
@@ -532,6 +544,8 @@ export default function Offers() {
   // Selected offer
   const [selectedOffer, setSelectedOffer] = useState<any | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Share modal
+  const { shareState, openShare, closeShare } = useShareModal();
 
   // Saved offers
   const savedQuery = trpc.offers.getSaved.useQuery(undefined, { enabled: !!user });
@@ -850,6 +864,23 @@ export default function Offers() {
         onClose={() => setSheetOpen(false)}
         isSaved={selectedOffer ? savedIds.includes(selectedOffer.id) : false}
         onToggleSave={handleToggleSave}
+        onShare={(offer) => openShare({
+          type: "offer",
+          resourceId: offer.id,
+          title: offer.title,
+          description: offer.tagline || offer.shortDescription,
+          coverImage: offer.heroImageUrl,
+        })}
+      />
+      {/* ─── SHARE MODAL ──────────────────────────────────────────────────── */}
+      <ShareModal
+        isOpen={shareState.isOpen}
+        onClose={closeShare}
+        type={shareState.type}
+        resourceId={shareState.resourceId}
+        title={shareState.title}
+        description={shareState.description}
+        coverImage={shareState.coverImage}
       />
     </div>
   );

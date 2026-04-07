@@ -743,3 +743,15 @@
 - [ ] Centre notifications : cloche navbar avec badge compteur non-lus
 - [ ] Notifications parcours actif : rappel matin, rappel restaurant, rappel départ
 - [ ] Notifications découvertes : nouvelles offres, nouveaux parcours, événements (opt-in)
+
+## Sprint — Partage + Filtres avancés
+
+- [ ] Composant ShareModal universel (lien copiable, Web Share API, QR code)
+- [ ] Backend tRPC : generateShareLink + getSharedTrip (liens publics temporaires)
+- [ ] Composant FilterBar universel (prix, catégorie, destination, durée, tri)
+- [ ] Intégration ShareModal dans Mes Parcours (TripsTab) + page TripPlan
+- [ ] Intégration ShareModal dans les fiches Offres (BottomSheet)
+- [ ] Intégration FilterBar dans page Offres (remplacer filtres pilules simples)
+- [ ] Intégration FilterBar dans page Discover
+- [ ] Filtres persistés dans URL (query params) pour partage direct
+- [ ] Page publique /parcours/:shareToken pour affichage sans connexion

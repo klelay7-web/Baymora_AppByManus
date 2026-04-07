@@ -2,12 +2,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { Link } from "wouter";
-import { Heart, FolderOpen, MessageSquare, MapPin, CreditCard, Crown, ArrowRight, Star, Sparkles, Plus, ChevronRight, Route, Bookmark, ShieldCheck, Bell, Users, UserPlus, Play, Pause, Zap, Globe, Mail } from "lucide-react";
+import { Heart, FolderOpen, MessageSquare, MapPin, CreditCard, Crown, ArrowRight, Star, Sparkles, Plus, ChevronRight, Route, Bookmark, ShieldCheck, Bell, Users, UserPlus, Play, Pause, Zap, Globe, Mail, Share2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
+import { ShareModal, useShareModal } from "@/components/ShareModal";
 
 export default function DashboardClient() {
   const { user, loading } = useAuth();
@@ -276,6 +277,7 @@ function TripsTab() {
   const utils = trpc.useUtils();
   const { data: trips, isLoading } = trpc.trips.getMyPlans.useQuery();
   const { data: activeSession } = trpc.mySpace.getActiveTrip.useQuery();
+  const { shareState, openShare, closeShare } = useShareModal();
   const activateTrip = trpc.mySpace.activateTrip.useMutation({
     onSuccess: () => utils.mySpace.getActiveTrip.invalidate()
   });
@@ -359,12 +361,36 @@ function TripsTab() {
                       <Play className="w-3 h-3" /> Activer
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-border/30 text-muted-foreground hover:border-primary/30 hover:text-primary gap-1 text-xs h-7 px-2.5"
+                    onClick={() => openShare({
+                      type: "trip",
+                      resourceId: trip.id,
+                      title: trip.title,
+                      description: trip.destination,
+                      coverImage: trip.coverImage || undefined,
+                    })}
+                  >
+                    <Share2 className="w-3 h-3" /> Partager
+                  </Button>
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={shareState.isOpen}
+        onClose={closeShare}
+        type={shareState.type}
+        resourceId={shareState.resourceId}
+        title={shareState.title}
+        description={shareState.description}
+        coverImage={shareState.coverImage}
+      />
     </div>
   );
 }
