@@ -600,11 +600,9 @@ export default function Offers() {
         {/* Content */}
         <div className="relative z-10 px-4 pt-16 pb-10 md:pt-24 md:pb-16 max-w-5xl mx-auto">
           {/* Back button */}
-          <Link href="/">
-            <a className="inline-flex items-center gap-2 text-white/60 text-sm mb-6 hover:text-white transition-colors">
-              <ArrowLeft size={16} />
-              Accueil
-            </a>
+          <Link href="/" className="inline-flex items-center gap-2 text-white/60 text-sm mb-6 hover:text-white transition-colors">
+            <ArrowLeft size={16} />
+            Accueil
           </Link>
 
           {/* Badge */}

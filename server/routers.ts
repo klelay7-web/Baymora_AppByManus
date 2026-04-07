@@ -3099,5 +3099,149 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── Notifications Router ────────────────────────────────────────────────────
+  notifications: router({
+    list: protectedProcedure
+      .input(z.object({ limit: z.number().default(20), unreadOnly: z.boolean().default(false) }))
+      .query(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const query = input.unreadOnly
+          ? 'SELECT * FROM notifications WHERE userId = ? AND readAt IS NULL ORDER BY createdAt DESC LIMIT ?'
+          : 'SELECT * FROM notifications WHERE userId = ? ORDER BY createdAt DESC LIMIT ?';
+        const [rows] = await conn.execute(query, [ctx.user.id, input.limit]) as any;
+        await conn.end();
+        return rows as any[];
+      }),
+    unreadCount: protectedProcedure.query(async ({ ctx }) => {
+      const mysql = await import('mysql2/promise');
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const [rows] = await conn.execute(
+        'SELECT COUNT(*) as count FROM notifications WHERE userId = ? AND readAt IS NULL',
+        [ctx.user.id]
+      ) as any;
+      await conn.end();
+      return Number(rows[0]?.count || 0);
+    }),
+    markRead: protectedProcedure
+      .input(z.object({ id: z.number().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        if (input.id) {
+          await conn.execute('UPDATE notifications SET readAt = NOW() WHERE id = ? AND userId = ?', [input.id, ctx.user.id]);
+        } else {
+          await conn.execute('UPDATE notifications SET readAt = NOW() WHERE userId = ? AND readAt IS NULL', [ctx.user.id]);
+        }
+        await conn.end();
+        return { success: true };
+      }),
+    getSettings: protectedProcedure.query(async ({ ctx }) => {
+      const mysql = await import('mysql2/promise');
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const [rows] = await conn.execute('SELECT * FROM notificationSettings WHERE userId = ?', [ctx.user.id]) as any;
+      await conn.end();
+      if (rows.length === 0) return { activeTripNotifs: true, discoveryNotifs: true, emailNotifs: true, emailFrequency: 'daily' };
+      return rows[0] as any;
+    }),
+    updateSettings: protectedProcedure
+      .input(z.object({
+        activeTripNotifs: z.boolean().optional(),
+        discoveryNotifs: z.boolean().optional(),
+        emailNotifs: z.boolean().optional(),
+        emailFrequency: z.enum(['instant', 'daily', 'weekly']).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        await conn.execute(
+          `INSERT INTO notificationSettings (userId, activeTripNotifs, discoveryNotifs, emailNotifs, emailFrequency) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE activeTripNotifs = COALESCE(?, activeTripNotifs), discoveryNotifs = COALESCE(?, discoveryNotifs), emailNotifs = COALESCE(?, emailNotifs), emailFrequency = COALESCE(?, emailFrequency)`,
+          [ctx.user.id, input.activeTripNotifs ?? true, input.discoveryNotifs ?? true, input.emailNotifs ?? true, input.emailFrequency ?? 'daily', input.activeTripNotifs ?? null, input.discoveryNotifs ?? null, input.emailNotifs ?? null, input.emailFrequency ?? null]
+        );
+        await conn.end();
+        return { success: true };
+      }),
+  }),
+
+  // ─── My Space Router (Espace Intérieur Client) ───────────────────────────────
+  mySpace: router({
+    getTrips: protectedProcedure
+      .input(z.object({ status: z.enum(['draft', 'proposed', 'accepted', 'confirmed', 'completed', 'cancelled', 'all']).default('all') }))
+      .query(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const where = input.status === 'all' ? 'userId = ?' : 'userId = ? AND status = ?';
+        const params: any[] = input.status === 'all' ? [ctx.user.id] : [ctx.user.id, input.status];
+        const [rows] = await conn.execute(`SELECT * FROM tripPlans WHERE ${where} ORDER BY updatedAt DESC LIMIT 50`, params) as any;
+        await conn.end();
+        return rows as any[];
+      }),
+    getActiveTrip: protectedProcedure.query(async ({ ctx }) => {
+      const mysql = await import('mysql2/promise');
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const [rows] = await conn.execute(
+        'SELECT ats.*, tp.title, tp.destinationCity, tp.destinationCountry, tp.startDate, tp.endDate FROM activeTripSessions ats JOIN tripPlans tp ON ats.tripPlanId = tp.id WHERE ats.userId = ? AND ats.isActive = 1 ORDER BY ats.startedAt DESC LIMIT 1',
+        [ctx.user.id]
+      ) as any;
+      await conn.end();
+      return (rows[0] || null) as any;
+    }),
+    activateTrip: protectedProcedure
+      .input(z.object({ tripPlanId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        await conn.execute('UPDATE activeTripSessions SET isActive = 0 WHERE userId = ?', [ctx.user.id]);
+        await conn.execute('INSERT INTO activeTripSessions (tripPlanId, userId, isActive) VALUES (?, ?, 1)', [input.tripPlanId, ctx.user.id]);
+        await conn.execute('UPDATE tripPlans SET status = "confirmed" WHERE id = ? AND userId = ?', [input.tripPlanId, ctx.user.id]);
+        await conn.execute('INSERT INTO notifications (userId, type, title, body, data) VALUES (?, "trip_reminder", ?, ?, ?)', [ctx.user.id, '\uD83D\uDDFA\uFE0F Votre parcours est activ\u00e9 !', 'MAYA vous accompagne tout au long de votre voyage. Bon voyage !', JSON.stringify({ tripPlanId: input.tripPlanId })]);
+        await conn.end();
+        return { success: true };
+      }),
+    deactivateTrip: protectedProcedure
+      .input(z.object({ sessionId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        await conn.execute('UPDATE activeTripSessions SET isActive = 0, completedAt = NOW() WHERE id = ? AND userId = ?', [input.sessionId, ctx.user.id]);
+        await conn.end();
+        return { success: true };
+      }),
+    getCompanions: protectedProcedure.query(async ({ ctx }) => {
+      const mysql = await import('mysql2/promise');
+      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const [rows] = await conn.execute('SELECT * FROM travelCompanions WHERE userId = ? ORDER BY name ASC', [ctx.user.id]) as any;
+      await conn.end();
+      return rows as any[];
+    }),
+    addCompanion: protectedProcedure
+      .input(z.object({ name: z.string().min(1), relationship: z.string().optional(), dietaryRestrictions: z.string().optional(), preferences: z.string().optional(), birthDate: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        await conn.execute('INSERT INTO travelCompanions (userId, name, relationship, dietaryRestrictions, preferences, birthDate) VALUES (?, ?, ?, ?, ?, ?)', [ctx.user.id, input.name, input.relationship || null, input.dietaryRestrictions || null, input.preferences || null, input.birthDate || null]);
+        await conn.end();
+        return { success: true };
+      }),
+    deleteCompanion: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        await conn.execute('DELETE FROM travelCompanions WHERE id = ? AND userId = ?', [input.id, ctx.user.id]);
+        await conn.end();
+        return { success: true };
+      }),
+    deleteTrip: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        await conn.execute('DELETE FROM tripPlans WHERE id = ? AND userId = ?', [input.id, ctx.user.id]);
+        await conn.end();
+        return { success: true };
+      }),
+  }),
+
 });
 export type AppRouter = typeof appRouter;

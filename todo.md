@@ -711,3 +711,35 @@
 - [ ] Villas de prestige avec réduction dans la sélection gratuite/réductions (ex : villa Saint-Tropez 12 500€/sem au lieu de 15 000€)
 - [ ] Champ `originalPrice` + `discountedPrice` + `discountPercent` dans les fiches établissements
 - [ ] Badge "−X%" affiché sur les fiches avec réduction
+
+## Phase 21 — Landing Page SEO + Espace Intérieur + Notifications
+
+### Landing Page (refonte scroll conversationnel style Spotify)
+- [ ] Refonte Home.tsx : scroll multi-sections conversationnel + landing page SEO
+- [ ] Section Hero : intent-first (émotion/occasion) avec double CTA (IA ou Offres)
+- [ ] Section "Entrée IA" : démo conversationnelle MAYA avec 3 questions d'intention
+- [ ] Section "Entrée Offres" : sélection horizontale scrollable par secteur
+- [ ] Section "Entrée Parcours" : exemples de parcours complets (Monaco, Bali, Paris...)
+- [ ] Section "Comment ça marche" : 3 étapes visuelles
+- [ ] Section "Forfaits" : 3 états clairs (Explorateur / Membre / Conciergerie)
+- [ ] Section FAQ SEO : 8 questions/réponses optimisées Google
+- [ ] SEO technique : balises meta title/description, OG tags, JSON-LD schema, ancres
+- [ ] index.html : meta robots, canonical, structured data WebSite + Organization
+
+### Espace Intérieur Client (/mon-espace)
+- [ ] Page /mon-espace : dashboard parcours (brouillons, sauvegardés, actif en cours)
+- [ ] Carte parcours : titre, destination, dates, statut, actions (activer/modifier/supprimer)
+- [ ] Parcours actif : badge "EN COURS" + timeline du jour
+- [ ] Fiche profil : avatar, infos, préférences, style de voyage
+- [ ] Section Proches : liste travelCompanions avec ajout/modification
+- [ ] Toggles notifications : parcours actif ON/OFF, découvertes ON/OFF, newsletter ON/OFF
+
+### Système Notifications
+- [ ] Table DB : notifications (id, userId, type, title, body, data, readAt, createdAt)
+- [ ] Table DB : notificationSettings (userId, activeTripNotifs, discoveryNotifs, emailNotifs)
+- [ ] Table DB : activeTripSessions (tripPlanId, userId, startedAt, currentDayIndex, isActive)
+- [ ] tRPC : notifications.list, notifications.markRead, notifications.settings.get/update
+- [ ] tRPC : trips.activate, trips.deactivate, trips.getActive
+- [ ] Centre notifications : cloche navbar avec badge compteur non-lus
+- [ ] Notifications parcours actif : rappel matin, rappel restaurant, rappel départ
+- [ ] Notifications découvertes : nouvelles offres, nouveaux parcours, événements (opt-in)

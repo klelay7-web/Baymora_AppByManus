@@ -18,8 +18,12 @@ import {
   Eye,
   Lock,
   Users,
+  Tag,
+  Bell,
+  Map,
+  ChevronDown,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 
@@ -102,9 +106,80 @@ const plans = [
   },
 ];
 
+// ─── Conversation MAYA animée ─────────────────────────────────────────────────
+const MAYA_CONVERSATION = [
+  { from: "maya", text: "Bonjour. Je suis MAYA, votre conciergerie personnelle.", delay: 0 },
+  { from: "user", text: "J'ai envie de quelque chose d'exceptionnel ce week-end.", delay: 700 },
+  { from: "maya", text: "Parfait. Vous préférez la mer, la montagne, ou une capitale ?", delay: 1400 },
+  { from: "user", text: "La mer. Monaco ou Saint-Tropez.", delay: 2100 },
+  { from: "maya", text: "J'ai 3 suites disponibles ce vendredi, dont une avec vue sur le port de Monaco à -28%. Je vous prépare le dossier ?", delay: 2800 },
+];
+
+// ─── Destinations phares ──────────────────────────────────────────────────────
+const DESTINATIONS = [
+  { name: "Monaco", tag: "Exclusif", img: HERO_IMG, offers: 4 },
+  { name: "Saint-Tropez", tag: "Été", img: GASTRO_IMG, offers: 6 },
+  { name: "Courchevel", tag: "Ski", img: SKI_IMG, offers: 3 },
+  { name: "Bali", tag: "Retraite", img: SPA_IMG, offers: 5 },
+  { name: "New York", tag: "Urbain", img: ROOFTOP_IMG, offers: 7 },
+];
+
+// ─── FAQ ──────────────────────────────────────────────────────────────────────
+const FAQ_ITEMS = [
+  { q: "Qu'est-ce que Maison Baymora ?", a: "Maison Baymora est une conciergerie personnelle propulsée par l'IA MAYA. Elle crée des parcours voyage luxe sur-mesure, donne accès à des offres exclusives 5★ et accompagne le client tout au long de son séjour." },
+  { q: "Comment fonctionne MAYA ?", a: "MAYA apprend vos préférences au fil des conversations, construit des parcours personnalisés, vous envoie des notifications pendant votre voyage et s'améliore à chaque échange." },
+  { q: "Quelles destinations sont disponibles ?", a: "Monaco, Saint-Tropez, Paris, Dubai, Bali, Courchevel, New York, Los Angeles, Miami et de nombreuses autres destinations de luxe dans le monde entier." },
+  { q: "Puis-je utiliser Baymora gratuitement ?", a: "Oui. Le compte gratuit donne accès aux offres avec réductions et à quelques conversations MAYA. L'abonnement premium débloque les parcours illimités et l'accompagnement complet." },
+  { q: "Baymora est-il disponible sur mobile ?", a: "Oui, Baymora est entièrement optimisé pour smartphone. L'interface native mobile inclut des bottom sheets, une navigation par pilules et des notifications push." },
+  { q: "Quelle est la différence entre Explorateur, Membre et Conciergerie ?", a: "Explorateur (gratuit) donne accès aux offres et 3 conversations MAYA/mois. Membre (abonnement) débloque les parcours illimités, les sélections VIP et les notifications voyage actif. Conciergerie ajoute un service humain dédié 24h/24." },
+];
+
+// ─── Composant FAQItem ────────────────────────────────────────────────────────
+function FAQItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-white/8 last:border-0">
+      <button
+        className="w-full flex items-center justify-between py-5 text-left gap-4"
+        onClick={() => setOpen(!open)}
+      >
+        <span className="text-white font-medium text-base">{q}</span>
+        <ChevronDown
+          size={18}
+          className={`text-white/40 flex-shrink-0 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      <div className={`overflow-hidden transition-all duration-300 ${open ? "max-h-48 pb-5" : "max-h-0"}`}>
+        <p className="text-white/60 text-sm leading-relaxed">{a}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { user, isAuthenticated } = useAuth();
   const [activeBundle, setActiveBundle] = useState(0);
+  const [visibleBubbles, setVisibleBubbles] = useState(0);
+  const chatRef = useRef<HTMLDivElement>(null);
+  const [chatInView, setChatInView] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setChatInView(true); },
+      { threshold: 0.3 }
+    );
+    if (chatRef.current) observer.observe(chatRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!chatInView) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    MAYA_CONVERSATION.forEach((msg, i) => {
+      timers.push(setTimeout(() => setVisibleBubbles(i + 1), msg.delay));
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [chatInView]);
 
   return (
     <div className="min-h-screen bg-[#080c14] text-white overflow-x-hidden">
@@ -670,9 +745,195 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════
+          {/* ═════════════════════════════════════════════
+          CHAT MAYA ANIMÉ — Scroll conversationnel
+      ═════════════════════════════════════════════ */}
+      <section id="comment-ca-marche" className="py-24 md:py-32">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+              <motion.p variants={fadeUp} className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-4">Comment ça marche</motion.p>
+              <motion.h2 variants={fadeUp} className="font-['Playfair_Display'] text-3xl md:text-5xl mb-6">
+                Une conversation.<br />
+                <em className="text-[#c8a94a] not-italic">Un parcours complet.</em>
+              </motion.h2>
+              <motion.p variants={fadeUp} className="text-white/50 text-lg leading-relaxed mb-8 font-light">
+                Dites à MAYA ce que vous ressentez, pas ce que vous cherchez. Elle s'occupe du reste — sélection, réservation, accompagnement.
+              </motion.p>
+              <motion.div variants={fadeUp} className="space-y-4 mb-8">
+                {[
+                  { step: "1", text: "Décrivez votre envie en quelques mots" },
+                  { step: "2", text: "MAYA construit un parcours sur-mesure" },
+                  { step: "3", text: "Activez et voyagez — MAYA vous guide en temps réel" },
+                ].map(({ step, text }) => (
+                  <div key={step} className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-full bg-[#c8a94a]/15 border border-[#c8a94a]/30 text-[#c8a94a] text-sm font-bold flex items-center justify-center flex-shrink-0">{step}</div>
+                    <span className="text-white/70 text-base">{text}</span>
+                  </div>
+                ))}
+              </motion.div>
+              <motion.div variants={fadeUp}>
+                <Button asChild className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-xl px-8 py-5">
+                  <a href={isAuthenticated ? "/chat" : getLoginUrl()}>
+                    <MessageCircle className="mr-2 h-5 w-5" /> Essayer maintenant
+                  </a>
+                </Button>
+              </motion.div>
+            </motion.div>
+
+            {/* Chat simulé animé */}
+            <div ref={chatRef} className="relative">
+              <div className="bg-[#0e0e16] rounded-3xl border border-white/8 overflow-hidden shadow-2xl shadow-black/60">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-white/8 bg-[#111118]">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#c8a94a] to-[#a07840] flex items-center justify-center">
+                    <Sparkles size={16} className="text-[#080c14]" />
+                  </div>
+                  <div>
+                    <div className="text-white text-sm font-semibold">MAYA</div>
+                    <div className="flex items-center gap-1.5 text-green-400 text-xs">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-400" /> En ligne
+                    </div>
+                  </div>
+                </div>
+                <div className="p-5 space-y-4 min-h-[280px]">
+                  {MAYA_CONVERSATION.map((msg, i) => {
+                    const isMAYA = msg.from === "maya";
+                    return (
+                      <div key={i} className={`flex items-end gap-3 transition-all duration-700 ${i < visibleBubbles ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"} ${isMAYA ? "justify-start" : "justify-end"}`}>
+                        {isMAYA && (
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#c8a94a] to-[#a07840] flex items-center justify-center flex-shrink-0 mb-1">
+                            <Sparkles size={12} className="text-[#080c14]" />
+                          </div>
+                        )}
+                        <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                          isMAYA ? "bg-[#1a1a24] text-white rounded-bl-sm border border-white/8" : "bg-[#c8a94a] text-[#080c14] font-medium rounded-br-sm"
+                        }`}>{msg.text}</div>
+                      </div>
+                    );
+                  })}
+                  {visibleBubbles > 0 && visibleBubbles < MAYA_CONVERSATION.length && (
+                    <div className="flex items-center gap-2 text-white/30 text-xs">
+                      <div className="flex gap-1">
+                        {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-[#c8a94a]/50 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />)}
+                      </div>
+                      MAYA rédige…
+                    </div>
+                  )}
+                </div>
+                <div className="px-5 pb-5">
+                  <div className="flex items-center gap-3 bg-[#1a1a24] rounded-2xl px-4 py-3 border border-white/8">
+                    <span className="text-white/20 text-sm flex-1">Écrivez à MAYA…</span>
+                    <div className="w-7 h-7 rounded-full bg-[#c8a94a] flex items-center justify-center">
+                      <ArrowRight size={13} className="text-[#080c14]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -top-4 -right-4 bg-[#7c6af7] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">IA Personnelle</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═════════════════════════════════════════════
+          DESTINATIONS — Scroll horizontal style Spotify
+      ═════════════════════════════════════════════ */}
+      <section id="destinations" className="py-16 overflow-hidden">
+        <div className="px-6 md:px-12 mb-8 flex items-end justify-between max-w-7xl mx-auto">
+          <div>
+            <p className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-2">Destinations</p>
+            <h2 className="font-['Playfair_Display'] text-3xl md:text-4xl">Les plus prisées en ce moment</h2>
+          </div>
+          <Link href="/offres" className="hidden md:flex items-center gap-2 text-white/40 text-sm hover:text-white transition-colors">
+            Tout voir <ArrowRight size={14} />
+          </Link>
+        </div>
+        <div className="flex gap-4 overflow-x-auto px-6 md:px-12 pb-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
+          {DESTINATIONS.map((dest) => (
+            <Link key={dest.name} href="/offres" className="flex-shrink-0 w-48 md:w-60 snap-start group cursor-pointer">
+              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-3">
+                <img src={dest.img} alt={dest.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                <div className="absolute top-3 left-3 bg-white/15 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full border border-white/20">{dest.tag}</div>
+                <div className="absolute bottom-3 left-3 right-3">
+                  <div className="text-white font-bold text-lg">{dest.name}</div>
+                  <div className="text-white/60 text-xs">{dest.offers} offres disponibles</div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ═════════════════════════════════════════════
+          OFFRES FLASH — Point d'entrée 2
+      ═════════════════════════════════════════════ */}
+      <section id="offres-flash" className="py-16 bg-[#0a0f1a]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <div className="inline-flex items-center gap-2 text-red-400 text-xs font-semibold uppercase tracking-widest mb-2">
+                <Zap size={12} /> Offres Flash
+              </div>
+              <h2 className="font-['Playfair_Display'] text-3xl md:text-4xl">Jusqu'à <span className="text-[#c8a94a]">-35%</span> cette semaine</h2>
+            </div>
+            <Link href="/offres" className="hidden md:flex items-center gap-2 text-white/40 text-sm hover:text-white transition-colors">
+              Toutes les offres <ArrowRight size={14} />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              { title: "Hôtel de Paris", loc: "Monaco", price: "980€", original: "1 400€", pct: 30, img: HERO_IMG, tag: "Hôtellerie" },
+              { title: "Villa Karma Kandara", loc: "Bali, Ubud", price: "840€", original: "1 200€", pct: 30, img: SPA_IMG, tag: "Villa" },
+              { title: "Dîner Gastronomique", loc: "Paris, 8e", price: "280€", original: "420€", pct: 33, img: GASTRO_IMG, tag: "Gastronomie" },
+            ].map((offer) => (
+              <Link key={offer.title} href="/offres" className="group relative bg-[#111118] rounded-2xl overflow-hidden border border-white/6 hover:border-[#c8a94a]/30 transition-all hover:-translate-y-0.5 cursor-pointer">
+                <div className="relative aspect-video overflow-hidden">
+                  <img src={offer.img} alt={offer.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute top-3 left-3 flex gap-2">
+                    <span className="bg-[#c8a94a] text-[#080c14] text-xs font-bold px-2.5 py-1 rounded-full">-{offer.pct}%</span>
+                    <span className="bg-black/50 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur-sm">{offer.tag}</span>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center gap-1 text-white/40 text-xs mb-1"><MapPin size={10} /> {offer.loc}</div>
+                  <h3 className="text-white font-semibold text-base mb-2">{offer.title}</h3>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[#c8a94a] font-bold text-lg">{offer.price}</span>
+                    <span className="text-white/30 text-xs">/nuit</span>
+                    <span className="text-white/30 text-xs line-through ml-1">{offer.original}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <Button asChild variant="outline" className="border-[#c8a94a]/30 text-[#c8a94a] hover:bg-[#c8a94a]/10 rounded-xl px-8 py-5">
+              <Link href="/offres">Voir toutes les offres <ArrowRight className="ml-2 h-4 w-4" /></Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* ═════════════════════════════════════════════
+          FAQ — Ancres SEO + Google Featured Snippets
+      ═════════════════════════════════════════════ */}
+      <section id="faq" className="py-24 md:py-32">
+        <div className="max-w-3xl mx-auto px-6">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="text-center mb-12">
+            <motion.p variants={fadeUp} className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-3">FAQ</motion.p>
+            <motion.h2 variants={fadeUp} className="font-['Playfair_Display'] text-3xl md:text-4xl">Questions fréquentes</motion.h2>
+          </motion.div>
+          <div className="bg-[#0e0e16] rounded-2xl border border-white/6 px-6 divide-y divide-white/8">
+            {FAQ_ITEMS.map((item) => <FAQItem key={item.q} q={item.q} a={item.a} />)}
+          </div>
+        </div>
+      </section>
+
+      {/* ═════════════════════════════════════════════
           CTA FINAL
-      ═══════════════════════════════════════════════ */}
+      ═════════════════════════════════════════════ */}
       <section className="relative py-32 overflow-hidden">
         <div className="absolute inset-0">
           <img src={SPA_IMG} alt="Luxury spa" className="w-full h-full object-cover opacity-30" />
