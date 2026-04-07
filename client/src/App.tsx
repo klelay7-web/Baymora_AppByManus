@@ -20,9 +20,6 @@ import About from "./pages/About";
 import MesParcours from "./pages/MesParcours";
 import Offers from "./pages/Offers";
 import SharedContent from "./pages/SharedContent";
-import Bundles from "./pages/Bundles";
-import Rechercher from "./pages/Rechercher";
-import Premium from "./pages/Premium";
 import { lazy, Suspense } from "react";
 
 // Lazy load dashboards
@@ -74,9 +71,6 @@ function Router() {
       <Route path="/a-propos" component={About} />
       <Route path="/mes-parcours" component={MesParcours} />
       <Route path="/offres" component={Offers} />
-      <Route path="/bundles" component={Bundles} />
-      <Route path="/rechercher" component={Rechercher} />
-      <Route path="/premium" component={Premium} />
       <Route path="/ambassadeur-info">{() => <LazyPage Component={AmbassadeurInfo} />}</Route>
 
       {/* Client Dashboards */}

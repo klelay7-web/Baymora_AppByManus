@@ -1,9 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /mon-espace
-Disallow: /profile
-Disallow: /lena-workspace
-Disallow: /pilotage
-
-Sitemap: https://www.maisonbaymora.com/sitemap.xml

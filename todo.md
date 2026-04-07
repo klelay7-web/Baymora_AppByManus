@@ -756,44 +756,35 @@
 - [ ] Filtres persistés dans URL (query params) pour partage direct
 - [ ] Page publique /parcours/:shareToken pour affichage sans connexion
 
-## Sprint — VERSION FINALE V1
+## Sprint — Refonte Landing Mobile V2
 
-### Navigation Mobile (style Spotify)
-- [x] Barre haut pilules : Logo B | Maison | IA/Parcours (double) | Offres remises | Bundles
-- [x] Barre bas 5 icônes : Maison | Rechercher | Maya (centre) | Premium | Créer
-- [ ] Bouton IA/Parcours qui s'ouvre en 2 (puis 3 avec offres)
-- [x] Navigation desktop cohérente
+### Hero Mobile
+- [x] Supprimer bouton jaune "Parlez à votre assistant"
+- [x] Supprimer "experts humains & IA - voyages d'exception"
+- [x] Supprimer "Explorer les destinations"
+- [x] Garder "L'art de l'excellence" + "Un assistant qui vous connaît"
+- [x] Remplacer texte "Maison Baymora...exprimiez" par "Discrétion & confidentialité · Accès mondial"
+- [x] Réduire taille hero pour arriver vite au contenu
+- [x] Scroll max vers le haut = "Chaque moment devient une expérience inoubliable"
 
-### Page Maison (Landing SEO)
-- [x] Hero accroche SEO optimisé
-- [x] Bundles carrousel style magazine/insta
-- [x] Offres flash section
-- [x] Section partenaires B2B
-- [x] FAQ GEO/SEO stratégique
+### Sections supprimées
+- [x] Supprimer "Comment ça fonctionne"
+- [x] Supprimer les 4 icônes (expert humain, parcours GPS, discrétion, accès mondial)
+- [x] Supprimer section forfaits de la landing (déplacer dans Premium)
 
-### Système Forfaits
-- [x] Gratuit : offres remisées + essai parcours limité (3 parcours, 1 enregistrable)
-- [x] Social Club Standard 9.90€/14.30€ (15/25 crédits) + Illimité 29.90€/37€
-- [x] Club Privé : visible avec liste d'attente / invitation
-- [x] Page pricing refaite avec 4 tiers + toggle Solo/Duo + recharges crédits
+### Bloc Ambassadeur reformulé
+- [x] Titre : "Invitez vos proches et devenez ambassadeur Maison Baymora"
+- [x] Système de points : partage, réservations, forfait
+- [x] 10 000€ en points = accès liste d'attente Club Privé
+- [x] Club Privé = "Sur invitation" / "S'inscrire à la liste d'attente"
+- [x] Points : partage sans profil = X pts, avec profil = X pts, avec forfait = X pts
+- [x] Réservations : plus le montant est grand, plus de points
+- [x] Crédits débloqués par les points + fonctionnalités débloquées
 
-### Espace Logo B (profil client)
-- [ ] Forfait + points + solde
-- [ ] Profil complet (manuel ou avec Maya)
-- [ ] Mes parcours (brouillons, enregistrés, favoris)
-- [ ] Parcours partagés / groupes collaboratifs
-- [ ] Paramètres forfait (pause, accumulation, parrainage)
+### Forfaits dans Premium
+- [x] Déplacer forfaits dans page Premium
+- [x] Bouton "Choisir Duo" avec prix duo dans chaque tier
+- [x] Crédits à la carte déplacés aussi
 
-### Bundles
-- [ ] Table DB bundles + bundleItems
-- [x] Page bundles carrousel magazine
-- [x] Fiches inspirantes (3 rooftops Paris, 5 spas montagne, etc.)
-- [ ] Favoris (gratuit=0, compte=3, payant=illimité)
-- [ ] Backend CRUD bundles
-
-### SEO Complet
-- [x] Meta tags FR optimisés
-- [x] Open Graph + Twitter Cards
-- [x] Schema.org (Organization, FAQ, Product, SoftwareApplication)
-- [x] FAQ GEO pour IA
-- [x] Sitemap.xml + Robots.txt
+### Bloc B2B
+- [x] Garder "Recevez des clients qualifiés"
