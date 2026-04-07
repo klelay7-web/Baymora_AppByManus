@@ -788,3 +788,18 @@
 
 ### Bloc B2B
 - [x] Garder "Recevez des clients qualifiés"
+
+## Sprint — Corrections Urgentes (07/04)
+
+- [ ] Navigation Pilotage : supprimer "Pilotage" en haut à gauche qui mène nulle part
+- [ ] Navigation Pilotage : ajouter bouton B (retour page principale) en haut à gauche
+- [ ] Navigation Pilotage : ajouter flèche workspace LENA en haut à droite
+- [ ] Mes Parcours : supprimer "Demander à Aria" → remplacer par MAYA
+- [ ] Programme ambassadeur : mettre à jour avec nouveau système de points
+- [ ] Programme ambassadeur : corriger erreur au clic
+- [ ] Page principale : ajouter section Bundles à découvrir
+- [ ] Système de points : 1 point = 0.25 centime
+- [ ] Système de points : partage avec souscription forfait = 50 pts partagés (25 chacun)
+- [ ] Système de points : parcours partagé = 15 pts
+- [ ] Système de points : forfaits Duo au prorata
+- [ ] Design mobile : vérifier et restaurer le design demandé

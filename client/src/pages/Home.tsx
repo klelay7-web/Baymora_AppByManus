@@ -4,12 +4,9 @@ import { getLoginUrl } from "@/const";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import {
-  MessageCircle,
   MapPin,
-  Star,
   Sparkles,
   Crown,
-  ChevronRight,
   ArrowRight,
   Zap,
   Users,
@@ -17,7 +14,7 @@ import {
   Gift,
   ChevronDown,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 
@@ -45,15 +42,6 @@ const bundles = [
   { title: "Les spas les plus exclusifs", subtitle: "Bali, Indonésie", img: SPA_IMG, tag: "Bien-être" },
 ];
 
-// ─── Conversation MAYA animée ─────────────────────────────────────────────────
-const MAYA_CONVERSATION = [
-  { from: "maya", text: "Bonjour. Je suis MAYA, votre conciergerie personnelle.", delay: 0 },
-  { from: "user", text: "J'ai envie de quelque chose d'exceptionnel ce week-end.", delay: 700 },
-  { from: "maya", text: "Parfait. Vous préférez la mer, la montagne, ou une capitale ?", delay: 1400 },
-  { from: "user", text: "La mer. Monaco ou Saint-Tropez.", delay: 2100 },
-  { from: "maya", text: "J'ai 3 suites disponibles ce vendredi, dont une avec vue sur le port de Monaco à -28%. Je vous prépare le dossier ?", delay: 2800 },
-];
-
 // ─── Destinations phares ──────────────────────────────────────────────────────
 const DESTINATIONS = [
   { name: "Monaco", tag: "Exclusif", img: HERO_IMG, offers: 4 },
@@ -70,7 +58,7 @@ const FAQ_ITEMS = [
   { q: "Quelles destinations sont disponibles ?", a: "Monaco, Saint-Tropez, Paris, Dubai, Bali, Courchevel, New York, Los Angeles, Miami et de nombreuses autres destinations de luxe dans le monde entier." },
   { q: "Puis-je utiliser Baymora gratuitement ?", a: "Oui. Le compte gratuit donne accès aux offres avec réductions et à 3 parcours MAYA. L'abonnement Social Club débloque les crédits parcours et l'accompagnement complet." },
   { q: "Baymora est-il disponible sur mobile ?", a: "Oui, Baymora est entièrement optimisé pour smartphone. L'interface native mobile inclut des bottom sheets, une navigation par pilules et des notifications push." },
-  { q: "Comment fonctionne le système de points ?", a: "Chaque partage, réservation et parrainage vous rapporte des points. Les points débloquent des crédits et des fonctionnalités exclusives. Accumulez l'équivalent de 10 000 points pour accéder à la liste d'attente du Club Privé." },
+  { q: "Comment fonctionne le système de points ?", a: "Chaque parrainage avec souscription vous rapporte 50 points partagés (25 pts chacun). Un parcours partagé rapporte 15 pts. 1 point vaut 0,25 centime d'euro. Accumulez 10 000 points pour accéder à la liste d'attente du Club Privé." },
 ];
 
 // ─── Composant FAQItem ────────────────────────────────────────────────────────
@@ -96,28 +84,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 }
 
 export default function Home() {
-  const { user, isAuthenticated } = useAuth();
-  const [visibleBubbles, setVisibleBubbles] = useState(0);
-  const chatRef = useRef<HTMLDivElement>(null);
-  const [chatInView, setChatInView] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setChatInView(true); },
-      { threshold: 0.3 }
-    );
-    if (chatRef.current) observer.observe(chatRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!chatInView) return;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    MAYA_CONVERSATION.forEach((msg, i) => {
-      timers.push(setTimeout(() => setVisibleBubbles(i + 1), msg.delay));
-    });
-    return () => timers.forEach(clearTimeout);
-  }, [chatInView]);
+  const { isAuthenticated } = useAuth();
 
   return (
     <div className="min-h-screen bg-[#080c14] text-white overflow-x-hidden">
@@ -126,7 +93,6 @@ export default function Home() {
           HERO — Compact, droit au but
       ═══════════════════════════════════════════════ */}
       <section className="relative min-h-[70vh] md:min-h-screen flex items-center justify-center">
-        {/* Background image */}
         <div className="absolute inset-0">
           <img
             src={HERO_IMG}
@@ -136,7 +102,6 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-b from-[#080c14]/80 via-[#080c14]/50 to-[#080c14]" />
         </div>
 
-        {/* Content */}
         <motion.div
           className="relative z-10 max-w-5xl mx-auto px-6 text-center pt-16 md:pt-20"
           initial="hidden"
@@ -150,7 +115,6 @@ export default function Home() {
             </div>
           </motion.div>
 
-          {/* Desktop subtitle */}
           <motion.p
             variants={fadeUp}
             className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs font-light mb-6 hidden md:block"
@@ -158,7 +122,6 @@ export default function Home() {
             Conciergerie premium &amp; voyages d'exception
           </motion.p>
 
-          {/* Main headline */}
           <motion.h1
             variants={fadeUp}
             className="font-['Playfair_Display'] text-2xl md:text-6xl lg:text-7xl leading-tight mb-4"
@@ -177,7 +140,6 @@ export default function Home() {
             </span>
           </motion.h1>
 
-          {/* Mobile: subtitle line */}
           <motion.p
             variants={fadeUp}
             className="md:hidden text-white/70 text-base font-light mb-3"
@@ -185,7 +147,6 @@ export default function Home() {
             Un assistant qui vous connaît
           </motion.p>
 
-          {/* Mobile: two keywords */}
           <motion.div
             variants={fadeUp}
             className="md:hidden flex items-center justify-center gap-3 text-white/40 text-xs tracking-wider uppercase mb-6"
@@ -195,7 +156,6 @@ export default function Home() {
             <span>Accès mondial</span>
           </motion.div>
 
-          {/* Desktop: compact subtitle like mobile */}
           <motion.p
             variants={fadeUp}
             className="hidden md:block text-white/70 text-xl font-light mb-3"
@@ -203,35 +163,38 @@ export default function Home() {
             Un assistant qui vous connaît
           </motion.p>
 
-          {/* Desktop: two keywords */}
           <motion.div
             variants={fadeUp}
-            className="hidden md:flex items-center justify-center gap-4 text-white/40 text-sm tracking-wider uppercase mb-6"
+            className="hidden md:flex items-center justify-center gap-4 text-white/40 text-sm tracking-wider uppercase mb-8"
           >
-            <span>Discrétion & confidentialité</span>
+            <span>Discrétion &amp; confidentialité</span>
             <span className="text-[#c8a94a]">·</span>
             <span>Accès mondial</span>
           </motion.div>
 
-          {/* Mobile: scroll hint */}
+          <motion.div variants={fadeUp}>
+            <Button
+              asChild
+              className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-xl px-8 py-5 tracking-wider"
+            >
+              <a href={isAuthenticated ? "/chat" : getLoginUrl()}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Parler à MAYA
+              </a>
+            </Button>
+          </motion.div>
+
           <motion.div
             variants={fadeUp}
-            className="md:hidden mt-4 text-white/20 text-xs animate-bounce"
+            className="md:hidden mt-6 text-white/20 text-xs animate-bounce"
           >
             <ChevronDown size={20} className="mx-auto" />
           </motion.div>
         </motion.div>
-
-        {/* Pull-down reveal phrase */}
-        <div className="absolute top-0 left-0 right-0 h-16 flex items-center justify-center bg-[#080c14]/90 backdrop-blur-sm z-20 md:hidden -translate-y-full">
-          <p className="text-white/50 text-xs font-light tracking-wider italic">
-            Chaque moment devient une expérience inoubliable
-          </p>
-        </div>
       </section>
 
       {/* ═════════════════════════════════════════════
-          "DES EXPÉRIENCES LÉGENDAIRES" — Laissez-vous inspirer
+          BUNDLES — Laissez-vous inspirer
       ═════════════════════════════════════════════ */}
       <section className="py-16 md:py-24">
         <div className="max-w-7xl mx-auto px-6">
@@ -250,7 +213,6 @@ export default function Home() {
             </motion.p>
           </motion.div>
 
-          {/* Bundles carrousel */}
           <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
             {bundles.map((b) => (
               <Link key={b.title} href="/bundles" className="flex-shrink-0 w-64 md:w-72 snap-start group cursor-pointer">
@@ -271,84 +233,6 @@ export default function Home() {
             <Button asChild variant="outline" className="border-[#c8a94a]/30 text-[#c8a94a] hover:bg-[#c8a94a]/10 rounded-xl px-8 py-5">
               <Link href="/bundles">Tous les bundles <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* ═════════════════════════════════════════════
-          CHAT MAYA ANIMÉ — Point d'entrée IA
-      ═════════════════════════════════════════════ */}
-      <section ref={chatRef} className="py-16 md:py-24 bg-[#0a0f1a]">
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <p className="text-[#c8a94a] tracking-[0.3em] uppercase text-xs mb-3">Votre assistant IA</p>
-            <h2 className="font-['Playfair_Display'] text-2xl md:text-4xl mb-4">
-              MAYA vous connaît{" "}
-              <em className="text-[#c8a94a] not-italic">déjà</em>
-            </h2>
-            <p className="text-white/40 font-light text-sm leading-relaxed mb-6">
-              Dites-lui ce dont vous avez envie. Elle construit votre parcours, trouve les meilleures offres et vous accompagne tout au long du voyage.
-            </p>
-            <Button
-              asChild
-              className="bg-[#c8a94a] text-[#080c14] hover:bg-[#d4b85a] rounded-xl px-8 py-5 tracking-wider"
-            >
-              <a href={isAuthenticated ? "/chat" : getLoginUrl()}>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Essayer MAYA
-              </a>
-            </Button>
-          </div>
-
-          {/* Chat mockup */}
-          <div className="relative">
-            <div className="bg-[#111118] rounded-3xl border border-white/8 overflow-hidden shadow-2xl max-w-sm mx-auto">
-              <div className="p-4 border-b border-white/6 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#c8a94a] to-[#a07840] flex items-center justify-center">
-                  <Sparkles size={14} className="text-[#080c14]" />
-                </div>
-                <div>
-                  <div className="text-white text-sm font-medium">MAYA</div>
-                  <div className="text-green-400 text-xs flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full" /> En ligne
-                  </div>
-                </div>
-              </div>
-              <div className="p-5 space-y-3 min-h-[260px]">
-                {MAYA_CONVERSATION.map((msg, i) => {
-                  const isMAYA = msg.from === "maya";
-                  return (
-                    <div key={i} className={`flex items-end gap-3 transition-all duration-700 ${i < visibleBubbles ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"} ${isMAYA ? "justify-start" : "justify-end"}`}>
-                      {isMAYA && (
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#c8a94a] to-[#a07840] flex items-center justify-center flex-shrink-0 mb-1">
-                          <Sparkles size={12} className="text-[#080c14]" />
-                        </div>
-                      )}
-                      <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                        isMAYA ? "bg-[#1a1a24] text-white rounded-bl-sm border border-white/8" : "bg-[#c8a94a] text-[#080c14] font-medium rounded-br-sm"
-                      }`}>{msg.text}</div>
-                    </div>
-                  );
-                })}
-                {visibleBubbles > 0 && visibleBubbles < MAYA_CONVERSATION.length && (
-                  <div className="flex items-center gap-2 text-white/30 text-xs">
-                    <div className="flex gap-1">
-                      {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-[#c8a94a]/50 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />)}
-                    </div>
-                    MAYA rédige…
-                  </div>
-                )}
-              </div>
-              <div className="px-5 pb-5">
-                <div className="flex items-center gap-3 bg-[#1a1a24] rounded-2xl px-4 py-3 border border-white/8">
-                  <span className="text-white/20 text-sm flex-1">Écrivez à MAYA…</span>
-                  <div className="w-7 h-7 rounded-full bg-[#c8a94a] flex items-center justify-center">
-                    <ArrowRight size={13} className="text-[#080c14]" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="absolute -top-4 -right-4 bg-[#7c6af7] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">IA Personnelle</div>
           </div>
         </div>
       </section>
@@ -384,7 +268,7 @@ export default function Home() {
       </section>
 
       {/* ═════════════════════════════════════════════
-          OFFRES FLASH — Point d'entrée 2
+          OFFRES FLASH
       ═════════════════════════════════════════════ */}
       <section id="offres-flash" className="py-16 bg-[#0a0f1a]">
         <div className="max-w-7xl mx-auto px-6">
@@ -461,7 +345,6 @@ export default function Home() {
                 {[
                   { icon: Users, text: "Parrainez et gagnez des crédits ou débloquez des fonctionnalités" },
                   { icon: Trophy, text: "Gagnez des points pour débloquer des fonctionnalités premium" },
-                  { icon: Star, text: "Créez et publiez vos parcours enregistrés" },
                   { icon: Gift, text: "Partagez vos parcours vérifiés et gagnez encore plus" },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-4">
@@ -478,13 +361,18 @@ export default function Home() {
                   <span className="text-white text-sm font-medium">Comment gagner des points</span>
                 </div>
                 <div className="space-y-2.5 text-xs text-white/50">
-                  <div className="flex justify-between"><span>Partage sans profil</span><span className="text-[#c8a94a]">+50 pts</span></div>
-                  <div className="flex justify-between"><span>Partage avec profil</span><span className="text-[#c8a94a]">+100 pts</span></div>
-                  <div className="flex justify-between"><span>Partage avec forfait Standard</span><span className="text-[#c8a94a]">+200 pts</span></div>
-                  <div className="flex justify-between"><span>Partage avec forfait Illimité</span><span className="text-[#c8a94a]">+350 pts</span></div>
-                  <div className="flex justify-between"><span>Forfait Duo (bonus)</span><span className="text-[#c8a94a]">+150 pts</span></div>
-                  <div className="flex justify-between"><span>Parcours partagé</span><span className="text-[#c8a94a]">+100 pts</span></div>
-                  <div className="flex justify-between"><span>Réservation via Baymora</span><span className="text-[#c8a94a]">1€ = 1 pt</span></div>
+                  <div className="flex justify-between items-start">
+                    <span>Parrainage avec souscription forfait</span>
+                    <span className="text-[#c8a94a] text-right leading-tight">+50 pts partagés<br /><span className="text-white/30 text-[10px]">(25 pts chacun)</span></span>
+                  </div>
+                  <div className="flex justify-between"><span>Forfait Standard Duo partagé</span><span className="text-[#c8a94a]">+75 pts</span></div>
+                  <div className="flex justify-between"><span>Forfait Illimité Duo partagé</span><span className="text-[#c8a94a]">+120 pts</span></div>
+                  <div className="flex justify-between"><span>Parcours partagé</span><span className="text-[#c8a94a]">+15 pts</span></div>
+                  <div className="flex justify-between"><span>Réservation via Baymora</span><span className="text-[#c8a94a]">1€ = 4 pts</span></div>
+                  <div className="flex justify-between text-white/30 text-[10px] italic">
+                    <span>Valeur d'un point</span>
+                    <span>0,25 centime d'euro</span>
+                  </div>
                   <div className="border-t border-white/8 pt-2.5 mt-2.5 flex justify-between font-medium">
                     <span className="text-white/70">Accès liste d'attente Club Privé</span>
                     <span className="text-[#c8a94a]">10 000 pts</span>
@@ -536,7 +424,7 @@ export default function Home() {
       </section>
 
       {/* ═══════════════════════════════════════════════
-          PRESTATAIRES B2B — Recevez des clients qualifiés
+          PRESTATAIRES B2B
       ═══════════════════════════════════════════════ */}
       <section className="py-20 md:py-28 bg-[#0a0f1a]">
         <div className="max-w-5xl mx-auto px-6 text-center">
@@ -576,7 +464,7 @@ export default function Home() {
       </section>
 
       {/* ═════════════════════════════════════════════
-          FAQ — Ancres SEO + Google Featured Snippets
+          FAQ
       ═════════════════════════════════════════════ */}
       <section id="faq" className="py-20 md:py-28">
         <div className="max-w-3xl mx-auto px-6">

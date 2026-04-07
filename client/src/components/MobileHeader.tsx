@@ -6,6 +6,13 @@ import { useState } from "react";
 
 const HIDDEN_PATHS = ["/chat", "/pilotage", "/admin", "/team", "/lena"];
 
+const TOP_PILLS = [
+  { label: "Maison", path: "/" },
+  { label: "IA Maya", path: "/chat" },
+  { label: "Offres", path: "/offres" },
+  { label: "Bundles", path: "/bundles" },
+];
+
 export default function MobileHeader() {
   const [location] = useLocation();
   const { user } = useAuth();
@@ -13,13 +20,11 @@ export default function MobileHeader() {
 
   const shouldHide = HIDDEN_PATHS.some((p) => location.startsWith(p));
 
-  // Compter les messages non lus (seulement si connecté)
   const { data: unreadData, refetch: refetchUnread } = trpc.team.getUnreadCount.useQuery(undefined, {
     enabled: !!user,
     refetchInterval: 30000,
   });
 
-  // Récupérer les notifications récentes (seulement quand le drawer est ouvert)
   const { data: notifications } = trpc.team.getRecentNotifications.useQuery(undefined, {
     enabled: !!user && drawerOpen,
   });
@@ -34,19 +39,33 @@ export default function MobileHeader() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 md:hidden bg-[#0d0d14]/95 backdrop-blur-xl border-b border-white/10 pt-[env(safe-area-inset-top)]">
+      <header className="fixed top-0 left-0 right-0 z-50 md:hidden bg-[#0d0d14]/95 backdrop-blur-xl border-b border-white/8 pt-[env(safe-area-inset-top)]">
         <div className="flex items-center justify-between h-12 px-4">
-          <Link href="/">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full border border-amber-500/30 flex items-center justify-center">
-                <span className="text-amber-400 font-bold text-sm" style={{ fontFamily: "'Playfair Display', serif" }}>B</span>
-              </div>
-              <span className="text-white/90 font-semibold text-sm" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Maison Baymora
-              </span>
-            </div>
-          </Link>
-          <div className="flex items-center gap-3">
+          {/* Pilules de navigation Spotify */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
+            {TOP_PILLS.map((pill) => {
+              const isActive =
+                pill.path === "/"
+                  ? location === "/"
+                  : location.startsWith(pill.path);
+              return (
+                <Link key={pill.path} href={pill.path}>
+                  <button
+                    className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                      isActive
+                        ? "bg-white text-[#080c14] font-semibold"
+                        : "bg-white/10 text-white/70 hover:bg-white/15"
+                    }`}
+                  >
+                    {pill.label}
+                  </button>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Actions droite */}
+          <div className="flex items-center gap-3 ml-2 shrink-0">
             <button
               className="relative text-white/50 hover:text-white transition-colors"
               onClick={() => user ? setDrawerOpen(true) : undefined}
@@ -76,14 +95,11 @@ export default function MobileHeader() {
       {/* Drawer notifications */}
       {drawerOpen && (
         <div className="fixed inset-0 z-[100] md:hidden">
-          {/* Overlay */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setDrawerOpen(false)}
           />
-          {/* Panel glissant depuis la droite */}
           <div className="absolute top-0 right-0 h-full w-[85vw] max-w-sm bg-[#0d0d14] border-l border-white/10 flex flex-col">
-            {/* Header du drawer */}
             <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 pt-[calc(env(safe-area-inset-top)+1rem)]">
               <div>
                 <h2 className="text-white font-semibold text-sm" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -111,7 +127,6 @@ export default function MobileHeader() {
               </div>
             </div>
 
-            {/* Liste des notifications */}
             <div className="flex-1 overflow-y-auto">
               {!notifications || notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-white/30 px-6">
@@ -153,7 +168,6 @@ export default function MobileHeader() {
               )}
             </div>
 
-            {/* Footer — lien messagerie terrain */}
             {user && (user.role === "team" || user.role === "admin") && (
               <div className="border-t border-white/10 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
                 <Link href="/team" onClick={() => setDrawerOpen(false)}>

@@ -400,12 +400,13 @@ export default function Pilotage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col">
-      {/* ─── Header ──────────────────────────────────────────────────────── */}
+      {/* ─── Header ─────────────────────────────────────────────────────────────────── */}
       <div className="border-b border-white/10 bg-[#0d0d14] px-3 md:px-6 py-3 flex items-center justify-between flex-shrink-0">
+        {/* Gauche : logo B → page principale */}
         <div className="flex items-center gap-2 md:gap-3">
           <Link href="/">
-            <button className="text-white/40 hover:text-white/70 transition-colors flex items-center gap-1 text-xs md:text-sm">
-              ←
+            <button className="w-8 h-8 rounded-full border border-amber-500/30 flex items-center justify-center hover:border-amber-400/60 transition-colors" title="Retour à l'accueil">
+              <span className="text-amber-400 font-bold text-sm" style={{ fontFamily: "'Playfair Display', serif" }}>B</span>
             </button>
           </Link>
           <div className="flex items-center gap-1.5 md:gap-2">
@@ -414,6 +415,8 @@ export default function Pilotage() {
             <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30 text-xs hidden md:inline-flex">Accès exclusif</Badge>
           </div>
         </div>
+
+        {/* Droite : toggle mobile + bouton LENA */}
         <div className="flex items-center gap-2">
           {/* Toggle mobile chat/panel */}
           <div className="flex md:hidden gap-1">
@@ -424,10 +427,17 @@ export default function Pilotage() {
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
             Manus DG active · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
           </div>
+          {/* Bouton LENA workspace */}
+          <Link href="/lena-workspace">
+            <button className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-300 hover:border-blue-400/60 hover:text-blue-200 transition-all bg-blue-500/5" title="Espace LENA">
+              <span>📍 LÉNA</span>
+              <ExternalLink size={11} />
+            </button>
+          </Link>
         </div>
       </div>
 
-      {/* ─── Corps principal ───────────────────────────────────────────────── */}
+      {/* ─── Corps principal ─────────────────────────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col md:flex-row" style={{ height: "calc(100vh - 57px)", overflow: "hidden" }}>
 
         {/* ─── Chat Manus DG (gauche) ─────────────────────────────────────── */}
