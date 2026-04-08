@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { getLoginUrl } from "@/const";
-import { Sparkles, Star, Shield, Zap, ChevronRight, Users } from "lucide-react";
+import { Sparkles, Shield, Zap, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 const HERO_IMG = `${CDN}/hero_yacht_sunset_b173a771.jpg`;
@@ -15,52 +16,98 @@ const FEATURES = [
   {
     icon: "✨",
     title: "Maya, votre IA de conciergerie",
-    desc: "Dites a Maya ce dont vous revez. Elle cree votre parcours ideal de A a Z : hotel, restaurants, activites, transport.",
+    desc: "Dites à Maya ce dont vous rêvez. Elle crée votre parcours idéal de A à Z : hôtel, restaurants, activités, transport.",
   },
   {
     icon: "🏷️",
-    title: "Jusqu'a -40% sur des adresses premium",
-    desc: "Remises negociees en direct avec les meilleurs etablissements. Exclusif aux membres Baymora.",
+    title: "Jusqu'à -40% sur des adresses premium",
+    desc: "Remises négociées en direct avec les meilleurs établissements. Exclusif aux membres Baymora.",
   },
   {
     icon: "🗺️",
-    title: "Parcours sur-mesure illimites",
-    desc: "Creez, sauvegardez et partagez vos voyages. Chaque parcours est unique, coordonne et personnalise.",
+    title: "Parcours sur-mesure illimités",
+    desc: "Créez, sauvegardez et partagez vos voyages. Chaque parcours est unique, coordonné et personnalisé.",
   },
   {
     icon: "👑",
-    title: "Club prive & evenements",
-    desc: "Acces a des experiences exclusives, des soirees privees et des rencontres entre membres selectifs.",
+    title: "Club privé & évènements",
+    desc: "Accès à des expériences exclusives, des soirées privées et des rencontres entre membres sélectifs.",
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    name: "Camille R.",
-    role: "Membre Social Club",
-    text: "Maya a organise mon voyage a Tokyo en 10 minutes. Hotel, restaurants, activites — tout etait parfait. Je n'aurais jamais trouve ca seule.",
-    rating: 5,
-  },
-  {
-    name: "Alexandre M.",
-    role: "Membre depuis 2024",
-    text: "Les remises sont reelles. J'ai economise 340€ sur mon week-end a Paris. L'abonnement se rembourse en une seule reservation.",
-    rating: 5,
-  },
-  {
-    name: "Sofia L.",
-    role: "Membre Duo",
-    text: "Nous utilisons Baymora pour tous nos voyages en couple. Maya connait nos gouts et ne se trompe jamais. Indispensable.",
-    rating: 5,
-  },
-];
-
+// Chiffres réels — pas de faux témoignages
 const STATS = [
-  { value: "12 000+", label: "Membres actifs" },
-  { value: "340+", label: "Adresses partenaires" },
-  { value: "-35%", label: "Remise moyenne" },
-  { value: "4.9/5", label: "Satisfaction" },
+  { value: "340+", label: "adresses partenaires" },
+  { value: "12", label: "pays couverts" },
+  { value: "-40%", label: "de réduction max" },
+  { value: "4.9/5", label: "satisfaction" },
 ];
+
+const DIFFERENTIATORS = [
+  {
+    icon: <Sparkles size={20} color="#C8A96E" />,
+    title: "Pas une liste. Un accès.",
+    desc: "ChatGPT donne des idées. Maya donne des réservations. Chaque recommandation est liée à un partenaire réel, avec une remise négociée.",
+  },
+  {
+    icon: <Shield size={20} color="#C8A96E" />,
+    title: "Vos données, vos règles.",
+    desc: "Pseudonyme possible. Suppression totale à tout moment. Hébergé en Europe. Conforme RGPD.",
+  },
+  {
+    icon: <Zap size={20} color="#C8A96E" />,
+    title: "Rapide comme un SMS.",
+    desc: "Décrivez votre voyage en 2 phrases. Maya vous propose 3 scénarios complets en moins de 30 secondes.",
+  },
+];
+
+const FAQ = [
+  {
+    q: "Qu'est-ce que Maison Baymora ?",
+    a: "Maison Baymora est un social club virtuel premium qui connecte les voyageurs exigeants aux meilleures adresses du monde. Notre assistante Maya, propulsée par l'intelligence artificielle, crée des parcours sur-mesure : hôtels 5 étoiles, restaurants gastronomiques, activités exclusives et transport — le tout personnalisé selon votre profil.",
+  },
+  {
+    q: "Comment Maya crée-t-elle un parcours sur-mesure ?",
+    a: "Maya analyse vos préférences, votre budget, vos dates et votre cercle de proches. Elle propose 3 scénarios (Essentiel, Premium, Excellence) avec hébergement, restaurants, activités et transport. Chaque parcours est unique et réservable en quelques clics.",
+  },
+  {
+    q: "Quels types d'hôtels propose Maison Baymora ?",
+    a: "Exclusivement des établissements 4 et 5 étoiles : palaces, boutique-hôtels de caractère, resorts avec piscine, spa ou jacuzzi. Toujours dans des grandes villes ou des destinations prisées, en France et à l'international.",
+  },
+  {
+    q: "Les réductions sont-elles réelles ?",
+    a: "Oui. Nous négocions en direct avec chaque établissement partenaire. Les remises vont de -15% à -40% sur des hôtels et restaurants premium. Ce sont des offres exclusives réservées aux membres Maison Baymora.",
+  },
+  {
+    q: "Maison Baymora est-il gratuit ?",
+    a: "Le forfait Découverte est entièrement gratuit : 3 conversations avec Maya et accès à toutes les offres avec remise. Le Social Club à 9,90€/mois offre un accès illimité à Maya, aux parcours sur-mesure et aux avantages exclusifs.",
+  },
+  {
+    q: "Dans quels pays Maison Baymora est-il disponible ?",
+    a: "Maya couvre le monde entier : France, Europe, États-Unis, Asie, Moyen-Orient. Les offres avec remise sont concentrées sur la France et l'Europe, avec une expansion internationale en cours.",
+  },
+  {
+    q: "Mes données sont-elles protégées ?",
+    a: "Pseudonyme possible, suppression totale à tout moment, données hébergées en Europe. Aucun partage avec des tiers. Maison Baymora est conforme au RGPD.",
+  },
+  {
+    q: "Puis-je partager mon parcours avec mes proches ?",
+    a: "Oui. Envoyez votre parcours par lien, email ou PDF. Vos proches peuvent créer un compte gratuit pour collaborer et modifier le parcours ensemble.",
+  },
+  {
+    q: "Quelle est la différence avec ChatGPT ?",
+    a: "ChatGPT donne des listes. Maya donne un accès : des réductions réelles négociées, des réservations en un clic, une mémoire de vos préférences, et un réseau de partenaires physiques.",
+  },
+  {
+    q: "Comment devenir partenaire Maison Baymora ?",
+    a: "Si vous êtes un hôtel, restaurant, spa ou prestataire d'expériences premium, rejoignez le réseau Maison Baymora pour toucher une clientèle exigeante et qualifiée. Contactez-nous depuis l'app.",
+  },
+];
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.55 } },
+};
 
 export default function Landing() {
   const loginUrl = getLoginUrl("/maison");
@@ -88,11 +135,7 @@ export default function Landing() {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <a
-            href={loginUrl}
-            className="text-sm font-medium px-4 py-2 rounded-full"
-            style={{ color: "#8B8D94" }}
-          >
+          <a href={loginUrl} className="text-sm font-medium px-4 py-2 rounded-full" style={{ color: "#8B8D94" }}>
             Se connecter
           </a>
           <a
@@ -113,28 +156,32 @@ export default function Landing() {
         />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(135deg, rgba(7,11,20,0.85) 0%, rgba(7,11,20,0.6) 50%, rgba(7,11,20,0.8) 100%)" }}
+          style={{ background: "linear-gradient(135deg, rgba(7,11,20,0.88) 0%, rgba(7,11,20,0.6) 50%, rgba(7,11,20,0.82) 100%)" }}
         />
-
-        <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
+        <motion.div
+          className="relative z-10 text-center px-4 max-w-3xl mx-auto"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+        >
           <div
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold mb-6"
             style={{ background: "rgba(200, 169, 110, 0.15)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.3)" }}
           >
             <Sparkles size={12} />
-            Club prive de conciergerie IA
+            Club privé de conciergerie IA
           </div>
 
           <h1
             className="text-4xl md:text-6xl font-bold mb-4 leading-tight"
             style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
           >
-            Vivez les experiences
-            <span className="block" style={{ color: "#C8A96E" }}>que vous meritez</span>
+            Le concierge
+            <span className="block" style={{ color: "#C8A96E" }}>que vous méritez.</span>
           </h1>
 
           <p className="text-base md:text-lg mb-8 max-w-xl mx-auto" style={{ color: "rgba(240, 237, 230, 0.7)" }}>
-            Maya, votre IA de conciergerie, cree vos voyages sur-mesure et negocie pour vous jusqu'a -40% dans les meilleurs etablissements du monde.
+            Maya crée vos voyages sur-mesure et négocie pour vous jusqu'à -40% dans les meilleurs établissements du monde.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -144,7 +191,7 @@ export default function Landing() {
               style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
             >
               <Sparkles size={18} />
-              Parler a Maya gratuitement
+              Parler à Maya gratuitement
             </a>
             <Link href="/offres">
               <button
@@ -160,16 +207,22 @@ export default function Landing() {
           <p className="text-xs mt-4" style={{ color: "#8B8D94" }}>
             3 conversations gratuites · Sans carte bancaire
           </p>
-        </div>
+        </motion.div>
 
-        {/* Scroll indicator */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
           <div className="w-0.5 h-8 rounded-full" style={{ background: "rgba(200, 169, 110, 0.3)" }} />
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-12 px-4" style={{ borderTop: "1px solid rgba(200, 169, 110, 0.08)" }}>
+      {/* Chiffres réels */}
+      <motion.section
+        className="py-12 px-4"
+        style={{ borderTop: "1px solid rgba(200, 169, 110, 0.08)" }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={sectionVariants}
+      >
         <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
           {STATS.map((stat) => (
             <div key={stat.label} className="text-center">
@@ -183,10 +236,16 @@ export default function Landing() {
             </div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {/* Galerie adresses */}
-      <section className="py-12 px-4">
+      <motion.section
+        className="py-12 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
         <div className="max-w-5xl mx-auto">
           <h2
             className="text-2xl md:text-3xl font-bold text-center mb-2"
@@ -195,21 +254,25 @@ export default function Landing() {
             Des adresses d'exception
           </h2>
           <p className="text-sm text-center mb-8" style={{ color: "#8B8D94" }}>
-            Selectionnees et negociees par notre equipe
+            Sélectionnées et négociées par notre équipe
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              { img: HOTEL_IMG, name: "Plaza Athenee", city: "Paris", pct: 28 },
+              { img: HOTEL_IMG, name: "Plaza Athénée", city: "Paris", pct: 28 },
               { img: SPA_IMG, name: "Four Seasons", city: "Bali", pct: 35 },
-              { img: SANTORINI_IMG, name: "Canaves Oia", city: "Santorini", pct: 22 },
+              { img: SANTORINI_IMG, name: "Canaves Oia", city: "Santorin", pct: 22 },
               { img: TOKYO_IMG, name: "Aman Tokyo", city: "Tokyo", pct: 15 },
               { img: MARRAKECH_IMG, name: "La Mamounia", city: "Marrakech", pct: 18 },
               { img: GASTRO_IMG, name: "Le Cinq", city: "Paris", pct: 22 },
             ].map((item, i) => (
-              <div
+              <motion.div
                 key={i}
                 className="relative rounded-2xl overflow-hidden card-hover cursor-pointer"
                 style={{ paddingTop: "66.67%" }}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08, duration: 0.4 }}
               >
                 <img src={item.img} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.8) 0%, transparent 50%)" }} />
@@ -223,90 +286,117 @@ export default function Landing() {
                   <div className="text-sm font-semibold" style={{ color: "#F0EDE6", fontFamily: "'Playfair Display', serif" }}>{item.name}</div>
                   <div className="text-xs" style={{ color: "#8B8D94" }}>{item.city}</div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Features */}
-      <section className="py-12 px-4">
+      <motion.section
+        className="py-12 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
         <div className="max-w-5xl mx-auto">
           <h2
             className="text-2xl md:text-3xl font-bold text-center mb-2"
             style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
           >
-            Tout ce que vous meritez
+            Tout ce que vous méritez
           </h2>
           <p className="text-sm text-center mb-10" style={{ color: "#8B8D94" }}>
-            Un club concu pour les personnes qui exigent le meilleur
+            Un club conçu pour les personnes qui exigent le meilleur
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {FEATURES.map((feature, i) => (
-              <div
+              <motion.div
                 key={i}
                 className="rounded-2xl p-5 flex gap-4"
                 style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.1)" }}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.4 }}
               >
                 <div className="text-3xl flex-shrink-0">{feature.icon}</div>
                 <div>
                   <h3 className="font-semibold mb-1" style={{ color: "#F0EDE6" }}>{feature.title}</h3>
                   <p className="text-sm leading-relaxed" style={{ color: "#8B8D94" }}>{feature.desc}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Temoignages */}
-      <section className="py-12 px-4">
-        <div className="max-w-5xl mx-auto">
-          <h2
-            className="text-2xl md:text-3xl font-bold text-center mb-8"
-            style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
-          >
-            Ce que disent nos membres
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((t, i) => (
-              <div
-                key={i}
-                className="rounded-2xl p-5"
-                style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.1)" }}
-              >
-                <div className="flex gap-0.5 mb-3">
-                  {Array.from({ length: t.rating }).map((_, j) => (
-                    <Star key={j} size={12} color="#C8A96E" fill="#C8A96E" />
-                  ))}
-                </div>
-                <p className="text-sm leading-relaxed mb-4" style={{ color: "#8B8D94" }}>"{t.text}"</p>
-                <div>
-                  <div className="text-sm font-semibold" style={{ color: "#F0EDE6" }}>{t.name}</div>
-                  <div className="text-xs" style={{ color: "#C8A96E" }}>{t.role}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing simplifie */}
-      <section className="py-12 px-4">
-        <div className="max-w-3xl mx-auto">
+      {/* Différenciateurs — remplace les faux témoignages */}
+      <motion.section
+        className="py-12 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
+        <div className="max-w-4xl mx-auto">
           <h2
             className="text-2xl md:text-3xl font-bold text-center mb-2"
             style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
           >
-            Choisissez votre acces
+            Pourquoi Maison Baymora ?
           </h2>
           <p className="text-sm text-center mb-8" style={{ color: "#8B8D94" }}>
-            Commencez gratuitement, evoluez a votre rythme
+            Ce qui nous rend différents
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {DIFFERENTIATORS.map((d, i) => (
+              <motion.div
+                key={i}
+                className="rounded-2xl p-5"
+                style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.1)" }}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.12, duration: 0.4 }}
+              >
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                  style={{ background: "rgba(200, 169, 110, 0.1)" }}
+                >
+                  {d.icon}
+                </div>
+                <h3 className="font-semibold mb-2" style={{ color: "#F0EDE6" }}>{d.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: "#8B8D94" }}>{d.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Pricing */}
+      <motion.section
+        className="py-12 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
+        <div className="max-w-4xl mx-auto">
+          <h2
+            className="text-2xl md:text-3xl font-bold text-center mb-2"
+            style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
+          >
+            Choisissez votre accès
+          </h2>
+          <p className="text-sm text-center mb-8" style={{ color: "#8B8D94" }}>
+            Commencez gratuitement, évoluez à votre rythme
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[
               {
-                name: "Decouverte",
+                name: "Découverte",
                 price: "Gratuit",
                 features: ["3 conversations Maya", "Offres avec remise", "1 parcours essai"],
                 highlight: false,
@@ -315,32 +405,36 @@ export default function Landing() {
               {
                 name: "Social Club",
                 price: "9,90€/mois",
-                features: ["Maya illimitee", "Parcours illimites", "Offres exclusives", "Evenements prives"],
+                features: ["Maya illimitée", "Parcours illimités", "Offres exclusives", "Évènements privés"],
                 highlight: true,
                 cta: "Rejoindre le Club",
               },
               {
                 name: "Duo",
                 price: "14,90€/mois",
-                features: ["Tout Social Club", "2 profils lies", "Parcours en commun"],
+                features: ["Tout Social Club", "2 profils liés", "Parcours en commun"],
                 highlight: false,
                 cta: "Choisir Duo",
               },
               {
                 name: "Annuel",
                 price: "89€/an",
-                features: ["Social Club 12 mois", "25% de reduction", "Acces prioritaire", "Cadeau de bienvenue"],
+                features: ["Social Club 12 mois", "25% de réduction", "Accès prioritaire", "Cadeau de bienvenue"],
                 highlight: false,
-                cta: "Economiser 25%",
+                cta: "Économiser 25%",
               },
             ].map((plan, i) => (
-              <div
+              <motion.div
                 key={i}
                 className="rounded-2xl p-5"
                 style={{
                   background: plan.highlight ? "rgba(200, 169, 110, 0.06)" : "#0D1117",
                   border: plan.highlight ? "1px solid rgba(200, 169, 110, 0.35)" : "1px solid rgba(200, 169, 110, 0.1)",
                 }}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.4 }}
               >
                 <h3 className="font-bold mb-1" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>{plan.name}</h3>
                 <div className="text-xl font-bold mb-3" style={{ color: plan.highlight ? "#C8A96E" : "#F0EDE6" }}>{plan.price}</div>
@@ -364,14 +458,54 @@ export default function Landing() {
                     {plan.cta}
                   </button>
                 </a>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
+
+      {/* FAQ */}
+      <motion.section
+        className="py-12 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
+        <div className="max-w-2xl mx-auto">
+          <h2
+            className="text-2xl md:text-3xl font-bold text-center mb-8"
+            style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
+          >
+            Questions fréquentes
+          </h2>
+          <div className="space-y-3">
+            {FAQ.map((item, i) => (
+              <motion.div
+                key={i}
+                className="rounded-xl p-4"
+                style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.1)" }}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.05, duration: 0.35 }}
+              >
+                <h3 className="font-medium text-sm mb-2" style={{ color: "#F0EDE6" }}>{item.q}</h3>
+                <p className="text-xs leading-relaxed" style={{ color: "#8B8D94" }}>{item.a}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
 
       {/* CTA final */}
-      <section className="py-16 px-4">
+      <motion.section
+        className="py-16 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        variants={sectionVariants}
+      >
         <div className="max-w-2xl mx-auto text-center">
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
@@ -383,10 +517,10 @@ export default function Landing() {
             className="text-2xl md:text-3xl font-bold mb-3"
             style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
           >
-            Pret a vivre autrement ?
+            Prêt à vivre autrement ?
           </h2>
           <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>
-            Rejoignez 12 000 membres qui voyagent mieux, pour moins cher.
+            Rejoignez les membres qui voyagent mieux, pour moins cher.
           </p>
           <a
             href={loginUrl}
@@ -397,10 +531,10 @@ export default function Landing() {
             Commencer gratuitement
           </a>
           <p className="text-xs mt-3" style={{ color: "#8B8D94" }}>
-            Sans carte bancaire · Annulation a tout moment
+            Sans carte bancaire · Annulation à tout moment
           </p>
         </div>
-      </section>
+      </motion.section>
 
       {/* Footer */}
       <footer className="px-4 py-8" style={{ borderTop: "1px solid rgba(200, 169, 110, 0.08)" }}>
@@ -415,12 +549,12 @@ export default function Landing() {
             <span className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Maison Baymora</span>
           </div>
           <div className="flex gap-5 text-xs" style={{ color: "#8B8D94" }}>
-            <a href="#" className="hover:text-[#C8A96E] transition-colors">Mentions legales</a>
-            <a href="#" className="hover:text-[#C8A96E] transition-colors">Confidentialite</a>
+            <a href="#" className="hover:text-[#C8A96E] transition-colors">Mentions légales</a>
+            <a href="#" className="hover:text-[#C8A96E] transition-colors">Confidentialité</a>
             <a href="#" className="hover:text-[#C8A96E] transition-colors">CGU</a>
             <a href="#" className="hover:text-[#C8A96E] transition-colors">Contact</a>
           </div>
-          <span className="text-xs" style={{ color: "#8B8D94" }}>© 2025 Maison Baymora</span>
+          <span className="text-xs" style={{ color: "#8B8D94" }}>© 2026 Maison Baymora</span>
         </div>
       </footer>
     </div>

@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Heart, Sparkles, Star } from "lucide-react";
+import { Heart, Sparkles, MapPin } from "lucide-react";
+import { motion } from "framer-motion";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 
 const OFFRES = [
   {
     id: "plaza-athenee",
-    name: "Hotel Plaza Athenee",
-    type: "Hotels",
+    name: "Hôtel Plaza Athénée",
+    type: "Hôtels",
     city: "Paris",
     quartier: "8e arrondissement",
-    tags: ["Piscine", "Spa", "Suite", "Restaurant etoile"],
+    tags: ["Piscine", "Spa", "Suite", "Restaurant étoilé"],
     pct: 28,
     price: "680€",
     original: "940€",
@@ -22,10 +23,10 @@ const OFFRES = [
   {
     id: "four-seasons-bali",
     name: "Four Seasons Bali",
-    type: "Hotels",
+    type: "Hôtels",
     city: "Bali",
     quartier: "Ubud",
-    tags: ["Piscine privee", "Spa", "Villa", "Riziere"],
+    tags: ["Piscine privée", "Spa", "Villa", "Rizière"],
     pct: 35,
     price: "520€",
     original: "800€",
@@ -36,9 +37,9 @@ const OFFRES = [
   {
     id: "mamounia",
     name: "La Mamounia",
-    type: "Hotels",
+    type: "Hôtels",
     city: "Marrakech",
-    quartier: "Medina",
+    quartier: "Médina",
     tags: ["Hammam", "Piscine", "Jardin", "Palace"],
     pct: 18,
     price: "420€",
@@ -50,10 +51,10 @@ const OFFRES = [
   {
     id: "canaves-oia",
     name: "Canaves Oia",
-    type: "Hotels",
-    city: "Santorini",
+    type: "Hôtels",
+    city: "Santorin",
     quartier: "Oia",
-    tags: ["Piscine a debordement", "Vue mer", "Suite"],
+    tags: ["Piscine à débordement", "Vue mer", "Suite"],
     pct: 22,
     price: "650€",
     original: "830€",
@@ -64,7 +65,7 @@ const OFFRES = [
   {
     id: "aman-tokyo",
     name: "Aman Tokyo",
-    type: "Hotels",
+    type: "Hôtels",
     city: "Tokyo",
     quartier: "Otemachi",
     tags: ["Spa", "Piscine", "Vue panoramique", "Luxe"],
@@ -80,7 +81,7 @@ const OFFRES = [
     name: "Hammam de la Rose",
     type: "Spas",
     city: "Marrakech",
-    quartier: "Medina",
+    quartier: "Médina",
     tags: ["Hammam", "Soins", "Rituel"],
     pct: 30,
     price: "85€",
@@ -109,7 +110,7 @@ const OFFRES = [
     type: "Restaurants",
     city: "Paris",
     quartier: "8e arrondissement",
-    tags: ["3 etoiles Michelin", "Gastronomie", "Cave"],
+    tags: ["3 étoiles Michelin", "Gastronomie", "Cave"],
     pct: 22,
     price: "280€",
     original: "360€",
@@ -123,7 +124,7 @@ const OFFRES = [
     type: "Restaurants",
     city: "New York",
     quartier: "Midtown",
-    tags: ["3 etoiles Michelin", "Fruits de mer", "Luxe"],
+    tags: ["3 étoiles Michelin", "Fruits de mer", "Luxe"],
     pct: 20,
     price: "320€",
     original: "400€",
@@ -133,9 +134,9 @@ const OFFRES = [
   },
   {
     id: "sunset-cruise",
-    name: "Sunset Cruise Santorini",
-    type: "Experiences",
-    city: "Santorini",
+    name: "Sunset Cruise Santorin",
+    type: "Expériences",
+    city: "Santorin",
     quartier: "Oia",
     tags: ["Coucher de soleil", "Catamaran", "Champagne"],
     pct: 15,
@@ -147,11 +148,11 @@ const OFFRES = [
   },
   {
     id: "helicopter-ny",
-    name: "Tour en Helicoptere NYC",
-    type: "Experiences",
+    name: "Tour en Hélicoptère NYC",
+    type: "Expériences",
     city: "New York",
     quartier: "Manhattan",
-    tags: ["Vue aerienne", "Manhattan", "Coucher de soleil"],
+    tags: ["Vue aérienne", "Manhattan", "Coucher de soleil"],
     pct: 10,
     price: "280€",
     original: "310€",
@@ -161,9 +162,9 @@ const OFFRES = [
   },
   {
     id: "wine-santorini",
-    name: "Degustation de vins",
-    type: "Experiences",
-    city: "Santorini",
+    name: "Dégustation de vins",
+    type: "Expériences",
+    city: "Santorin",
     quartier: "Pyrgos",
     tags: ["Vin local", "Coucher de soleil", "Gastronomie"],
     pct: 20,
@@ -175,13 +176,19 @@ const OFFRES = [
   },
 ];
 
-const FILTERS = ["Tout", "Hotels", "Spas", "Restaurants", "Experiences"];
+const FILTERS_TYPE = ["Tout", "Hôtels", "Spas", "Restaurants", "Expériences"];
+const FILTERS_CITY = ["Toutes", "Paris", "Côte d'Azur", "International"];
 
 export default function Offres() {
-  const [activeFilter, setActiveFilter] = useState("Tout");
+  const [activeType, setActiveType] = useState("Tout");
+  const [activeCity, setActiveCity] = useState("Toutes");
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  const filtered = activeFilter === "Tout" ? OFFRES : OFFRES.filter((o) => o.type === activeFilter);
+  const filtered = OFFRES.filter((o) => {
+    const matchType = activeType === "Tout" || o.type === activeType;
+    const matchCity = activeCity === "Toutes" || o.city === activeCity;
+    return matchType && matchCity;
+  });
 
   const toggleFav = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -202,27 +209,48 @@ export default function Offres() {
           className="text-2xl md:text-3xl font-bold mb-1"
           style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
         >
-          Offres exclusives
+          Luxe accessible
         </h1>
-        <p className="text-sm" style={{ color: "#8B8D94" }}>Reductions negociees en direct</p>
+        <p className="text-sm" style={{ color: "#8B8D94" }}>Des adresses d'exception, négociées pour vous.</p>
       </div>
 
-      {/* Filtres pills */}
-      <div className="px-4 mb-4">
+      {/* Filtres type */}
+      <div className="px-4 mb-2">
         <div className="max-w-5xl mx-auto flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          {FILTERS.map((f) => (
+          {FILTERS_TYPE.map((f) => (
             <button
               key={f}
               className="pill-item flex-shrink-0"
               style={{
-                background: activeFilter === f ? "linear-gradient(135deg, #C8A96E, #E8D5A8)" : "rgba(200, 169, 110, 0.08)",
-                color: activeFilter === f ? "#070B14" : "#8B8D94",
-                border: activeFilter === f ? "none" : "1px solid rgba(200, 169, 110, 0.15)",
-                fontWeight: activeFilter === f ? 600 : 400,
+                background: activeType === f ? "linear-gradient(135deg, #C8A96E, #E8D5A8)" : "rgba(200, 169, 110, 0.08)",
+                color: activeType === f ? "#070B14" : "#8B8D94",
+                border: activeType === f ? "none" : "1px solid rgba(200, 169, 110, 0.15)",
+                fontWeight: activeType === f ? 600 : 400,
               }}
-              onClick={() => setActiveFilter(f)}
+              onClick={() => setActiveType(f)}
             >
               {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Filtres villes */}
+      <div className="px-4 mb-4">
+        <div className="max-w-5xl mx-auto flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+          {FILTERS_CITY.map((c) => (
+            <button
+              key={c}
+              className="flex-shrink-0 flex items-center gap-1 text-xs px-3 py-1.5 rounded-full"
+              style={{
+                background: activeCity === c ? "rgba(200, 169, 110, 0.15)" : "transparent",
+                color: activeCity === c ? "#C8A96E" : "#8B8D94",
+                border: activeCity === c ? "1px solid rgba(200, 169, 110, 0.35)" : "1px solid rgba(200, 169, 110, 0.08)",
+              }}
+              onClick={() => setActiveCity(c)}
+            >
+              {c !== "Toutes" && <MapPin size={10} />}
+              {c}
             </button>
           ))}
         </div>
@@ -236,8 +264,8 @@ export default function Offres() {
         >
           <div className="text-2xl">🏷️</div>
           <div>
-            <div className="text-sm font-semibold" style={{ color: "#F0EDE6" }}>Jusqu'a -40% sur des hotels premium</div>
-            <div className="text-xs" style={{ color: "#8B8D94" }}>Offres negociees en exclusivite pour les membres Baymora</div>
+            <div className="text-sm font-semibold" style={{ color: "#F0EDE6" }}>Jusqu'à -40% sur des hôtels premium</div>
+            <div className="text-xs" style={{ color: "#8B8D94" }}>Offres négociées en exclusivité pour les membres Baymora</div>
           </div>
         </div>
       </div>
@@ -245,8 +273,15 @@ export default function Offres() {
       {/* Grid */}
       <div className="px-4 pb-8">
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-4">
-          {filtered.map((offer) => (
-            <Link key={offer.id} href={`/lieu/${offer.id}`}>
+          {filtered.length === 0 && (
+            <div className="col-span-2 md:col-span-3 text-center py-12" style={{ color: "#8B8D94" }}>
+              <p className="text-sm">Aucune offre pour cette sélection.</p>
+              <button className="mt-3 text-xs" style={{ color: "#C8A96E" }} onClick={() => { setActiveType("Tout"); setActiveCity("Toutes"); }}>Réinitialiser les filtres</button>
+            </div>
+          )}
+          {filtered.map((offer, idx) => (
+            <motion.div key={offer.id} initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.07, duration: 0.4 }}>
+            <Link href={`/lieu/${offer.id}`}>
               <div
                 className="rounded-2xl overflow-hidden card-hover cursor-pointer"
                 style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.12)" }}
@@ -268,12 +303,12 @@ export default function Offres() {
                   </div>
                   {/* Badge Baymora */}
                   {offer.featured && (
-                    <div
-                      className="absolute top-2 left-14 px-2 py-0.5 rounded-full text-[10px] font-bold"
-                      style={{ background: "rgba(200, 169, 110, 0.9)", color: "#070B14" }}
-                    >
-                      Selection Baymora
-                    </div>
+              <div
+                className="absolute top-2 left-14 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                style={{ background: "rgba(200, 169, 110, 0.9)", color: "#070B14" }}
+              >
+                Sélection Baymora
+              </div>
                   )}
                   {/* Favoris */}
                   <button
@@ -323,6 +358,7 @@ export default function Offres() {
                 </div>
               </div>
             </Link>
+            </motion.div>
           ))}
         </div>
 
@@ -346,7 +382,7 @@ export default function Offres() {
                 Envie d'un parcours complet ?
               </p>
               <p className="text-xs" style={{ color: "#8B8D94" }}>
-                Maya integre ces offres dans un voyage sur-mesure.
+                Maya intègre ces offres dans un voyage sur-mesure.
               </p>
             </div>
             <Link href="/maya">
@@ -354,7 +390,7 @@ export default function Offres() {
                 className="px-5 py-2.5 rounded-full text-sm font-semibold flex-shrink-0"
                 style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
               >
-                Parler a Maya
+                Parler à Maya
               </button>
             </Link>
           </div>

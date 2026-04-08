@@ -1,9 +1,9 @@
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Home, Search, Sparkles, Crown, User, Star, Compass } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
-const LOGO = `${CDN}/baymora_logo_1c0fc185.png`;
 
 const NAV_ITEMS = [
   { path: "/maison", label: "Maison", icon: Home },
@@ -30,6 +30,18 @@ const TOP_PILLS = [
 
 function BottomNav() {
   const [location] = useLocation();
+  const [mayaOpened, setMayaOpened] = useState(false);
+
+  useEffect(() => {
+    const opened = localStorage.getItem("baymora_maya_opened");
+    if (opened === "true") setMayaOpened(true);
+  }, []);
+
+  const handleMayaClick = () => {
+    localStorage.setItem("baymora_maya_opened", "true");
+    setMayaOpened(true);
+  };
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
@@ -47,15 +59,26 @@ function BottomNav() {
           if (item.center) {
             return (
               <Link key={item.path} href={item.path}>
-                <div className="flex flex-col items-center -mt-5">
-                  <div
-                    className="w-14 h-14 rounded-full flex items-center justify-center"
-                    style={{
-                      background: "linear-gradient(135deg, #C8A96E 0%, #E8D5A8 100%)",
-                      boxShadow: "0 0 20px rgba(200, 169, 110, 0.4)",
-                    }}
-                  >
-                    <Icon size={24} color="#070B14" strokeWidth={2.5} />
+                <div className="flex flex-col items-center -mt-5" onClick={handleMayaClick}>
+                  <div className="relative">
+                    <div
+                      className="w-14 h-14 rounded-full flex items-center justify-center animate-pulse-gold"
+                      style={{
+                        background: "linear-gradient(135deg, #C8A96E 0%, #E8D5A8 100%)",
+                        boxShadow: "0 0 20px rgba(200, 169, 110, 0.4)",
+                      }}
+                    >
+                      <Icon size={24} color="#070B14" strokeWidth={2.5} />
+                    </div>
+                    {/* Badge rouge si Maya jamais ouverte */}
+                    {!mayaOpened && (
+                      <div
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                        style={{ background: "#ef4444", color: "white", border: "2px solid #070B14" }}
+                      >
+                        1
+                      </div>
+                    )}
                   </div>
                   <span className="text-[10px] mt-1 font-medium" style={{ color: "#C8A96E" }}>{item.label}</span>
                 </div>
@@ -189,7 +212,7 @@ function Sidebar() {
                 {user.name || user.email || "Membre"}
               </div>
               <div className="text-[10px]" style={{ color: "#C8A96E" }}>
-                {user.subscriptionTier === "free" ? "Decouverte" : user.subscriptionTier === "explorer" ? "Social Club" : "Premium"}
+                {user.subscriptionTier === "free" ? "Découverte" : user.subscriptionTier === "explorer" ? "Social Club" : "Illimité"}
               </div>
             </div>
           </div>

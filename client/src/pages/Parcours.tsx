@@ -14,8 +14,8 @@ const MOCK_PARCOURS = [
     duration: "2 nuits",
     budget: "1 800€",
     steps: 5,
-    status: "valide" as const,
-    visibility: "prive" as const,
+    status: "validé" as const,
+    visibility: "privé" as const,
     img: `${CDN}/baymora-plaza-athenee-paris-UQttpWbf4KhLKFavhpDju8.webp`,
     shared: 0,
   },
@@ -28,7 +28,7 @@ const MOCK_PARCOURS = [
     budget: "3 200€",
     steps: 8,
     status: "brouillon" as const,
-    visibility: "prive" as const,
+    visibility: "privé" as const,
     img: `${CDN}/baymora-four-seasons-bali-3GtU7HyX7Q4FxXXuxAFiJE.webp`,
     shared: 0,
   },
@@ -41,7 +41,7 @@ const MOCK_PARCOURS = [
     budget: "4 500€",
     steps: 10,
     status: "en_cours" as const,
-    visibility: "partage" as const,
+    visibility: "partagé" as const,
     img: `${CDN}/baymora-aman-tokyo-aZXaYUrFDjjHKPFBHjghJ9.webp`,
     shared: 2,
   },
@@ -49,23 +49,23 @@ const MOCK_PARCOURS = [
 
 const STATUS_CONFIG = {
   brouillon: { label: "Brouillon", color: "#d97706", bg: "rgba(217, 119, 6, 0.12)" },
-  valide: { label: "Valide", color: "#16a34a", bg: "rgba(22, 163, 74, 0.12)" },
+  validé: { label: "Validé", color: "#16a34a", bg: "rgba(22, 163, 74, 0.12)" },
   en_cours: { label: "En cours", color: "#2563eb", bg: "rgba(37, 99, 235, 0.12)" },
-  partage: { label: "Partage", color: "#C8A96E", bg: "rgba(200, 169, 110, 0.12)" },
+  partagé: { label: "Partagé", color: "#C8A96E", bg: "rgba(200, 169, 110, 0.12)" },
 };
 
-const TABS = ["Tous", "Brouillons", "Valides", "Partages"];
+const TABS = ["Tous", "Brouillons", "Validés", "Partagés"];
 
 export default function Parcours() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("Tous");
+  const [activéTab, setActivéTab] = useState("Tous");
 
   const isFree = !user || user.subscriptionTier === "free";
 
   if (isFree) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center px-4"
+        className="min-h-scréén flex items-center justify-center px-4"
         style={{ background: "#070B14" }}
       >
         <div
@@ -85,7 +85,7 @@ export default function Parcours() {
             Passez au Social Club
           </h2>
           <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>
-            Les parcours sur-mesure illimites sont reserves aux membres Social Club. Creez, sauvegardez et partagez vos voyages de reve.
+            Les parcours sur-mesure illimités sont réserves aux membres Social Club. Crééz, sauvegardéz et partagéz vos voyages de reve.
           </p>
           <Link href="/profil">
             <button
@@ -109,10 +109,10 @@ export default function Parcours() {
   }
 
   const filtered = MOCK_PARCOURS.filter((p) => {
-    if (activeTab === "Tous") return true;
-    if (activeTab === "Brouillons") return p.status === "brouillon";
-    if (activeTab === "Valides") return p.status === "valide";
-    if (activeTab === "Partages") return p.visibility === "partage";
+    if (activéTab === "Tous") return true;
+    if (activéTab === "Brouillons") return p.status === "brouillon";
+    if (activéTab === "Validés") return p.status === "validé";
+    if (activéTab === "Partagés") return p.visibility === "partagé";
     return true;
   });
 
@@ -150,12 +150,12 @@ export default function Parcours() {
               key={tab}
               className="pill-item flex-shrink-0"
               style={{
-                background: activeTab === tab ? "linear-gradient(135deg, #C8A96E, #E8D5A8)" : "rgba(200, 169, 110, 0.08)",
-                color: activeTab === tab ? "#070B14" : "#8B8D94",
-                border: activeTab === tab ? "none" : "1px solid rgba(200, 169, 110, 0.15)",
-                fontWeight: activeTab === tab ? 600 : 400,
+                background: activéTab === tab ? "linear-gradient(135deg, #C8A96E, #E8D5A8)" : "rgba(200, 169, 110, 0.08)",
+                color: activéTab === tab ? "#070B14" : "#8B8D94",
+                border: activéTab === tab ? "none" : "1px solid rgba(200, 169, 110, 0.15)",
+                fontWeight: activéTab === tab ? 600 : 400,
               }}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => setActivéTab(tab)}
             >
               {tab}
             </button>
@@ -170,13 +170,13 @@ export default function Parcours() {
             <div className="text-center py-16">
               <div className="text-4xl mb-4">🗺️</div>
               <h3 className="font-semibold mb-2" style={{ color: "#F0EDE6" }}>Aucun parcours</h3>
-              <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>Creez un parcours avec Maya</p>
+              <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>Crééz un parcours avec Maya</p>
               <Link href="/maya">
                 <button
                   className="px-6 py-3 rounded-full text-sm font-semibold"
                   style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
                 >
-                  Creer avec Maya →
+                  Créér avec Maya →
                 </button>
               </Link>
             </div>
@@ -203,7 +203,7 @@ export default function Parcours() {
                       </div>
                       {/* Visibility */}
                       <div className="absolute top-3 right-3">
-                        {parcours.visibility === "partage" ? (
+                        {parcours.visibility === "partagé" ? (
                           <Globe size={14} color="rgba(200,169,110,0.8)" />
                         ) : (
                           <Lock size={14} color="rgba(139,141,148,0.8)" />

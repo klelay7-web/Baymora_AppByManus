@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Sparkles, ChevronRight, Heart, MapPin, Star, Users, Gift } from "lucide-react";
+import { Sparkles, ChevronRight, Heart, Star, Gift } from "lucide-react";
+import { motion } from "framer-motion";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 const HERO_IMG = `${CDN}/hero_yacht_sunset_b173a771.jpg`;
@@ -14,9 +15,9 @@ const ROOFTOP_IMG = `${CDN}/baymora-attiko-ny-ksKuanCuwityQbAeuoUSBB.webp`;
 
 const BUNDLES = [
   { title: "5 rooftops secrets de Paris", tag: "Paris", count: 5, img: HOTEL_IMG },
-  { title: "Hotels 5* avec piscine", tag: "Mondial", count: 12, img: HERO_IMG },
-  { title: "Tables etoilees abordables", tag: "Gastronomie", count: 8, img: GASTRO_IMG },
-  { title: "Spas & bien-etre", tag: "Detente", count: 9, img: SPA_IMG },
+  { title: "Hôtels 5* avec piscine", tag: "Mondial", count: 12, img: HERO_IMG },
+  { title: "Tables étoilées abordables", tag: "Gastronomie", count: 8, img: GASTRO_IMG },
+  { title: "Spas & bien-être", tag: "Détente", count: 9, img: SPA_IMG },
   { title: "Escapades romantiques", tag: "Couple", count: 6, img: SANTORINI_IMG },
   { title: "Week-ends urbains", tag: "City", count: 14, img: ROOFTOP_IMG },
 ];
@@ -29,33 +30,89 @@ const EXPERIENCES = [
 ];
 
 const OFFRES = [
-  { name: "Hotel Plaza Athenee", city: "Paris", pct: 28, price: "680€", original: "940€", img: HOTEL_IMG, tag: "Palace" },
+  { name: "Hôtel Plaza Athénée", city: "Paris", pct: 28, price: "680€", original: "940€", img: HOTEL_IMG, tag: "Palace" },
   { name: "Le Cinq — Four Seasons", city: "Paris", pct: 22, price: "280€", original: "360€", img: GASTRO_IMG, tag: "Gastronomie" },
   { name: "Four Seasons Bali", city: "Bali", pct: 35, price: "520€", original: "800€", img: SPA_IMG, tag: "Resort" },
   { name: "La Mamounia", city: "Marrakech", pct: 18, price: "420€", original: "510€", img: MARRAKECH_IMG, tag: "Palace" },
 ];
 
 const PLANS = [
-  { name: "Decouverte", price: "Gratuit", features: ["3 conversations Maya", "Offres avec remise", "1 parcours essai"], highlight: false },
-  { name: "Social Club", price: "9,90€/mois", features: ["Maya illimitee", "Parcours illimites", "Offres exclusives", "Evenements prives"], highlight: true },
-  { name: "Duo", price: "14,90€/mois", features: ["Tout Social Club", "2 profils lies", "Parcours en commun"], highlight: false },
-  { name: "Annuel", price: "89€/an", features: ["Social Club 12 mois", "25% de reduction", "Acces prioritaire", "Cadeau de bienvenue"], highlight: false },
+  { name: "Découverte", price: "Gratuit", features: ["3 conversations Maya", "Offres avec remise", "1 parcours essai"], highlight: false },
+  { name: "Social Club", price: "9,90€/mois", features: ["Maya illimitée", "Parcours illimités", "Offres exclusives", "Évènements privés"], highlight: true },
+  { name: "Duo", price: "14,90€/mois", features: ["Tout Social Club", "2 profils liés", "Parcours en commun"], highlight: false },
+  { name: "Annuel", price: "89€/an", features: ["Social Club 12 mois", "25% de réduction", "Accès prioritaire", "Cadeau de bienvenue"], highlight: false },
 ];
 
 const FAQ = [
-  { q: "Comment fonctionne le parrainage ?", a: "Invitez un ami avec votre lien unique. Quand il souscrit au Social Club, vous recevez 1 mois offert et lui aussi." },
-  { q: "Puis-je annuler mon abonnement ?", a: "Oui, a tout moment depuis votre profil. Aucun engagement, aucune penalite." },
-  { q: "Maya retient-elle mes preferences ?", a: "Oui. Maya memorise vos goûts, allergies, cercle familial et habitudes de voyage pour personnaliser chaque recommandation." },
+  {
+    q: "Qu'est-ce que Maison Baymora ?",
+    a: "Maison Baymora est un social club virtuel premium qui connecte les voyageurs exigeants aux meilleures adresses du monde. Notre assistante Maya, propulsée par l'intelligence artificielle, crée des parcours sur-mesure : hôtels 5 étoiles, restaurants gastronomiques, activités exclusives et transport — le tout personnalisé selon votre profil."
+  },
+  {
+    q: "Comment Maya crée-t-elle un parcours sur-mesure ?",
+    a: "Maya analyse vos préférences, votre budget, vos dates et votre cercle de proches. Elle propose 3 scénarios (Essentiel, Premium, Excellence) avec hébergement, restaurants, activités et transport. Chaque parcours est unique et réservable en quelques clics."
+  },
+  {
+    q: "Quels types d'hôtels propose Maison Baymora ?",
+    a: "Exclusivement des établissements 4 et 5 étoiles : palaces, boutique-hôtels de caractère, resorts avec piscine, spa ou jacuzzi. Toujours dans des grandes villes ou des destinations prisées, en France et à l'international."
+  },
+  {
+    q: "Les réductions sont-elles réelles ?",
+    a: "Oui. Nous négocions en direct avec chaque établissement partenaire. Les remises vont de -15% à -40% sur des hôtels et restaurants premium. Ce sont des offres exclusives réservées aux membres Maison Baymora."
+  },
+  {
+    q: "Maison Baymora est-il gratuit ?",
+    a: "Le forfait Découverte est entièrement gratuit : 3 conversations avec Maya et accès à toutes les offres avec remise. Le Social Club à 9,90€/mois offre un accès illimité à Maya, aux parcours sur-mesure et aux avantages exclusifs."
+  },
+  {
+    q: "Dans quels pays Maison Baymora est-il disponible ?",
+    a: "Maya couvre le monde entier : France, Europe, États-Unis, Asie, Moyen-Orient. Les offres avec remise sont concentrées sur la France et l'Europe, avec une expansion internationale en cours."
+  },
+  {
+    q: "Mes données sont-elles protégées ?",
+    a: "Pseudonyme possible, suppression totale à tout moment, données hébergées en Europe. Aucun partage avec des tiers. Maison Baymora est conforme au RGPD."
+  },
+  {
+    q: "Puis-je partager mon parcours avec mes proches ?",
+    a: "Oui. Envoyez votre parcours par lien, email ou PDF. Vos proches peuvent créer un compte gratuit pour collaborer et modifier le parcours ensemble."
+  },
+  {
+    q: "Quelle est la différence avec ChatGPT ?",
+    a: "ChatGPT donne des listes. Maya donne un accès : des réductions réelles négociées, des réservations en un clic, une mémoire de vos préférences, et un réseau de partenaires physiques. Chaque partenaire Baymora est un représentant du club."
+  },
+  {
+    q: "Comment devenir partenaire Maison Baymora ?",
+    a: "Si vous êtes un hôtel, restaurant, spa ou prestataire d'expériences premium, rejoignez le réseau Maison Baymora pour toucher une clientèle exigeante et qualifiée. Contactez-nous depuis l'app."
+  },
 ];
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+};
 
 export default function Maison() {
   const { user } = useAuth();
   const firstName = user?.name?.split(" ")[0] || "vous";
 
+  const hour = new Date().getHours();
+  const subtitle =
+    hour >= 6 && hour < 12
+      ? "Où partons-nous aujourd'hui ?"
+      : hour >= 12 && hour < 18
+      ? "Votre prochaine escapade est à portée de main."
+      : "Ce soir, laissez-vous surprendre.";
+
   return (
     <div style={{ background: "#070B14", color: "#F0EDE6", minHeight: "100vh" }}>
-      {/* Hero leger */}
-      <section className="relative overflow-hidden px-4 pt-8 pb-10 md:pt-12">
+      {/* Hero */}
+      <motion.section
+        className="relative overflow-hidden px-4"
+        style={{ paddingTop: 48, paddingBottom: 56 }}
+        initial="hidden"
+        animate="visible"
+        variants={sectionVariants}
+      >
         <div
           className="absolute inset-0 opacity-10"
           style={{ backgroundImage: `url(${HERO_IMG})`, backgroundSize: "cover", backgroundPosition: "center" }}
@@ -69,7 +126,7 @@ export default function Maison() {
               >
                 Bienvenue, <span style={{ color: "#C8A96E" }}>{firstName}</span>
               </h1>
-              <p className="text-sm" style={{ color: "#8B8D94" }}>Votre club, vos experiences, vos avantages.</p>
+              <p className="text-sm" style={{ color: "#8B8D94" }}>{subtitle}</p>
             </div>
             <div className="flex gap-3">
               <Link href="/maya">
@@ -78,7 +135,7 @@ export default function Maison() {
                   style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
                 >
                   <Sparkles size={16} />
-                  Parler a Maya
+                  Parler à Maya
                 </button>
               </Link>
               <Link href="/offres">
@@ -92,135 +149,190 @@ export default function Maison() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Bundles carrousel */}
-      <section className="px-4 py-8">
+      {/* Bundles */}
+      <motion.section
+        className="px-4"
+        style={{ marginTop: 48 }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
             <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
-              Selections Baymora
+              Nos coups de cœur
             </h2>
             <Link href="/offres">
               <span className="text-xs" style={{ color: "#C8A96E" }}>Tout voir →</span>
             </Link>
           </div>
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+          <div className="flex overflow-x-auto scrollbar-hide pb-2" style={{ gap: 16 }}>
             {BUNDLES.map((bundle, i) => (
-              <Link key={i} href="/offres">
-                <div
-                  className="flex-shrink-0 w-[160px] rounded-2xl overflow-hidden card-hover cursor-pointer"
-                  style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.12)" }}
-                >
-                  <div className="h-[200px] relative">
-                    <img src={bundle.img} alt={bundle.title} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.9) 0%, transparent 50%)" }} />
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <div
-                        className="text-[10px] px-2 py-0.5 rounded-full inline-block mb-1"
-                        style={{ background: "rgba(200, 169, 110, 0.2)", color: "#C8A96E" }}
-                      >
-                        {bundle.tag}
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.4 }}
+              >
+                <Link href="/offres">
+                  <div
+                    className="flex-shrink-0 w-[160px] rounded-2xl overflow-hidden card-hover cursor-pointer"
+                    style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.12)" }}
+                  >
+                    <div className="h-[200px] relative">
+                      <img src={bundle.img} alt={bundle.title} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.9) 0%, transparent 50%)" }} />
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <div
+                          className="text-[10px] px-2 py-0.5 rounded-full inline-block mb-1"
+                          style={{ background: "rgba(200, 169, 110, 0.2)", color: "#C8A96E" }}
+                        >
+                          {bundle.tag}
+                        </div>
+                        <p className="text-xs font-semibold leading-tight" style={{ color: "#F0EDE6" }}>{bundle.title}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: "#8B8D94" }}>{bundle.count} adresses</p>
                       </div>
-                      <p className="text-xs font-semibold leading-tight" style={{ color: "#F0EDE6" }}>{bundle.title}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: "#8B8D94" }}>{bundle.count} adresses</p>
                     </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Experiences legendaires */}
-      <section className="px-4 py-8">
+      {/* Expériences */}
+      <motion.section
+        className="px-4"
+        style={{ marginTop: 48 }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-lg font-bold mb-5" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
-            Experiences legendaires
+          <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6", marginBottom: 24 }}>
+            Les adresses qui changent tout
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 16 }}>
             {EXPERIENCES.map((exp, i) => (
-              <Link key={i} href="/offres">
-                <div
-                  className="rounded-2xl overflow-hidden card-hover cursor-pointer"
-                  style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.12)" }}
-                >
-                  <div className="relative h-36">
-                    <img src={exp.img} alt={exp.title} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.85) 0%, transparent 50%)" }} />
-                    <div
-                      className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold"
-                      style={{
-                        background: exp.badge.startsWith("-") ? "#16a34a" : "rgba(200, 169, 110, 0.9)",
-                        color: exp.badge.startsWith("-") ? "white" : "#070B14",
-                      }}
-                    >
-                      {exp.badge}
-                    </div>
-                    <div className="absolute bottom-2 left-2 right-2">
-                      <p className="text-xs font-semibold" style={{ color: "#F0EDE6" }}>{exp.title}</p>
-                      <div className="flex items-center justify-between mt-0.5">
-                        <span className="text-[10px]" style={{ color: "#8B8D94" }}>{exp.city}</span>
-                        <span className="text-xs font-bold" style={{ color: "#C8A96E" }}>{exp.price}</span>
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.4 }}
+              >
+                <Link href="/offres">
+                  <div
+                    className="rounded-2xl overflow-hidden card-hover cursor-pointer"
+                    style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.12)" }}
+                  >
+                    <div className="relative h-36">
+                      <img src={exp.img} alt={exp.title} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.85) 0%, transparent 50%)" }} />
+                      <div
+                        className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                        style={{
+                          background: exp.badge.startsWith("-") ? "#16a34a" : "rgba(200, 169, 110, 0.9)",
+                          color: exp.badge.startsWith("-") ? "white" : "#070B14",
+                        }}
+                      >
+                        {exp.badge}
+                      </div>
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <p className="text-xs font-semibold" style={{ color: "#F0EDE6" }}>{exp.title}</p>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <span className="text-[10px]" style={{ color: "#8B8D94" }}>{exp.city}</span>
+                          <span className="text-xs font-bold" style={{ color: "#C8A96E" }}>{exp.price}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Offres a proximite */}
-      <section className="px-4 py-8">
+      {/* Offres */}
+      <motion.section
+        className="px-4"
+        style={{ marginTop: 48 }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
-              Offres du moment
-            </h2>
+          <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
+            <div>
+              <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
+                Luxe accessible
+              </h2>
+              <p className="text-xs mt-0.5" style={{ color: "#8B8D94" }}>Négocié pour vous, jusqu'à -40%</p>
+            </div>
             <Link href="/offres">
               <span className="text-xs" style={{ color: "#C8A96E" }}>Tout voir →</span>
             </Link>
           </div>
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+          <div className="flex overflow-x-auto scrollbar-hide pb-2" style={{ gap: 20 }}>
             {OFFRES.map((offer, i) => (
-              <Link key={i} href="/offres">
-                <div
-                  className="flex-shrink-0 w-[220px] rounded-2xl overflow-hidden card-hover cursor-pointer"
-                  style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.12)" }}
-                >
-                  <div className="relative h-32">
-                    <img src={offer.img} alt={offer.name} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.7) 0%, transparent 60%)" }} />
-                    <div
-                      className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold"
-                      style={{ background: "#16a34a", color: "white" }}
-                    >
-                      -{offer.pct}%
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.4 }}
+              >
+                <Link href="/offres">
+                  <div
+                    className="flex-shrink-0 w-[220px] rounded-2xl overflow-hidden card-hover cursor-pointer"
+                    style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.12)" }}
+                  >
+                    <div className="relative h-32">
+                      <img src={offer.img} alt={offer.name} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.7) 0%, transparent 60%)" }} />
+                      <div
+                        className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                        style={{ background: "#16a34a", color: "white" }}
+                      >
+                        -{offer.pct}%
+                      </div>
+                      <button className="absolute top-2 right-2">
+                        <Heart size={14} color="rgba(200,169,110,0.6)" />
+                      </button>
                     </div>
-                    <button className="absolute top-2 right-2">
-                      <Heart size={14} color="rgba(200,169,110,0.6)" />
-                    </button>
-                  </div>
-                  <div className="p-3">
-                    <div className="text-[10px] mb-0.5" style={{ color: "#8B8D94" }}>{offer.tag} · {offer.city}</div>
-                    <p className="text-xs font-semibold mb-2" style={{ color: "#F0EDE6" }}>{offer.name}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold" style={{ color: "#C8A96E" }}>{offer.price}</span>
-                      <span className="text-xs line-through" style={{ color: "#8B8D94" }}>{offer.original}</span>
+                    <div className="p-3">
+                      <div className="text-[10px] mb-0.5" style={{ color: "#8B8D94" }}>{offer.tag} · {offer.city}</div>
+                      <p className="text-xs font-semibold mb-2" style={{ color: "#F0EDE6" }}>{offer.name}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold" style={{ color: "#C8A96E" }}>{offer.price}</span>
+                        <span className="text-xs line-through" style={{ color: "#8B8D94" }}>{offer.original}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Parcours sur-mesure */}
-      <section className="px-4 py-8">
+      {/* Maya CTA */}
+      <motion.section
+        className="px-4"
+        style={{ marginTop: 48, paddingTop: 32, paddingBottom: 32 }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
         <div className="max-w-5xl mx-auto">
           <div
             className="rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6"
@@ -241,10 +353,10 @@ export default function Maison() {
                 className="text-xl md:text-2xl font-bold mb-2"
                 style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
               >
-                Votre parcours sur-mesure
+                Maya connaît l'adresse parfaite.
               </h2>
               <p className="text-sm mb-4" style={{ color: "#8B8D94" }}>
-                Maya cree votre voyage ideal de A a Z : hotel, restaurants, activites, transport. Tout coordonne, tout personnalise.
+                Dites-lui ce dont vous rêvez. Elle s'occupe du reste.
               </p>
               <Link href="/maya">
                 <button
@@ -252,30 +364,39 @@ export default function Maison() {
                   style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
                 >
                   <Sparkles size={16} />
-                  Creer mon parcours
+                  Parler à Maya
                 </button>
               </Link>
             </div>
-            <div
-              className="w-full md:w-48 h-32 md:h-36 rounded-xl overflow-hidden flex-shrink-0"
-            >
+            <div className="w-full md:w-48 h-32 md:h-36 rounded-xl overflow-hidden flex-shrink-0">
               <img src={SANTORINI_IMG} alt="Parcours" className="w-full h-full object-cover" />
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Forfaits */}
-      <section className="px-4 py-8">
+      <motion.section
+        className="px-4"
+        style={{ marginTop: 48, paddingTop: 48, paddingBottom: 48 }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
         <div className="max-w-5xl mx-auto">
           <h2 className="text-lg font-bold mb-2 text-center" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
-            Votre acces
+            Choisissez votre cercle
           </h2>
-          <p className="text-sm text-center mb-6" style={{ color: "#8B8D94" }}>Evoluez a votre rythme.</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <p className="text-sm text-center" style={{ color: "#8B8D94", marginBottom: 24 }}>Commencez gratuitement. Sans engagement.</p>
+          <div className="grid grid-cols-1 md:grid-cols-4" style={{ gap: 16 }}>
             {PLANS.map((plan, i) => (
-              <div
+              <motion.div
                 key={i}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.4 }}
                 className="rounded-2xl p-5"
                 style={{
                   background: plan.highlight ? "rgba(200, 169, 110, 0.08)" : "#0D1117",
@@ -292,14 +413,21 @@ export default function Maison() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Parrainage */}
-      <section className="px-4 py-8">
+      <motion.section
+        className="px-4"
+        style={{ marginTop: 48 }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
         <div className="max-w-5xl mx-auto">
           <div
             className="rounded-2xl p-5 flex items-center gap-4"
@@ -323,10 +451,17 @@ export default function Maison() {
             </button>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Partenaire CTA */}
-      <section className="px-4 py-4">
+      <motion.section
+        className="px-4"
+        style={{ marginTop: 16 }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
         <div className="max-w-5xl mx-auto">
           <div
             className="rounded-2xl p-5 flex items-center gap-4"
@@ -339,19 +474,26 @@ export default function Maison() {
               <Star size={22} color="#C8A96E" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-sm mb-0.5" style={{ color: "#F0EDE6" }}>Vous etes un etablissement ?</h3>
-              <p className="text-xs" style={{ color: "#8B8D94" }}>Rejoignez le reseau Maison Baymora et touchez une clientele premium.</p>
+              <h3 className="font-semibold text-sm mb-0.5" style={{ color: "#F0EDE6" }}>Vous êtes un établissement ?</h3>
+              <p className="text-xs" style={{ color: "#8B8D94" }}>Rejoignez le réseau Maison Baymora et touchez une clientèle premium.</p>
             </div>
             <ChevronRight size={16} color="#C8A96E" className="flex-shrink-0" />
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* FAQ */}
-      <section className="px-4 py-10">
+      <motion.section
+        className="px-4"
+        style={{ marginTop: 48, paddingBottom: 48 }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
         <div className="max-w-2xl mx-auto">
           <h2 className="text-lg font-bold mb-5 text-center" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
-            Questions frequentes
+            Questions fréquentes
           </h2>
           <div className="space-y-3">
             {FAQ.map((item, i) => (
@@ -366,10 +508,10 @@ export default function Maison() {
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Footer */}
-      <footer className="px-4 py-8" style={{ borderTop: "1px solid rgba(200, 169, 110, 0.1)" }}>
+      <footer className="px-4" style={{ borderTop: "1px solid rgba(200, 169, 110, 0.1)", paddingTop: 48, paddingBottom: 48, marginTop: 64 }}>
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div
@@ -381,11 +523,11 @@ export default function Maison() {
             <span className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Maison Baymora</span>
           </div>
           <div className="flex gap-5 text-xs" style={{ color: "#8B8D94" }}>
-            <a href="#" className="hover:text-[#C8A96E]">Mentions legales</a>
-            <a href="#" className="hover:text-[#C8A96E]">Confidentialite</a>
+            <a href="#" className="hover:text-[#C8A96E]">Mentions légales</a>
+            <a href="#" className="hover:text-[#C8A96E]">Confidentialité</a>
             <a href="#" className="hover:text-[#C8A96E]">CGU</a>
           </div>
-          <span className="text-xs" style={{ color: "#8B8D94" }}>© 2025 Maison Baymora</span>
+          <span className="text-xs" style={{ color: "#8B8D94" }}>© 2026 Maison Baymora</span>
         </div>
       </footer>
     </div>

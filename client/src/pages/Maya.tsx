@@ -6,13 +6,13 @@ import { ArrowLeft, Sparkles, Send, Mic, MicOff, RotateCcw } from "lucide-react"
 import MessageRenderer from "@/components/MessageRenderer";
 
 const QUICK_CHOICES = [
-  { icon: "🏨", title: "Escapade luxe a proximite", desc: "Hotel premium avec remise, proche de chez vous", prompt: "Je cherche une escapade luxe a proximite avec un hotel premium" },
-  { icon: "✨", title: "Parcours sur-mesure", desc: "Maya cree votre voyage ideal de A a Z", prompt: "Je veux un parcours sur-mesure complet" },
-  { icon: "🎯", title: "Decouvrir les bons plans", desc: "Restos, bars, activites autour de vous", prompt: "Montre-moi les bons plans et activites" },
-  { icon: "👑", title: "Deleguer totalement", desc: "Notre conciergerie s'occupe de tout", prompt: "Je veux deleguer totalement mon voyage a votre equipe" },
+  { icon: "🏨", title: "Escapade luxe à proximité", desc: "Hôtel premium avec remise, proche de chez vous", prompt: "Je cherche une escapade luxe à proximité avec un hôtel premium" },
+  { icon: "✨", title: "Parcours sur-mesure", desc: "Maya crée votre voyage idéal de A à Z", prompt: "Je veux un parcours sur-mesure complet" },
+  { icon: "🎯", title: "Découvrir les bons plans", desc: "Restos, bars, activités autour de vous", prompt: "Montre-moi les bons plans et activités" },
+  { icon: "👑", title: "Déléguer totalement", desc: "Notre conciergerie s'occupe de tout", prompt: "Je veux déléguer totalement mon voyage à votre équipe" },
 ];
 
-const DESTINATIONS = ["Paris", "Cote d'Azur", "Reims", "Deauville", "New York", "Bali"];
+const DESTINATIONS = ["Paris", "Côte d'Azur", "Reims", "Deauville", "New York", "Bali"];
 
 const SESSION_KEY = "baymora_conv_id";
 
@@ -90,8 +90,8 @@ export default function Maya() {
           id: Date.now().toString() + "_err",
           role: "maya",
           content: isUpgrade
-            ? "Vous avez utilise vos 3 messages gratuits. Rejoignez le Social Club a 9,90€/mois pour continuer avec Maya illimitee.\n\n:::QR:::Voir les forfaits | Continuer gratuitement:::END:::"
-            : "Desolee, une erreur est survenue. Reessayez dans un instant.",
+            ? "Vous avez utilisé vos 3 messages gratuits. Rejoignez le Social Club à 9,90€/mois pour continuer avec Maya illimitée.\n\n:::QR:::Voir les forfaits | Continuer gratuitement:::END:::"
+            : "Désolée, une erreur est survenue. Réessayez dans un instant.",
           timestamp: new Date(),
         },
       ]);
@@ -183,7 +183,7 @@ export default function Maya() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs" style={{ color: isUnlimited ? "#C8A96E" : "#8B8D94" }}>
-            {isUnlimited ? "Acces illimite" : `${creditsLeft} credits`}
+            {isUnlimited ? "Accès illimité" : `${creditsLeft} crédit${creditsLeft > 1 ? "s" : ""}`}
           </span>
           <button className="p-2" onClick={handleNewConversation} title="Nouvelle conversation">
             <RotateCcw size={16} color="#8B8D94" />
@@ -211,10 +211,11 @@ export default function Maya() {
               >
                 Bonjour {firstName} !
               </h2>
-              <p className="text-sm text-center mb-6 max-w-xs" style={{ color: "#8B8D94" }}>
-                Je suis Maya, votre assistante Maison Baymora. Quel type d'experience vous ferait plaisir ?
+              <p className="text-sm text-center mb-6 max-w-xs" style={{ color: "#8B8D94", whiteSpace: "pre-line" }}>
+Je connais les meilleures adresses du monde.
+Et bientôt, je connaîtrai les vôtres.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 w-full max-w-lg mb-6" style={{ gap: 12 }}>
                 {QUICK_CHOICES.map((choice, i) => (
                   <button
                     key={i}
@@ -228,7 +229,7 @@ export default function Maya() {
                   </button>
                 ))}
               </div>
-              <div className="flex flex-wrap gap-2 justify-center">
+              <div className="flex flex-wrap justify-center" style={{ gap: 8 }}>
                 {DESTINATIONS.map((dest) => (
                   <button key={dest} className="pill-item" onClick={() => handleSend(`Je veux explorer ${dest}`)}>
                     {dest}
@@ -239,7 +240,7 @@ export default function Maya() {
                 <p className="text-xs mt-6 text-center" style={{ color: "#8B8D94" }}>
                   {creditsLeft} messages gratuits ·{" "}
                   <Link href="/auth">
-                    <span style={{ color: "#C8A96E" }}>Creer un compte pour continuer</span>
+                    <span style={{ color: "#C8A96E" }}>Créer un compte pour continuer</span>
                   </Link>
                 </p>
               )}
@@ -330,7 +331,7 @@ export default function Maya() {
             value={input}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder="Dites a Maya ce dont vous revez..."
+            placeholder="Dites à Maya ce dont vous rêvez..."
             rows={1}
             className="flex-1 bg-transparent resize-none outline-none text-sm py-2"
             style={{ color: "#F0EDE6", minHeight: "40px", maxHeight: "120px" }}
@@ -350,14 +351,16 @@ export default function Maya() {
         <div className="flex items-center justify-between mt-2 px-1">
           <span className="text-[10px]" style={{ color: isUnlimited ? "#C8A96E" : "#8B8D94" }}>
             {isUnlimited
-              ? "Conversations illimitees"
-              : user
-              ? `${creditsLeft} messages gratuits restants`
-              : `${creditsLeft} messages gratuits`}
+              ? "Conversations illimitées"
+              : creditsLeft === 0
+              ? "Plus de messages gratuits"
+              : creditsLeft === 1
+              ? "1 message gratuit restant"
+              : `${creditsLeft} messages gratuits restants`}
           </span>
           {!user && (
             <Link href="/auth">
-              <span className="text-[10px]" style={{ color: "#C8A96E" }}>Creer un compte</span>
+              <span className="text-[10px]" style={{ color: "#C8A96E" }}>Créer un compte</span>
             </Link>
           )}
         </div>

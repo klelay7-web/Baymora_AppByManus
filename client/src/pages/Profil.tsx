@@ -25,7 +25,7 @@ export default function Profil() {
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#070B14" }}>
         <div className="text-center">
           <h2 className="text-xl font-bold mb-4" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
-            Connectez-vous pour acceder a votre profil
+            Connectez-vous pour accéder à votre profil
           </h2>
           <Link href="/auth">
             <button className="px-6 py-3 rounded-full text-sm font-semibold" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}>
@@ -40,7 +40,7 @@ export default function Profil() {
   const firstName = user.name?.split(" ")[0] || "Membre";
   const initial = (user.name || user.email || "M")[0].toUpperCase();
   const isFree = user.subscriptionTier === "free";
-  const tierLabel = isFree ? "Decouverte" : user.subscriptionTier === "explorer" ? "Social Club" : "Premium";
+  const tierLabel = isFree ? "Découverte" : user.subscriptionTier === "explorer" ? "Social Club" : "Illimité";
   const creditsUsed = isFree ? 2 : 0;
   const creditsTotal = isFree ? 3 : 999;
 
@@ -48,26 +48,26 @@ export default function Profil() {
     {
       title: "Mon compte",
       items: [
-        { icon: User, label: "Completer mon profil", desc: "Gouts, allergies, preferences", href: "#" },
-        { icon: Compass, label: "Mes parcours", desc: "Voyages crees avec Maya", href: "/parcours" },
-        { icon: Heart, label: "Mes collections", desc: "Favoris et lieux sauvegardes", href: "#" },
+        { icon: User, label: "Compléter mon profil", desc: "Goûts, allergies, préférences", href: "#" },
+        { icon: Compass, label: "Mes parcours", desc: "Voyages créés avec Maya", href: "/parcours" },
+        { icon: Heart, label: "Mes collections", desc: "Favoris et lieux sauvegardés", href: "#" },
         { icon: Users, label: "Mes proches", desc: "Cercle familial et amis", href: "#" },
       ],
     },
     {
-      title: "Forfait & credits",
+      title: "Forfait & crédits",
       items: [
         { icon: Crown, label: "Mon forfait", desc: `Actuel : ${tierLabel}`, href: "#" },
-        { icon: CreditCard, label: "Acheter des credits", desc: "Recharger votre solde", href: "#" },
+        { icon: CreditCard, label: "Acheter des crédits", desc: "Recharger votre solde", href: "#" },
         { icon: Gift, label: "Parrainer un ami", desc: "Gagnez 1 mois offert", href: "#" },
       ],
     },
     {
-      title: "Parametres",
+      title: "Paramètres",
       items: [
         { icon: Bell, label: "Notifications", desc: "Alertes et rappels", href: "#" },
-        { icon: Globe, label: "Langue", desc: "Francais", href: "#" },
-        { icon: Shield, label: "Confidentialite", desc: "Gestion des donnees", href: "#" },
+        { icon: Globe, label: "Langue", desc: "Français", href: "#" },
+        { icon: Shield, label: "Confidentialité", desc: "Gestion des données", href: "#" },
       ],
     },
   ];
@@ -102,7 +102,7 @@ export default function Profil() {
           </div>
         </div>
 
-        {/* Card credits */}
+        {/* Card crédits */}
         <div
           className="rounded-2xl p-5 mb-6"
           style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.15)" }}
@@ -110,10 +110,10 @@ export default function Profil() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Sparkles size={16} color="#C8A96E" />
-              <span className="text-sm font-semibold" style={{ color: "#F0EDE6" }}>Credits Maya</span>
+              <span className="text-sm font-semibold" style={{ color: "#F0EDE6" }}>Crédits Maya</span>
             </div>
             <span className="text-sm font-bold" style={{ color: "#C8A96E" }}>
-              {isFree ? `${creditsTotal - creditsUsed} / ${creditsTotal}` : "Illimite"}
+              {isFree ? `${creditsTotal - creditsUsed} / ${creditsTotal}` : "Illimité"}
             </span>
           </div>
           {isFree && (
@@ -175,7 +175,7 @@ export default function Profil() {
           </div>
         ))}
 
-        {/* Deconnexion */}
+        {/* Déconnexion */}
         <button
           className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 text-sm font-medium mt-2"
           style={{ background: "rgba(239, 68, 68, 0.08)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.15)" }}
@@ -183,8 +183,20 @@ export default function Profil() {
           disabled={logoutMutation.isPending}
         >
           <LogOut size={16} />
-          {logoutMutation.isPending ? "Deconnexion..." : "Se deconnecter"}
+          {logoutMutation.isPending ? "Déconnexion..." : "Se déconnecter"}
         </button>
+
+        {/* Footer */}
+        <div className="text-center mt-8 pt-6" style={{ borderTop: "1px solid rgba(200, 169, 110, 0.08)" }}>
+          <p className="text-xs" style={{ color: "#8B8D94" }}>
+            <a href="#" className="hover:text-gold transition-colors">Mentions légales</a>
+            {" · "}
+            <a href="#" className="hover:text-gold transition-colors">Confidentialité</a>
+            {" · "}
+            <a href="#" className="hover:text-gold transition-colors">Aide</a>
+          </p>
+          <p className="text-xs mt-2" style={{ color: "rgba(139, 141, 148, 0.5)" }}>© 2026 Maison Baymora</p>
+        </div>
       </div>
     </div>
   );

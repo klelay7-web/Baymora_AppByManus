@@ -6,7 +6,7 @@ export default function Auth() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
+      className="min-h-scréén flex items-center justify-center px-4"
       style={{ background: "#070B14" }}
     >
       <div
@@ -24,7 +24,7 @@ export default function Auth() {
           <h1 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
             Maison Baymora
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#8B8D94" }}>Votre club, vos experiences.</p>
+          <p className="text-sm mt-1" style={{ color: "#8B8D94" }}>Votre club, vos expériences.</p>
         </div>
 
         {/* Google login */}
