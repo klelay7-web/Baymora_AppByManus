@@ -60,6 +60,19 @@ async function startServer() {
     }
   });
 
+  // Affiliate redirect tracking
+  app.get("/api/affiliate/redirect", async (req, res) => {
+    try {
+      const { partner, dest, userId } = req.query as { partner?: string; dest?: string; userId?: string };
+      if (!dest) return res.status(400).json({ error: "Missing dest parameter" });
+      const decodedDest = decodeURIComponent(String(dest));
+      console.log(`[Affiliate] Click: partner=${partner} userId=${userId} dest=${decodedDest}`);
+      res.redirect(302, decodedDest);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

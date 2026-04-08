@@ -39,6 +39,7 @@ const PLANS = [
   { name: "Decouverte", price: "Gratuit", features: ["3 conversations Maya", "Offres avec remise", "1 parcours essai"], highlight: false },
   { name: "Social Club", price: "9,90€/mois", features: ["Maya illimitee", "Parcours illimites", "Offres exclusives", "Evenements prives"], highlight: true },
   { name: "Duo", price: "14,90€/mois", features: ["Tout Social Club", "2 profils lies", "Parcours en commun"], highlight: false },
+  { name: "Annuel", price: "89€/an", features: ["Social Club 12 mois", "25% de reduction", "Acces prioritaire", "Cadeau de bienvenue"], highlight: false },
 ];
 
 const FAQ = [

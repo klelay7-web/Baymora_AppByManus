@@ -326,6 +326,13 @@ export default function Landing() {
                 highlight: false,
                 cta: "Choisir Duo",
               },
+              {
+                name: "Annuel",
+                price: "89€/an",
+                features: ["Social Club 12 mois", "25% de reduction", "Acces prioritaire", "Cadeau de bienvenue"],
+                highlight: false,
+                cta: "Economiser 25%",
+              },
             ].map((plan, i) => (
               <div
                 key={i}

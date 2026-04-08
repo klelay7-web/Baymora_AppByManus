@@ -1,65 +1,33 @@
-# Maison Baymora — Reconstruction Finale (Prompt v5)
+# Maison Baymora — TODO (Prompt Final v6)
 
-## Phase 1 : Nettoyage
-- [ ] Supprimer toutes les pages non listées dans le prompt
-- [ ] Nettoyer App.tsx (routes : /, /maison, /maya, /offres, /parcours, /profil, /auth, /lieu/:id)
-- [ ] Supprimer les routers backend non listés (lena, agents, social, comments, content, fieldReports, pilotage, email bulk)
+## URGENT (app cassée sans)
+- [x] Fix crash new URL() dans const.ts — safety check getLoginUrl()
+- [x] Fix conversationId: 0 dans Maya.tsx — vrai ID via chat.createConversation
+- [x] Owner illimité pour Kevin — OWNER_OPEN_ID check, afficher "Acces illimite"
+- [x] Supprimer doublons : Chat.tsx, Home.tsx, EstablishmentDetail.tsx, Offers.tsx, Profile.tsx
 
-## Phase 2 : Design System
-- [ ] Mettre à jour index.css avec les variables CSS exactes du prompt
-- [ ] Ajouter Playfair Display + Inter via Google Fonts dans index.html
-- [ ] Créer AppLayout.tsx (sidebar 250px desktop + bottom nav mobile + top pills)
-- [ ] MobileBottomNav : 5 onglets (Maison, Chercher, Maya, Premium, Profil)
-- [ ] TopPills : scroll horizontal (B, Maison, Maya, Offres, Bundles)
+## CRITIQUE (transforme l'experience)
+- [x] Creer MessageRenderer.tsx — parser :::QR::: boutons cliquables (simple + multi-select + portes de sortie)
+- [x] Parser :::PLACES::: caroussel de cartes lieux (200x280px, photo, badge, coeur favori)
+- [x] Parser :::MAP::: carte Google Maps filtre sombre
+- [x] Parser :::BOOKING::: encart reservation glassmorphism 4 boutons
+- [x] Parser :::SCENARIOS::: 3 onglets Essentiel/Premium/Excellence
+- [x] Parser :::GCAL::: bouton "Ajouter au calendrier"
+- [x] Parser :::JOURNEY::: timeline verticale transport
+- [x] Markdown dans les bulles (react-markdown + remarkGfm)
+- [x] Integrer MessageRenderer dans Maya.tsx
 
-## Phase 3 : Page Landing (/)
-- [ ] Navbar fixe
-- [ ] Hero Playfair + CTA "Commencer — c'est gratuit"
-- [ ] Démo conversation animée (4 messages)
-- [ ] Section "Pourquoi Maison Baymora" (6 cards)
-- [ ] Offres preview (3 cards avec remise)
-- [ ] Forfaits 3 colonnes
-- [ ] CTA final glassmorphism
-- [ ] FAQ SEO accordéon
-- [ ] Footer
+## IMPORTANT
+- [x] Credits backend vers frontend (user.freeMessagesUsed, pas state local)
+- [x] System prompt : ajouter section TRANSPORT COMPLET (REGLE N°8)
+- [x] System prompt : ajouter section APRES-VOYAGE (REGLE N°9)
+- [x] Corriger TOUS les prix : Decouverte gratuit, Social Club 9,90e, Duo 14,90e, Annuel 89e/an
+- [x] Supprimer "Club Prive" de l'affichage public
+- [x] Structure DB affiliatePartners/affiliateClicks/affiliateConversions en place
+- [x] Route /api/affiliate/redirect avec tracking
 
-## Phase 4 : Page Maison (/maison)
-- [ ] Hero léger "Bienvenue [prénom]"
-- [ ] Bundles carrousel horizontal
-- [ ] Expériences légendaires grid
-- [ ] Offres à proximité carrousel
-- [ ] Parcours sur-mesure glassmorphism
-- [ ] Forfaits résumé
-- [ ] Parrainage + Partenaire CTA
-- [ ] FAQ + Footer
-
-## Phase 5 : Page Maya (/maya)
-- [ ] Plein écran, header mobile
-- [ ] Onboarding : avatar animé + 4 choix + destinations pills
-- [ ] Bulles conversation + cards structurées
-- [ ] Input bar (micro + textarea + bouton doré)
-- [ ] Logique crédits
-- [ ] Conciergerie automatique (>10k€ ou yacht/jet/villa)
-
-## Phase 6 : Page Offres (/offres)
-- [ ] Header + filtres pills
-- [ ] Banner promo
-- [ ] Grid cards 2/3 colonnes
-- [ ] CTA Maya en bas
-
-## Phase 7 : Page Parcours (/parcours)
-- [ ] Header + tabs
-- [ ] Grid cards parcours
-- [ ] Vue détail jour par jour
-- [ ] Gate Social Club
-
-## Phase 8 : Profil (/profil) + Fiche (/lieu/:id)
-- [ ] Profil complet avec sections menu
-- [ ] Fiche établissement magazine premium
-
-## Phase 9 : Backend nettoyage
-- [ ] Supprimer routers non listés
-
-## Phase 10 : Final
-- [ ] Tests visuels
-- [ ] Checkpoint + GitHub
+## Prochaines étapes
+- [ ] Connecter bouton "Réserver" sur LieuDetail à Stripe Checkout
+- [ ] Formulaire de préférences profil (allergies, destinations, cercle familial)
+- [ ] Notifications push pour alertes offres flash
+- [ ] Page /parcours : connecter au vrai backend (trips table)

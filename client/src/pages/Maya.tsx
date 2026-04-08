@@ -2,9 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Sparkles, Send, Mic, MicOff, RotateCcw, Hotel, Star, Compass, Crown } from "lucide-react";
-
-const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
+import { ArrowLeft, Sparkles, Send, Mic, MicOff, RotateCcw } from "lucide-react";
+import MessageRenderer from "@/components/MessageRenderer";
 
 const QUICK_CHOICES = [
   { icon: "🏨", title: "Escapade luxe a proximite", desc: "Hotel premium avec remise, proche de chez vous", prompt: "Je cherche une escapade luxe a proximite avec un hotel premium" },
@@ -14,6 +13,8 @@ const QUICK_CHOICES = [
 ];
 
 const DESTINATIONS = ["Paris", "Cote d'Azur", "Reims", "Deauville", "New York", "Bali"];
+
+const SESSION_KEY = "baymora_conv_id";
 
 interface Message {
   id: string;
@@ -28,17 +29,47 @@ export default function Maya() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [guestCredits, setGuestCredits] = useState(3);
+  const [conversationId, setConversationId] = useState<number | null>(() => {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    return stored ? parseInt(stored, 10) : null;
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const firstName = user?.name?.split(" ")[0] || "vous";
 
+  // ─── Crédits backend ───────────────────────────────────────────────────────
+  const { data: creditsData } = trpc.credits.getBalance.useQuery(undefined, {
+    enabled: !!user,
+  });
+
+  const isOwner = user?.openId === import.meta.env.VITE_OWNER_OPEN_ID;
+  const isPaid = user?.subscriptionTier !== "free";
+  const isUnlimited = isOwner || isPaid;
+  const freeUsed = creditsData?.freeMessagesUsed ?? 0;
+  const FREE_LIMIT = 3;
+  const creditsLeft = isUnlimited ? 999 : Math.max(0, FREE_LIMIT - freeUsed);
+
+  // ─── Créer une conversation au mount si pas de session ─────────────────────
+  const createConvMutation = trpc.chat.createConversation.useMutation({
+    onSuccess: (data) => {
+      setConversationId(data.id);
+      sessionStorage.setItem(SESSION_KEY, String(data.id));
+    },
+  });
+
+  useEffect(() => {
+    if (user && !conversationId) {
+      createConvMutation.mutate({ title: "Conversation Maya" });
+    }
+  }, [user]);
+
+  // ─── Envoyer un message ────────────────────────────────────────────────────
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
     onMutate: () => setIsTyping(true),
     onSettled: () => setIsTyping(false),
     onSuccess: (data) => {
-      const text = data?.cleanMessage || data?.rawContent;
+      const text = data?.rawContent || data?.cleanMessage;
       if (text) {
         setMessages((prev) => [
           ...prev,
@@ -51,13 +82,16 @@ export default function Maya() {
         ]);
       }
     },
-    onError: () => {
+    onError: (err) => {
+      const isUpgrade = err.message === "UPGRADE_REQUIRED";
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString() + "_err",
           role: "maya",
-          content: "Desolee, une erreur est survenue. Reessayez dans un instant.",
+          content: isUpgrade
+            ? "Vous avez utilise vos 3 messages gratuits. Rejoignez le Social Club a 9,90€/mois pour continuer avec Maya illimitee.\n\n:::QR:::Voir les forfaits | Continuer gratuitement:::END:::"
+            : "Desolee, une erreur est survenue. Reessayez dans un instant.",
           timestamp: new Date(),
         },
       ]);
@@ -71,7 +105,8 @@ export default function Maya() {
   const handleSend = (text?: string) => {
     const msg = text || input.trim();
     if (!msg) return;
-    if (!user && guestCredits <= 0) return;
+    if (!user && creditsLeft <= 0) return;
+    if (!conversationId && user) return; // Attendre la création de la conv
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -81,11 +116,10 @@ export default function Maya() {
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    if (!user) setGuestCredits((c) => c - 1);
 
     sendMessageMutation.mutate({
       content: msg,
-      conversationId: 0,
+      conversationId: conversationId ?? 0,
     });
   };
 
@@ -105,9 +139,14 @@ export default function Maya() {
     }
   };
 
-  const creditsLeft = user
-    ? user.subscriptionTier === "free" ? 3 : 999
-    : guestCredits;
+  const handleNewConversation = () => {
+    setMessages([]);
+    sessionStorage.removeItem(SESSION_KEY);
+    setConversationId(null);
+    if (user) {
+      createConvMutation.mutate({ title: "Nouvelle conversation" });
+    }
+  };
 
   const isOnboarding = messages.length === 0;
 
@@ -116,7 +155,7 @@ export default function Maya() {
       className="flex flex-col"
       style={{ background: "#070B14", color: "#F0EDE6", height: "100dvh", maxHeight: "100dvh", overflow: "hidden" }}
     >
-      {/* Header mobile */}
+      {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"
         style={{
@@ -143,14 +182,10 @@ export default function Maya() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: "#8B8D94" }}>
-            {user?.subscriptionTier === "free" || !user ? `${creditsLeft} credits` : "Illimite"}
+          <span className="text-xs" style={{ color: isUnlimited ? "#C8A96E" : "#8B8D94" }}>
+            {isUnlimited ? "Acces illimite" : `${creditsLeft} credits`}
           </span>
-          <button
-            className="p-2"
-            onClick={() => setMessages([])}
-            title="Nouvelle conversation"
-          >
+          <button className="p-2" onClick={handleNewConversation} title="Nouvelle conversation">
             <RotateCcw size={16} color="#8B8D94" />
           </button>
         </div>
@@ -160,9 +195,7 @@ export default function Maya() {
       <div className="flex-1 overflow-y-auto px-4 py-4" style={{ scrollBehavior: "smooth" }}>
         <div className="max-w-[700px] mx-auto space-y-4">
           {isOnboarding ? (
-            /* Etat onboarding */
             <div className="flex flex-col items-center pt-4 pb-2">
-              {/* Avatar Maya anime */}
               <div
                 className="w-20 h-20 rounded-full flex items-center justify-center mb-4 animate-float"
                 style={{
@@ -181,17 +214,12 @@ export default function Maya() {
               <p className="text-sm text-center mb-6 max-w-xs" style={{ color: "#8B8D94" }}>
                 Je suis Maya, votre assistante Maison Baymora. Quel type d'experience vous ferait plaisir ?
               </p>
-
-              {/* 4 choix */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mb-6">
                 {QUICK_CHOICES.map((choice, i) => (
                   <button
                     key={i}
                     className="text-left p-4 rounded-xl card-hover"
-                    style={{
-                      background: "#0D1117",
-                      border: "1px solid rgba(200, 169, 110, 0.15)",
-                    }}
+                    style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.15)" }}
                     onClick={() => handleSend(choice.prompt)}
                   >
                     <div className="text-2xl mb-2">{choice.icon}</div>
@@ -200,23 +228,16 @@ export default function Maya() {
                   </button>
                 ))}
               </div>
-
-              {/* Destinations rapides */}
               <div className="flex flex-wrap gap-2 justify-center">
                 {DESTINATIONS.map((dest) => (
-                  <button
-                    key={dest}
-                    className="pill-item"
-                    onClick={() => handleSend(`Je veux explorer ${dest}`)}
-                  >
+                  <button key={dest} className="pill-item" onClick={() => handleSend(`Je veux explorer ${dest}`)}>
                     {dest}
                   </button>
                 ))}
               </div>
-
               {!user && (
                 <p className="text-xs mt-6 text-center" style={{ color: "#8B8D94" }}>
-                  {guestCredits} messages gratuits · {" "}
+                  {creditsLeft} messages gratuits ·{" "}
                   <Link href="/auth">
                     <span style={{ color: "#C8A96E" }}>Creer un compte pour continuer</span>
                   </Link>
@@ -224,7 +245,6 @@ export default function Maya() {
               )}
             </div>
           ) : (
-            /* Messages */
             <>
               {messages.map((msg) => (
                 <div
@@ -240,20 +260,22 @@ export default function Maya() {
                     </div>
                   )}
                   <div
-                    className="max-w-[80%] px-4 py-3 text-sm leading-relaxed"
+                    className="max-w-[85%] px-4 py-3"
                     style={{
-                      background: msg.role === "user" ? "#161B26" : "rgba(200, 169, 110, 0.08)",
-                      border: msg.role === "maya" ? "1px solid rgba(200, 169, 110, 0.2)" : "none",
+                      background: msg.role === "user" ? "#161B26" : "rgba(200, 169, 110, 0.06)",
+                      border: msg.role === "maya" ? "1px solid rgba(200, 169, 110, 0.15)" : "none",
                       borderRadius: msg.role === "user" ? "1rem 1rem 0.25rem 1rem" : "1rem 1rem 1rem 0.25rem",
-                      color: "#F0EDE6",
                     }}
                   >
-                    {msg.content}
+                    {msg.role === "maya" ? (
+                      <MessageRenderer content={msg.content} onSend={handleSend} />
+                    ) : (
+                      <span className="text-sm" style={{ color: "#F0EDE6" }}>{msg.content}</span>
+                    )}
                   </div>
                 </div>
               ))}
 
-              {/* Indicateur de frappe */}
               {isTyping && (
                 <div className="flex justify-start animate-slide-up">
                   <div
@@ -296,68 +318,48 @@ export default function Maya() {
           paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
         }}
       >
-        <div className="max-w-[700px] mx-auto">
-          <div
-            className="flex items-end gap-2 rounded-2xl px-3 py-2"
-            style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.2)" }}
+        <div
+          className="flex items-end gap-2 rounded-2xl px-3 py-2"
+          style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.2)" }}
+        >
+          <button className="p-2 flex-shrink-0 self-end mb-0.5" onClick={() => setIsRecording((r) => !r)}>
+            {isRecording ? <MicOff size={20} color="#ef4444" /> : <Mic size={20} color="#8B8D94" />}
+          </button>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Dites a Maya ce dont vous revez..."
+            rows={1}
+            className="flex-1 bg-transparent resize-none outline-none text-sm py-2"
+            style={{ color: "#F0EDE6", minHeight: "40px", maxHeight: "120px" }}
+          />
+          <button
+            className="p-2 flex-shrink-0 self-end mb-0.5 rounded-xl transition-all"
+            style={{
+              background: input.trim() ? "linear-gradient(135deg, #C8A96E, #E8D5A8)" : "rgba(200, 169, 110, 0.1)",
+              opacity: input.trim() ? 1 : 0.5,
+            }}
+            onClick={() => handleSend()}
+            disabled={!input.trim()}
           >
-            {/* Micro */}
-            <button
-              className="p-2 flex-shrink-0 self-end mb-0.5"
-              onClick={() => setIsRecording((r) => !r)}
-            >
-              {isRecording ? (
-                <MicOff size={20} color="#ef4444" />
-              ) : (
-                <Mic size={20} color="#8B8D94" />
-              )}
-            </button>
-
-            {/* Textarea */}
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleTextareaChange}
-              onKeyDown={handleKeyDown}
-              placeholder="Dites a Maya ce dont vous revez..."
-              rows={1}
-              className="flex-1 bg-transparent resize-none outline-none text-sm py-2"
-              style={{
-                color: "#F0EDE6",
-                minHeight: "40px",
-                maxHeight: "120px",
-              }}
-            />
-
-            {/* Bouton envoi */}
-            <button
-              className="p-2 flex-shrink-0 self-end mb-0.5 rounded-xl transition-all"
-              style={{
-                background: input.trim() ? "linear-gradient(135deg, #C8A96E, #E8D5A8)" : "rgba(200, 169, 110, 0.1)",
-                opacity: input.trim() ? 1 : 0.5,
-              }}
-              onClick={() => handleSend()}
-              disabled={!input.trim()}
-            >
-              <Send size={18} color={input.trim() ? "#070B14" : "#C8A96E"} />
-            </button>
-          </div>
-
-          {/* Credits info */}
-          <div className="flex items-center justify-between mt-2 px-1">
-            <span className="text-[10px]" style={{ color: "#8B8D94" }}>
-              {user?.subscriptionTier === "free"
-                ? `${creditsLeft} credits restants`
-                : user
-                ? "Conversations illimitees"
-                : `${guestCredits} messages gratuits`}
-            </span>
-            {!user && (
-              <Link href="/auth">
-                <span className="text-[10px]" style={{ color: "#C8A96E" }}>Creer un compte</span>
-              </Link>
-            )}
-          </div>
+            <Send size={18} color={input.trim() ? "#070B14" : "#C8A96E"} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between mt-2 px-1">
+          <span className="text-[10px]" style={{ color: isUnlimited ? "#C8A96E" : "#8B8D94" }}>
+            {isUnlimited
+              ? "Conversations illimitees"
+              : user
+              ? `${creditsLeft} messages gratuits restants`
+              : `${creditsLeft} messages gratuits`}
+          </span>
+          {!user && (
+            <Link href="/auth">
+              <span className="text-[10px]" style={{ color: "#C8A96E" }}>Creer un compte</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>
