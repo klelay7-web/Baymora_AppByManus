@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Sparkles, ChevronRight, Heart, Star, Gift } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 const HERO_IMG = `${CDN}/hero_yacht_sunset_b173a771.jpg`;
@@ -446,6 +447,10 @@ export default function Maison() {
             <button
               className="flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold"
               style={{ background: "rgba(200, 169, 110, 0.12)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.25)" }}
+              onClick={() => {
+                navigator.clipboard.writeText("https://maisonbaymora.com/join/" + (user?.name?.split(" ")[0] || "ami"));
+                toast.success("Lien de parrainage copié !");
+              }}
             >
               Inviter
             </button>
@@ -477,7 +482,13 @@ export default function Maison() {
               <h3 className="font-semibold text-sm mb-0.5" style={{ color: "#F0EDE6" }}>Vous êtes un établissement ?</h3>
               <p className="text-xs" style={{ color: "#8B8D94" }}>Rejoignez le réseau Maison Baymora et touchez une clientèle premium.</p>
             </div>
-            <ChevronRight size={16} color="#C8A96E" className="flex-shrink-0" />
+            <button
+              className="flex-shrink-0 p-1"
+              onClick={() => window.open("mailto:partenaires@maisonbaymora.com?subject=Demande partenariat Maison Baymora", "_blank")}
+              aria-label="Contacter les partenaires"
+            >
+              <ChevronRight size={16} color="#C8A96E" />
+            </button>
           </div>
         </div>
       </motion.section>

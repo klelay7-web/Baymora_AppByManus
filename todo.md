@@ -31,3 +31,19 @@
 - [ ] Formulaire de préférences profil (allergies, destinations, cercle familial)
 - [ ] Notifications push pour alertes offres flash
 - [ ] Page /parcours : connecter au vrai backend (trips table)
+
+## Prompt 04 — Corrections restantes + Map + Transport + CTA
+- [ ] Bouton "Inviter" → clipboard + toast "Lien copié !"
+- [ ] CTA "Établissement" → mailto partenaires@maisonbaymora.com
+- [ ] Préserver overflow-x: hidden dans index.css et index.html
+- [ ] Map multi-markers cliquables (bottom sheet nom/note/prix/Découvrir)
+- [ ] Géolocalisation client (navigator.geolocation + QR villes)
+- [ ] Distances hébergement→prestataires dans system prompt
+- [ ] Boutons réservation sur chaque étape JOURNEY (bookingUrl)
+- [ ] Transport adapté au budget dans system prompt
+- [ ] Map thème sombre (filter: invert+hue-rotate)
+- [ ] Budget = question N°1 avec QR fourchettes dans system prompt
+- [ ] Récapitulatif budget en fin de programme dans system prompt
+- [ ] Questions en fin de message, séparées dans system prompt
+- [ ] Raccourcir Maison (supprimer forfaits + parrainage → mini CTA)
+- [ ] Boutons d'action forfaits sur /premium (toast Stripe bientôt)

@@ -1,11 +1,15 @@
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Check, Crown, Zap, Star, ArrowLeft } from "lucide-react";
+import { Check, Crown, Zap, Star, ArrowLeft, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const PLANS = [
   {
     id: "social_club",
+    stripeId: "premium",
     name: "Social Club",
     price: "9,90",
     period: "mois",
@@ -25,6 +29,7 @@ const PLANS = [
   },
   {
     id: "duo",
+    stripeId: "premium",
     name: "Duo",
     price: "14,90",
     period: "mois",
@@ -43,6 +48,7 @@ const PLANS = [
   },
   {
     id: "annual",
+    stripeId: "prive",
     name: "Annuel",
     price: "89",
     period: "an",
@@ -60,6 +66,7 @@ const PLANS = [
   },
   {
     id: "decouverte",
+    stripeId: null,
     name: "Découverte",
     price: "0",
     period: "",
@@ -79,14 +86,38 @@ const PLANS = [
 export default function Premium() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const handleChoose = (planId: string) => {
-    if (planId === "decouverte") {
+  const createCheckoutSession = trpc.stripe.createCheckoutSession.useMutation({
+    onSuccess: (data) => {
+      if (data.url) {
+        window.open(data.url, "_blank");
+        toast.success("Redirection vers le paiement sécurisé...");
+      }
+      setLoadingPlan(null);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Erreur lors de la création du paiement");
+      setLoadingPlan(null);
+    },
+  });
+
+  const handleChoose = (plan: typeof PLANS[0]) => {
+    if (plan.id === "decouverte") {
       navigate("/maison");
       return;
     }
-    // TODO: connecter Stripe Checkout
-    alert(`Redirection vers Stripe pour le forfait ${planId} — à connecter`);
+    if (!user) {
+      toast.error("Connecte-toi pour souscrire à un forfait");
+      navigate("/auth");
+      return;
+    }
+    if (!plan.stripeId) return;
+    setLoadingPlan(plan.id);
+    createCheckoutSession.mutate({
+      planId: plan.stripeId as "premium" | "prive",
+      origin: window.location.origin,
+    });
   };
 
   return (
@@ -113,6 +144,7 @@ export default function Premium() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {PLANS.map((plan, i) => {
             const Icon = plan.icon;
+            const isLoading = loadingPlan === plan.id;
             return (
               <motion.div
                 key={plan.id}
@@ -172,8 +204,9 @@ export default function Premium() {
                 </ul>
 
                 <button
-                  onClick={() => handleChoose(plan.id)}
-                  className="w-full py-3 rounded-xl text-sm font-semibold transition-opacity"
+                  onClick={() => handleChoose(plan)}
+                  disabled={isLoading}
+                  className="w-full py-3 rounded-xl text-sm font-semibold transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
                   style={
                     plan.highlight
                       ? { background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }
@@ -182,7 +215,12 @@ export default function Premium() {
                       : { background: "rgba(200,169,110,0.1)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.25)" }
                   }
                 >
-                  {plan.id === "decouverte" ? "Continuer gratuitement" : plan.highlight ? "Choisir le Social Club" : `Choisir ${plan.name}`}
+                  {isLoading && <Loader2 size={14} className="animate-spin" />}
+                  {plan.id === "decouverte"
+                    ? "Continuer gratuitement"
+                    : plan.highlight
+                    ? "Choisir le Social Club"
+                    : `Choisir ${plan.name}`}
                 </button>
               </motion.div>
             );
@@ -192,7 +230,7 @@ export default function Premium() {
         {/* Garantie */}
         <div className="mt-8 text-center">
           <p className="text-sm" style={{ color: "#8B8D94" }}>
-            Paiement sécurisé · Résiliation en 1 clic · Aucun engagement
+            Paiement sécurisé Stripe · Résiliation en 1 clic · Aucun engagement
           </p>
           <p className="text-xs mt-2" style={{ color: "rgba(139,141,148,0.5)" }}>
             © 2026 Maison Baymora — Les prix sont TTC

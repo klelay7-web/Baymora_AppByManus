@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { MapView } from "@/components/Map";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Heart, MapPin, Star, ExternalLink, Calendar, ChevronRight, Check } from "lucide-react";
@@ -391,22 +392,76 @@ function PlacesRenderer({ data, onSend }: { data: unknown; onSend: (text: string
   );
 }
 
+interface MapMarker {
+  lat: number;
+  lng: number;
+  name?: string;
+  type?: string;
+}
 function MapRenderer({ data }: { data: unknown }) {
-  const mapData = data as { query?: string; center?: { lat: number; lng: number }; zoom?: number };
+  const mapData = data as {
+    query?: string;
+    center?: { lat: number; lng: number };
+    zoom?: number;
+    markers?: MapMarker[];
+  };
   const query = mapData?.query || "Paris, France";
-  const encodedQuery = encodeURIComponent(query);
-  const src = `https://www.google.com/maps/embed/v1/search?key=AIzaSyD-placeholder&q=${encodedQuery}`;
+  const markers: MapMarker[] = mapData?.markers || [];
+  const center = mapData?.center || { lat: 48.8566, lng: 2.3522 };
+  const zoom = mapData?.zoom || 13;
+  const [activeMarker, setActiveMarker] = useState<number | null>(null);
+
+  const handleMapReady = useCallback(
+    (map: google.maps.Map) => {
+      map.setCenter(center);
+      map.setZoom(zoom);
+      if (markers.length === 0 && query) {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ address: query }, (results, status) => {
+          if (status === "OK" && results && results[0]) {
+            const loc = results[0].geometry.location;
+            map.setCenter(loc);
+            new window.google.maps.Marker({
+              position: loc,
+              map,
+              title: query,
+              icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#C8A96E", fillOpacity: 1, strokeColor: "#070B14", strokeWeight: 2 },
+            });
+          }
+        });
+      }
+      markers.forEach((m, i) => {
+        const marker = new window.google.maps.Marker({
+          position: { lat: m.lat, lng: m.lng },
+          map,
+          title: m.name || `Lieu ${i + 1}`,
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: "#C8A96E", fillOpacity: 1, strokeColor: "#070B14", strokeWeight: 2 },
+        });
+        marker.addListener("click", () => setActiveMarker(i));
+      });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   return (
-    <div className="mt-3 rounded-2xl overflow-hidden" style={{ height: "200px", filter: "invert(90%) hue-rotate(180deg)" }}>
-      <iframe
-        src={`https://maps.google.com/maps?q=${encodedQuery}&output=embed&z=13`}
-        width="100%"
-        height="200"
-        style={{ border: 0 }}
-        loading="lazy"
-        title={`Carte ${query}`}
-      />
+    <div className="mt-3 rounded-2xl overflow-hidden" style={{ position: "relative" }}>
+      <MapView className="w-full" initialCenter={center} initialZoom={zoom} onMapReady={handleMapReady} />
+      {markers.length > 0 && activeMarker !== null && (
+        <div className="absolute bottom-3 left-3 right-3 rounded-xl p-3" style={{ background: "rgba(13,17,23,0.95)", border: "1px solid rgba(200,169,110,0.25)" }}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold" style={{ color: "#F0EDE6" }}>{markers[activeMarker].name || `Lieu ${activeMarker + 1}`}</span>
+            <button onClick={() => setActiveMarker(null)} className="text-xs" style={{ color: "#8B8D94" }}>×</button>
+          </div>
+          {markers[activeMarker].type && <span className="text-[10px]" style={{ color: "#C8A96E" }}>{markers[activeMarker].type}</span>}
+          <a href={`https://www.google.com/maps/search/?api=1&query=${markers[activeMarker].lat},${markers[activeMarker].lng}`} target="_blank" rel="noopener noreferrer" className="block mt-2 text-[10px] font-semibold text-center py-1.5 rounded-lg" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}>Ouvrir dans Google Maps</a>
+        </div>
+      )}
+      {markers.length > 1 && activeMarker === null && (
+        <div className="absolute bottom-3 left-3 text-[10px] px-2 py-1 rounded-full" style={{ background: "rgba(13,17,23,0.9)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.2)" }}>
+          {markers.length} lieux — cliquez sur un marqueur
+        </div>
+      )}
     </div>
   );
 }

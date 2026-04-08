@@ -45,6 +45,7 @@ import {
   getPilotageMessages, addPilotageMessage,
 } from "./db";
 import { generateConciergeResponse, getWelcomeResponse } from "./services/concierge";
+import { PLANS } from "./stripe/products";
 import { sendEmail, previewEmail, triggerPartnerProspection, triggerAffiliateWelcome, triggerTeamWeeklyReport, sendBulkWeeklyPlans } from "./services/emailService";
 import type { EmailType } from "./services/emailService";
 import { callClaude, buildSystemPrompt, parseStructuredTags, type ClaudeMessage } from "./services/claudeService";
@@ -3322,6 +3323,40 @@ export const appRouter = router({
           ) as any[];
           return rows;
         } finally { await conn.end(); }
+      }),
+  }),
+
+  // ─── Stripe Checkout ───────────────────────────────────────────────────────────
+  stripe: router({
+    createCheckoutSession: protectedProcedure
+      .input(z.object({
+        planId: z.enum(["premium", "prive"]),
+        origin: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const StripeLib = (await import("stripe")).default;
+        const stripe = new StripeLib(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" as any });
+        const plan = PLANS[input.planId];
+        if (!plan || !plan.stripePriceId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Plan invalide ou gratuit" });
+        }
+        const session = await stripe.checkout.sessions.create({
+          mode: "subscription",
+          payment_method_types: ["card"],
+          customer_email: ctx.user.email,
+          line_items: [{ price: plan.stripePriceId ?? "", quantity: 1 }],
+          allow_promotion_codes: true,
+          client_reference_id: ctx.user.id.toString(),
+          metadata: {
+            user_id: ctx.user.id.toString(),
+            customer_email: ctx.user.email || "",
+            customer_name: ctx.user.name || "",
+            plan_id: input.planId,
+          },
+          success_url: `${input.origin}/profil?upgrade=success`,
+          cancel_url: `${input.origin}/premium?cancelled=true`,
+        });
+        return { url: session.url };
       }),
   }),
 });
