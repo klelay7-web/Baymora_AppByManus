@@ -1,107 +1,81 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AppLayout from "./components/AppLayout";
-import Home from "./pages/Home";
-import Chat from "./pages/Chat";
-import Discover from "./pages/Discover";
-import CardDetail from "./pages/CardDetail";
-import Profile from "./pages/Profile";
-import Pricing from "./pages/Pricing";
-import TripPlan from "./pages/TripPlan";
-import EstablishmentDetail from "./pages/EstablishmentDetail";
-import Destinations from "./pages/Destinations";
-import Inspirations from "./pages/Inspirations";
-import Services from "./pages/Services";
-import About from "./pages/About";
-import MesParcours from "./pages/MesParcours";
-import Offers from "./pages/Offers";
-import SharedContent from "./pages/SharedContent";
-import { lazy, Suspense } from "react";
+import { useAuth } from "./_core/hooks/useAuth";
 
-// Lazy load dashboards
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
-const DashboardClient = lazy(() => import("./pages/DashboardClient"));
-const DashboardAmbassador = lazy(() => import("./pages/DashboardAmbassador"));
-const AdminCommandCenter = lazy(() => import("./pages/AdminCommandCenter"));
-const CommandCenter = lazy(() => import("./pages/CommandCenter"));
-const AdminSeoFiches = lazy(() => import("./pages/AdminSeoFiches"));
-const AdminContentSocial = lazy(() => import("./pages/AdminContentSocial"));
-const AdminPartnersCommissions = lazy(() => import("./pages/AdminPartnersCommissions"));
-const TeamDashboard = lazy(() => import("./pages/TeamDashboard"));
-const Pilotage = lazy(() => import("./pages/Pilotage"));
-const AdminEmailCenter = lazy(() => import("./pages/AdminEmailCenter"));
-const LenaWorkspace = lazy(() => import("./pages/LenaWorkspace"));
-const AmbassadeurInfo = lazy(() => import("./pages/AmbassadeurInfo"));
-const MaFiche = lazy(() => import("./pages/MaFiche"));
-const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
+// 6 pages exactes + auth + fiche etablissement
+import Landing from "./pages/Landing";
+import Maison from "./pages/Maison";
+import Maya from "./pages/Maya";
+import Offres from "./pages/Offres";
+import Parcours from "./pages/Parcours";
+import Profil from "./pages/Profil";
+import Auth from "./pages/Auth";
+import LieuDetail from "./pages/LieuDetail";
 
-function LazyPage({ Component }: { Component: React.LazyExoticComponent<any> }) {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="text-primary text-sm tracking-wider animate-pulse">Chargement...</div>
-        </div>
-      }
-    >
-      <Component />
-    </Suspense>
-  );
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#070B14" }}>
+        <div className="text-[#C8A96E] text-sm tracking-widest animate-pulse">MAISON BAYMORA</div>
+      </div>
+    );
+  }
+  if (!user) return <Redirect to="/auth" />;
+  return <Component />;
 }
 
 function Router() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#070B14" }}>
+        <div className="text-[#C8A96E] text-sm tracking-widest animate-pulse">MAISON BAYMORA</div>
+      </div>
+    );
+  }
+
   return (
     <Switch>
-      {/* Public */}
-      <Route path="/" component={Home} />
-      <Route path="/chat" component={Chat} />
-      <Route path="/chat/:id" component={Chat} />
-      <Route path="/discover" component={Discover} />
-      <Route path="/discover/:slug" component={CardDetail} />
-      <Route path="/pricing" component={Pricing} />
-      <Route path="/trip/:id" component={TripPlan} />
-      <Route path="/establishment/:slug" component={EstablishmentDetail} />
-      <Route path="/destinations" component={Destinations} />
-      <Route path="/inspirations" component={Inspirations} />
-      <Route path="/services" component={Services} />
-      <Route path="/a-propos" component={About} />
-      <Route path="/mes-parcours" component={MesParcours} />
-      <Route path="/offres" component={Offers} />
-      <Route path="/ambassadeur-info">{() => <LazyPage Component={AmbassadeurInfo} />}</Route>
+      {/* Landing — visiteurs non connectes uniquement */}
+      <Route path="/">
+        {() => user ? <Redirect to="/maison" /> : <Landing />}
+      </Route>
 
-      {/* Client Dashboards */}
-      <Route path="/profile" component={Profile} />
-      <Route path="/ma-fiche">{() => <LazyPage Component={MaFiche} />}</Route>
-      <Route path="/mon-espace">{() => <LazyPage Component={DashboardClient} />}</Route>
-      <Route path="/ambassadeur">{() => <LazyPage Component={DashboardAmbassador} />}</Route>
+      {/* Auth */}
+      <Route path="/auth">
+        {() => user ? <Redirect to="/maison" /> : <Auth />}
+      </Route>
 
-      {/* Team Dashboard */}
-      <Route path="/team/fiches">{() => <LazyPage Component={TeamDashboard} />}</Route>
-      <Route path="/terrain">{() => <LazyPage Component={TeamDashboard} />}</Route>
+      {/* Pages connectees */}
+      <Route path="/maison">
+        {() => <ProtectedRoute component={Maison} />}
+      </Route>
+      <Route path="/maya">
+        {() => <ProtectedRoute component={Maya} />}
+      </Route>
+      <Route path="/offres">
+        {() => <ProtectedRoute component={Offres} />}
+      </Route>
+      <Route path="/parcours">
+        {() => <ProtectedRoute component={Parcours} />}
+      </Route>
+      <Route path="/profil">
+        {() => <ProtectedRoute component={Profil} />}
+      </Route>
 
-      {/* Admin Dashboards */}
-      <Route path="/admin">{() => <LazyPage Component={AdminDashboard} />}</Route>
-      <Route path="/admin/command-center">{() => <LazyPage Component={CommandCenter} />}</Route>
-      <Route path="/admin/seo-fiches">{() => <LazyPage Component={AdminSeoFiches} />}</Route>
-      <Route path="/admin/content-social">{() => <LazyPage Component={AdminContentSocial} />}</Route>
-      <Route path="/admin/partners-commissions">{() => <LazyPage Component={AdminPartnersCommissions} />}</Route>
+      {/* Fiche etablissement */}
+      <Route path="/lieu/:id">
+        {() => <LieuDetail />}
+      </Route>
 
-      {/* Pilotage Owner */}
-      <Route path="/pilotage">{() => <LazyPage Component={Pilotage} />}</Route>
-      <Route path="/admin/emails">{() => <LazyPage Component={AdminEmailCenter} />}</Route>
-      <Route path="/lena-workspace">{() => <LazyPage Component={LenaWorkspace} />}</Route>
-
-      {/* Invitation Terrain */}
-      <Route path="/invite/:token">{() => <LazyPage Component={AcceptInvite} />}</Route>
-
-      {/* Partage public */}
-      <Route path="/partage/:token" component={SharedContent} />
-
-      <Route path="/404" component={NotFound} />
+      {/* 404 */}
       <Route component={NotFound} />
     </Switch>
   );
