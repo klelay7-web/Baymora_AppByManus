@@ -7,9 +7,9 @@ const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHU
 
 const NAV_ITEMS = [
   { path: "/maison", label: "Maison", icon: Home },
-  { path: "/offres", label: "Chercher", icon: Search },
+  { path: "/offres", label: "Offres", icon: Search },
   { path: "/maya", label: "Maya", icon: Sparkles, center: true },
-  { path: "/parcours", label: "Premium", icon: Crown },
+  { path: "/parcours", label: "Parcours", icon: Compass },
   { path: "/profil", label: "Profil", icon: User },
 ];
 
@@ -18,6 +18,7 @@ const SIDEBAR_ITEMS = [
   { path: "/maya", label: "Maya IA", icon: Sparkles },
   { path: "/offres", label: "Offres", icon: Star },
   { path: "/parcours", label: "Parcours", icon: Compass },
+  { path: "/premium", label: "Premium", icon: Crown },
   { path: "/profil", label: "Profil", icon: User },
 ];
 
@@ -25,7 +26,7 @@ const TOP_PILLS = [
   { path: "/maison", label: "Maison" },
   { path: "/maya", label: "Maya" },
   { path: "/offres", label: "Offres" },
-  { path: "/parcours", label: "Bundles" },
+  { path: "/parcours", label: "Parcours" },
 ];
 
 function BottomNav() {

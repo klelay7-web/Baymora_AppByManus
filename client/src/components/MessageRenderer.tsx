@@ -45,14 +45,18 @@ interface JourneyStep {
   from: string;
   to: string;
   duration?: string;
+  departure?: string;
+  arrival?: string;
   cost?: string;
   bookingUrl?: string;
+  notes?: string;
 }
 
 interface JourneyData {
   from?: string;
   to?: string;
   duration?: string;
+  totalDuration?: string;
   steps?: JourneyStep[];
 }
 
@@ -367,7 +371,7 @@ function PlacesRenderer({ data, onSend }: { data: unknown; onSend: (text: string
                     className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold text-center"
                     style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
                   >
-                    Voir
+                    Découvrir
                   </a>
                 ) : (
                   <button
@@ -375,7 +379,7 @@ function PlacesRenderer({ data, onSend }: { data: unknown; onSend: (text: string
                     style={{ background: "rgba(200,169,110,0.1)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.2)" }}
                     onClick={() => onSend(`Dis-moi plus sur ${place.name}`)}
                   >
-                    En savoir +
+                    Découvrir
                   </button>
                 )}
               </div>
@@ -437,7 +441,7 @@ function BookingRenderer({ data, onSend }: { data: unknown; onSend: (text: strin
             className="py-2 rounded-xl text-xs font-semibold text-center"
             style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
           >
-            Reserver moi-meme
+            Réserver moi-même
           </a>
         )}
         {booking.email && (
@@ -465,7 +469,7 @@ function BookingRenderer({ data, onSend }: { data: unknown; onSend: (text: strin
         </button>
       </div>
       <p className="text-[10px] mt-2 text-center" style={{ color: "#8B8D94" }}>
-        Mentionnez Maison Baymora pour beneficier de vos avantages
+        Mentionnez Maison Baymora pour bénéficier de vos avantages
       </p>
     </div>
   );
@@ -562,44 +566,70 @@ function JourneyRenderer({ data }: { data: unknown }) {
   if (!steps.length) return null;
 
   return (
-    <div className="mt-3 rounded-2xl p-4" style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)" }}>
-      <div className="text-xs font-semibold mb-3" style={{ color: "#C8A96E" }}>
-        Itineraire transport
+    <div className="mt-3 rounded-2xl overflow-hidden" style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.18)" }}>
+      {/* Header */}
+      <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(200,169,110,0.1)" }}>
+        <div className="flex items-center gap-2">
+          <span style={{ color: "#C8A96E" }}>🗺️</span>
+          <span className="text-xs font-semibold" style={{ color: "#C8A96E" }}>Itinéraire transport</span>
+        </div>
+        {(journey as any)?.totalDuration && (
+          <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.12)", color: "#C8A96E" }}>
+            {(journey as any).totalDuration} au total
+          </span>
+        )}
       </div>
-      <div className="space-y-0">
+      {/* Trajet résumé */}
+      {journey.from && journey.to && (
+        <div className="px-4 py-2 text-xs" style={{ color: "#8B8D94", borderBottom: "1px solid rgba(200,169,110,0.06)" }}>
+          {journey.from} <span style={{ color: "#C8A96E" }}>→</span> {journey.to}
+        </div>
+      )}
+      {/* Étapes */}
+      <div className="p-4 space-y-0">
         {steps.map((step, i) => (
           <div key={i} className="flex gap-3">
-            {/* Ligne verticale */}
+            {/* Timeline */}
             <div className="flex flex-col items-center">
               <div
-                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-sm"
+                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-base"
                 style={{ background: "rgba(200,169,110,0.12)", border: "1px solid rgba(200,169,110,0.25)" }}
               >
                 {getTransportEmoji(step.mode)}
               </div>
               {i < steps.length - 1 && (
-                <div className="w-0.5 flex-1 my-1" style={{ background: "rgba(200,169,110,0.15)", minHeight: "20px" }} />
+                <div className="w-0.5 flex-1 my-1" style={{ background: "rgba(200,169,110,0.15)", minHeight: "24px" }} />
               )}
             </div>
-            {/* Contenu */}
-            <div className="pb-3 flex-1">
-              <div className="text-xs font-medium" style={{ color: "#F0EDE6" }}>
-                {step.from} → {step.to}
+            {/* Contenu étape */}
+            <div className="pb-4 flex-1">
+              <div className="text-xs font-semibold" style={{ color: "#F0EDE6" }}>
+                {step.from} <span style={{ color: "#C8A96E" }}>→</span> {step.to}
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px]" style={{ color: "#8B8D94" }}>{step.mode}</span>
-                {step.duration && <span className="text-[10px]" style={{ color: "#8B8D94" }}>· {step.duration}</span>}
-                {step.cost && <span className="text-[10px]" style={{ color: "#C8A96E" }}>· {step.cost}</span>}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                <span className="text-[10px] font-medium" style={{ color: "#C8A96E" }}>{step.mode}</span>
+                {step.duration && <span className="text-[10px]" style={{ color: "#8B8D94" }}>⏱ {step.duration}</span>}
+                {step.departure && step.arrival && (
+                  <span className="text-[10px]" style={{ color: "#8B8D94" }}>{step.departure} → {step.arrival}</span>
+                )}
+                {step.cost && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "rgba(200,169,110,0.1)", color: "#C8A96E" }}>
+                    {step.cost}
+                  </span>
+                )}
               </div>
+              {step.notes && (
+                <div className="mt-1 text-[10px] italic" style={{ color: "#6B6E78" }}>{step.notes}</div>
+              )}
               {step.bookingUrl && (
                 <a
                   href={step.bookingUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-1 text-[10px]"
-                  style={{ color: "#C8A96E" }}
+                  className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-opacity hover:opacity-80"
+                  style={{ background: "rgba(200,169,110,0.15)", border: "1px solid rgba(200,169,110,0.3)", color: "#C8A96E" }}
                 >
-                  Reserver <ExternalLink size={9} />
+                  Réserver <ExternalLink size={10} />
                 </a>
               )}
             </div>

@@ -342,15 +342,28 @@ Format QR avec porte de sortie (OBLIGATOIRE sur chaque message) :
 :::QR:::Option A | Option B | Option C | Option D | 💬 Autre chose:::END:::
 
 ## RÈGLE N°8 — TRANSPORT COMPLET
-Chaque fois qu'un client demande un séjour, une escapade ou un parcours, MAYA doit TOUJOURS inclure le transport aller-retour :
-- **Depuis la ville du client** (utiliser son profil ou demander si inconnu)
-- **Modes proposés** : train (TGV/Eurostar), avion (low-cost + premium), voiture, chauffeur VTC, jet privé si budget >10k€
-- **Toujours comparer** au moins 2 options transport avec durée + coût estimé
-- **Liens directs** : Trainline (train), Skyscanner (vol), Uber/Chauffeur (VTC)
-- **Tag JOURNEY obligatoire** dès qu'un déplacement >2h est impliqué
-- **Demander si besoin** : "Vous partez depuis quelle ville ? Et vous préférez train ou avion ?"
-- **Inclure dans SCENARIOS** : chaque scénario doit avoir son option transport adaptée au budget
-- **Horaires réalistes** : tenir compte des temps de trajet, correspondances, et arrivée à l'hôtel
+Chaque fois qu'un client demande un séjour, une escapade ou un parcours, MAYA doit TOUJOURS inclure le transport aller-retour.
+
+**OPTIONS TRANSPORT à proposer selon budget et distance :**
+- Train TGV/Intercités → lien Trainline : https://www.trainline.fr
+- Avion low-cost → lien Skyscanner : https://www.skyscanner.fr
+- Avion premium (Business/First) → lien compagnie directe ou Skyscanner
+- Voiture de location → lien Rentalcars : https://www.rentalcars.com/fr
+- Chauffeur VTC → lien Uber : https://www.uber.com/fr ou Blacklane : https://www.blacklane.com/fr
+- Jet privé (budget >10k€) → lien VistaJet : https://www.vistajet.com ou Air Charter Service
+- Ferry/Bateau → lien Corsica Ferries ou Direct Ferries selon destination
+- Eurostar (Paris↔Londres) → lien https://www.eurostar.com/fr-fr
+
+**RÈGLES OBLIGATOIRES :**
+- Depuis la ville du client (utiliser son profil ou demander si inconnu)
+- Toujours comparer AU MOINS 2 options transport avec durée + coût estimé
+- Tag JOURNEY obligatoire dès qu'un déplacement >1h est impliqué
+- Horaires réalistes : tenir compte des temps de trajet, correspondances, et arrivée à l'hôtel
+- Inclure dans SCENARIOS : chaque scénario a son option transport adaptée au budget
+- Pour les trajets multi-étapes (ex: Paris → TGV → Toulon → VTC → Saint-Tropez), détailler chaque étape
+
+**FORMAT JOURNEY enrichi (multi-étapes) :**
+:::JOURNEY:::{"from":"Paris CDG","to":"Saint-Tropez","totalDuration":"5h30","steps":[{"mode":"TGV","from":"Paris Gare de Lyon","to":"Toulon","duration":"3h45","departure":"09:15","arrival":"13:00","cost":"€€","bookingUrl":"https://www.trainline.fr","notes":"Direct, confortable"},{"mode":"VTC","from":"Toulon Gare","to":"Saint-Tropez","duration":"1h30","departure":"13:15","arrival":"14:45","cost":"€€€","bookingUrl":"https://www.uber.com/fr","notes":"Éviter 16h-19h (embouteillages)"}]}:::END:::
 
 ## RÈGLE N°9 — APRÈS-VOYAGE
 Une fois qu'un séjour est terminé (ou que le client revient d'un voyage), MAYA doit :
@@ -363,12 +376,80 @@ Une fois qu'un séjour est terminé (ou que le client revient d'un voyage), MAYA
 - **Invitation à noter** : "Votre avis sur [établissement] aide les autres membres — souhaitez-vous le partager ?"
 - **Planification anticipée** : "Votre prochain voyage, c'est pour quand ? Je peux commencer à surveiller les disponibilités"
 
+## RÈGLE N°0 — LE BUDGET AVANT TOUT
+Le budget est LA première information à obtenir. Sans budget, Maya ne peut pas proposer de parcours pertinent.
+
+Si le client donne une destination SANS budget :
+→ Maya propose immédiatement les 3 fourchettes avec QR cliquables + "Mon budget exact" en option
+:::QR:::Budget 2 000-5 000€ | Budget 5 000-15 000€ | Budget 15 000€+ | 💬 Mon budget exact | 💬 Autre chose:::END:::
+
+Si le client donne un budget :
+→ Maya le respecte STRICTEMENT
+→ Total transport + hébergement + restaurants + activités doit être DANS le budget annoncé
+→ Maya affiche un RÉCAPITULATIF BUDGET à la fin de chaque programme :
+"💰 Récapitulatif budget :
+· Transport : 890€
+· Hébergement : 2 030€
+· Restaurants & sorties : ~1 200€
+· Activités : ~400€
+· TOTAL estimé : 4 520€ (dans votre budget 5-7k€) ✅"
+
+## RÈGLE — QUALIFICATION DISCRÈTE DU PROFIL
+Maya enrichit la fiche client EN CONTINU, sans que le client s'en rende compte. Elle ne pose JAMAIS de questions de type "formulaire". Elle les intègre naturellement dans la conversation.
+
+MAUVAIS : "Avez-vous des allergies alimentaires ?"
+BON : "Pour les restos, il y a des choses que vous ne mangez pas ou des préférences particulières ?"
+
+MAUVAIS : "Quel est votre style de voyage ?"
+BON : "Plutôt plage et détente, ou vous aimez bouger et explorer ?"
+
+Informations à capter DISCRÈTEMENT au fil de la conversation :
+- Budget (fourchette) → demandé naturellement
+- Nombre de personnes → "Vous partez à combien ?"
+- Régime alimentaire → quand on parle de restaurants
+- Enfants / animaux → "C'est un voyage en famille ?"
+- Style (détente/aventure/culture) → via les choix proposés
+- Hébergement préféré → quand on propose les hôtels
+- Transport préféré → quand on parle de se déplacer
+- Ville de départ → pour calculer le transport
+
+Maya ne pose PAS toutes ces questions d'un coup. Elle les distille sur 2-3 messages, maximum.
+
+## RÈGLE — TUTOIEMENT ADAPTATIF
+Si le client tutoie → Maya tutoie immédiatement.
+Si le client vouvoie → Maya vouvoie.
+JAMAIS mélanger tu et vous dans un même message.
+
+## RÈGLE — FORMAT QUESTIONS
+Ne JAMAIS mettre une question en **gras**. Les questions sont dans le flux naturel du texte. Pas de mise en forme spéciale.
+INTERDIT : "**Quel budget vous visez ?**"
+CORRECT : "Quel budget vous visez pour ces 2 semaines ?"
+
+## RÈGLE — PROGRAMME AÉRÉ
+Chaque créneau horaire sur sa propre ligne avec espace vide avant et après :
+
+09h00 — Petit-déj hôtel
+
+11h00 — Balade vieille ville
+
+14h00 — Plage de Pampelonne
+
+PAS tout collé en un seul paragraphe. Chaque créneau = une ligne séparée.
+
+## RÈGLE — TAGS EN FIN DE MESSAGE
+TOUS les tags structurés (:::PLACES:::, :::MAP:::, :::BOOKING:::, :::JOURNEY:::, :::QR:::) doivent être placés APRÈS le texte complet, jamais au milieu. Le texte doit être 100% lisible SANS les tags. Les tags sont des "pièces jointes" invisibles.
+
+## RÈGLE — QR DERNIÈRE OPTION
+La DERNIÈRE option de chaque :::QR::: est TOUJOURS et UNIQUEMENT "💬 Autre chose". Pas "Autre idée", pas "Mon idée".
+
 ## LANGUE ET TON
 - Français par défaut, anglais si le client écrit en anglais
 - Vouvoiement élégant et naturel
 - Jamais de jargon technique ou de langage robotique
 - Chaleureux mais professionnel — comme un ami très bien connecté
-- Émojis utilisés avec parcimonie : 1-3 max par message, jamais en excès`;
+- Émojis utilisés avec parcimonie : 1-3 max par message, jamais en excès
+- La question est TOUJOURS en fin de message, séparée du reste par une ligne vide
+- JAMAIS une question noyée au milieu d'un paragraphe`;
 }
 
 // ─── Événements à venir ──────────────────────────────────────────────────────
@@ -455,7 +536,7 @@ export async function callClaude(
 
   const response = await anthropic.messages.create({
     model,
-    max_tokens: 8000, // Plannings complets 7-10 jours nécessitent plus de tokens
+    max_tokens: 6000, // EXCELLENCE : plannings complets 7-10 jours
     system: systemPrompt,
     messages: messages.map(m => ({
       role: m.role,
@@ -523,70 +604,96 @@ export interface ParsedTags {
 export function parseStructuredTags(content: string): ParsedTags {
   const result: ParsedTags = { cleanMessage: content };
 
+  // Helper : parse avec fallback si :::END::: absent
+  function extractTag(tag: string, cnt: string): string | null {
+    const strict = cnt.match(new RegExp(`:::${tag}:::[\\s\\S]*?:::END:::`, "g"));
+    if (strict && strict[0]) {
+      const inner = strict[0].replace(`:::${tag}:::`, "").replace(/:::END:::$/, "");
+      return inner.trim();
+    }
+    // Fallback : tag sans :::END::: (message coupé)
+    const fb = cnt.match(new RegExp(`:::${tag}:::([\\s\\S]*)$`));
+    if (fb) return fb[1].trim();
+    return null;
+  }
+
   // Extract PLACES
-  const placesMatch = content.match(/:::PLACES:::([\s\S]*?):::END:::/);
-  if (placesMatch) {
-    try { result.places = JSON.parse(placesMatch[1].trim()); } catch {}
+  const placesRaw = extractTag("PLACES", content);
+  if (placesRaw) {
+    try { result.places = JSON.parse(placesRaw); } catch {
+      // Fallback : chercher un tableau JSON dans le contenu brut
+      const arrMatch = placesRaw.match(/(\[[\s\S]*?\])/); 
+      if (arrMatch) { try { result.places = JSON.parse(arrMatch[1]); } catch {} }
+    }
   }
 
   // Extract MAP
-  const mapMatch = content.match(/:::MAP:::([\s\S]*?):::END:::/);
-  if (mapMatch) {
-    try { result.map = JSON.parse(mapMatch[1].trim()); } catch {}
+  const mapRaw = extractTag("MAP", content);
+  if (mapRaw) {
+    try { result.map = JSON.parse(mapRaw); } catch {
+      const objMatch = mapRaw.match(/({[\s\S]*?})/); 
+      if (objMatch) { try { result.map = JSON.parse(objMatch[1]); } catch {} }
+    }
   }
 
   // Extract JOURNEY
-  const journeyMatch = content.match(/:::JOURNEY:::([\s\S]*?):::END:::/);
-  if (journeyMatch) {
-    try { result.journey = JSON.parse(journeyMatch[1].trim()); } catch {}
+  const journeyRaw = extractTag("JOURNEY", content);
+  if (journeyRaw) {
+    try { result.journey = JSON.parse(journeyRaw); } catch {
+      const objMatch = journeyRaw.match(/({[\s\S]*?})/); 
+      if (objMatch) { try { result.journey = JSON.parse(objMatch[1]); } catch {} }
+    }
   }
 
   // Extract GCAL (multiple)
-  const gcalMatches = Array.from(content.matchAll(/:::GCAL:::([\s\S]*?):::END:::/g));
+  const gcalMatches = Array.from(content.matchAll(/:::GCAL:::([\.\s\S]*?):::END:::/g));
   if (gcalMatches.length > 0) {
     result.gcal = gcalMatches.map(m => { try { return JSON.parse(m[1].trim()); } catch { return null; } }).filter(Boolean);
   }
 
   // Extract BOOKING (multiple)
-  const bookingMatches = Array.from(content.matchAll(/:::BOOKING:::([\s\S]*?):::END:::/g));
+  const bookingMatches = Array.from(content.matchAll(/:::BOOKING:::([\.\s\S]*?):::END:::/g));
   if (bookingMatches.length > 0) {
     result.booking = bookingMatches.map(m => { try { return JSON.parse(m[1].trim()); } catch { return null; } }).filter(Boolean);
   }
 
   // Extract QR
-  const qrMatch = content.match(/:::QR:::([\s\S]*?):::END:::/);
-  if (qrMatch) {
-    result.qr = qrMatch[1]
+  const qrRaw = extractTag("QR", content);
+  if (qrRaw) {
+    result.qr = qrRaw
       .split("|")
       .map(s => s.trim())
-      .filter(s => s.length > 1 && s.length < 80) // Filtrer items vides ou trop longs
-      .slice(0, 6); // Max 6 suggestions cliquables
+      .filter(s => s.length > 1 && s.length < 80)
+      .slice(0, 6);
   }
 
   // Extract PLAN
-  const planMatch = content.match(/:::PLAN:::([\s\S]*?):::END:::/);
-  if (planMatch) {
-    try { result.plan = JSON.parse(planMatch[1].trim()); } catch {}
+  const planRaw = extractTag("PLAN", content);
+  if (planRaw) {
+    try { result.plan = JSON.parse(planRaw); } catch {}
   }
 
-  // Extract SCENARIOS (nouveau tag)
-  const scenariosMatch = content.match(/:::SCENARIOS:::([\s\S]*?):::END:::/);
-  if (scenariosMatch) {
-    try { result.scenarios = JSON.parse(scenariosMatch[1].trim()); } catch {}
+  // Extract SCENARIOS
+  const scenariosRaw = extractTag("SCENARIOS", content);
+  if (scenariosRaw) {
+    try { result.scenarios = JSON.parse(scenariosRaw); } catch {
+      const arrMatch = scenariosRaw.match(/(\[[\s\S]*?\])/); 
+      if (arrMatch) { try { result.scenarios = JSON.parse(arrMatch[1]); } catch {} }
+    }
   }
 
-  // Clean message: remove ALL tags — le client ne voit JAMAIS les tags bruts
+  // ⚠️ CRITIQUE : nettoyage TOUJOURS appliqué — le client ne voit JAMAIS de JSON brut
   result.cleanMessage = content
-    .replace(/:::PLACES:::[\s\S]*?:::END:::/g, "")
-    .replace(/:::MAP:::[\s\S]*?:::END:::/g, "")
-    .replace(/:::JOURNEY:::[\s\S]*?:::END:::/g, "")
-    .replace(/:::GCAL:::[\s\S]*?:::END:::/g, "")
-    .replace(/:::BOOKING:::[\s\S]*?:::END:::/g, "")
-    .replace(/:::QR:::[\s\S]*?:::END:::/g, "")
-    .replace(/:::PLAN:::[\s\S]*?:::END:::/g, "")
-    .replace(/:::SCENARIOS:::[\s\S]*?:::END:::/g, "")
-    // Sécurité : supprimer tout tag résiduel mal formé
-    .replace(/:::[A-Z_]+:::[^:]*(?!:::END:::)/g, "")
+    .replace(/:::PLACES:::[\.\s\S]*?(:::END:::|$)/g, "")
+    .replace(/:::MAP:::[\.\s\S]*?(:::END:::|$)/g, "")
+    .replace(/:::BOOKING:::[\.\s\S]*?(:::END:::|$)/g, "")
+    .replace(/:::JOURNEY:::[\.\s\S]*?(:::END:::|$)/g, "")
+    .replace(/:::SCENARIOS:::[\.\s\S]*?(:::END:::|$)/g, "")
+    .replace(/:::GCAL:::[\.\s\S]*?(:::END:::|$)/g, "")
+    .replace(/:::QR:::[\.\s\S]*?(:::END:::|$)/g, "")
+    .replace(/:::PLAN:::[\.\s\S]*?(:::END:::|$)/g, "")
+    // Sécurité finale : supprimer tout tag résiduel
+    .replace(/:::[A-Z_]+:::[\s\S]*/g, "")
     .trim();
 
   return result;

@@ -22,7 +22,7 @@ const MOCK_PARCOURS = [
   {
     id: "2",
     title: "Escapade Bali & Ubud",
-    destination: "Bali, Indonesie",
+    destination: "Bali, Indonésie",
     dates: "5-12 avril 2025",
     duration: "7 nuits",
     budget: "3 200€",
@@ -60,49 +60,73 @@ export default function Parcours() {
   const { user } = useAuth();
   const [activéTab, setActivéTab] = useState("Tous");
 
-  const isFree = !user || user.subscriptionTier === "free";
+  const OWNER_EMAILS = ["k.lelay7@gmail.com", "klelay7@gmail.com"];
+  const isOwner = OWNER_EMAILS.includes(user?.email || "") || user?.role === "admin";
+  const isFree = !user || (user.subscriptionTier === "free" && !isOwner);
 
   if (isFree) {
     return (
-      <div
-        className="min-h-scréén flex items-center justify-center px-4"
-        style={{ background: "#070B14" }}
-      >
-        <div
-          className="max-w-sm w-full rounded-3xl p-8 text-center"
-          style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.15)" }}
-        >
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: "rgba(200, 169, 110, 0.12)" }}
-          >
-            <Lock size={28} color="#C8A96E" />
+      <div style={{ background: "#070B14", minHeight: "100vh", color: "#F0EDE6" }}>
+        {/* Header */}
+        <div className="px-4 pt-6 pb-4 max-w-5xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold mb-1" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Mes parcours</h1>
+              <p className="text-sm" style={{ color: "#8B8D94" }}>Vos voyages sur-mesure</p>
+            </div>
+            <Link href="/maya">
+              <button className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}>
+                <Plus size={16} />
+                Nouveau
+              </button>
+            </Link>
           </div>
-          <h2
-            className="text-xl font-bold mb-2"
-            style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
-          >
-            Passez au Social Club
-          </h2>
-          <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>
-            Les parcours sur-mesure illimités sont réserves aux membres Social Club. Crééz, sauvegardéz et partagéz vos voyages de reve.
-          </p>
-          <Link href="/profil">
-            <button
-              className="w-full py-3 rounded-full text-sm font-semibold"
-              style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
-            >
-              Voir les forfaits
-            </button>
-          </Link>
-          <Link href="/maya">
-            <button
-              className="w-full py-3 rounded-full text-sm font-medium mt-3"
-              style={{ background: "rgba(200, 169, 110, 0.08)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.2)" }}
-            >
-              Essayer avec Maya d'abord
-            </button>
-          </Link>
+        </div>
+
+        {/* Démos floutées */}
+        <div className="px-4 pb-4 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {MOCK_PARCOURS.map((parcours) => {
+              const statusCfg = STATUS_CONFIG[parcours.status];
+              return (
+                <div key={parcours.id} className="rounded-2xl overflow-hidden relative" style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.12)" }}>
+                  {/* Flou overlay */}
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center" style={{ backdropFilter: "blur(6px)", background: "rgba(7,11,20,0.6)" }}>
+                    <Lock size={22} color="#C8A96E" className="mb-2" />
+                    <span className="text-xs font-semibold" style={{ color: "#C8A96E" }}>Social Club</span>
+                  </div>
+                  <div className="relative h-36">
+                    <img src={parcours.img} alt={parcours.title} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.8) 0%, transparent 50%)" }} />
+                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background: statusCfg.bg, color: statusCfg.color, border: `1px solid ${statusCfg.color}40` }}>
+                      {statusCfg.label}
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-sm mb-1" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>{parcours.title}</h3>
+                    <p className="text-xs" style={{ color: "#8B8D94" }}>{parcours.destination} · {parcours.duration}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* CTA upgrade */}
+        <div className="px-4 pb-8 max-w-sm mx-auto text-center">
+          <div className="rounded-3xl p-8" style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.2)" }}>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(200, 169, 110, 0.12)" }}>
+              <Sparkles size={24} color="#C8A96E" />
+            </div>
+            <h2 className="text-lg font-bold mb-2" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Passez au Social Club</h2>
+            <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>Les parcours sur-mesure illimités sont réservés aux membres Social Club. Créez, sauvegardez et partagez vos voyages de rêve.</p>
+            <Link href="/premium">
+              <button className="w-full py-3 rounded-full text-sm font-semibold mb-3" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}>Voir les forfaits →</button>
+            </Link>
+            <Link href="/maya">
+              <button className="w-full py-3 rounded-full text-sm font-medium" style={{ background: "rgba(200, 169, 110, 0.08)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.2)" }}>Essayer avec Maya d'abord</button>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -170,13 +194,13 @@ export default function Parcours() {
             <div className="text-center py-16">
               <div className="text-4xl mb-4">🗺️</div>
               <h3 className="font-semibold mb-2" style={{ color: "#F0EDE6" }}>Aucun parcours</h3>
-              <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>Crééz un parcours avec Maya</p>
+                <p className="text-sm" style={{ color: "#8B8D94" }}>Créez un parcours avec Maya</p>
               <Link href="/maya">
                 <button
                   className="px-6 py-3 rounded-full text-sm font-semibold"
                   style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
                 >
-                  Créér avec Maya →
+                  Créer avec Maya →
                 </button>
               </Link>
             </div>
