@@ -78,6 +78,16 @@ const TRANSPORT_EMOJI: Record<string, string> = {
   helicoptere: "🚁", default: "🚗",
 };
 
+const getAffiliatePartner = (mode: string): string => {
+  const m = mode.toLowerCase();
+  if (m.includes('train') || m.includes('tgv') || m.includes('eurostar')) return 'trainline';
+  if (m.includes('avion') || m.includes('vol') || m.includes('jet')) return 'skyscanner';
+  if (m.includes('voiture') || m.includes('location') || m.includes('sixt')) return 'sixt';
+  if (m.includes('hotel') || m.includes('nuit') || m.includes('chambre')) return 'booking';
+  if (m.includes('experience') || m.includes('activite') || m.includes('visite')) return 'getyourguide';
+  return 'booking';
+};
+
 const getTransportEmoji = (mode: string) => {
   const key = mode.toLowerCase();
   for (const [k, v] of Object.entries(TRANSPORT_EMOJI)) {
@@ -678,7 +688,7 @@ function JourneyRenderer({ data }: { data: unknown }) {
               )}
               {step.bookingUrl && (
                 <a
-                  href={step.bookingUrl}
+                  href={`/api/affiliate/redirect?partner=${encodeURIComponent(getAffiliatePartner(step.mode))}&dest=${encodeURIComponent(step.bookingUrl)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-opacity hover:opacity-80"

@@ -121,7 +121,7 @@ export default function Parcours() {
             <h2 className="text-lg font-bold mb-2" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Passez au Social Club</h2>
             <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>Les parcours sur-mesure illimités sont réservés aux membres Social Club. Créez, sauvegardez et partagez vos voyages de rêve.</p>
             <Link href="/premium">
-              <button className="w-full py-3 rounded-full text-sm font-semibold mb-3" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}>Voir les forfaits →</button>
+              <button className="w-full py-3 rounded-full text-sm font-semibold mb-3" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}>Voir les forfaits</button>
             </Link>
             <Link href="/maya">
               <button className="w-full py-3 rounded-full text-sm font-medium" style={{ background: "rgba(200, 169, 110, 0.08)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.2)" }}>Essayer avec Maya d'abord</button>
@@ -200,7 +200,7 @@ export default function Parcours() {
                   className="px-6 py-3 rounded-full text-sm font-semibold"
                   style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
                 >
-                  Créer avec Maya →
+                  Créer avec Maya
                 </button>
               </Link>
             </div>

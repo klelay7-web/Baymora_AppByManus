@@ -315,8 +315,15 @@ export default function LieuDetail() {
           <button
             className="px-5 py-2.5 rounded-full text-sm font-semibold"
             style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
+            onClick={() => {
+              const isRestaurant = lieu.type === 'Restaurant';
+              const dest = isRestaurant
+                ? `https://www.thefork.fr/search?query=${encodeURIComponent(lieu.name)}`
+                : `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(lieu.name + ' ' + lieu.city)}&aid=2311236`;
+              window.open(`/api/affiliate/redirect?partner=${isRestaurant ? 'thefork' : 'booking'}&dest=${encodeURIComponent(dest)}`, '_blank');
+            }}
           >
-            Reserver
+            Réserver
           </button>
         </div>
 

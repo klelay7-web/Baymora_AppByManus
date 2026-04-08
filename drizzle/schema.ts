@@ -303,11 +303,13 @@ export const affiliatePartners = mysqlTable("affiliatePartners", {
   apiKey: text("apiKey"),
   commissionRate: decimal("commissionRate", { precision: 5, scale: 2 }).notNull(),
   trackingParam: varchar("trackingParam", { length: 64 }).default("ref"),
-  baseUrl: text("baseUrl"),
+   baseUrl: text("baseUrl"),
+  affiliateId: varchar("affiliateId", { length: 256 }),
+  signupUrl: text("signupUrl"),
+  status: mysqlEnum("status", ["pending", "active", "rejected"]).default("pending").notNull(),
   isActive: boolean("isActive").default(true),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
-
 // ─── Affiliate Clicks ───────────────────────────────────────────────
 export const affiliateClicks = mysqlTable("affiliateClicks", {
   id: int("id").autoincrement().primaryKey(),

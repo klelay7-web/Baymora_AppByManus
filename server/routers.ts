@@ -3343,7 +3343,7 @@ export const appRouter = router({
         const session = await stripe.checkout.sessions.create({
           mode: "subscription",
           payment_method_types: ["card"],
-          customer_email: ctx.user.email,
+          customer_email: ctx.user.email ?? undefined,
           line_items: [{ price: plan.stripePriceId ?? "", quantity: 1 }],
           allow_promotion_codes: true,
           client_reference_id: ctx.user.id.toString(),

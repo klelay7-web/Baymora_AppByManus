@@ -23,13 +23,6 @@ const BUNDLES = [
   { title: "Week-ends urbains", tag: "City", count: 14, img: ROOFTOP_IMG },
 ];
 
-const EXPERIENCES = [
-  { title: "Aman Tokyo", city: "Tokyo", badge: "Exclusif", price: "1 200€", img: TOKYO_IMG },
-  { title: "La Mamounia", city: "Marrakech", badge: "-28%", price: "380€", img: MARRAKECH_IMG },
-  { title: "Canaves Oia", city: "Santorini", badge: "-22%", price: "520€", img: SANTORINI_IMG },
-  { title: "Attiko Rooftop", city: "New York", badge: "Exclusif", price: "180€", img: ROOFTOP_IMG },
-];
-
 const OFFRES = [
   { name: "Hôtel Plaza Athénée", city: "Paris", pct: 28, price: "680€", original: "940€", img: HOTEL_IMG, tag: "Palace" },
   { name: "Le Cinq — Four Seasons", city: "Paris", pct: 22, price: "280€", original: "360€", img: GASTRO_IMG, tag: "Gastronomie" },
@@ -47,43 +40,23 @@ const PLANS = [
 const FAQ = [
   {
     q: "Qu'est-ce que Maison Baymora ?",
-    a: "Maison Baymora est un social club virtuel premium qui connecte les voyageurs exigeants aux meilleures adresses du monde. Notre assistante Maya, propulsée par l'intelligence artificielle, crée des parcours sur-mesure : hôtels 5 étoiles, restaurants gastronomiques, activités exclusives et transport — le tout personnalisé selon votre profil."
-  },
-  {
-    q: "Comment Maya crée-t-elle un parcours sur-mesure ?",
-    a: "Maya analyse vos préférences, votre budget, vos dates et votre cercle de proches. Elle propose 3 scénarios (Essentiel, Premium, Excellence) avec hébergement, restaurants, activités et transport. Chaque parcours est unique et réservable en quelques clics."
-  },
-  {
-    q: "Quels types d'hôtels propose Maison Baymora ?",
-    a: "Exclusivement des établissements 4 et 5 étoiles : palaces, boutique-hôtels de caractère, resorts avec piscine, spa ou jacuzzi. Toujours dans des grandes villes ou des destinations prisées, en France et à l'international."
-  },
-  {
-    q: "Les réductions sont-elles réelles ?",
-    a: "Oui. Nous négocions en direct avec chaque établissement partenaire. Les remises vont de -15% à -40% sur des hôtels et restaurants premium. Ce sont des offres exclusives réservées aux membres Maison Baymora."
+    a: "Maison Baymora est un social club virtuel premium. Notre assistante Maya, propulsée par l'IA, crée des parcours sur-mesure : hôtels 5★, restaurants gastronomiques, activités exclusives et transport — le tout personnalisé selon votre profil et votre budget."
   },
   {
     q: "Maison Baymora est-il gratuit ?",
-    a: "Le forfait Découverte est entièrement gratuit : 3 conversations avec Maya et accès à toutes les offres avec remise. Le Social Club à 9,90€/mois offre un accès illimité à Maya, aux parcours sur-mesure et aux avantages exclusifs."
+    a: "Le forfait Découverte est entièrement gratuit : 3 conversations avec Maya et accès aux offres avec remise. Le Social Club à 9,90€/mois offre un accès illimité à Maya, aux parcours sur-mesure et aux avantages exclusifs."
   },
   {
-    q: "Dans quels pays Maison Baymora est-il disponible ?",
-    a: "Maya couvre le monde entier : France, Europe, États-Unis, Asie, Moyen-Orient. Les offres avec remise sont concentrées sur la France et l'Europe, avec une expansion internationale en cours."
+    q: "Les réductions sont-elles réelles ?",
+    a: "Oui. Les remises vont de -15% à -40% sur des hôtels et restaurants premium. Ce sont des offres exclusives réservées aux membres Maison Baymora, négociées en direct avec chaque établissement partenaire."
+  },
+  {
+    q: "Quelle est la différence avec ChatGPT ?",
+    a: "ChatGPT donne des listes. Maya donne un accès : des réductions réelles, des réservations en un clic, une mémoire de vos préférences, et un réseau de partenaires physiques. Chaque partenaire Baymora est un représentant du club."
   },
   {
     q: "Mes données sont-elles protégées ?",
     a: "Pseudonyme possible, suppression totale à tout moment, données hébergées en Europe. Aucun partage avec des tiers. Maison Baymora est conforme au RGPD."
-  },
-  {
-    q: "Puis-je partager mon parcours avec mes proches ?",
-    a: "Oui. Envoyez votre parcours par lien, email ou PDF. Vos proches peuvent créer un compte gratuit pour collaborer et modifier le parcours ensemble."
-  },
-  {
-    q: "Quelle est la différence avec ChatGPT ?",
-    a: "ChatGPT donne des listes. Maya donne un accès : des réductions réelles négociées, des réservations en un clic, une mémoire de vos préférences, et un réseau de partenaires physiques. Chaque partenaire Baymora est un représentant du club."
-  },
-  {
-    q: "Comment devenir partenaire Maison Baymora ?",
-    a: "Si vous êtes un hôtel, restaurant, spa ou prestataire d'expériences premium, rejoignez le réseau Maison Baymora pour toucher une clientèle exigeante et qualifiée. Contactez-nous depuis l'app."
   },
 ];
 
@@ -206,60 +179,7 @@ export default function Maison() {
         </div>
       </motion.section>
 
-      {/* Expériences */}
-      <motion.section
-        className="px-4"
-        style={{ marginTop: 48 }}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-50px" }}
-        variants={sectionVariants}
-      >
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6", marginBottom: 24 }}>
-            Les adresses qui changent tout
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: 16 }}>
-            {EXPERIENCES.map((exp, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.4 }}
-              >
-                <Link href="/offres">
-                  <div
-                    className="rounded-2xl overflow-hidden card-hover cursor-pointer"
-                    style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.12)" }}
-                  >
-                    <div className="relative h-36">
-                      <img src={exp.img} alt={exp.title} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.85) 0%, transparent 50%)" }} />
-                      <div
-                        className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold"
-                        style={{
-                          background: exp.badge.startsWith("-") ? "#16a34a" : "rgba(200, 169, 110, 0.9)",
-                          color: exp.badge.startsWith("-") ? "white" : "#070B14",
-                        }}
-                      >
-                        {exp.badge}
-                      </div>
-                      <div className="absolute bottom-2 left-2 right-2">
-                        <p className="text-xs font-semibold" style={{ color: "#F0EDE6" }}>{exp.title}</p>
-                        <div className="flex items-center justify-between mt-0.5">
-                          <span className="text-[10px]" style={{ color: "#8B8D94" }}>{exp.city}</span>
-                          <span className="text-xs font-bold" style={{ color: "#C8A96E" }}>{exp.price}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
+
 
       {/* Offres */}
       <motion.section
