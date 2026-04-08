@@ -47,3 +47,28 @@
 - [ ] Questions en fin de message, séparées dans system prompt
 - [ ] Raccourcir Maison (supprimer forfaits + parrainage → mini CTA)
 - [ ] Boutons d'action forfaits sur /premium (toast Stripe bientôt)
+
+## Prompt pasted_content_8 + pasted_content_9 — Concierge Interactif
+
+- [ ] System prompt Maya : 4 scénarios (Malin/Essentiel/Premium/Excellence) au lieu de 3
+- [ ] System prompt Maya : flux 2 étapes (résumé court + QR → programme détaillé)
+- [ ] System prompt Maya : transport porte-à-porte, adresse précise, options par budget
+- [ ] System prompt Maya : destinations alternatives si budget serré
+- [ ] System prompt Maya : mixer les gammes dans un même séjour
+- [ ] System prompt Maya : PLACES pour chaque établissement (pas juste hôtels)
+- [ ] System prompt Maya : MAP obligatoire avec tous les pins + distances
+- [ ] System prompt Maya : QR modification (changer hôtel / changer resto / autre scénario)
+- [ ] System prompt Maya : règle "Changer l'hôtel" → 3 alternatives même secteur/budget
+- [ ] claudeService.ts : max_tokens 8000 pour les modèles Opus
+- [ ] System prompt Maya : découpage auto si programme trop long (jamais tronqué)
+- [ ] System prompt Maya : récapitulatif budget obligatoire en fin de programme
+- [ ] Frontend : popup GPS élégante glassmorphism (premier contact Maya)
+- [ ] Frontend : placeholder Maya adaptatif "Écrivez à Maya..."
+- [ ] Frontend : badge "✓ Partenaire" sur cards (Offres, PLACES, LieuDetail)
+- [ ] Frontend : bouton "Découvrir" → fiche LieuDetail.tsx (pas Booking direct)
+- [ ] Frontend : si fiche absente → message Maya "Dis-moi plus sur [Nom]"
+- [ ] Frontend : MAP multi-markers (hôtel doré + restos/activités secondaires)
+- [ ] Frontend : bouton "Réserver" sur chaque étape JOURNEY avec bookingUrl
+- [ ] Backend : table affiliate_clicks (schema + migration)
+- [ ] Backend : enrichir /api/affiliate/redirect avec logging userId + source
+- [ ] Vérifier points protégés : products.ts, freeMessagesUsed>=3, OWNER_EMAILS, overflow-x

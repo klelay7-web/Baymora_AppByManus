@@ -2,8 +2,22 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Sparkles, Send, Mic, MicOff, RotateCcw } from "lucide-react";
+import { ArrowLeft, Sparkles, Send, Mic, MicOff, RotateCcw, MapPin } from "lucide-react";
 import MessageRenderer from "@/components/MessageRenderer";
+
+const GEOLOC_KEY = "baymora_geoloc_asked";
+
+function reverseGeocode(lat: number, lng: number): Promise<{ address: string; city: string }> {
+  return fetch(
+    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=fr`
+  )
+    .then((r) => r.json())
+    .then((d) => ({
+      address: d.display_name?.split(",").slice(0, 3).join(",").trim() || "",
+      city: d.address?.city || d.address?.town || d.address?.village || "",
+    }))
+    .catch(() => ({ address: "", city: "" }));
+}
 
 const QUICK_CHOICES = [
   { icon: "🏨", title: "Escapade luxe à proximité", desc: "Hôtel premium avec remise, proche de chez vous", prompt: "Je cherche une escapade luxe à proximité avec un hôtel premium" },
@@ -33,8 +47,12 @@ export default function Maya() {
     const stored = sessionStorage.getItem(SESSION_KEY);
     return stored ? parseInt(stored, 10) : null;
   });
+  const [showGpsPopup, setShowGpsPopup] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; address?: string; city?: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const updateProfileMutation = trpc.profile.updateProfile.useMutation();
 
   const firstName = user?.name?.split(" ")[0] || "vous";
 
@@ -64,6 +82,40 @@ export default function Maya() {
       createConvMutation.mutate({ title: "Conversation Maya" });
     }
   }, [user]);
+
+  // ─── Popup GPS au premier contact ─────────────────────────────────────────
+  useEffect(() => {
+    if (user && !localStorage.getItem(GEOLOC_KEY)) {
+      setShowGpsPopup(true);
+    }
+  }, [user]);
+
+  const handleGpsAllow = () => {
+    localStorage.setItem(GEOLOC_KEY, "true");
+    setShowGpsPopup(false);
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        const geo = await reverseGeocode(lat, lng);
+        setUserLocation({ lat, lng, address: geo.address, city: geo.city });
+        if (user && (geo.address || geo.city)) {
+          updateProfileMutation.mutate({
+            homeAddress: geo.address || undefined,
+            homeCity: geo.city || undefined,
+            homeLat: lat,
+            homeLng: lng,
+          });
+        }
+      },
+      () => {}
+    );
+  };
+
+  const handleGpsLater = () => {
+    localStorage.setItem(GEOLOC_KEY, "true");
+    setShowGpsPopup(false);
+  };
 
   // ─── Envoyer un message ────────────────────────────────────────────────────
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
@@ -121,6 +173,9 @@ export default function Maya() {
     sendMessageMutation.mutate({
       content: msg,
       conversationId: conversationId ?? 0,
+      userLocation: userLocation
+        ? { lat: userLocation.lat, lng: userLocation.lng, city: userLocation.city || "", country: "France" }
+        : undefined,
     });
   };
 
@@ -156,6 +211,53 @@ export default function Maya() {
       className="flex flex-col"
       style={{ background: "#070B14", color: "#F0EDE6", height: "100dvh", maxHeight: "100dvh", overflow: "hidden" }}
     >
+      {/* Popup GPS élégante */}
+      {showGpsPopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: "rgba(7, 11, 20, 0.85)", backdropFilter: "blur(12px)" }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-6 flex flex-col items-center text-center"
+            style={{
+              background: "rgba(13, 17, 23, 0.95)",
+              border: "1px solid rgba(200, 169, 110, 0.35)",
+              boxShadow: "0 0 40px rgba(200, 169, 110, 0.12)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
+              style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)" }}
+            >
+              <MapPin size={24} color="#070B14" />
+            </div>
+            <h3
+              className="text-lg font-bold mb-2"
+              style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
+            >
+              Maya peut vous recommander des adresses proches
+            </h3>
+            <p className="text-sm mb-6" style={{ color: "#8B8D94", lineHeight: 1.6 }}>
+              Autorisez la localisation pour des suggestions personnalisées et un transport précis depuis chez vous.
+            </p>
+            <button
+              className="w-full py-3 rounded-xl font-semibold text-sm mb-3"
+              style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
+              onClick={handleGpsAllow}
+            >
+              Autoriser
+            </button>
+            <button
+              className="w-full py-3 rounded-xl text-sm"
+              style={{ border: "1px solid rgba(139, 141, 148, 0.3)", color: "#8B8D94", background: "transparent" }}
+              onClick={handleGpsLater}
+            >
+              Plus tard
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"
@@ -332,7 +434,7 @@ Et bientôt, je connaîtrai les vôtres.
             value={input}
             onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder="Dites à Maya ce dont vous rêvez..."
+            placeholder="Écrivez à Maya..."
             rows={1}
             className="flex-1 bg-transparent resize-none outline-none text-sm py-2"
             style={{ color: "#F0EDE6", minHeight: "40px", maxHeight: "120px" }}

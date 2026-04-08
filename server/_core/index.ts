@@ -2,12 +2,16 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import crypto from "crypto";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { handleStripeWebhook } from "../stripe/webhook";
+import { trackAffiliateClick, getDb } from "../db";
+import { affiliatePartners } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -69,7 +73,27 @@ async function startServer() {
       const { partner, dest, userId } = req.query as { partner?: string; dest?: string; userId?: string };
       if (!dest) return res.status(400).json({ error: "Missing dest parameter" });
       const decodedDest = decodeURIComponent(String(dest));
-      console.log(`[Affiliate] Click: partner=${partner} userId=${userId} dest=${decodedDest}`);
+      const partnerSlug = String(partner || "booking").toLowerCase();
+      const userIdNum = userId ? parseInt(String(userId), 10) : undefined;
+      const referrer = (req.headers.referer || req.headers.referrer) as string | undefined;
+      const userAgent = req.headers["user-agent"] as string | undefined;
+      const ip = ((req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "").split(",")[0].trim();
+      const ipHash = ip ? crypto.createHash("sha256").update(ip).digest("hex").slice(0, 16) : undefined;
+      // Logger le clic en base (non bloquant)
+      try {
+        const db = await getDb();
+        if (db) {
+          const rows = await db.select({ id: affiliatePartners.id })
+            .from(affiliatePartners)
+            .where(eq(affiliatePartners.slug, partnerSlug))
+            .limit(1);
+          const partnerId = rows[0]?.id ?? 1;
+          await trackAffiliateClick(partnerId, decodedDest, undefined, userIdNum || undefined, referrer, userAgent, ipHash);
+        }
+      } catch (logErr) {
+        console.warn("[Affiliate] Log error (non-blocking):", logErr);
+      }
+      console.log(`[Affiliate] Click: partner=${partnerSlug} userId=${userId} dest=${decodedDest}`);
       res.redirect(302, decodedDest);
     } catch (err: any) {
       res.status(500).json({ error: err.message });

@@ -246,6 +246,15 @@ export default function LieuDetail() {
         >
           -{lieu.pct}% Baymora
         </div>
+        {/* Badge Partenaire */}
+        {(lieu.type === "Palace" || lieu.type === "Resort" || lieu.type === "Boutique Hotel" || lieu.type === "Urban Resort" || lieu.type === "Hôtel" || lieu.type === "Restaurant") && (
+          <div
+            className="absolute bottom-11 left-4 px-2 py-0.5 rounded-full text-[10px] font-medium"
+            style={{ background: "rgba(200, 169, 110, 0.15)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.35)", backdropFilter: "blur(8px)" }}
+          >
+            ✓ Partenaire officiel
+          </div>
+        )}
 
         {/* Galerie miniatures */}
         <div className="absolute bottom-4 right-4 flex gap-1.5">

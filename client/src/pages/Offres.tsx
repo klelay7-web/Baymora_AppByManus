@@ -310,6 +310,15 @@ export default function Offres() {
                 Sélection Baymora
               </div>
                   )}
+                  {/* Badge Partenaire */}
+                  {(offer.type === "Hôtels" || offer.type === "Restaurants") && (
+                    <div
+                      className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-medium"
+                      style={{ background: "rgba(200, 169, 110, 0.15)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.3)", backdropFilter: "blur(4px)" }}
+                    >
+                      ✓ Partenaire
+                    </div>
+                  )}
                   {/* Favoris */}
                   <button
                     className="absolute top-2 right-2 p-1.5 rounded-full"

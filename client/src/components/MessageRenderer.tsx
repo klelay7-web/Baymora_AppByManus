@@ -8,6 +8,7 @@ import { Heart, MapPin, Star, ExternalLink, Calendar, ChevronRight, Check } from
 
 interface Place {
   name: string;
+  id?: string;
   type?: string;
   city?: string;
   country?: string;
@@ -360,6 +361,15 @@ function PlacesRenderer({ data, onSend }: { data: unknown; onSend: (text: string
                   {place.priceRange}
                 </div>
               )}
+              {/* Badge Partenaire */}
+              {(place.type === "Hôtel" || place.type === "Hotel" || place.type === "Restaurant" || place.type === "Palace" || place.type === "Resort") && (
+                <div
+                  className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-full text-[9px] font-medium"
+                  style={{ background: "rgba(200,169,110,0.15)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.3)", backdropFilter: "blur(4px)" }}
+                >
+                  ✓ Partenaire
+                </div>
+              )}
               {/* Coeur favori */}
               <button
                 className="absolute bottom-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
@@ -404,15 +414,23 @@ function PlacesRenderer({ data, onSend }: { data: unknown; onSend: (text: string
                 </p>
               )}
               <div className="flex gap-1">
-                {place.bookingUrl ? (
+                {place.id ? (
                   <a
-                    href={place.bookingUrl}
+                    href={`/lieu/${place.id}`}
+                    className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold text-center"
+                    style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
+                  >
+                    Voir la fiche
+                  </a>
+                ) : place.bookingUrl ? (
+                  <a
+                    href={`/api/affiliate/redirect?partner=${encodeURIComponent(getAffiliatePartner(place.type || ""))}&dest=${encodeURIComponent(place.bookingUrl)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold text-center"
                     style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
                   >
-                    Découvrir
+                    Réserver
                   </a>
                 ) : (
                   <button
@@ -420,7 +438,7 @@ function PlacesRenderer({ data, onSend }: { data: unknown; onSend: (text: string
                     style={{ background: "rgba(200,169,110,0.1)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.2)" }}
                     onClick={() => onSend(`Dis-moi plus sur ${place.name}`)}
                   >
-                    Découvrir
+                    En savoir plus
                   </button>
                 )}
               </div>
