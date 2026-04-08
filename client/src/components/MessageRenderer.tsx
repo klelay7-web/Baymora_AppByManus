@@ -128,9 +128,10 @@ const getPlaceImage = (place: Place) => {
 };
 
 // ─── Parse tags ───────────────────────────────────────────────────────────────
-
-const TAG_RE = /:::(\w+):::([\s\S]*?):::END:::/g;
-
+// Regex principale : avec :::END:::
+const TAG_RE = /:::(\w+):::([\ s\S]*?):::END:::/g;
+// Regex fallback tolérant : tag sans :::END::: (message tronqué ou long)
+const TAG_RE_FALLBACK = /:::(\w+):::([\ s\S]+?)(?=:::\w+:::|$)/g;
 interface ParsedSegment {
   type: "text" | "QR" | "PLACES" | "MAP" | "BOOKING" | "SCENARIOS" | "GCAL" | "JOURNEY";
   content: string;
@@ -142,6 +143,7 @@ function parseMessage(raw: string): ParsedSegment[] {
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
+  // Passe 1 : tags avec :::END:::
   TAG_RE.lastIndex = 0;
   while ((match = TAG_RE.exec(raw)) !== null) {
     if (match.index > lastIndex) {
@@ -159,9 +161,37 @@ function parseMessage(raw: string): ParsedSegment[] {
     lastIndex = match.index + match[0].length;
   }
 
+  // Passe 2 : fallback tolérant pour les tags sans :::END::: (message tronqué)
   if (lastIndex < raw.length) {
-    const text = raw.slice(lastIndex).trim();
-    if (text) segments.push({ type: "text", content: text });
+    const remaining = raw.slice(lastIndex);
+    // Vérifier si le reste contient des tags non fermés
+    if (remaining.includes(':::') && !remaining.includes(':::END:::')) {
+      TAG_RE_FALLBACK.lastIndex = 0;
+      let fbLastIndex = 0;
+      let fbMatch: RegExpExecArray | null;
+      while ((fbMatch = TAG_RE_FALLBACK.exec(remaining)) !== null) {
+        if (fbMatch.index > fbLastIndex) {
+          const text = remaining.slice(fbLastIndex, fbMatch.index).trim();
+          if (text) segments.push({ type: "text", content: text });
+        }
+        const tag = fbMatch[1].toUpperCase() as ParsedSegment["type"];
+        const body = fbMatch[2].trim();
+        try {
+          const data = JSON.parse(body);
+          segments.push({ type: tag, content: body, data });
+        } catch {
+          // JSON incomplet : ne pas afficher le tag brut
+        }
+        fbLastIndex = fbMatch.index + fbMatch[0].length;
+      }
+      if (fbLastIndex < remaining.length) {
+        const text = remaining.slice(fbLastIndex).trim();
+        if (text && !text.startsWith(':::')) segments.push({ type: "text", content: text });
+      }
+    } else {
+      const text = remaining.trim();
+      if (text) segments.push({ type: "text", content: text });
+    }
   }
 
   return segments;

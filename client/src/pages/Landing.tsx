@@ -193,15 +193,14 @@ export default function Landing() {
               <Sparkles size={18} />
               Parler à Maya gratuitement
             </a>
-            <Link href="/offres">
-              <button
+            <button
                 className="flex items-center justify-center gap-2 px-8 py-4 rounded-full text-base font-medium"
                 style={{ background: "rgba(200, 169, 110, 0.1)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.25)" }}
+                onClick={() => document.getElementById("offres-section")?.scrollIntoView({ behavior: "smooth" })}
               >
                 Voir les offres
                 <ChevronRight size={16} />
               </button>
-            </Link>
           </div>
 
           <p className="text-xs mt-4" style={{ color: "#8B8D94" }}>
@@ -209,9 +208,7 @@ export default function Landing() {
           </p>
         </motion.div>
 
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
-          <div className="w-0.5 h-8 rounded-full" style={{ background: "rgba(200, 169, 110, 0.3)" }} />
-        </div>
+
       </section>
 
       {/* Chiffres réels */}
@@ -240,6 +237,7 @@ export default function Landing() {
 
       {/* Galerie adresses */}
       <motion.section
+        id="offres-section"
         className="py-12 px-4"
         initial="hidden"
         whileInView="visible"
@@ -292,45 +290,7 @@ export default function Landing() {
         </div>
       </motion.section>
 
-      {/* Features */}
-      <motion.section
-        className="py-12 px-4"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-50px" }}
-        variants={sectionVariants}
-      >
-        <div className="max-w-5xl mx-auto">
-          <h2
-            className="text-2xl md:text-3xl font-bold text-center mb-2"
-            style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
-          >
-            Tout ce que vous méritez
-          </h2>
-          <p className="text-sm text-center mb-10" style={{ color: "#8B8D94" }}>
-            Un club conçu pour les personnes qui exigent le meilleur
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {FEATURES.map((feature, i) => (
-              <motion.div
-                key={i}
-                className="rounded-2xl p-5 flex gap-4"
-                style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.1)" }}
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.4 }}
-              >
-                <div className="text-3xl flex-shrink-0">{feature.icon}</div>
-                <div>
-                  <h3 className="font-semibold mb-1" style={{ color: "#F0EDE6" }}>{feature.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: "#8B8D94" }}>{feature.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
+
 
       {/* Différenciateurs — remplace les faux témoignages */}
       <motion.section

@@ -47,7 +47,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
                 subscriptionTier: tier,
                 stripeCustomerId: session.customer as string,
                 stripeSubscriptionId: session.subscription as string,
-                credits: plan.credits === -1 ? 99999 : plan.credits,
+                credits: plan.credits,
               })
               .where(eq(users.id, parseInt(userId)));
             console.log(`[Stripe] User ${userId} upgraded to ${planId}`);
@@ -93,9 +93,9 @@ export async function handleStripeWebhook(req: Request, res: Response) {
 
         if (userRows2.length > 0) {
           const user = userRows2[0];
-          const planKey = user.subscriptionTier === "premium" ? "premium" : (user.subscriptionTier as string) === "elite" ? "prive" : "decouverte";
+          const planKey = (user.subscriptionTier === "premium" || user.subscriptionTier === "elite") ? "social" : "decouverte";
           const plan = PLANS[planKey as keyof typeof PLANS];
-          if (plan && plan.credits !== -1) {
+          if (plan && plan.credits > 0) {
             // Rollover : ajouter les crédits, cap à 3x
             const newBalance = Math.min(
               (user.credits || 0) + plan.credits,

@@ -3330,7 +3330,7 @@ export const appRouter = router({
   stripe: router({
     createCheckoutSession: protectedProcedure
       .input(z.object({
-        planId: z.enum(["premium", "prive"]),
+        planId: z.enum(["social", "duo", "annuel"]),
         origin: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {

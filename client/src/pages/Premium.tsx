@@ -8,12 +8,12 @@ import { useState } from "react";
 
 const PLANS = [
   {
-    id: "social_club",
-    stripeId: "premium",
+    id: "social",
+    stripeId: "social",
     name: "Social Club",
     price: "9,90",
     period: "mois",
-    badge: "Le plus populaire",
+    badge: "Recommandé",
     highlight: true,
     color: "#C8A96E",
     icon: Star,
@@ -25,43 +25,6 @@ const PLANS = [
       "Sélections exclusives Baymora",
       "Mémoire de conversation conservée",
       "Alertes offres flash en temps réel",
-    ],
-  },
-  {
-    id: "duo",
-    stripeId: "premium",
-    name: "Duo",
-    price: "14,90",
-    period: "mois",
-    badge: "Pour deux",
-    highlight: false,
-    color: "#8B8D94",
-    icon: Crown,
-    description: "Partagez l'accès avec votre partenaire ou un proche.",
-    features: [
-      "Tout le Social Club",
-      "2 profils distincts",
-      "Recommandations en couple",
-      "Parcours duo personnalisés",
-      "Partage de favoris",
-    ],
-  },
-  {
-    id: "annual",
-    stripeId: "prive",
-    name: "Annuel",
-    price: "89",
-    period: "an",
-    badge: "2 mois offerts",
-    highlight: false,
-    color: "#E8D5A8",
-    icon: Zap,
-    description: "Le Social Club pour toute l'année, avec deux mois offerts.",
-    features: [
-      "Tout le Social Club",
-      "Économisez 30€ par an",
-      "Accès prioritaire aux nouveautés",
-      "Support dédié",
     ],
   },
   {
@@ -79,6 +42,43 @@ const PLANS = [
       "3 messages avec Maya",
       "Accès aux offres publiques",
       "Aperçu des bundles",
+    ],
+  },
+  {
+    id: "duo",
+    stripeId: "duo",
+    name: "Duo",
+    price: "14,90",
+    period: "mois",
+    badge: "Pour deux",
+    highlight: false,
+    color: "#8B8D94",
+    icon: Crown,
+    description: "Partagez l'accès avec votre partenaire ou un proche.",
+    features: [
+      "Tout le Social Club",
+      "2 profils distincts",
+      "Recommandations en couple",
+      "Parcours duo personnalisés",
+      "Partage de favoris",
+    ],
+  },
+  {
+    id: "annuel",
+    stripeId: "annuel",
+    name: "Annuel",
+    price: "89",
+    period: "an",
+    badge: "2 mois offerts",
+    highlight: false,
+    color: "#E8D5A8",
+    icon: Zap,
+    description: "Le Social Club pour toute l'année, avec deux mois offerts.",
+    features: [
+      "Tout le Social Club",
+      "Économisez 30€ par an",
+      "Accès prioritaire aux nouveautés",
+      "Support dédié",
     ],
   },
 ];
@@ -115,7 +115,7 @@ export default function Premium() {
     if (!plan.stripeId) return;
     setLoadingPlan(plan.id);
     createCheckoutSession.mutate({
-      planId: plan.stripeId as "premium" | "prive",
+      planId: plan.stripeId as "social" | "duo" | "annuel",
       origin: window.location.origin,
     });
   };
@@ -154,7 +154,7 @@ export default function Premium() {
                 className="rounded-2xl p-6 relative overflow-hidden"
                 style={{
                   background: plan.highlight ? "linear-gradient(135deg, rgba(200,169,110,0.12), rgba(232,213,168,0.06))" : "#0D1117",
-                  border: plan.highlight ? "1.5px solid rgba(200,169,110,0.5)" : "1px solid rgba(200,169,110,0.12)",
+                  border: plan.highlight ? "2px solid #C8A96E" : "1px solid rgba(200,169,110,0.12)",
                   boxShadow: plan.highlight ? "0 0 40px rgba(200,169,110,0.1)" : "none",
                 }}
               >

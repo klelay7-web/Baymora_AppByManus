@@ -1,6 +1,12 @@
-// ─── Plans Baymora ────────────────────────────────────────────────
-// Découverte (gratuit) / Premium (14.90€/mois) / Privé (49.90€/mois)
+// ⚠️ NE PAS MODIFIER — Tarifs validés par Kevin
+// decouverte : Gratuit
+// social : 9,90€/mois
+// duo : 14,90€/mois
+// annuel : 89€/an
+// Le plan "prive" (49,90€) est SUPPRIMÉ.
+// Utiliser les noms : social, duo, annuel (PAS premium, prive)
 
+// ─── Plans Baymora ────────────────────────────────────────────────
 export const PLANS = {
   decouverte: {
     id: "decouverte",
@@ -8,66 +14,84 @@ export const PLANS = {
     price: 0,
     priceMonthly: 0,
     stripePriceId: null,
-    credits: 15,
-    rolloverCap: 45, // 3x quota
-    description: "Découvrez Baymora gratuitement",
+    credits: 3,
+    rolloverCap: 9,
+    description: "Découvrez Maya avec 3 messages gratuits",
     features: [
-      "15 crédits/mois",
-      "3 messages gratuits sans compte",
-      "Accès aux fiches établissements",
-      "Carte interactive",
+      "3 messages avec Maya",
+      "Accès aux offres publiques",
+      "Aperçu des bundles",
     ],
     limits: {
-      opusMessages: 5, // 5 messages Opus max (3 crédits chacun = 15 crédits)
-      sonnetMessages: 15,
+      opusMessages: 3,
+      sonnetMessages: 3,
       perplexitySearches: 0,
     },
   },
-  premium: {
-    id: "premium",
-    name: "Premium",
-    price: 1490, // en centimes
-    priceMonthly: 14.90,
-    stripePriceId: process.env.STRIPE_PRICE_PREMIUM || "price_premium_monthly",
+  social: {
+    id: "social",
+    name: "Social Club",
+    price: 990, // en centimes
+    priceMonthly: 9.90,
+    stripePriceId: process.env.STRIPE_PRICE_SOCIAL || "price_social_monthly",
     credits: 200,
-    rolloverCap: 600, // 3x quota
-    description: "L'expérience complète Baymora",
+    rolloverCap: 600,
+    description: "L'accès complet à Maya et aux meilleures adresses négociées.",
     features: [
-      "200 crédits/mois + rollover",
-      "Claude Opus illimité",
-      "Recherche Perplexity temps réel",
-      "Parcours voyage complets",
-      "Fiches établissements premium",
-      "Partage & collaboration",
+      "Conversations illimitées avec Maya",
+      "Accès à toutes les offres négociées",
+      "Bundles et parcours premium",
+      "Sélections exclusives Baymora",
+      "Mémoire de conversation conservée",
+      "Alertes offres flash en temps réel",
     ],
     limits: {
-      opusMessages: 60, // 60 × 3 crédits = 180 crédits
+      opusMessages: 60,
       sonnetMessages: 200,
       perplexitySearches: 20,
     },
   },
-  prive: {
-    id: "prive",
-    name: "Privé",
-    price: 4990, // en centimes
-    priceMonthly: 49.90,
-    stripePriceId: process.env.STRIPE_PRICE_PRIVE || "price_prive_monthly",
-    credits: -1, // illimité
-    rolloverCap: -1,
-    description: "Accès total, sans limites",
+  duo: {
+    id: "duo",
+    name: "Duo",
+    price: 1490, // en centimes
+    priceMonthly: 14.90,
+    stripePriceId: process.env.STRIPE_PRICE_DUO || "price_duo_monthly",
+    credits: 400,
+    rolloverCap: 1200,
+    description: "Partagez l'accès avec votre partenaire ou un proche.",
     features: [
-      "Crédits illimités",
-      "Claude Opus prioritaire",
-      "Accès Off-Market",
-      "Conciergerie humaine incluse",
-      "Expériences VIP incluses",
-      "Support dédié 24/7",
-      "Accès anticipé nouvelles fonctionnalités",
+      "Tout le Social Club",
+      "2 profils distincts",
+      "Recommandations en couple",
+      "Parcours duo personnalisés",
+      "Partage de favoris",
     ],
     limits: {
-      opusMessages: -1,
-      sonnetMessages: -1,
-      perplexitySearches: -1,
+      opusMessages: 120,
+      sonnetMessages: 400,
+      perplexitySearches: 40,
+    },
+  },
+  annuel: {
+    id: "annuel",
+    name: "Annuel",
+    price: 8900, // en centimes
+    priceMonthly: 89,
+    stripePriceId: process.env.STRIPE_PRICE_ANNUEL || "price_annuel_yearly",
+    credits: 200,
+    rolloverCap: 600,
+    description: "Le Social Club pour toute l'année, avec deux mois offerts.",
+    features: [
+      "Tout le Social Club",
+      "Économisez 30€ par an",
+      "Accès prioritaire aux nouveautés",
+      "Support dédié",
+    ],
+    limits: {
+      opusMessages: 60,
+      sonnetMessages: 200,
+      perplexitySearches: 20,
     },
   },
 } as const;
@@ -96,17 +120,6 @@ export const FEATURE_UNLOCKS = {
     description: "Un concierge humain dédié pendant 7 jours",
     icon: "🏛️",
   },
-  off_market: {
-    id: "off_market",
-    name: "Accès Off-Market",
-    priceEur: 9.90,
-    priceCents: 990,
-    durationDays: 30,
-    pointsAlternative: 3000,
-    stripePriceId: process.env.STRIPE_PRICE_OFFMARKET || "price_offmarket_oneshot",
-    description: "Pépites secrètes et adresses confidentielles",
-    icon: "🔐",
-  },
 } as const;
 
 // ─── Coûts en crédits ─────────────────────────────────────────────
@@ -122,32 +135,30 @@ export const CREDIT_COSTS = {
 export const CREATOR_POINTS = {
   publish_itinerary: 50,
   verify_with_photos: 200,
-  verify_bonus_credits: 50, // crédits bonus en plus des points
+  verify_bonus_credits: 50,
   submit_venue: 25,
   submit_venue_accepted: 100,
   itinerary_used: 30,
-  cashout_rate: 100, // 100 pts = 1€
-  cashout_min: 1000, // minimum 1000 pts pour cashout
-  cashout_max_monthly: 500, // max 500€/mois
+  cashout_rate: 100,
+  cashout_min: 1000,
+  cashout_max_monthly: 500,
 } as const;
 
 // ─── Tiers d'abonnement → plan ────────────────────────────────────
 export function getTierFromPlan(plan: string): "free" | "premium" | "elite" {
-  if (plan === "prive") return "elite";
-  if (plan === "premium") return "premium";
+  if (plan === "duo" || plan === "annuel" || plan === "social") return "premium";
   return "free";
 }
 
 export function getPlanFromTier(tier: string): keyof typeof PLANS {
-  if (tier === "elite") return "prive";
-  if (tier === "premium") return "premium";
+  if (tier === "premium" || tier === "elite") return "social";
   return "decouverte";
 }
 
-export function isUnlimited(plan: string): boolean {
-  return plan === "prive";
+export function isUnlimited(_plan: string): boolean {
+  return false;
 }
 
 export function getMonthlyCredits(plan: string): number {
-  return PLANS[plan as keyof typeof PLANS]?.credits ?? 15;
+  return PLANS[plan as keyof typeof PLANS]?.credits ?? 3;
 }
