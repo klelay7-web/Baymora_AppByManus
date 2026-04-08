@@ -14,6 +14,7 @@ import Maya from "./pages/Maya";
 import Offres from "./pages/Offres";
 import Parcours from "./pages/Parcours";
 import Profil from "./pages/Profil";
+import Premium from "./pages/Premium";
 import Auth from "./pages/Auth";
 import LieuDetail from "./pages/LieuDetail";
 
@@ -68,6 +69,9 @@ function Router() {
       </Route>
       <Route path="/profil">
         {() => <ProtectedRoute component={Profil} />}
+      </Route>
+      <Route path="/premium">
+        {() => <Premium />}
       </Route>
 
       {/* Fiche etablissement */}

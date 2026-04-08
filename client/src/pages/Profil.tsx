@@ -1,13 +1,14 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import {
   User, Heart, Compass, Users, Crown, CreditCard, Gift,
-  Bell, Globe, Shield, LogOut, ChevronRight, Sparkles
+  Bell, Globe, Shield, LogOut, ChevronRight, Sparkles, Zap
 } from "lucide-react";
 
 export default function Profil() {
   const { user, loading } = useAuth();
+  const [, navigate] = useLocation();
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => { window.location.href = "/"; },
   });
@@ -39,10 +40,23 @@ export default function Profil() {
 
   const firstName = user.name?.split(" ")[0] || "Membre";
   const initial = (user.name || user.email || "M")[0].toUpperCase();
-  const isFree = user.subscriptionTier === "free";
-  const tierLabel = isFree ? "Découverte" : user.subscriptionTier === "explorer" ? "Social Club" : "Illimité";
-  const creditsUsed = isFree ? 2 : 0;
-  const creditsTotal = isFree ? 3 : 999;
+
+  // Détection owner/admin
+  const OWNER_EMAILS = ["k.lelay7@gmail.com", "klelay7@gmail.com"];
+  const isOwner = OWNER_EMAILS.includes(user.email || "") || user.role === "admin";
+
+  const isFree = !isOwner && user.subscriptionTier === "free";
+  const tierLabel = isOwner ? "Admin" : isFree ? "Découverte" : user.subscriptionTier === "explorer" ? "Social Club" : "Illimité";
+
+  // Crédits dynamiques
+  const freeUsed = user.freeMessagesUsed ?? 0;
+  const freeTotal = 3;
+  const freeRemaining = Math.max(0, freeTotal - freeUsed);
+  const creditPct = (freeRemaining / freeTotal) * 100;
+  const creditColor = freeRemaining === 3 ? "#C8A96E"
+    : freeRemaining === 2 ? "#C8A96E"
+    : freeRemaining === 1 ? "#E8A040"
+    : "#E85050";
 
   const MENU_SECTIONS = [
     {
@@ -57,8 +71,8 @@ export default function Profil() {
     {
       title: "Forfait & crédits",
       items: [
-        { icon: Crown, label: "Mon forfait", desc: `Actuel : ${tierLabel}`, href: "#" },
-        { icon: CreditCard, label: "Acheter des crédits", desc: "Recharger votre solde", href: "#" },
+        { icon: Crown, label: "Mon forfait", desc: `Actuel : ${tierLabel}`, href: "/premium" },
+        { icon: CreditCard, label: "Acheter des crédits", desc: "Recharger votre solde", href: "/premium" },
         { icon: Gift, label: "Parrainer un ami", desc: "Gagnez 1 mois offert", href: "#" },
       ],
     },
@@ -84,21 +98,24 @@ export default function Profil() {
             >
               {initial}
             </div>
-            <button
-              className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center"
-              style={{ background: "#161B26", border: "2px solid #070B14" }}
-            >
-              <User size={12} color="#C8A96E" />
-            </button>
+            {isOwner && (
+              <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)" }}>
+                <Zap size={12} color="#070B14" />
+              </div>
+            )}
           </div>
           <h1 className="text-xl font-bold mb-1" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
             {user.name || user.email || "Membre"}
           </h1>
           <div
             className="px-3 py-1 rounded-full text-xs font-semibold"
-            style={{ background: "rgba(200, 169, 110, 0.12)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.25)" }}
+            style={{
+              background: isOwner ? "linear-gradient(135deg, rgba(200,169,110,0.2), rgba(232,213,168,0.2))" : "rgba(200, 169, 110, 0.12)",
+              color: "#C8A96E",
+              border: isOwner ? "1px solid rgba(200, 169, 110, 0.5)" : "1px solid rgba(200, 169, 110, 0.25)"
+            }}
           >
-            {tierLabel}
+            {isOwner ? "⚡ Admin — Accès illimité" : tierLabel}
           </div>
         </div>
 
@@ -112,24 +129,27 @@ export default function Profil() {
               <Sparkles size={16} color="#C8A96E" />
               <span className="text-sm font-semibold" style={{ color: "#F0EDE6" }}>Crédits Maya</span>
             </div>
-            <span className="text-sm font-bold" style={{ color: "#C8A96E" }}>
-              {isFree ? `${creditsTotal - creditsUsed} / ${creditsTotal}` : "Illimité"}
+            <span className="text-sm font-bold" style={{ color: isOwner ? "#C8A96E" : creditColor }}>
+              {isOwner ? "Illimité ∞" : `${freeRemaining} / ${freeTotal}`}
             </span>
           </div>
-          {isFree && (
+
+          {isOwner ? (
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(200, 169, 110, 0.12)" }}>
+              <div className="h-full rounded-full w-full" style={{ background: "linear-gradient(90deg, #C8A96E, #E8D5A8)" }} />
+            </div>
+          ) : (
             <>
               <div className="h-2 rounded-full mb-3 overflow-hidden" style={{ background: "rgba(200, 169, 110, 0.12)" }}>
                 <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${((creditsTotal - creditsUsed) / creditsTotal) * 100}%`,
-                    background: "linear-gradient(90deg, #C8A96E, #E8D5A8)",
-                  }}
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${creditPct}%`, background: `linear-gradient(90deg, ${creditColor}, ${creditColor}dd)` }}
                 />
               </div>
               <button
-                className="w-full py-2.5 rounded-xl text-sm font-semibold"
+                className={`w-full py-2.5 rounded-xl text-sm font-semibold ${freeRemaining === 0 ? "animate-pulse-gold" : ""}`}
                 style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
+                onClick={() => navigate("/premium")}
               >
                 Passer au Social Club — 9,90€/mois
               </button>
@@ -186,16 +206,37 @@ export default function Profil() {
           {logoutMutation.isPending ? "Déconnexion..." : "Se déconnecter"}
         </button>
 
-        {/* Footer */}
-        <div className="text-center mt-8 pt-6" style={{ borderTop: "1px solid rgba(200, 169, 110, 0.08)" }}>
-          <p className="text-xs" style={{ color: "#8B8D94" }}>
-            <a href="#" className="hover:text-gold transition-colors">Mentions légales</a>
-            {" · "}
-            <a href="#" className="hover:text-gold transition-colors">Confidentialité</a>
-            {" · "}
-            <a href="#" className="hover:text-gold transition-colors">Aide</a>
+        {/* Footer enrichi */}
+        <div className="mt-10 pt-6" style={{ borderTop: "1px solid rgba(200, 169, 110, 0.08)" }}>
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div>
+              <p className="text-xs font-semibold mb-2" style={{ color: "#C8A96E" }}>Maison Baymora</p>
+              <div className="space-y-1.5">
+                {["Maya IA", "Offres", "Forfaits"].map(l => (
+                  <p key={l}><a href="#" className="text-xs" style={{ color: "#8B8D94" }}>{l}</a></p>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold mb-2" style={{ color: "#C8A96E" }}>Support</p>
+              <div className="space-y-1.5">
+                {["Aide & FAQ", "Contact", "Devenir partenaire"].map(l => (
+                  <p key={l}><a href="#" className="text-xs" style={{ color: "#8B8D94" }}>{l}</a></p>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold mb-2" style={{ color: "#C8A96E" }}>Légal</p>
+              <div className="space-y-1.5">
+                {["Mentions légales", "Confidentialité", "CGU"].map(l => (
+                  <p key={l}><a href="#" className="text-xs" style={{ color: "#8B8D94" }}>{l}</a></p>
+                ))}
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-center" style={{ color: "rgba(139, 141, 148, 0.5)" }}>
+            © 2026 Maison Baymora — Social club virtuel premium
           </p>
-          <p className="text-xs mt-2" style={{ color: "rgba(139, 141, 148, 0.5)" }}>© 2026 Maison Baymora</p>
         </div>
       </div>
     </div>

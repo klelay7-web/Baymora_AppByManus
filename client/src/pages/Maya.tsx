@@ -43,7 +43,8 @@ export default function Maya() {
     enabled: !!user,
   });
 
-  const isOwner = user?.openId === import.meta.env.VITE_OWNER_OPEN_ID;
+  const OWNER_EMAILS = ["k.lelay7@gmail.com", "klelay7@gmail.com"];
+  const isOwner = user?.openId === import.meta.env.VITE_OWNER_OPEN_ID || OWNER_EMAILS.includes(user?.email || "") || user?.role === "admin";
   const isPaid = user?.subscriptionTier !== "free";
   const isUnlimited = isOwner || isPaid;
   const freeUsed = creditsData?.freeMessagesUsed ?? 0;

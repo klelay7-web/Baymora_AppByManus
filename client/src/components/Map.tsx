@@ -134,11 +134,24 @@ export function MapView({
     map.current = new window.google.maps.Map(mapContainer.current, {
       zoom: initialZoom,
       center: initialCenter,
-      mapTypeControl: true,
+      mapTypeControl: false,
       fullscreenControl: true,
       zoomControl: true,
-      streetViewControl: true,
+      streetViewControl: false,
       mapId: "DEMO_MAP_ID",
+      // Thème sombre Baymora (midnight navy + or)
+      styles: [
+        { elementType: "geometry", stylers: [{ color: "#0D1117" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#070B14" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#8B8D94" }] },
+        { featureType: "road", elementType: "geometry", stylers: [{ color: "#161B26" }] },
+        { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#C8A96E" }] },
+        { featureType: "water", elementType: "geometry", stylers: [{ color: "#070B14" }] },
+        { featureType: "poi", elementType: "geometry", stylers: [{ color: "#0D1117" }] },
+        { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#C8A96E" }] },
+        { featureType: "transit", elementType: "geometry", stylers: [{ color: "#161B26" }] },
+        { featureType: "administrative", elementType: "labels.text.fill", stylers: [{ color: "#F0EDE6" }] },
+      ],
     });
     if (onMapReady) {
       onMapReady(map.current);

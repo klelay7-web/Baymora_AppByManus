@@ -204,14 +204,20 @@
     box-shadow: 0 0 30px rgba(200, 169, 110, 0.4), 0 0 80px rgba(200, 169, 110, 0.15);
   }
 
-  /* Card hover */
+  /* Card hover — PAS de transform pour éviter le saut au toucher mobile */
   .card-hover {
-    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
   .card-hover:hover {
-    transform: translateY(-2px);
     border-color: rgba(200, 169, 110, 0.35);
     box-shadow: 0 8px 32px rgba(200, 169, 110, 0.12);
+  }
+  /* Désactiver tout effet de mouvement sur mobile tactile */
+  @media (hover: none) {
+    .card-hover:active {
+      transform: none !important;
+      transition: none !important;
+    }
   }
 
   /* CTA bouton dore */

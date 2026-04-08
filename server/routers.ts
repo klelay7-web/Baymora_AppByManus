@@ -89,8 +89,10 @@ const teamProcedure = protectedProcedure.use(({ ctx, next }) => {
 // Owner procedure — accepte role admin OU ownerOpenId (robuste même si OWNER_OPEN_ID est vide)
 const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
   const isOwner = ENV.ownerOpenId && ctx.user.openId === ENV.ownerOpenId;
+  const OWNER_EMAILS = ["k.lelay7@gmail.com", "klelay7@gmail.com"];
+  const isOwnerByEmail = OWNER_EMAILS.includes(ctx.user.email || "");
   const isAdmin = ctx.user.role === "admin";
-  if (!isOwner && !isAdmin) {
+  if (!isOwner && !isOwnerByEmail && !isAdmin) {
     console.log("[Manus DG] Access denied - user.openId:", ctx.user.openId, "ownerOpenId:", ENV.ownerOpenId, "role:", ctx.user.role);
     throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé au propriétaire" });
   }
@@ -141,9 +143,13 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         // Owner & admin bypass: accès illimité
         const isOwner = ctx.user.openId === ENV.ownerOpenId;
-        const isPrivileged = isOwner || ctx.user.role === "admin";
+        // Bypass par email pour le fondateur
+        const OWNER_EMAILS = ["k.lelay7@gmail.com", "klelay7@gmail.com"];
+        const isOwnerByEmail = OWNER_EMAILS.includes(ctx.user.email || "");
+        const isPrivileged = isOwner || isOwnerByEmail || ctx.user.role === "admin";
         if (!isPrivileged && ctx.user.subscriptionTier === "free") {
-          if (ctx.user.freeMessagesUsed >= 15) {
+          // ⚠️ NE PAS MODIFIER : 3 messages gratuits (aligné avec le frontend)
+          if (ctx.user.freeMessagesUsed >= 3) {
             throw new TRPCError({
               code: "FORBIDDEN",
               message: "UPGRADE_REQUIRED",
