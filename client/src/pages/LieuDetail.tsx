@@ -19,7 +19,7 @@ const LIEUX: Record<string, {
     country: "France",
     description: "L'un des palaces les plus emblematiques de Paris, sur l'Avenue Montaigne.",
     longDesc: "Niché sur l'Avenue Montaigne, le Plaza Athenee incarne l'art de vivre a la parisienne. Ses facades ornees de geraniums rouges, ses salons feutrés et son restaurant Alain Ducasse en font une adresse legendaire. Chaque suite est une oeuvre d'art, entre classicisme haussmannien et modernite raffinee.",
-    tags: ["Piscine", "Spa", "Suite", "Restaurant étoilé", "Bar", "Concierge 24h"],
+    tags: ["Piscine", "Spa", "Suite", "Restaurant étoilé", "Bar", "Accès privé 24h"],
     pct: 28,
     price: "680€",
     original: "940€",
@@ -36,7 +36,7 @@ const LIEUX: Record<string, {
     website: "www.dorchestercollection.com",
     hours: "Ouvert 24h/24",
     address: "25 Avenue Montaigne, 75008 Paris",
-    features: ["Check-in 24h", "Parking valet", "Concierge prive", "Transfert aeroport", "Room service"],
+    features: ["Check-in 24h", "Parking valet", "Accès privé prive", "Transfert aeroport", "Room service"],
     maya_tip: "Demandez la Suite Eiffel pour une vue imprenable sur la Tour Eiffel. Le bar du Gobelins est ideal pour un cocktail en fin de soiree.",
   },
   "four-seasons-bali": {
@@ -148,7 +148,7 @@ const LIEUX: Record<string, {
     website: "www.aman.com/resorts/aman-tokyo",
     hours: "Ouvert 24h/24",
     address: "Otemachi Tower, 1-5-6 Otemachi, Chiyoda-ku, Tokyo",
-    features: ["Spa 2500m2", "Piscine 30m", "Onsen", "Restaurant gastronomique", "Concierge culturel"],
+    features: ["Spa 2500m2", "Piscine 30m", "Onsen", "Restaurant gastronomique", "Accès privé culturel"],
     maya_tip: "Demandez une chambre orientee nord-ouest pour voir le Mont Fuji au lever du soleil. Le spa Aman est l'un des meilleurs du monde — réservez le hammam japonais.",
   },
   "le-cinq": {

@@ -52,7 +52,7 @@ import {
 const servicesItems = [
   {
     title: "Assistant IA Premium",
-    description: "Votre concierge intelligent, disponible 24/7",
+    description: "Votre accès privé intelligent, disponible 24/7",
     href: "/chat",
     icon: Sparkles,
     highlight: true,

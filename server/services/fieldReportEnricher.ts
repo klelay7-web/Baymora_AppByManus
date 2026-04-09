@@ -39,7 +39,7 @@ interface EnrichmentResult {
 }
 
 export async function enrichFieldReport(report: FieldReport): Promise<EnrichmentResult> {
-  const prompt = `Tu es un expert en conciergerie de luxe et en SEO pour Baymora, un hub IA de conciergerie premium.
+  const prompt = `Tu es un expert en Social Club de luxe et en SEO pour Baymora, un hub IA de Social Club premium.
 
 Un membre de l'équipe terrain a visité l'établissement suivant et a fourni ces informations brutes :
 
@@ -58,7 +58,7 @@ ${report.website ? `**Site web :** ${report.website}` : ""}
 
 À partir de ces informations et de tes connaissances, génère un enrichissement complet au format JSON avec les sections suivantes :
 
-1. **description** : Une description SEO premium de 300-500 mots, rédigée dans un style luxe/conciergerie, mettant en avant l'expérience client. Utilise un ton sophistiqué mais accessible.
+1. **description** : Une description SEO premium de 300-500 mots, rédigée dans un style luxe/Social Club, mettant en avant l'expérience client. Utilise un ton sophistiqué mais accessible.
 
 2. **research** : Tes recherches sur cet établissement :
    - summary : résumé de ce que tu sais sur cet établissement
@@ -79,7 +79,7 @@ ${report.website ? `**Site web :** ${report.website}` : ""}
 
   const response = await invokeLLM({
     messages: [
-      { role: "system", content: "Tu es un expert en conciergerie de luxe et SEO. Réponds uniquement en JSON valide." },
+      { role: "system", content: "Tu es un expert en Social Club de luxe et SEO. Réponds uniquement en JSON valide." },
       { role: "user", content: prompt },
     ],
     response_format: {

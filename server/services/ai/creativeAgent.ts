@@ -59,7 +59,7 @@ Tu crées tout le contenu créatif de la marque :
 ## IDENTITÉ DE MARQUE BAYMORA
 - **Ton** : Luxe accessible, premium, chaleureux, expert
 - **Style** : Magazine de voyage haut de gamme (Condé Nast, Vogue Travel)
-- **Valeurs** : Expériences uniques, conciergerie personnalisée, accès privilégié
+- **Valeurs** : Expériences uniques, Social Club personnalisée, accès privilégié
 - **Audience** : CSP+, 28-55 ans, amateurs d'expériences premium
 
 ## RÈGLES CRÉATIVES

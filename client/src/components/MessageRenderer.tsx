@@ -569,9 +569,9 @@ function BookingRenderer({ data, onSend }: { data: unknown; onSend: (text: strin
         <button
           className="py-2 rounded-xl text-xs font-semibold"
           style={{ background: "rgba(200,169,110,0.1)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.2)" }}
-          onClick={() => onSend(`Je veux que la conciergerie Baymora s'occupe de ma reservation au ${booking.name}`)}
+          onClick={() => onSend(`Je veux que la Social Club Baymora s'occupe de ma reservation au ${booking.name}`)}
         >
-          Conciergerie
+          Social Club
         </button>
         <button
           className="py-2 rounded-xl text-xs font-semibold"

@@ -565,7 +565,7 @@ export default function Profil() {
   const isOwner = OWNER_EMAILS.includes(user.email || "") || user.role === "admin";
 
   const isFree = !isOwner && user.subscriptionTier === "free";
-  const tierLabel = isOwner ? "Admin" : isFree ? "Découverte" : user.subscriptionTier === "explorer" ? "Social Club" : "Illimité";
+  const tierLabel = isOwner ? "Admin" : isFree ? "Invité" : user.subscriptionTier === "explorer" ? "Membre" : "Illimité";
 
   const freeUsed = user.freeMessagesUsed ?? 0;
   const freeTotal = 3;

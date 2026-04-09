@@ -17,7 +17,7 @@ export default function CGU() {
         <section className="mb-10">
           <h2 className="font-playfair text-2xl text-[#C8A96E] mb-4">Article 1 — Objet du service</h2>
           <p className="text-gray-400 leading-relaxed">
-            Maison Baymora est une plateforme de conciergerie IA de voyage et lifestyle. Elle met à disposition de ses membres un assistant intelligent (Maya) capable de créer des programmes de voyage personnalisés, de recommander des établissements et d'organiser des expériences sur-mesure.
+            Maison Baymora est une plateforme de Social Club de voyage et lifestyle. Elle met à disposition de ses membres un assistant intelligent (Maya) capable de créer des programmes de voyage personnalisés, de recommander des établissements et d'organiser des expériences sur-mesure.
           </p>
         </section>
 
@@ -32,10 +32,10 @@ export default function CGU() {
           <h2 className="font-playfair text-2xl text-[#C8A96E] mb-4">Article 3 — Abonnements</h2>
           <div className="space-y-4">
             {[
-              { name: "Découverte", price: "Gratuit", desc: "3 conversations avec Maya, accès aux offres avec réductions" },
-              { name: "Social Club", price: "9,90€/mois", desc: "Conversations illimitées, accès complet aux parcours et bundles" },
+              { name: "Invité", price: "Gratuit", desc: "3 conversations avec Maya, accès aux offres avec réductions" },
+              { name: "Membre", price: "9,90€/mois", desc: "Conversations illimitées, accès complet aux parcours et bundles" },
               { name: "Duo", price: "14,90€/mois", desc: "Tout Social Club + accès pour 2 personnes" },
-              { name: "Annuel", price: "89€/an", desc: "Accès complet toute l'année (soit 7,42€/mois)" },
+              { name: "Le Cercle", price: "89€/an", desc: "Accès complet toute l'année (soit 7,42€/mois)" },
             ].map((plan) => (
               <div key={plan.name} className="bg-white/5 rounded-lg p-4 border border-white/10">
                 <div className="flex justify-between items-center mb-1">

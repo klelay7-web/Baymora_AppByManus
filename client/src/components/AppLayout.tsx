@@ -213,7 +213,7 @@ function Sidebar() {
                 {user.name || user.email || "Membre"}
               </div>
               <div className="text-[10px]" style={{ color: "#C8A96E" }}>
-                {user.subscriptionTier === "free" ? "Découverte" : user.subscriptionTier === "explorer" ? "Social Club" : "Illimité"}
+                {user.subscriptionTier === "free" ? "Invité" : user.subscriptionTier === "explorer" ? "Membre" : "Illimité"}
               </div>
             </div>
           </div>

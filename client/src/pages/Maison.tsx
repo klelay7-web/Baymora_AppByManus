@@ -31,10 +31,10 @@ const OFFRES = [
 ];
 
 const PLANS = [
-  { name: "Découverte", price: "Gratuit", features: ["3 conversations Maya", "Offres avec remise", "1 parcours essai"], highlight: false },
-  { name: "Social Club", price: "9,90€/mois", features: ["Maya illimitée", "Parcours illimités", "Offres exclusives", "Évènements privés"], highlight: true },
+  { name: "Invité", price: "Gratuit", features: ["3 conversations Maya", "Offres avec remise", "1 parcours essai"], highlight: false },
+  { name: "Membre", price: "9,90€/mois", features: ["Maya illimitée", "Parcours illimités", "Offres exclusives", "Évènements privés"], highlight: true },
   { name: "Duo", price: "14,90€/mois", features: ["Tout Social Club", "2 profils liés", "Parcours en commun"], highlight: false },
-  { name: "Annuel", price: "89€/an", features: ["Social Club 12 mois", "25% de réduction", "Accès prioritaire", "Cadeau de bienvenue"], highlight: false },
+  { name: "Le Cercle", price: "89€/an", features: ["Social Club 12 mois", "25% de réduction", "Accès prioritaire", "Cadeau de bienvenue"], highlight: false },
 ];
 
 const FAQ = [
@@ -117,7 +117,7 @@ export default function Maison() {
                   className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium"
                   style={{ background: "rgba(200, 169, 110, 0.1)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.25)" }}
                 >
-                  Voir les offres
+                  Voir les privilèges
                 </button>
               </Link>
             </div>

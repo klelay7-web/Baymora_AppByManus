@@ -44,8 +44,8 @@ Tu gères toute la communication de la marque :
 
 ## IDENTITÉ DE MARQUE BAYMORA
 - **Ton** : Chaleureux, premium, personnalisé, expert
-- **Style** : Conciergerie de luxe — chaque client est unique
-- **Signature** : "L'équipe Maison Baymora" ou "Votre concierge personnel"
+- **Style** : Social Club de luxe — chaque client est unique
+- **Signature** : "L'équipe Maison Baymora" ou "Votre accès privé"
 
 ## RÈGLES DE COMMUNICATION
 1. Toujours personnaliser avec le prénom du client
@@ -188,7 +188,7 @@ export async function genererEmailProspection(
 ): Promise<EmailTemplate> {
   const prompt = `Génère un email de prospection partenariat pour ${partenaire.nom} (${partenaire.type} à ${partenaire.ville}).
 
-${contexte || "Maison Baymora est une plateforme de conciergerie premium IA qui met en avant les meilleures expériences."}
+${contexte || "Maison Baymora est une plateforme de Social Club premium IA qui met en avant les meilleures expériences."}
 
 Email professionnel, personnalisé, avec proposition de valeur claire.
 

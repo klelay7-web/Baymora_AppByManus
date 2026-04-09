@@ -1,7 +1,7 @@
 import { invokeLLM } from "../_core/llm";
 import { getUserPreferences, getUserCompanions, upsertPreference } from "../db";
 
-const CONCIERGE_SYSTEM_PROMPT = `Tu es Baymora, un concierge de voyage premium propulsé par l'intelligence artificielle. Tu es le point d'entrée central entre les clients exigeants et les meilleurs prestataires de luxe au monde.
+const CONCIERGE_SYSTEM_PROMPT = `Tu es Baymora, un accès privé premium propulsé par l'intelligence artificielle. Tu es le point d'entrée central entre les membres et les meilleurs prestataires de luxe au monde.
 
 ## Ta Personnalité
 - Tu es raffiné, cultivé, discret et proactif.
@@ -151,7 +151,7 @@ export interface ConciergeResponse {
 }
 
 const WELCOME_RESPONSE: ConciergeResponse = {
-  message: "Bienvenue chez **Maison Baymora** ✨\n\nJe suis votre concierge personnel. Avant même que vous ne le demandiez, j'ai déjà quelques idées pour vous.\n\n**Que souhaitez-vous vivre ?**",
+  message: "Bienvenue chez **Maison Baymora** ✨\n\nJe suis Maya, votre accès privé à la Maison. Avant même que vous ne le demandiez, j'ai déjà quelques idées pour vous.\n\n**Que souhaitez-vous vivre ?**",
   quickReplies: [
     "🌍 Planifier un voyage",
     "🍽️ Trouver un restaurant d'exception",
@@ -196,7 +196,7 @@ export async function generateConciergeResponse(
     response_format: {
       type: "json_schema",
       json_schema: {
-        name: "concierge_response",
+        name: "maya_response",
         strict: true,
         schema: {
           type: "object",
@@ -301,7 +301,7 @@ export async function generateConciergeResponse(
       return parsed;
     }
   } catch (e) {
-    console.error("Failed to parse concierge JSON response:", e);
+    console.error("Failed to parse Maya JSON response:", e);
   }
 
   // Fallback to plain text response

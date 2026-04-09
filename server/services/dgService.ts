@@ -85,7 +85,7 @@ export const ORGANIGRAMME = {
     },
     {
       id: "concierge",
-      nom: "Équipe Conciergerie IA",
+      nom: "Équipe Social Club",
       emoji: "🤝",
       effectif: 2,
       agents: [
@@ -198,7 +198,7 @@ export const STRATEGIE = {
     taches: [
       "500+ fiches établissements",
       "App mobile (PWA optimisée)",
-      "Conciergerie humaine opérationnelle",
+      "Social Club humaine opérationnelle",
       "Partenariats Staycation + Airbnb Luxe + Booking",
       "Campagne influence (5 créateurs lifestyle)",
       "Expansion : Londres, Barcelone, Dubaï",
@@ -279,7 +279,7 @@ Structure de tes rapports :
 - Objectif : 50 Premium, 5 Privé
 
 **Phase 3 (J61-90) : Accélération** — Budget 5000€
-- 500 fiches, app mobile, conciergerie humaine, expansion internationale
+- 500 fiches, app mobile, Social Club humaine, expansion internationale
 - Objectif : 2000 inscrits, 200 Premium, 20 Privé → CA ~3500€/mois
 
 ## PRIORITÉS IMMÉDIATES (semaine en cours)

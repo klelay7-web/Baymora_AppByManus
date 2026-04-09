@@ -96,6 +96,43 @@ export const PLANS = {
   },
 } as const;
 
+// ─── Packs Crédits One-Time (Sprint 5 V6) ────────────────────────
+export const CREDIT_PACKS = {
+  boost_10: {
+    id: "boost_10",
+    name: "Boost 10 crédits",
+    credits: 10,
+    priceEur: 1.99,
+    priceCents: 199,
+    stripePriceId: process.env.STRIPE_PRICE_CREDITS_10 || "price_credits_10",
+    description: "10 crédits supplémentaires pour continuer avec Maya",
+    icon: "⚡",
+    popular: false,
+  },
+  boost_50: {
+    id: "boost_50",
+    name: "Pack 50 crédits",
+    credits: 50,
+    priceEur: 7.99,
+    priceCents: 799,
+    stripePriceId: process.env.STRIPE_PRICE_CREDITS_50 || "price_credits_50",
+    description: "50 crédits — idéal pour planifier un voyage complet",
+    icon: "✨",
+    popular: true,
+  },
+  boost_200: {
+    id: "boost_200",
+    name: "Pack 200 crédits",
+    credits: 200,
+    priceEur: 24.99,
+    priceCents: 2499,
+    stripePriceId: process.env.STRIPE_PRICE_CREDITS_200 || "price_credits_200",
+    description: "200 crédits — l'équivalent d'un mois Social Club",
+    icon: "👑",
+    popular: false,
+  },
+} as const;
+
 // ─── Feature Unlocks (one-shot) ───────────────────────────────────
 export const FEATURE_UNLOCKS = {
   vip_experiences: {
@@ -111,13 +148,13 @@ export const FEATURE_UNLOCKS = {
   },
   concierge_humain: {
     id: "concierge_humain",
-    name: "Conciergerie Humaine",
+    name: "Social Club Humaine",
     priceEur: 19.90,
     priceCents: 1990,
     durationDays: 7,
     pointsAlternative: 2000,
     stripePriceId: process.env.STRIPE_PRICE_CONCIERGE || "price_concierge_oneshot",
-    description: "Un concierge humain dédié pendant 7 jours",
+    description: "Un expert Maison Baymora dédié pendant 7 jours",
     icon: "🏛️",
   },
 } as const;

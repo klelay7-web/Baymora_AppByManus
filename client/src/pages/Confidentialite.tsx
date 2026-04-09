@@ -30,7 +30,7 @@ export default function Confidentialite() {
         <section className="mb-10">
           <h2 className="font-playfair text-2xl text-[#C8A96E] mb-4">Finalité du traitement</h2>
           <p className="text-gray-400 leading-relaxed">
-            Les données collectées sont utilisées exclusivement pour personnaliser les recommandations de Maya, votre concierge IA. Elles ne sont jamais revendues à des tiers à des fins commerciales.
+            Les données collectées sont utilisées exclusivement pour personnaliser les recommandations de Maya, votre accès privé IA. Elles ne sont jamais revendues à des tiers à des fins commerciales.
           </p>
         </section>
 

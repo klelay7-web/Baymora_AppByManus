@@ -15,7 +15,7 @@ export default function NotFound() {
           BAYMORA
         </div>
         <div className="text-xs tracking-[0.3em] uppercase" style={{ color: "#8B8D94" }}>
-          Maison de conciergerie
+          Maison de Social Club
         </div>
       </div>
 

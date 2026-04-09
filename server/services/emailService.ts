@@ -55,7 +55,7 @@ async function generateEmailContent(
   context: EmailContext
 ): Promise<{ subject: string; html: string; text: string }> {
   const prompts: Record<EmailType, string> = {
-    welcome: `Tu es le rédacteur de Maison Baymora, une conciergerie IA premium ultra-luxe. 
+    welcome: `Tu es le rédacteur de Maison Baymora, une Social Club premium ultra-luxe. 
 Rédige un email de bienvenue chaleureux et élégant pour ${context.recipientName || "notre nouveau membre"}.
 Ton : chaleureux, exclusif, comme une lettre d'un maître d'hôtel 5 étoiles.
 Inclure : accueil personnalisé, ce qui les attend (assistant IA, fiches premium, parcours sur-mesure), CTA "Parler à votre assistant".
@@ -70,7 +70,7 @@ Rappeler : accès Claude Opus, parcours illimités, fiches premium.`,
 
     subscription_reminder_3d: `Tu es le rédacteur de Maison Baymora.
 Rédige un email de relance douce (J+3 après expiration) pour ${context.recipientName || "notre membre"}.
-Ton : bienveillant, pas insistant, comme un concierge qui prend des nouvelles.
+Ton : bienveillant, pas insistant, comme un allié premium qui prend des nouvelles.
 Inclure : "Votre assistant vous manque", rappel des avantages perdus, offre de retour avec réduction 20%, CTA "Reprendre mon abonnement".
 Ne pas mentionner directement "expiration" — utiliser "votre accès est en pause".`,
 
@@ -85,10 +85,10 @@ Rédige un email de bons plans hebdomadaires pour ${context.recipientName || "no
 Ville de référence : ${context.city || "Paris"}.
 Centres d'intérêt : ${context.interests?.join(", ") || "gastronomie, culture, bien-être"}.
 Ton : curateur de luxe, insider, comme un ami qui connaît les meilleures adresses.
-Inclure : 3 recommandations de la semaine (restaurant, expérience, hôtel), 1 événement exclusif, 1 astuce concierge, CTA "Voir plus de bons plans".
+Inclure : 3 recommandations de la semaine (restaurant, expérience, hôtel), 1 événement exclusif, 1 privilège exclusif, CTA "Voir plus de bons plans".
 Format : HTML riche avec sections visuelles, emojis élégants (🍽️ 🌟 🏛️ ✨).`,
 
-    partner_prospection: `Tu es le responsable des partenariats de Maison Baymora, conciergerie IA premium.
+    partner_prospection: `Tu es le responsable des partenariats de Maison Baymora, Social Club premium.
 Rédige un email de prospection pour ${context.companyName || "un établissement de luxe"} (${context.partnerType || "hôtel/restaurant"}).
 Ton : professionnel, direct, B2B premium. Pas de fioriture.
 Inclure : présentation Baymora en 3 lignes, proposition de valeur (visibilité auprès de clients ultra-premium, commissions, fiches SEO), chiffres clés (ex: "notre base de membres premium"), CTA "Planifier un appel de 20 minutes".
@@ -99,9 +99,9 @@ Rédige un email de bienvenue pour un nouveau partenaire affilié : ${context.co
 Ton : professionnel, enthousiaste, partenariat win-win.
 Inclure : félicitations pour l'intégration, récapitulatif du programme (commissions, tracking, support), lien vers le dashboard partenaire, contact dédié.`,
 
-    client_followup_30d: `Tu es le concierge de Maison Baymora.
+    client_followup_30d: `Tu es Maya, l'accès privé de Maison Baymora.
 Rédige un email de suivi 30 jours après l'inscription de ${context.recipientName || "notre membre"}.
-Ton : attentionné, personnalisé, comme un concierge qui prend des nouvelles.
+Ton : attentionné, personnalisé, comme un allié premium qui prend des nouvelles.
 Inclure : "Comment s'est passé votre premier mois ?", rappel des fonctionnalités peut-être non utilisées, invitation à partager un retour, CTA "Parler à votre assistant".
 Mentionner : programme créateur (gagnez des points en partageant vos parcours).`,
 

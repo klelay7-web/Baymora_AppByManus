@@ -28,15 +28,22 @@ const DEMO_FLOWS: DemoFlow[] = [
       { role: "user", content: "Je veux organiser un week-end romantique à Paris pour 2 personnes. Budget 800-1500€, 2 nuits.", delay: 0 },
       { role: "maya", content: `Quel plaisir de vous accompagner pour ce week-end romantique à Paris ✨
 
-Voici 4 scénarios selon votre envie :
+Voici 4 façons de vivre ce week-end :
 
-🎯 **Malin** (800€) — Hôtel boutique Marais + dîner bistronomique + balade Seine
-🏨 **Essentiel** (1 100€) — Hôtel 4★ Saint-Germain + restaurant gastronomique + croisière privée
-✨ **Premium** (1 350€) — Hôtel 5★ Champs-Élysées + chef étoilé + spa privatif
-👑 **Excellence** (1 500€) — Suite Plaza Athénée + dîner Alain Ducasse + voiture avec chauffeur
+🌿 **Signature** (~820€) — Marais historique
+Hôtel Caron de Beaumarchais 4★ + dîner Septime + balade nocturne Île Saint-Louis
 
-Quel scénario vous correspond le mieux ?`, delay: 1200 },
-      { role: "user", content: "✨ Premium", delay: 800 },
+✨ **Privilège** (~1 100€) — Saint-Germain-des-Prés
+Hôtel Bel Ami 5★ + Lapérouse + croisière privée Seine au coucher du soleil
+
+👑 **Prestige** (~1 350€) — Triangle d'Or
+Hôtel Vernet 5★ + Le Cinq (1★ Michelin) + spa Guerlain
+
+💎 **Sur-Mesure** (~1 500€) — Palace
+Le Bristol Paris + suite junior + petit-déjeuner en chambre + Épicure (3★ Michelin)
+
+Quel accès vous correspond le mieux ?`, delay: 1200 },
+      { role: "user", content: "👑 Prestige", delay: 800 },
       { role: "maya", content: `Excellent choix ! Voici votre programme Premium pour Paris 🌟
 
 **Vendredi soir**
@@ -197,7 +204,7 @@ Prix : 650€/nuit × 3 = 1 950€
 
 **Extras inclus :**
 - Accès lounge Al Mourjan (Doha transit)
-- Conciergerie 24h sur 24
+- Social Club 24h sur 24
 - Check-out tardif 18h
 
 **Budget total : 11 200€** tout compris.
@@ -334,7 +341,7 @@ export default function MayaDemo() {
           </Link>
         </div>
         <p className="text-xs" style={{ color: "#8B8D94" }}>
-          Découvrez comment Maya planifie vos voyages en quelques échanges
+          Découvrez comment Maya vous ouvre les meilleures adresses en quelques échanges
         </p>
       </div>
 
@@ -343,7 +350,7 @@ export default function MayaDemo() {
           {/* Sidebar : sélection des flows */}
           <div className="md:col-span-1">
             <p className="text-xs font-semibold uppercase tracking-wider mb-3 px-1" style={{ color: "#8B8D94" }}>
-              Choisissez un scénario
+              Choisissez un accès
             </p>
             <div className="space-y-2">
               {DEMO_FLOWS.map((flow) => (
@@ -407,7 +414,7 @@ export default function MayaDemo() {
                       <Play size={24} color="#C8A96E" />
                     </div>
                     <p className="text-sm font-medium mb-2" style={{ color: "#F0EDE6" }}>Sélectionnez un scénario</p>
-                    <p className="text-xs" style={{ color: "#8B8D94" }}>Choisissez un voyage dans la liste pour voir Maya en action</p>
+                    <p className="text-xs" style={{ color: "#8B8D94" }}>Choisissez un accès dans la liste pour voir Maya en action</p>
                   </div>
                 ) : (
                   <>
@@ -488,17 +495,17 @@ export default function MayaDemo() {
             Prêt à voyager autrement ?
           </h2>
           <p className="text-sm mb-6 max-w-md mx-auto" style={{ color: "#8B8D94", lineHeight: "1.7" }}>
-            Maya connaît vos goûts, vos allergies, vos proches. Elle planifie, réserve et vous accompagne — comme un vrai concierge de palace.
+            Maya connaît vos goûts, vos proches, vos préférences. Elle vous ouvre les meilleures adresses et vous accompagne — comme un accès privé aux lieux qui comptent.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/auth">
               <button className="px-8 py-3 rounded-full text-sm font-semibold" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}>
-                Essayer gratuitement — 3 échanges offerts
+                Accéder à Maya — 3 messages gratuits
               </button>
             </Link>
             <Link href="/premium">
               <button className="px-8 py-3 rounded-full text-sm font-medium" style={{ background: "rgba(200,169,110,0.08)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.25)" }}>
-                Voir les forfaits — dès 9,90€/mois
+                Voir les adhésions — dès 9,90€/mois
               </button>
             </Link>
           </div>

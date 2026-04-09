@@ -44,7 +44,7 @@ export const SEO_CATEGORIES = [
   // Hébergement & Luxe
   { key: "hotel", label: "Hôtels & Palaces", searchQuery: "meilleurs hôtels luxe 5 étoiles palace", count: 3 },
   { key: "villa", label: "Villas & Résidences", searchQuery: "villas location luxe privée", count: 2 },
-  { key: "concierge", label: "Conciergeries", searchQuery: "conciergerie service premium luxe", count: 2 },
+  { key: "concierge", label: "Social Clubs", searchQuery: "Social Club service premium luxe", count: 2 },
   // Gastronomie
   { key: "restaurant", label: "Restaurants Gastronomiques", searchQuery: "meilleurs restaurants gastronomiques étoilés", count: 4 },
   { key: "bar", label: "Bars & Cocktails", searchQuery: "meilleurs bars cocktails tendance", count: 3 },
@@ -137,7 +137,7 @@ async function searchPerplexity(query: string, maxTokens = 1500): Promise<string
         messages: [
           {
             role: "system",
-            content: "Tu es un assistant de recherche pour une agence de conciergerie de luxe. Réponds en français avec des informations précises et vérifiées.",
+            content: "Tu es un assistant de recherche pour une agence de Social Club de luxe. Réponds en français avec des informations précises et vérifiées.",
           },
           { role: "user", content: query },
         ],
@@ -231,7 +231,7 @@ async function generateSeoContent(
   reviews: string,
   viralVideosInfo: string
 ): Promise<SeoFiche> {
-  const prompt = `Tu es LÉNA, experte SEO pour Maison Baymora, une agence de conciergerie de luxe.
+  const prompt = `Tu es LÉNA, experte SEO pour Maison Baymora, une agence de Social Club de luxe.
 
 À partir des données terrain collectées par MANUS, génère une fiche SEO complète et premium pour :
 **${estab.name}** — ${estab.category} à ${estab.city}

@@ -55,7 +55,7 @@ async function sendReminderEmail(userId: number, subject: string, body: string):
         </div>
         <div style="font-size:16px;line-height:1.6;">${body}</div>
         <div style="margin-top:32px;text-align:center;font-size:12px;color:#6B7280;">
-          Maison Baymora — Votre concierge IA privé
+          Maison Baymora — Votre accès privé premium
         </div>
       </div>`,
     });

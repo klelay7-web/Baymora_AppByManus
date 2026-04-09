@@ -16,7 +16,7 @@ const SANTORINI_IMG = `${CDN}/baymora-canaves-oia-santorini-dYNNPqBiH8GUcPC6dZMq
 const FEATURES = [
   {
     icon: "✨",
-    title: "Maya, votre IA de conciergerie",
+    title: "Maya, votre IA de Social Club",
     desc: "Dites à Maya ce dont vous rêvez. Elle crée votre parcours idéal de A à Z : hôtel, restaurants, activités, transport.",
   },
   {
@@ -58,7 +58,7 @@ const DIFFERENTIATORS = [
   {
     icon: <Zap size={20} color="#C8A96E" />,
     title: "Rapide comme un SMS.",
-    desc: "Décrivez votre voyage en 2 phrases. Maya vous propose 4 scénarios complets en moins de 30 secondes.",
+    desc: "Décrivez votre envie en 2 phrases. Maya vous propose 4 accès complets en moins de 30 secondes.",
   },
   {
     icon: <MapPin size={20} color="#C8A96E" />,
@@ -69,15 +69,15 @@ const DIFFERENTIATORS = [
 
 const HOW_IT_WORKS = [
   { step: "01", title: "Dites à Maya ce dont vous rêvez", desc: "\"Week-end romantique à Paris, budget 1500€, 2 nuits.\" C'est tout ce qu'il faut." },
-  { step: "02", title: "Maya propose 4 scénarios", desc: "Malin, Essentiel, Premium, Excellence. Choisissez celui qui vous correspond." },
+  { step: "02", title: "Maya propose 4 accès", desc: "Signature, Privilège, Prestige, Sur-Mesure. Choisissez celui qui vous correspond." },
   { step: "03", title: "Affinez en un clic", desc: "\"Changer l'hôtel\", \"Autre restaurant\" — Maya s'adapte instantanément." },
   { step: "04", title: "Réservez avec vos remises", desc: "Liens directs vers les partenaires avec vos remises négociées. Votre programme est prêt." },
 ];
 
 const SOCIAL_PROOF = [
-  { name: "Sophie M.", city: "Paris", text: "Maya a planifié notre week-end à Venise en 3 messages. Hôtel, restos, gondole privée. Parfait.", stars: 5 },
-  { name: "Thomas R.", city: "Lyon", text: "J'ai économisé 340€ sur mon séjour à Dubai. La remise Baymora est réelle et négociée.", stars: 5 },
-  { name: "Camille D.", city: "Bordeaux", text: "Le Social Club vaut largement 9,90€/mois. Maya connaît mes goûts, elle ne propose jamais deux fois la même chose.", stars: 5 },
+  { name: "Sophie M.", city: "Paris", text: "Maya m'a ouvert des adresses que je ne connaissais pas. Week-end à Venise planifié en 3 messages. Hôtel, restos, gondole privée.", stars: 5 },
+  { name: "Thomas R.", city: "Lyon", text: "J'ai économisé 340€ sur mon accès Dubai. Les remises Baymora sont réelles et négociées. Le Cercle vaut chaque centime.", stars: 5 },
+  { name: "Camille D.", city: "Bordeaux", text: "Le Cercle Baymora vaut largement l'abonnement. Maya connaît mes goûts, elle ne propose jamais deux fois la même adresse.", stars: 5 },
 ];
 
 const HERO_IMAGES = [
@@ -88,12 +88,12 @@ const HERO_IMAGES = [
 
 const FAQ = [
   {
-    q: "Qu'est-ce que Maison Baymora ?",
-    a: "Maison Baymora est un social club virtuel premium qui connecte les voyageurs exigeants aux meilleures adresses du monde. Notre assistante Maya, propulsée par l'intelligence artificielle, crée des parcours sur-mesure : hôtels 5 étoiles, restaurants gastronomiques, activités exclusives et transport — le tout personnalisé selon votre profil.",
+    q: "Qu'est-ce que Baymora ?",
+    a: "Baymora est un accès privé aux meilleures adresses du monde. Notre assistante Maya, propulsée par l'intelligence artificielle, crée des parcours sur-mesure : hôtels 5 étoiles, restaurants gastronomiques, activités exclusives et transport — le tout personnalisé selon votre profil.",
   },
   {
     q: "Comment Maya crée-t-elle un parcours sur-mesure ?",
-    a: "Maya analyse vos préférences, votre budget, vos dates et votre cercle de proches. Elle propose 3 scénarios (Essentiel, Premium, Excellence) avec hébergement, restaurants, activités et transport. Chaque parcours est unique et réservable en quelques clics.",
+    a: "Maya analyse vos préférences, votre budget, vos dates et votre cercle de proches. Elle propose 4 accès (Signature, Privilège, Prestige, Sur-Mesure) avec hébergement, restaurants, activités et transport. Chaque parcours est unique et réservable en quelques clics.",
   },
   {
     q: "Quels types d'hôtels propose Maison Baymora ?",
@@ -104,11 +104,11 @@ const FAQ = [
     a: "Oui. Nous négocions en direct avec chaque établissement partenaire. Les remises vont de -15% à -40% sur des hôtels et restaurants premium. Ce sont des offres exclusives réservées aux membres Maison Baymora.",
   },
   {
-    q: "Maison Baymora est-il gratuit ?",
-    a: "Le forfait Découverte est entièrement gratuit : 3 conversations avec Maya et accès à toutes les offres avec remise. Le Social Club à 9,90€/mois offre un accès illimité à Maya, aux parcours sur-mesure et aux avantages exclusifs.",
+    q: "Baymora est-il gratuit ?",
+    a: "Le plan Invité est entièrement gratuit : 3 conversations avec Maya et accès à toutes les offres avec remise. Le Cercle à 9,90€/mois offre un accès illimité à Maya, aux parcours sur-mesure et aux avantages exclusifs.",
   },
   {
-    q: "Dans quels pays Maison Baymora est-il disponible ?",
+    q: "Dans quels pays Baymora est-il disponible ?",
     a: "Maya couvre le monde entier : France, Europe, États-Unis, Asie, Moyen-Orient. Les offres avec remise sont concentrées sur la France et l'Europe, avec une expansion internationale en cours.",
   },
   {
@@ -124,8 +124,8 @@ const FAQ = [
     a: "ChatGPT donne des listes. Maya donne un accès : des réductions réelles négociées, des réservations en un clic, une mémoire de vos préférences, et un réseau de partenaires physiques.",
   },
   {
-    q: "Comment devenir partenaire Maison Baymora ?",
-    a: "Si vous êtes un hôtel, restaurant, spa ou prestataire d'expériences premium, rejoignez le réseau Maison Baymora pour toucher une clientèle exigeante et qualifiée. Contactez-nous depuis l'app.",
+    q: "Comment devenir partenaire Baymora ?",
+    a: "Si vous êtes un hôtel, restaurant, spa ou prestataire d'expériences premium, rejoignez le réseau Baymora pour toucher une clientèle exigeante et qualifiée. Contactez-nous depuis l'app.",
   },
 ];
 
@@ -134,14 +134,24 @@ const sectionVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.55 } },
 };
 
+const HERO_SUBTITLES = [
+  "Hôtels 5★ · Restaurants gastronomiques · Expériences exclusives",
+  "Vos voyages planifiés en 3 messages · Jusqu'à -40% négociés",
+  "Maya connaît vos goûts · Elle ne propose jamais deux fois la même adresse",
+  "Accès privé aux meilleures adresses du monde · Sans effort",
+];
+
 export default function Landing() {
   const loginUrl = getLoginUrl("/maison");
   const [heroIdx, setHeroIdx] = useState(0);
+  const [subtitleIdx, setSubtitleIdx] = useState(0);
+  const founderCount = 67;
 
   // Hero rotatif toutes les 5 secondes
   useEffect(() => {
     const t = setInterval(() => setHeroIdx((i) => (i + 1) % HERO_IMAGES.length), 5000);
-    return () => clearInterval(t);
+    const s = setInterval(() => setSubtitleIdx((i) => (i + 1) % HERO_SUBTITLES.length), 3500);
+    return () => { clearInterval(t); clearInterval(s); };
   }, []);
 
   // Cookie 30j : si déjà visité, stocker dans localStorage
@@ -207,20 +217,33 @@ export default function Landing() {
             style={{ background: "rgba(200, 169, 110, 0.15)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.3)" }}
           >
             <Sparkles size={12} />
-            Club privé de conciergerie IA
+✦ Accès privé · Le Cercle Baymora
           </div>
 
           <h1
             className="text-4xl md:text-6xl font-bold mb-4 leading-tight"
             style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
           >
-            Le concierge
+            L'accès privé
             <span className="block" style={{ color: "#C8A96E" }}>que vous méritez.</span>
           </h1>
 
-          <p className="text-base md:text-lg mb-8 max-w-xl mx-auto" style={{ color: "rgba(240, 237, 230, 0.7)" }}>
-            Maya crée vos voyages sur-mesure et négocie pour vous jusqu'à -40% dans les meilleurs établissements du monde.
+          <p className="text-base md:text-lg mb-5 max-w-xl mx-auto" style={{ color: "rgba(240, 237, 230, 0.7)", minHeight: "2rem" }}>
+            {HERO_SUBTITLES[subtitleIdx]}
           </p>
+
+          {/* FounderCounter */}
+          <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl mb-6" style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.2)" }}>
+            <div className="flex -space-x-2">
+              {["S","T","C"].map((l, i) => (
+                <div key={i} className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14", border: "2px solid #070B14" }}>{l}</div>
+              ))}
+            </div>
+            <div className="text-left">
+              <p className="text-xs font-semibold" style={{ color: "#C8A96E" }}>{founderCount}/100 membres fondateurs</p>
+              <p className="text-xs" style={{ color: "#8B8D94" }}>{100 - founderCount} places restantes au tarif fondateur</p>
+            </div>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a
@@ -229,14 +252,14 @@ export default function Landing() {
               style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
             >
               <Sparkles size={18} />
-              Parler à Maya gratuitement
+              Découvrir Maya
             </a>
             <button
                 className="flex items-center justify-center gap-2 px-8 py-4 rounded-full text-base font-medium"
                 style={{ background: "rgba(200, 169, 110, 0.1)", color: "#C8A96E", border: "1px solid rgba(200, 169, 110, 0.25)" }}
                 onClick={() => document.getElementById("offres-section")?.scrollIntoView({ behavior: "smooth" })}
               >
-                Voir les offres
+                Voir les privilèges
                 <ChevronRight size={16} />
               </button>
           </div>
@@ -343,7 +366,7 @@ export default function Landing() {
             className="text-2xl md:text-3xl font-bold text-center mb-2"
             style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
           >
-            Pourquoi Maison Baymora ?
+            Pourquoi rejoindre la Maison ?
           </h2>
           <p className="text-sm text-center mb-8" style={{ color: "#8B8D94" }}>
             Ce qui nous rend différents
@@ -471,7 +494,7 @@ export default function Landing() {
             className="text-2xl md:text-3xl font-bold text-center mb-2"
             style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
           >
-            Choisissez votre accès
+            Votre adhésion
           </h2>
           <p className="text-sm text-center mb-8" style={{ color: "#8B8D94" }}>
             Commencez gratuitement, évoluez à votre rythme
@@ -479,14 +502,14 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[
               {
-                name: "Découverte",
+                name: "Invité",
                 price: "Gratuit",
                 features: ["3 conversations Maya", "Offres avec remise", "1 parcours essai"],
                 highlight: false,
                 cta: "Commencer",
               },
               {
-                name: "Social Club",
+                name: "Membre",
                 price: "9,90€/mois",
                 features: ["Maya illimitée", "Parcours illimités", "Offres exclusives", "Évènements privés"],
                 highlight: true,
@@ -500,7 +523,7 @@ export default function Landing() {
                 cta: "Choisir Duo",
               },
               {
-                name: "Annuel",
+                name: "Le Cercle",
                 price: "89€/an",
                 features: ["Social Club 12 mois", "25% de réduction", "Accès prioritaire", "Cadeau de bienvenue"],
                 highlight: false,
@@ -603,7 +626,7 @@ export default function Landing() {
             Prêt à vivre autrement ?
           </h2>
           <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>
-            Rejoignez les membres qui voyagent mieux, pour moins cher.
+            Rejoignez les membres qui savent où aller.
           </p>
           <a
             href={loginUrl}

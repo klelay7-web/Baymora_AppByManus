@@ -71,7 +71,7 @@ export function OnboardingWelcome({ onComplete }: OnboardingWelcomeProps) {
           transition={{ delay: 0.6 }}
           className="text-[#C8A96E] text-lg"
         >
-          Votre club privé de conciergerie IA
+          Votre club privé de Social Club
         </motion.p>
       </div>
       <motion.button
@@ -99,7 +99,7 @@ export function OnboardingWelcome({ onComplete }: OnboardingWelcomeProps) {
           <span className="text-3xl">✨</span>
         </div>
         <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-          Voici Maya, votre concierge
+          Voici Maya, votre accès privé
         </h2>
         <p className="text-gray-400 text-sm mb-6">Elle crée vos voyages, trouve vos restaurants,<br />anticipe vos envies</p>
       </div>
