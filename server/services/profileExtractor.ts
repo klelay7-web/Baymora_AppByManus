@@ -43,6 +43,20 @@ interface ExtractedProfileData {
   sleepPreference?: string;
   tempPreference?: string;
   freeNotes?: string;
+  // Nouveaux champs Sprint 2A
+  birthdayDate?: string;
+  partnerName?: string;
+  partnerBirthday?: string;
+  childrenNames?: string[];
+  childrenAges?: number[];
+  weddingAnniversary?: string;
+  importantDates?: { date: string; label: string }[];
+  sportsInterests?: string[];
+  fashionBrands?: string[];
+  favoriteDestinations?: string[];
+  dislikedThings?: string[];
+  travelContext?: string;
+  dressCodePreference?: string;
 }
 
 const EXTRACTION_SYSTEM_PROMPT = `Tu es un extracteur de données JSON silencieux pour Maison Baymora.
@@ -75,6 +89,19 @@ Retourne un JSON valide avec UNIQUEMENT les champs détectés parmi :
 - sleepPreference: string
 - tempPreference: string
 - freeNotes: string (infos utiles non catégorisées)
+- birthdayDate: string ("15 mars" — date d'anniversaire du client)
+- partnerName: string (prénom du/de la partenaire)
+- partnerBirthday: string ("22 juin" — anniversaire du/de la partenaire)
+- childrenNames: string[] (prénoms des enfants)
+- childrenAges: number[] (ages des enfants)
+- weddingAnniversary: string ("3 septembre" — anniversaire de mariage)
+- importantDates: {date: string, label: string}[] (dates importantes personnalisées)
+- sportsInterests: string[] (sports pratiqués ou aimés: "golf", "tennis", "surf")
+- fashionBrands: string[] (marques de luxe préférées: "Hermès", "Gucci")
+- favoriteDestinations: string[] (destinations mentionnées comme aimées)
+- dislikedThings: string[] (choses que le client n'aime pas: "je n'aime pas les musées")
+- travelContext: string ("business" | "leisure" | "mixed")
+- dressCodePreference: string ("formel" | "smart casual" | "décontracté")
 
 Exemples :
 - "Je suis végétarien" → {"dietRegime": ["vegetarien"]}
@@ -100,6 +127,9 @@ export async function extractProfileFromMessage(
     "chien", "chat", "fumeur", "cigare", "taille", "pointure",
     "aéroport", "cdg", "ory", "lounge", "priority", "peur", "adore", "déteste",
     "préfère", "j'aime", "je n'aime pas", "langue", "parle", "résid",
+    "anniversaire", "fête", "mariage", "partenaire", "conjoint", "golf", "tennis",
+    "surf", "ski", "hermès", "gucci", "chanel", "vuitton", "destination",
+    "business", "réunion", "conférence", "déplacement",
   ];
   
   const lowerMsg = userMessage.toLowerCase();
@@ -130,6 +160,13 @@ export async function extractProfileFromMessage(
     if (extracted.dietAllergies) dbData.dietAllergies = JSON.stringify(extracted.dietAllergies);
     if (extracted.travelStyles) dbData.travelStyles = JSON.stringify(extracted.travelStyles);
     if (extracted.languages) dbData.languages = JSON.stringify(extracted.languages);
+    if (extracted.childrenNames) dbData.childrenNames = JSON.stringify(extracted.childrenNames);
+    if (extracted.childrenAges) dbData.childrenAges = JSON.stringify(extracted.childrenAges);
+    if (extracted.importantDates) dbData.importantDates = JSON.stringify(extracted.importantDates);
+    if (extracted.sportsInterests) dbData.sportsInterests = JSON.stringify(extracted.sportsInterests);
+    if (extracted.fashionBrands) dbData.fashionBrands = JSON.stringify(extracted.fashionBrands);
+    if (extracted.favoriteDestinations) dbData.favoriteDestinations = JSON.stringify(extracted.favoriteDestinations);
+    if (extracted.dislikedThings) dbData.dislikedThings = JSON.stringify(extracted.dislikedThings);
     
     // Champs scalaires directs
     const scalarFields = [
@@ -138,6 +175,8 @@ export async function extractProfileFromMessage(
       "preferredAirport", "airportLounge", "priorityLane", "clothingSize",
       "shoeSize", "favoriteAlcohol", "favoriteCuisine", "sleepPreference",
       "tempPreference", "freeNotes",
+      "birthdayDate", "partnerName", "partnerBirthday", "weddingAnniversary",
+      "travelContext", "dressCodePreference",
     ] as const;
     
     for (const field of scalarFields) {

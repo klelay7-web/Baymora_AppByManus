@@ -72,3 +72,57 @@
 - [ ] Backend : table affiliate_clicks (schema + migration)
 - [ ] Backend : enrichir /api/affiliate/redirect avec logging userId + source
 - [ ] Vérifier points protégés : products.ts, freeMessagesUsed>=3, OWNER_EMAILS, overflow-x
+
+## PROMPT_MANUS_V2 — 5 Sprints
+
+### Sprint 1 — Connexions & Conversion
+- [ ] 1.1 Pages légales : /mentions-legales, /confidentialite, /cgu, /contact
+- [ ] 1.1 Fix footers href="#" → vraies routes
+- [ ] 1.1 Routes dans App.tsx
+- [ ] 1.2 Profil : formulaire préférences (alimentaire, voyage, sports, dates, proches, destinations)
+- [ ] 1.2 Profil : Mes collections → trpc.favorites.list
+- [ ] 1.2 Profil : Mes proches → trpc.companions.getCompanions + formulaire ajout
+- [ ] 1.2 Profil : Parrainer un ami → code unique + partage
+- [ ] 1.2 Profil : Notifications → toggles + sauvegarde DB
+- [ ] 1.2 Profil : Confidentialité → lien /confidentialite
+- [ ] 1.3 Offres.tsx → trpc.offers.list (seed si vide)
+- [ ] 1.3 Parcours.tsx → trpc.trips.getMyPlans (état vide élégant)
+- [ ] 1.3 LieuDetail.tsx → trpc.establishments.getById (fallback hardcodé)
+- [ ] 1.3 Maison.tsx → trpc.bundles.published + trpc.offers.list
+- [ ] 1.4 NotFound.tsx thème sombre + FR + CTAs
+- [ ] 1.5 MayaDemo.tsx (6 flows pré-écrits, MessageRenderer, typing simulé, CTA)
+- [ ] 1.6 Landing : hero rotatif (5 textes, AnimatePresence)
+- [ ] 1.6 Landing : section "Comment ça marche" (4 étapes)
+- [ ] 1.6 Landing : section "Ce que vivent nos membres" (3 vignettes)
+- [ ] 1.6 Landing : 4ème différenciateur "Un club, pas un outil"
+- [ ] 1.6 Landing : pricing enrichi (sous-titres + badge populaire)
+- [ ] 1.6 Landing : double CTA final
+- [ ] 1.7 Cookie JWT 30 jours + redirect /maison si connecté
+- [ ] 1.8 Générer 9 images demo/social-proof
+
+### Sprint 2 — Maya Intelligence+
+- [ ] 2.1 Règles N°10 à N°16 dans claudeService.ts
+- [ ] 2.2 profileExtractor enrichi (nouveaux champs)
+- [ ] 2.3 Multi-QR dans MessageRenderer.tsx
+- [ ] 2.4 affiliations.json enrichi (+31 partenaires)
+- [ ] 2.4 System prompt mis à jour avec nouveaux partenaires
+- [ ] 2.5 OnboardingWelcome.tsx (3 étapes + QR)
+
+### Sprint 3 — Exploration & Immersion
+- [ ] 3.1 ScenarioExplorer.tsx (slide panel + carte + programme + budget + actions)
+- [ ] 3.2 Sauvegarde multi-scénarios en brouillon
+- [ ] 3.3 Widget Maya Mini flottant contextuel
+- [ ] 3.4 Système notifications (cloche + drawer + backend)
+
+### Sprint 4 — Mode Parcours Actif
+- [ ] 4.1 TripActiveMode.tsx (carte + todolist + contacts + SOS)
+- [ ] 4.2 TripTodoList.tsx rétractable (spring animation, swipe, mode business)
+- [ ] 4.3 Navigation bottom adaptative (mode parcours)
+- [ ] 4.4 reminderService.ts (cron + notifications J-14 à retour)
+
+### Sprint 5 — Monétisation & Scale
+- [ ] 5.1 Rate limiting (Opus 10/min, Sonnet 30/min, image 5/min)
+- [ ] 5.2 Stripe Customer Portal
+- [ ] 5.3 Auto-save trip depuis Maya (tag PLAN)
+- [ ] 5.4 Programme ambassadeur (code unique, dashboard filleuls)
+- [ ] 5.5 Dashboard affilié (owner Kevin uniquement)

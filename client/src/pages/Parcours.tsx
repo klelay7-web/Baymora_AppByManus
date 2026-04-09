@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import { Plus, Lock, Users, Globe, Eye, EyeOff, Sparkles, MapPin, Calendar, DollarSign } from "lucide-react";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
@@ -63,6 +64,27 @@ export default function Parcours() {
   const OWNER_EMAILS = ["k.lelay7@gmail.com", "klelay7@gmail.com"];
   const isOwner = OWNER_EMAILS.includes(user?.email || "") || user?.role === "admin";
   const isFree = !user || (user.subscriptionTier === "free" && !isOwner);
+
+  // Données réelles depuis la DB
+  const { data: realPlans, isLoading: plansLoading } = trpc.trips.getMyPlans.useQuery(undefined, { enabled: !!user && !isFree });
+
+  // Mapper les plans DB vers la structure MOCK pour réutiliser le même affichage
+  const dbParcours = (realPlans as any[] || []).map((p: any) => ({
+    id: String(p.id),
+    title: p.title || "Parcours sans titre",
+    destination: [p.destinationCity, p.destinationCountry].filter(Boolean).join(", ") || "Destination inconnue",
+    dates: p.startDate ? new Date(p.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "",
+    duration: p.totalDays ? `${p.totalDays} nuit${p.totalDays > 1 ? "s" : ""}` : "",
+    budget: p.estimatedTotal || p.budgetLevel || "",
+    steps: 0,
+    status: (p.status === "confirmed" ? "validé" : p.status === "active" ? "en_cours" : "brouillon") as "brouillon" | "validé" | "en_cours" | "partagé",
+    visibility: "privé" as const,
+    img: p.coverImage || `${CDN}/baymora-plaza-athenee-paris-UQttpWbf4KhLKFavhpDju8.webp`,
+    shared: 0,
+  }));
+
+  // Utiliser les données réelles si disponibles, sinon MOCK
+  const displayParcours = dbParcours.length > 0 ? dbParcours : MOCK_PARCOURS;
 
   if (isFree) {
     return (
@@ -132,7 +154,7 @@ export default function Parcours() {
     );
   }
 
-  const filtered = MOCK_PARCOURS.filter((p) => {
+  const filtered = displayParcours.filter((p) => {
     if (activéTab === "Tous") return true;
     if (activéTab === "Brouillons") return p.status === "brouillon";
     if (activéTab === "Validés") return p.status === "validé";
@@ -152,7 +174,7 @@ export default function Parcours() {
             >
               Mes parcours
             </h1>
-            <p className="text-sm" style={{ color: "#8B8D94" }}>{MOCK_PARCOURS.length} parcours</p>
+            <p className="text-sm" style={{ color: "#8B8D94" }}>{plansLoading ? "Chargement..." : `${displayParcours.length} parcours`}</p>
           </div>
           <Link href="/maya">
             <button

@@ -223,6 +223,48 @@ function Sidebar() {
   );
 }
 
+// Widget Maya Mini — FAB contextuel
+function MayaMiniWidget() {
+  const [location, navigate] = useLocation();
+  const [hovered, setHovered] = useState(false);
+  if (location === "/maya" || location === "/" || location === "/auth" || location === "/maya-demo") return null;
+  const contextMap: Record<string, string> = {
+    "/offres": "Tu veux que je te trouve mieux ?",
+    "/parcours": "Besoin de modifier quelque chose ?",
+    "/maison": "Besoin d'aide ?",
+    "/profil": "Besoin d'aide ?",
+    "/premium": "Besoin d'aide ?",
+  };
+  const isLieu = location.startsWith("/lieu/");
+  const contextText = isLieu
+    ? "Je connais un secret sur cet endroit..."
+    : contextMap[location] || "Besoin d'aide ?";
+  const contextParam = isLieu
+    ? `lieu_${location.split("/lieu/")[1]}`
+    : location.replace("/", "") || "home";
+  return (
+    <button
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={() => navigate(`/maya?context=${contextParam}`)}
+      className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 flex items-center gap-2 transition-all duration-300"
+      style={{ filter: "drop-shadow(0 4px 16px rgba(200,169,110,0.4))" }}
+    >
+      {hovered && (
+        <span className="bg-[#1A1A2E] border border-[#C8A96E]/40 text-white text-xs px-3 py-2 rounded-xl whitespace-nowrap max-w-[180px]">
+          {contextText}
+        </span>
+      )}
+      <div
+        className="w-12 h-12 rounded-full flex items-center justify-center text-xl"
+        style={{ background: "linear-gradient(135deg, #C8A96E 0%, #E8D5A8 100%)" }}
+      >
+        ✨
+      </div>
+    </button>
+  );
+}
+
 interface AppLayoutProps {
   children: React.ReactNode;
 }
@@ -261,6 +303,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       {/* Mobile bottom nav */}
       {!isMayaPage && <BottomNav />}
+
+      {/* Widget Maya Mini — FAB contextuel */}
+      <MayaMiniWidget />
     </div>
   );
 }

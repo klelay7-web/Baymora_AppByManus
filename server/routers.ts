@@ -77,6 +77,25 @@ import { genererEmail, repondreCommentaire, gererMessagePrive, genererEmailProsp
 import { rechercherPrestataires, genererStrategieAffiliation, analyserPartenaire, PROGRAMMES_AFFILIATION } from "./services/ai/affiliationAgent";
 import { createMission, getActiveMission, getMissionHistory, addMissionProgress, closeMission, buildMissionContext } from "./services/missionService";
 
+// ─── Rate Limiter en mémoire (par userId, par minute) ───────────────────────
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+function checkRateLimit(userId: number, key: string, maxPerMinute: number): void {
+  const now = Date.now();
+  const mapKey = `${userId}:${key}`;
+  const entry = rateLimitMap.get(mapKey);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(mapKey, { count: 1, resetAt: now + 60000 });
+    return;
+  }
+  if (entry.count >= maxPerMinute) {
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: "Maya reprend son souffle, réessayez dans quelques secondes ✨",
+    });
+  }
+  entry.count++;
+}
+
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux administrateurs" });
   return next({ ctx });
@@ -157,6 +176,11 @@ export const appRouter = router({
             });
           }
           await incrementFreeMessages(ctx.user.id);
+        }
+
+        // Rate limiting Claude (sauf owner/admin)
+        if (!isPrivileged) {
+          checkRateLimit(ctx.user.id, "claude", 10);
         }
 
         // Ajouter le message utilisateur
@@ -3358,6 +3382,49 @@ export const appRouter = router({
         });
         return { url: session.url };
       }),
+
+    createPortalSession: protectedProcedure
+      .input(z.object({ origin: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const StripeLib = (await import("stripe")).default;
+        const stripe = new StripeLib(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" as any });
+        // Chercher ou créer le customer Stripe
+        const user = await getUserById(ctx.user.id);
+        let customerId = (user as any)?.stripeCustomerId;
+        if (!customerId) {
+          const customer = await stripe.customers.create({
+            email: ctx.user.email ?? undefined,
+            name: ctx.user.name ?? undefined,
+            metadata: { userId: ctx.user.id.toString() },
+          });
+          customerId = customer.id;
+        }
+        const session = await stripe.billingPortal.sessions.create({
+          customer: customerId,
+          return_url: `${input.origin}/profil`,
+        });
+        return { url: session.url };
+      }),
+  }),
+
+  // ─── Dashboard Affilié (owner Kevin uniquement) ───────────────────────
+  affiliateDashboard: router({
+    getStats: ownerProcedure.query(async () => {
+      const stats = await getAffiliateStats();
+      return stats;
+    }),
+    getTopPartners: ownerProcedure
+      .input(z.object({ limit: z.number().default(5) }))
+      .query(async ({ input }) => {
+        const stats = await getAffiliateStats();
+        // Trier par nombre de clics
+        const sorted = ((stats as unknown) as any[]).sort((a: any, b: any) => (b.clickCount || 0) - (a.clickCount || 0));
+        return sorted.slice(0, input.limit);
+      }),
+    getLast30Days: ownerProcedure.query(async () => {
+      const stats = await getAffiliateStats();
+      return stats;
+    }),
   }),
 });
 export type AppRouter = typeof appRouter;

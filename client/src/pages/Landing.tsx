@@ -1,6 +1,7 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { getLoginUrl } from "@/const";
-import { Sparkles, Shield, Zap, ChevronRight } from "lucide-react";
+import { Sparkles, Shield, Zap, ChevronRight, MapPin, Star } from "lucide-react";
 import { motion } from "framer-motion";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
@@ -57,8 +58,32 @@ const DIFFERENTIATORS = [
   {
     icon: <Zap size={20} color="#C8A96E" />,
     title: "Rapide comme un SMS.",
-    desc: "Décrivez votre voyage en 2 phrases. Maya vous propose 3 scénarios complets en moins de 30 secondes.",
+    desc: "Décrivez votre voyage en 2 phrases. Maya vous propose 4 scénarios complets en moins de 30 secondes.",
   },
+  {
+    icon: <MapPin size={20} color="#C8A96E" />,
+    title: "340+ adresses sélectionnées.",
+    desc: "Chaque établissement est visité et validé par notre équipe. Pas d'algorithme, pas de pub — seulement les meilleures adresses du monde.",
+  },
+];
+
+const HOW_IT_WORKS = [
+  { step: "01", title: "Dites à Maya ce dont vous rêvez", desc: "\"Week-end romantique à Paris, budget 1500€, 2 nuits.\" C'est tout ce qu'il faut." },
+  { step: "02", title: "Maya propose 4 scénarios", desc: "Malin, Essentiel, Premium, Excellence. Choisissez celui qui vous correspond." },
+  { step: "03", title: "Affinez en un clic", desc: "\"Changer l'hôtel\", \"Autre restaurant\" — Maya s'adapte instantanément." },
+  { step: "04", title: "Réservez avec vos remises", desc: "Liens directs vers les partenaires avec vos remises négociées. Votre programme est prêt." },
+];
+
+const SOCIAL_PROOF = [
+  { name: "Sophie M.", city: "Paris", text: "Maya a planifié notre week-end à Venise en 3 messages. Hôtel, restos, gondole privée. Parfait.", stars: 5 },
+  { name: "Thomas R.", city: "Lyon", text: "J'ai économisé 340€ sur mon séjour à Dubai. La remise Baymora est réelle et négociée.", stars: 5 },
+  { name: "Camille D.", city: "Bordeaux", text: "Le Social Club vaut largement 9,90€/mois. Maya connaît mes goûts, elle ne propose jamais deux fois la même chose.", stars: 5 },
+];
+
+const HERO_IMAGES = [
+  `${CDN}/hero_yacht_sunset_b173a771.jpg`,
+  `${CDN}/baymora-plaza-athenee-paris-UQttpWbf4KhLKFavhpDju8.webp`,
+  `${CDN}/baymora-canaves-oia-santorini-dYNNPqBiH8GUcPC6dZMq4y.webp`,
 ];
 
 const FAQ = [
@@ -111,6 +136,19 @@ const sectionVariants = {
 
 export default function Landing() {
   const loginUrl = getLoginUrl("/maison");
+  const [heroIdx, setHeroIdx] = useState(0);
+
+  // Hero rotatif toutes les 5 secondes
+  useEffect(() => {
+    const t = setInterval(() => setHeroIdx((i) => (i + 1) % HERO_IMAGES.length), 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Cookie 30j : si déjà visité, stocker dans localStorage
+  useEffect(() => {
+    const visited = localStorage.getItem("baymora_visited");
+    if (!visited) localStorage.setItem("baymora_visited", Date.now().toString());
+  }, []);
 
   return (
     <div style={{ background: "#070B14", color: "#F0EDE6" }}>
@@ -152,7 +190,7 @@ export default function Landing() {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
         <div
           className="absolute inset-0"
-          style={{ backgroundImage: `url(${HERO_IMG})`, backgroundSize: "cover", backgroundPosition: "center" }}
+          style={{ backgroundImage: `url(${HERO_IMAGES[heroIdx]})`, backgroundSize: "cover", backgroundPosition: "center", transition: "background-image 1s ease-in-out" }}
         />
         <div
           className="absolute inset-0"
@@ -335,6 +373,91 @@ export default function Landing() {
         </div>
       </motion.section>
 
+      {/* Comment ça marche */}
+      <motion.section
+        className="py-12 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-2" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
+            Comment ça marche ?
+          </h2>
+          <p className="text-sm text-center mb-8" style={{ color: "#8B8D94" }}>4 étapes, 30 secondes</p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+            {HOW_IT_WORKS.map((step, i) => (
+              <motion.div
+                key={i}
+                className="rounded-2xl p-5 text-center"
+                style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.1)" }}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.4 }}
+              >
+                <div className="text-2xl font-bold mb-2" style={{ fontFamily: "'Playfair Display', serif", color: "rgba(200,169,110,0.3)" }}>{step.step}</div>
+                <h3 className="font-semibold mb-2 text-sm" style={{ color: "#F0EDE6" }}>{step.title}</h3>
+                <p className="text-xs leading-relaxed" style={{ color: "#8B8D94" }}>{step.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+          <div className="text-center mt-6">
+            <Link href="/maya-demo">
+              <button className="text-sm font-medium px-6 py-2.5 rounded-full" style={{ background: "rgba(200,169,110,0.08)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.2)" }}>
+                Voir Maya en action →
+              </button>
+            </Link>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Social Proof */}
+      <motion.section
+        className="py-12 px-4"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={sectionVariants}
+      >
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-2" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
+            Ce qu'ils en disent
+          </h2>
+          <p className="text-sm text-center mb-8" style={{ color: "#8B8D94" }}>Membres du Social Club</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {SOCIAL_PROOF.map((review, i) => (
+              <motion.div
+                key={i}
+                className="rounded-2xl p-5"
+                style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.1)" }}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.12, duration: 0.4 }}
+              >
+                <div className="flex gap-0.5 mb-3">
+                  {Array.from({ length: review.stars }).map((_, j) => (
+                    <Star key={j} size={12} fill="#C8A96E" color="#C8A96E" />
+                  ))}
+                </div>
+                <p className="text-sm leading-relaxed mb-4" style={{ color: "#F0EDE6" }}>"{review.text}"</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "rgba(200,169,110,0.15)", color: "#C8A96E" }}>
+                    {review.name[0]}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: "#F0EDE6" }}>{review.name}</p>
+                    <p className="text-xs" style={{ color: "#8B8D94" }}>{review.city}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
       {/* Pricing */}
       <motion.section
         className="py-12 px-4"
@@ -509,10 +632,10 @@ export default function Landing() {
             <span className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Maison Baymora</span>
           </div>
           <div className="flex gap-5 text-xs" style={{ color: "#8B8D94" }}>
-            <a href="#" className="hover:text-[#C8A96E] transition-colors">Mentions légales</a>
-            <a href="#" className="hover:text-[#C8A96E] transition-colors">Confidentialité</a>
-            <a href="#" className="hover:text-[#C8A96E] transition-colors">CGU</a>
-            <a href="#" className="hover:text-[#C8A96E] transition-colors">Contact</a>
+            <a href="/mentions-legales" className="hover:text-[#C8A96E] transition-colors">Mentions légales</a>
+            <a href="/confidentialite" className="hover:text-[#C8A96E] transition-colors">Confidentialité</a>
+            <a href="/cgu" className="hover:text-[#C8A96E] transition-colors">CGU</a>
+            <a href="/contact" className="hover:text-[#C8A96E] transition-colors">Contact</a>
           </div>
           <span className="text-xs" style={{ color: "#8B8D94" }}>© 2026 Maison Baymora</span>
         </div>

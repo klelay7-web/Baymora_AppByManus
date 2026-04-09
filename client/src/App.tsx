@@ -18,6 +18,16 @@ import Premium from "./pages/Premium";
 import Auth from "./pages/Auth";
 import LieuDetail from "./pages/LieuDetail";
 
+// Maya Demo
+import MayaDemo from "./pages/MayaDemo";
+// Onboarding
+import { OnboardingWelcome } from "./components/OnboardingWelcome";
+// Pages légales
+import MentionsLegales from "./pages/MentionsLegales";
+import Confidentialite from "./pages/Confidentialite";
+import CGU from "./pages/CGU";
+import Contact from "./pages/Contact";
+
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, loading } = useAuth();
   if (loading) {
@@ -44,7 +54,7 @@ function Router() {
 
   return (
     <Switch>
-      {/* Landing — visiteurs non connectes uniquement */}
+      {/* Landing — visiteurs non connectes uniquement, redirect /maison si connecté */}
       <Route path="/">
         {() => user ? <Redirect to="/maison" /> : <Landing />}
       </Route>
@@ -79,6 +89,14 @@ function Router() {
         {() => <LieuDetail />}
       </Route>
 
+      {/* Maya Demo — accessible sans connexion */}
+      <Route path="/maya-demo" component={MayaDemo} />
+      {/* Pages légales — accessibles sans connexion */}
+      <Route path="/mentions-legales" component={MentionsLegales} />
+      <Route path="/confidentialite" component={Confidentialite} />
+      <Route path="/cgu" component={CGU} />
+      <Route path="/contact" component={Contact} />
+
       {/* 404 */}
       <Route component={NotFound} />
     </Switch>
@@ -91,6 +109,7 @@ function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
+          <OnboardingWelcome />
           <AppLayout>
             <Router />
           </AppLayout>

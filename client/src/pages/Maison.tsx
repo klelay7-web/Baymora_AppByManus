@@ -454,9 +454,9 @@ export default function Maison() {
             <span className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Maison Baymora</span>
           </div>
           <div className="flex gap-5 text-xs" style={{ color: "#8B8D94" }}>
-            <a href="#" className="hover:text-[#C8A96E]">Mentions légales</a>
-            <a href="#" className="hover:text-[#C8A96E]">Confidentialité</a>
-            <a href="#" className="hover:text-[#C8A96E]">CGU</a>
+            <a href="/mentions-legales" className="hover:text-[#C8A96E]">Mentions légales</a>
+            <a href="/confidentialite" className="hover:text-[#C8A96E]">Confidentialité</a>
+            <a href="/cgu" className="hover:text-[#C8A96E]">CGU</a>
           </div>
           <span className="text-xs" style={{ color: "#8B8D94" }}>© 2026 Maison Baymora</span>
         </div>
