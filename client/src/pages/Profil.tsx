@@ -753,7 +753,7 @@ export default function Profil() {
             </div>
           </div>
           <p className="text-xs text-center" style={{ color: "rgba(139, 141, 148, 0.5)" }}>
-            © 2026 Maison Baymora — Social club virtuel premium
+            © 2026 Maison Baymora — Accès privé
           </p>
         </div>
       </div>

@@ -54,7 +54,7 @@ export default function Confidentialite() {
             <div className="flex items-start gap-3">
               <span className="text-[#C8A96E] mt-0.5">•</span>
               <div>
-                <span className="text-white">Anthropic (Claude IA)</span> — traitement des conversations pour générer les recommandations Maya
+                <span className="text-white">Anthropic (Claude)</span> — traitement des conversations pour générer les recommandations Maya
               </div>
             </div>
             <div className="flex items-start gap-3">

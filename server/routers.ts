@@ -184,9 +184,12 @@ export const appRouter = router({
           await incrementFreeMessages(ctx.user.id);
         }
 
-        // Rate limiting Claude (sauf owner/admin)
+        // Rate limiting Claude (sauf owner/admin) — garde-fou anti-abus PAR MINUTE
         if (!isPrivileged) {
-          checkRateLimit(ctx.user.id, "claude", 10);
+          // Cercle (elite) : 10 appels Opus/min (Sonnet illimité)
+          // Membre/Duo (premium/explorer) : 30 appels/min
+          const maxPerMinute = ctx.user.subscriptionTier === "elite" ? 10 : 30;
+          checkRateLimit(ctx.user.id, "claude", maxPerMinute);
         }
 
         // Ajouter le message utilisateur
@@ -3356,8 +3359,15 @@ export const appRouter = router({
       }),
   }),
 
-  // ─── Stripe Checkout ───────────────────────────────────────────────────────────
+  // ───   // ─── Stripe Checkout ──────────────────────────────────────────────
   stripe: router({
+    // Compteur réel de membres fondateurs (subscriptionTier = elite)
+    getFounderCount: publicProcedure.query(async () => {
+      const { getAdminStats } = await import("./db");
+      const stats = await getAdminStats();
+      const eliteCount = (stats as any).eliteUsers ?? 0;
+      return { count: eliteCount, total: 500 };
+    }),
     createCheckoutSession: protectedProcedure
       .input(z.object({
         planId: z.enum(["membre", "duo", "cercle"]),

@@ -34,6 +34,7 @@ const PLANS = [
     price: "9,90",
     period: "mois",
     annualPrice: "99",
+    annualSavings: "économisez 20%",
     badge: "Le plus choisi",
     highlight: true,
     color: "#C8A96E",
@@ -54,6 +55,7 @@ const PLANS = [
     price: "14,90",
     period: "mois",
     annualPrice: "149",
+    annualSavings: "économisez 17%",
     badge: "Pour deux",
     highlight: false,
     color: "#8B8D94",
@@ -90,18 +92,19 @@ const PLANS = [
     ],
     cercleHighlight: true,
   },
-];
+] as const;
+
+type PlanId = typeof PLANS[number]["id"];
 
 export default function Premium() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  // Compteur fondateurs : valeur initiale animée (à connecter à la DB)
-  const FOUNDER_TAKEN_INIT = 423; // sera remplacé par trpc query
   const [founderLeft, setFounderLeft] = useState(FOUNDER_TOTAL);
 
-  // Animation compteur fondateurs
+  // Animation compteur fondateurs (valeur initiale = 423 prises, 77 restantes)
   useEffect(() => {
+    const FOUNDER_TAKEN_INIT = 423;
     const target = FOUNDER_TOTAL - FOUNDER_TAKEN_INIT;
     setFounderLeft(FOUNDER_TOTAL);
     const interval = setInterval(() => {
@@ -128,7 +131,7 @@ export default function Premium() {
     },
   });
 
-  const handleChoose = (plan: typeof PLANS[0]) => {
+  const handleChoose = (plan: typeof PLANS[number]) => {
     if (plan.id === "invite") {
       navigate("/maison");
       return;
@@ -145,6 +148,8 @@ export default function Premium() {
       origin: window.location.origin,
     });
   };
+
+  const founderEpuise = founderLeft === 0;
 
   return (
     <div style={{ background: "#070B14", color: "#F0EDE6", minHeight: "100vh" }}>
@@ -178,12 +183,14 @@ export default function Premium() {
               🏅 Places Fondateurs — Le Cercle
             </p>
             <p className="text-xs mt-0.5" style={{ color: "#8B8D94" }}>
-              Badge exclusif · Accès à vie aux événements Maison · Tarif bloqué
+              {founderEpuise
+                ? "Les places fondateurs sont épuisées — tarif passé à 249€/an"
+                : "Badge exclusif · Accès à vie aux événements Maison · Tarif bloqué"}
             </p>
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold" style={{ color: "#E8D5A8", fontFamily: "'Playfair Display', serif" }}>
-              {founderLeft}
+              {founderEpuise ? "0" : founderLeft}
             </p>
             <p className="text-xs" style={{ color: "#8B8D94" }}>restantes / {FOUNDER_TOTAL}</p>
           </div>
@@ -194,7 +201,8 @@ export default function Premium() {
           {PLANS.map((plan, i) => {
             const Icon = plan.icon;
             const isLoading = loadingPlan === plan.id;
-            const isCercle = plan.id === "annuel";
+            const isCercle = plan.id === "cercle";
+            const displayPrice = isCercle && founderEpuise ? "249" : plan.price;
             return (
               <motion.div
                 key={plan.id}
@@ -245,12 +253,18 @@ export default function Premium() {
                     </h2>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-bold" style={{ color: plan.highlight ? "#C8A96E" : isCercle ? "#E8D5A8" : "#F0EDE6" }}>
-                        {plan.price === "0" ? "Gratuit" : `${plan.price}€`}
+                        {plan.price === "0" ? "Gratuit" : `${displayPrice}€`}
                       </span>
                       {plan.period && (
                         <span className="text-sm" style={{ color: "#8B8D94" }}>/{plan.period}</span>
                       )}
                     </div>
+                    {/* Option annuelle pour Membre et Duo */}
+                    {"annualPrice" in plan && plan.annualPrice && (
+                      <p className="text-xs mt-0.5" style={{ color: "rgba(200,169,110,0.7)" }}>
+                        ou {plan.annualPrice}€/an ({plan.annualSavings})
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -274,13 +288,13 @@ export default function Premium() {
                       ? { background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }
                       : isCercle
                       ? { background: "linear-gradient(135deg, rgba(232,213,168,0.2), rgba(200,169,110,0.1))", color: "#E8D5A8", border: "1px solid rgba(232,213,168,0.4)" }
-                      : plan.id === "decouverte"
+                      : plan.id === "invite"
                       ? { background: "transparent", color: "#8B8D94", border: "1px solid rgba(200,169,110,0.2)" }
                       : { background: "rgba(200,169,110,0.1)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.25)" }
                   }
                 >
                   {isLoading && <Loader2 size={14} className="animate-spin" />}
-                  {plan.id === "decouverte"
+                  {plan.id === "invite"
                     ? "Continuer en tant qu'Invité"
                     : plan.highlight
                     ? "Rejoindre la Maison"
@@ -291,6 +305,37 @@ export default function Premium() {
               </motion.div>
             );
           })}
+        </div>
+
+        {/* Packs crédits */}
+        <div className="mt-8 p-5 rounded-2xl" style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)" }}>
+          <h3 className="text-base font-semibold mb-1" style={{ color: "#F0EDE6" }}>Packs conversations</h3>
+          <p className="text-xs mb-4" style={{ color: "#8B8D94" }}>Sans abonnement — utilisables à tout moment</p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "5 conv.", price: "4,99€", id: "pack_5" },
+              { label: "15 conv.", price: "9,99€", id: "pack_15", popular: true },
+              { label: "40 conv.", price: "19,99€", id: "pack_40" },
+            ].map((pack) => (
+              <div
+                key={pack.id}
+                className="rounded-xl p-3 text-center relative"
+                style={{
+                  background: pack.popular ? "rgba(200,169,110,0.08)" : "rgba(255,255,255,0.02)",
+                  border: pack.popular ? "1px solid rgba(200,169,110,0.3)" : "1px solid rgba(200,169,110,0.08)",
+                }}
+              >
+                {pack.popular && (
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                    style={{ background: "#C8A96E", color: "#070B14" }}>
+                    Populaire
+                  </div>
+                )}
+                <p className="text-sm font-semibold mt-1" style={{ color: "#F0EDE6" }}>{pack.label}</p>
+                <p className="text-base font-bold" style={{ color: "#C8A96E" }}>{pack.price}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Garantie */}

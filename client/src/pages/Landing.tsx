@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { getLoginUrl } from "@/const";
-import { Sparkles, Shield, Zap, ChevronRight, MapPin, Star } from "lucide-react";
+import { Sparkles, Shield, Zap, ChevronRight, MapPin, Star, Send } from "lucide-react";
 import { motion } from "framer-motion";
+import { trpc } from "@/lib/trpc";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 const HERO_IMG = `${CDN}/hero_yacht_sunset_b173a771.jpg`;
@@ -89,7 +90,7 @@ const HERO_IMAGES = [
 const FAQ = [
   {
     q: "Qu'est-ce que Maison Baymora ?",
-    a: "Maison Baymora est un hub IA de conciergerie privée. Maya, votre accès exclusif, connaît les meilleures adresses du monde et quelques secrets que personne d'autre ne partage. Elle crée vos parcours sur-mesure : hôtels, restaurants, activités, lifestyle — le tout personnalisé selon votre profil.",
+    a: "Maison Baymora est un service de recommandations premium. Maya, votre accès exclusif, connaît les meilleures adresses du monde et quelques secrets que personne d'autre ne partage. Elle crée vos parcours sur-mesure : hôtels, restaurants, activités, lifestyle — le tout personnalisé selon votre profil.",
   },
   {
     q: "Comment Maya crée-t-elle un parcours sur-mesure ?",
@@ -141,12 +142,122 @@ const HERO_SUBTITLES = [
   "Accès privé aux meilleures adresses du monde · Sans effort",
 ];
 
+// ─── MayaDemo inline (3 personas) ──────────────────────────────────────────
+const DEMO_PERSONAS = [
+  {
+    label: "Week-end romantique",
+    icon: "💛",
+    prompt: "Week-end romantique à Paris, budget 1500€, 2 nuits.",
+    reply: "Pour un week-end romantique à Paris avec 1500€, voici mon accès **Privilège** :\n\n**Hôtel** : Hôtel Le Marais Bastille (4★) — -22% membres → **290€/nuit** au lieu de 370€\n**Dîner** : Septime (bistronomique étoilé) — réservation directe, table fenêtre disponible vendredi\n**Matin** : Brunch au Bal Café (Montmartre) + balade Sacré-Cœur\n\nBudget total estimé : **1 340€** pour 2 (hôtel + 2 dîners + brunch)\n\nVous voulez que j'affine l'hôtel ou le restaurant ?",
+  },
+  {
+    label: "Business à Dubai",
+    icon: "💼",
+    prompt: "Déplacement business Dubai 3 jours, hôtel proche DIFC.",
+    reply: "Pour 3 jours business au DIFC Dubai, voici mon accès **Prestige** :\n\n**Hôtel** : Address Boulevard (5★) — -18% membres → **420€/nuit** | 5min DIFC à pied\n**Déjeuner d'affaires** : Zuma Dubai — table privée, dress code smart casual\n**Transport** : VTC Careem pré-réservé aéroport → hôtel (45min, 35€)\n\n**Programme J1** : Arrivée 14h → check-in → spa express → dîner Zuma 20h\n**J2** : RDV DIFC 9h → déj Zuma 13h → RDV 15h → rooftop Level 43 20h\n\nDress code pour vos RDV ?",
+  },
+  {
+    label: "Famille à Barcelone",
+    icon: "👨‍👩‍👧",
+    prompt: "Barcelone en famille, 4 jours, 2 enfants 8 et 12 ans.",
+    reply: "Barcelone en famille 4 jours — voici mon accès **Signature** :\n\n**Hôtel** : Hotel Arts Barcelona (5★) — suite familiale -15% membres | piscine + plage privée\n**J1** : Sagrada Familia (entrée coupe-file) + Park Güell + diner La Barceloneta\n**J2** : Aquarium BCN (réduction -20%) + Las Ramblas + Boqueria\n**J3** : Tibidabo (parc d'attractions) + Montjuïc + show flamenco familial\n\n**Budget estimé** : 2 800€ pour 4 (hôtel + activités + repas)\n\nLes enfants ont des allergies alimentaires ?",
+  },
+];
+
+function MayaDemoInline() {
+  const [activePersona, setActivePersona] = useState(0);
+  const [showReply, setShowReply] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const loginUrl = getLoginUrl("/maya");
+
+  function selectPersona(i: number) {
+    setActivePersona(i);
+    setShowReply(false);
+    setTyping(true);
+    setTimeout(() => { setTyping(false); setShowReply(true); }, 1400);
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto mt-8" style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.2)", borderRadius: 20, overflow: "hidden" }}>
+      {/* Header */}
+      <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid rgba(200,169,110,0.08)", background: "rgba(200,169,110,0.04)" }}>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)" }}>
+          <Sparkles size={14} color="#070B14" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold" style={{ color: "#F0EDE6", fontFamily: "'Playfair Display', serif" }}>Maya</p>
+          <p className="text-xs" style={{ color: "#C8A96E" }}>Votre accès privé Baymora</p>
+        </div>
+      </div>
+      {/* Personas */}
+      <div className="flex gap-2 px-5 py-3" style={{ borderBottom: "1px solid rgba(200,169,110,0.06)" }}>
+        {DEMO_PERSONAS.map((p, i) => (
+          <button
+            key={i}
+            onClick={() => selectPersona(i)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+            style={{
+              background: activePersona === i ? "rgba(200,169,110,0.2)" : "rgba(200,169,110,0.05)",
+              color: activePersona === i ? "#C8A96E" : "#8B8D94",
+              border: `1px solid ${activePersona === i ? "rgba(200,169,110,0.4)" : "rgba(200,169,110,0.1)"}`,
+            }}
+          >
+            {p.icon} {p.label}
+          </button>
+        ))}
+      </div>
+      {/* Chat */}
+      <div className="px-5 py-4 space-y-3" style={{ minHeight: 180 }}>
+        {/* User message */}
+        <div className="flex justify-end">
+          <div className="px-4 py-2.5 rounded-2xl text-sm max-w-[80%]" style={{ background: "rgba(200,169,110,0.15)", color: "#F0EDE6" }}>
+            {DEMO_PERSONAS[activePersona].prompt}
+          </div>
+        </div>
+        {/* Maya typing or reply */}
+        {typing && (
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)" }}>
+              <Sparkles size={10} color="#070B14" />
+            </div>
+            <div className="flex gap-1">
+              {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: "#C8A96E", opacity: 0.6, animation: `pulse ${0.8 + i * 0.2}s infinite` }} />)}
+            </div>
+          </div>
+        )}
+        {showReply && !typing && (
+          <div className="flex gap-2">
+            <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)" }}>
+              <Sparkles size={10} color="#070B14" />
+            </div>
+            <div className="px-4 py-3 rounded-2xl text-xs leading-relaxed" style={{ background: "#161B27", color: "#D4D0C8", maxWidth: "88%" }}>
+              {DEMO_PERSONAS[activePersona].reply.split("\n").map((line, j) => (
+                <p key={j} className={line === "" ? "mb-1" : "mb-0.5"}>
+                  {line.replace(/\*\*(.*?)\*\*/g, "$1")}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      {/* CTA */}
+      <div className="px-5 py-4" style={{ borderTop: "1px solid rgba(200,169,110,0.06)" }}>
+        <a href={loginUrl} className="flex items-center justify-center gap-2 w-full py-3 rounded-full text-sm font-semibold" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}>
+          <Sparkles size={14} />
+          Essayer Maya gratuitement
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
   const loginUrl = getLoginUrl("/maison");
   const [heroIdx, setHeroIdx] = useState(0);
   const [subtitleIdx, setSubtitleIdx] = useState(0);
-  const founderCount = 423;
-  const founderTotal = 500;
+  const { data: founderData } = trpc.stripe.getFounderCount.useQuery();
+  const founderCount = founderData?.count ?? 423;
+  const founderTotal = founderData?.total ?? 500;
 
   // Hero rotatif toutes les 5 secondes
   useEffect(() => {
@@ -428,11 +539,7 @@ export default function Landing() {
             ))}
           </div>
           <div className="text-center mt-6">
-            <Link href="/maya-demo">
-              <button className="text-sm font-medium px-6 py-2.5 rounded-full" style={{ background: "rgba(200,169,110,0.08)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.2)" }}>
-                Voir Maya en action →
-              </button>
-            </Link>
+            <MayaDemoInline />
           </div>
         </div>
       </motion.section>
@@ -635,7 +742,7 @@ export default function Landing() {
             style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
           >
             <Sparkles size={18} />
-            Commencer gratuitement
+            Découvrir Maya
           </a>
           <p className="text-xs mt-3" style={{ color: "#8B8D94" }}>
             Sans carte bancaire · Annulation à tout moment
