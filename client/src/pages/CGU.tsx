@@ -17,7 +17,7 @@ export default function CGU() {
         <section className="mb-10">
           <h2 className="font-playfair text-2xl text-[#C8A96E] mb-4">Article 1 — Objet du service</h2>
           <p className="text-gray-400 leading-relaxed">
-            Maison Baymora est un hub IA de conciergerie privée. Elle met à disposition de ses membres Maya, l'accès exclusif qui connaît les meilleures adresses du monde. Maya crée des parcours sur-mesure, recommande des établissements d'exception et organise des expériences exclusives.
+            Maison Baymora est un service de recommandations premium. Elle met à disposition de ses membres Maya, l'accès exclusif qui connaît les meilleures adresses du monde. Maya crée des parcours sur-mesure, recommande des établissements d'exception et organise des expériences exclusives.
           </p>
         </section>
 

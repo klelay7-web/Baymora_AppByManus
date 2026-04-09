@@ -40,7 +40,7 @@ const PLANS = [
 const FAQ = [
   {
     q: "Qu'est-ce que Maison Baymora ?",
-    a: "Maison Baymora est un hub IA de conciergerie privée. Maya connaît les meilleures adresses du monde et quelques secrets que personne d'autre ne partage. Elle crée vos parcours sur-mesure : hôtels, restaurants, activités, lifestyle — le tout personnalisé selon votre profil."
+    a: "Maison Baymora est un service de recommandations premium. Maya connaît les meilleures adresses du monde et quelques secrets que personne d'autre ne partage. Elle crée vos parcours sur-mesure : hôtels, restaurants, activités, lifestyle — le tout personnalisé selon votre profil."
   },
   {
     q: "Maison Baymora est-il gratuit ?",
