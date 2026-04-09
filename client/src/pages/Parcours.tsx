@@ -115,7 +115,7 @@ export default function Parcours() {
                   {/* Flou overlay */}
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center" style={{ backdropFilter: "blur(6px)", background: "rgba(7,11,20,0.6)" }}>
                     <Lock size={22} color="#C8A96E" className="mb-2" />
-                    <span className="text-xs font-semibold" style={{ color: "#C8A96E" }}>Social Club</span>
+                    <span className="text-xs font-semibold" style={{ color: "#C8A96E" }}>Maison Baymora</span>
                   </div>
                   <div className="relative h-36">
                     <img src={parcours.img} alt={parcours.title} className="w-full h-full object-cover" />
@@ -140,8 +140,8 @@ export default function Parcours() {
             <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(200, 169, 110, 0.12)" }}>
               <Sparkles size={24} color="#C8A96E" />
             </div>
-            <h2 className="text-lg font-bold mb-2" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Passez au Social Club</h2>
-            <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>Les parcours sur-mesure illimités sont réservés aux membres Social Club. Créez, sauvegardez et partagez vos voyages de rêve.</p>
+            <h2 className="text-lg font-bold mb-2" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Rejoignez la Maison</h2>
+            <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>Les parcours sur-mesure illimités sont réservés aux membres de la Maison. Créez, sauvegardez et partagez vos voyages de rêve.</p>
             <Link href="/premium">
               <button className="w-full py-3 rounded-full text-sm font-semibold mb-3" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}>Voir les forfaits</button>
             </Link>

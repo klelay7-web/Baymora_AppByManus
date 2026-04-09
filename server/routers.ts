@@ -129,6 +129,12 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    completeOnboarding: protectedProcedure
+      .input(z.object({ style: z.string().optional() }))
+      .mutation(async ({ ctx }) => {
+        await updateUser(ctx.user.id, { hasCompletedOnboarding: true });
+        return { success: true };
+      }),
   }),
 
   // ─── Chat Concierge ───────────────────────────────────────────────
@@ -3354,7 +3360,7 @@ export const appRouter = router({
   stripe: router({
     createCheckoutSession: protectedProcedure
       .input(z.object({
-        planId: z.enum(["social", "duo", "annuel"]),
+        planId: z.enum(["membre", "duo", "cercle"]),
         origin: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -3407,7 +3413,7 @@ export const appRouter = router({
       }),
     buyCreditPack: protectedProcedure
       .input(z.object({
-        packId: z.enum(["boost_10", "boost_50", "boost_200"]),
+        packId: z.enum(["pack_5", "pack_15", "pack_40"]),
         origin: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {

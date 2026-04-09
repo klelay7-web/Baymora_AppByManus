@@ -16,13 +16,13 @@ const SANTORINI_IMG = `${CDN}/baymora-canaves-oia-santorini-dYNNPqBiH8GUcPC6dZMq
 const FEATURES = [
   {
     icon: "✨",
-    title: "Maya, votre IA de Social Club",
-    desc: "Dites à Maya ce dont vous rêvez. Elle crée votre parcours idéal de A à Z : hôtel, restaurants, activités, transport.",
+    title: "Maya détient les clés.",
+    desc: "Elle connaît les secrets, les meilleures tables, les portes dérobées. Dites-lui ce dont vous rêvez.",
   },
   {
-    icon: "🏷️",
-    title: "Jusqu'à -40% sur des adresses premium",
-    desc: "Remises négociées en direct avec les meilleurs établissements. Exclusif aux membres Baymora.",
+    icon: "📍",
+    title: "Chaque jour, un privilège.",
+    desc: "Votre accès quotidien aux meilleures adresses de votre ville et du monde.",
   },
   {
     icon: "🗺️",
@@ -30,9 +30,9 @@ const FEATURES = [
     desc: "Créez, sauvegardez et partagez vos voyages. Chaque parcours est unique, coordonné et personnalisé.",
   },
   {
-    icon: "👑",
-    title: "Club privé & évènements",
-    desc: "Accès à des expériences exclusives, des soirées privées et des rencontres entre membres sélectifs.",
+    icon: "🏠",
+    title: "Un club, pas un outil.",
+    desc: "Maison Baymora est une communauté de membres qui vivent différemment.",
   },
 ];
 
@@ -48,22 +48,22 @@ const DIFFERENTIATORS = [
   {
     icon: <Sparkles size={20} color="#C8A96E" />,
     title: "Pas une liste. Un accès.",
-    desc: "ChatGPT donne des idées. Maya donne des réservations. Chaque recommandation est liée à un partenaire réel, avec une remise négociée.",
-  },
-  {
-    icon: <Shield size={20} color="#C8A96E" />,
-    title: "Vos données, vos règles.",
-    desc: "Pseudonyme possible. Suppression totale à tout moment. Hébergé en Europe. Conforme RGPD.",
-  },
-  {
-    icon: <Zap size={20} color="#C8A96E" />,
-    title: "Rapide comme un SMS.",
-    desc: "Décrivez votre envie en 2 phrases. Maya vous propose 4 accès complets en moins de 30 secondes.",
+    desc: "ChatGPT donne des idées. Maya ouvre des portes. Chaque recommandation est liée à un partenaire réel, avec des privilèges négociés.",
   },
   {
     icon: <MapPin size={20} color="#C8A96E" />,
-    title: "340+ adresses sélectionnées.",
-    desc: "Chaque établissement est visité et validé par notre équipe. Pas d'algorithme, pas de pub — seulement les meilleures adresses du monde.",
+    title: "Chaque jour, un privilège.",
+    desc: "Votre accès quotidien aux meilleures adresses de votre ville et du monde. Maya connaît vos goûts.",
+  },
+  {
+    icon: <Zap size={20} color="#C8A96E" />,
+    title: "Maya détient les clés.",
+    desc: "Elle connaît les secrets, les meilleures tables, les portes dérobées. Elle ne propose jamais deux fois la même adresse.",
+  },
+  {
+    icon: <Star size={20} color="#C8A96E" />,
+    title: "Un club, pas un outil.",
+    desc: "Maison Baymora est une communauté de membres qui vivent différemment. Bienvenue chez vous.",
   },
 ];
 
@@ -88,8 +88,8 @@ const HERO_IMAGES = [
 
 const FAQ = [
   {
-    q: "Qu'est-ce que Baymora ?",
-    a: "Baymora est un accès privé aux meilleures adresses du monde. Notre assistante Maya, propulsée par l'intelligence artificielle, crée des parcours sur-mesure : hôtels 5 étoiles, restaurants gastronomiques, activités exclusives et transport — le tout personnalisé selon votre profil.",
+    q: "Qu'est-ce que Maison Baymora ?",
+    a: "Maison Baymora est un hub IA de conciergerie privée. Maya, votre accès exclusif, connaît les meilleures adresses du monde et quelques secrets que personne d'autre ne partage. Elle crée vos parcours sur-mesure : hôtels, restaurants, activités, lifestyle — le tout personnalisé selon votre profil.",
   },
   {
     q: "Comment Maya crée-t-elle un parcours sur-mesure ?",
@@ -100,12 +100,12 @@ const FAQ = [
     a: "Exclusivement des établissements 4 et 5 étoiles : palaces, boutique-hôtels de caractère, resorts avec piscine, spa ou jacuzzi. Toujours dans des grandes villes ou des destinations prisées, en France et à l'international.",
   },
   {
-    q: "Les réductions sont-elles réelles ?",
-    a: "Oui. Nous négocions en direct avec chaque établissement partenaire. Les remises vont de -15% à -40% sur des hôtels et restaurants premium. Ce sont des offres exclusives réservées aux membres Maison Baymora.",
+    q: "Les privilèges sont-ils réels ?",
+    a: "Oui. Nous négocions en direct avec chaque établissement partenaire. Les privilèges vont de -15% à -40% sur des hôtels et restaurants d'exception. Ce sont des accès exclusifs réservés aux membres de la Maison.",
   },
   {
     q: "Baymora est-il gratuit ?",
-    a: "Le plan Invité est entièrement gratuit : 3 conversations avec Maya et accès à toutes les offres avec remise. Le Cercle à 9,90€/mois offre un accès illimité à Maya, aux parcours sur-mesure et aux avantages exclusifs.",
+    a: "Le plan Invité est entièrement gratuit : 3 conversations avec Maya et accès aux adresses publiques. Le plan Membre à 9,90€/mois offre un accès illimité à Maya, aux parcours et aux privilèges partenaires. Le Cercle à 149€/an est l'adhésion fondatrice à vie.",
   },
   {
     q: "Dans quels pays Baymora est-il disponible ?",
@@ -145,7 +145,8 @@ export default function Landing() {
   const loginUrl = getLoginUrl("/maison");
   const [heroIdx, setHeroIdx] = useState(0);
   const [subtitleIdx, setSubtitleIdx] = useState(0);
-  const founderCount = 67;
+  const founderCount = 423;
+  const founderTotal = 500;
 
   // Hero rotatif toutes les 5 secondes
   useEffect(() => {
@@ -240,8 +241,8 @@ export default function Landing() {
               ))}
             </div>
             <div className="text-left">
-              <p className="text-xs font-semibold" style={{ color: "#C8A96E" }}>{founderCount}/100 membres fondateurs</p>
-              <p className="text-xs" style={{ color: "#8B8D94" }}>{100 - founderCount} places restantes au tarif fondateur</p>
+              <p className="text-xs font-semibold" style={{ color: "#C8A96E" }}>{founderCount}/{founderTotal} membres fondateurs</p>
+              <p className="text-xs" style={{ color: "#8B8D94" }}>{founderTotal - founderCount} places restantes au tarif fondateur</p>
             </div>
           </div>
 
@@ -448,7 +449,7 @@ export default function Landing() {
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-2" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
             Ce qu'ils en disent
           </h2>
-          <p className="text-sm text-center mb-8" style={{ color: "#8B8D94" }}>Membres du Social Club</p>
+          <p className="text-sm text-center mb-8" style={{ color: "#8B8D94" }}>Membres de la Maison</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {SOCIAL_PROOF.map((review, i) => (
               <motion.div
@@ -504,30 +505,30 @@ export default function Landing() {
               {
                 name: "Invité",
                 price: "Gratuit",
-                features: ["3 conversations Maya", "Offres avec remise", "1 parcours essai"],
+                features: ["3 conversations avec Maya", "Accès aux adresses publiques", "Aperçu des privilèges"],
                 highlight: false,
                 cta: "Commencer",
               },
               {
                 name: "Membre",
-                price: "9,90€/mois",
-                features: ["Maya illimitée", "Parcours illimités", "Offres exclusives", "Évènements privés"],
+                price: "9,90€/mois ou 99€/an",
+                features: ["Maya illimitée", "Parcours & cartes illimités", "Privilèges partenaires", "Feed local \"Ma position\"", "Mode Business"],
                 highlight: true,
-                cta: "Rejoindre le Club",
+                cta: "Rejoindre la Maison",
               },
               {
                 name: "Duo",
-                price: "14,90€/mois",
-                features: ["Tout Social Club", "2 profils liés", "Parcours en commun"],
+                price: "14,90€/mois ou 149€/an",
+                features: ["Tout Membre pour 2 profils", "Parcours en commun", "Préférences croisées"],
                 highlight: false,
                 cta: "Choisir Duo",
               },
               {
                 name: "Le Cercle",
-                price: "89€/an",
-                features: ["Social Club 12 mois", "25% de réduction", "Accès prioritaire", "Cadeau de bienvenue"],
+                price: "149€/an — Fondateur à vie",
+                features: ["Tout Membre", "Maya mode Prestige", "Le Secret du Jour", "Événements privés Cercle", "2 invitations/mois", "Badge Fondateur (500 places)"],
                 highlight: false,
-                cta: "Économiser 25%",
+                cta: "Rejoindre Le Cercle",
               },
             ].map((plan, i) => (
               <motion.div

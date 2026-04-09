@@ -93,7 +93,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
 
         if (userRows2.length > 0) {
           const user = userRows2[0];
-          const planKey = (user.subscriptionTier === "premium" || user.subscriptionTier === "elite") ? "social" : "decouverte";
+          const planKey = user.subscriptionTier === "elite" ? "cercle" : (user.subscriptionTier === "premium" ? "membre" : "invite");
           const plan = PLANS[planKey as keyof typeof PLANS];
           if (plan && plan.credits > 0) {
             // Rollover : ajouter les crédits, cap à 3x

@@ -1,26 +1,24 @@
-// ⚠️ NE PAS MODIFIER — Tarifs validés par Kevin
-// decouverte : Gratuit
-// social : 9,90€/mois
-// duo : 14,90€/mois
-// annuel : 89€/an
-// Le plan "prive" (49,90€) est SUPPRIMÉ.
-// Utiliser les noms : social, duo, annuel (PAS premium, prive)
+// ⚠️ Tarifs V7 validés — Maison Baymora Social Club Premium
+// invité : Gratuit (3 conversations)
+// membre : 9,90€/mois ou 99€/an
+// duo : 14,90€/mois ou 149€/an
+// cercle : 149€/an — Fondateur à vie (500 places)
 
 // ─── Plans Baymora ────────────────────────────────────────────────
 export const PLANS = {
-  decouverte: {
-    id: "decouverte",
-    name: "Découverte",
+  invite: {
+    id: "invite",
+    name: "Invité",
     price: 0,
     priceMonthly: 0,
     stripePriceId: null,
     credits: 3,
     rolloverCap: 9,
-    description: "Découvrez Maya avec 3 messages gratuits",
+    description: "3 conversations avec Maya, accès aux adresses publiques",
     features: [
-      "3 messages avec Maya",
-      "Accès aux offres publiques",
-      "Aperçu des bundles",
+      "3 conversations avec Maya",
+      "Accès aux adresses publiques",
+      "Aperçu des privilèges",
     ],
     limits: {
       opusMessages: 3,
@@ -28,22 +26,23 @@ export const PLANS = {
       perplexitySearches: 0,
     },
   },
-  social: {
-    id: "social",
-    name: "Social Club",
-    price: 990, // en centimes
+  membre: {
+    id: "membre",
+    name: "Membre",
+    price: 990, // en centimes (mensuel)
     priceMonthly: 9.90,
-    stripePriceId: process.env.STRIPE_PRICE_SOCIAL || "price_social_monthly",
+    stripePriceId: process.env.STRIPE_PRICE_MEMBRE || "price_membre_monthly",
+    stripePriceIdAnnual: process.env.STRIPE_PRICE_MEMBRE_ANNUAL || "price_membre_annual",
     credits: 200,
     rolloverCap: 600,
-    description: "L'accès complet à Maya et aux meilleures adresses négociées.",
+    description: "Maya illimitée, parcours & cartes illimités, privilèges partenaires.",
     features: [
-      "Conversations illimitées avec Maya",
-      "Accès à toutes les offres négociées",
-      "Bundles et parcours premium",
-      "Sélections exclusives Baymora",
+      "Maya illimitée",
+      "Parcours & cartes illimités",
+      "Privilèges partenaires",
+      "Feed local \"Ma position\"",
+      "Mode Business",
       "Mémoire de conversation conservée",
-      "Alertes offres flash en temps réel",
     ],
     limits: {
       opusMessages: 60,
@@ -54,17 +53,17 @@ export const PLANS = {
   duo: {
     id: "duo",
     name: "Duo",
-    price: 1490, // en centimes
+    price: 1490, // en centimes (mensuel)
     priceMonthly: 14.90,
     stripePriceId: process.env.STRIPE_PRICE_DUO || "price_duo_monthly",
+    stripePriceIdAnnual: process.env.STRIPE_PRICE_DUO_ANNUAL || "price_duo_annual",
     credits: 400,
     rolloverCap: 1200,
-    description: "Partagez l'accès avec votre partenaire ou un proche.",
+    description: "Tout Membre pour 2 profils, parcours en commun.",
     features: [
-      "Tout le Social Club",
-      "2 profils distincts",
-      "Recommandations en couple",
-      "Parcours duo personnalisés",
+      "Tout Membre pour 2 profils",
+      "Parcours en commun",
+      "Préférences croisées",
       "Partage de favoris",
     ],
     limits: {
@@ -73,61 +72,63 @@ export const PLANS = {
       perplexitySearches: 40,
     },
   },
-  annuel: {
-    id: "annuel",
-    name: "Annuel",
-    price: 8900, // en centimes
-    priceMonthly: 89,
-    stripePriceId: process.env.STRIPE_PRICE_ANNUEL || "price_annuel_yearly",
-    credits: 200,
-    rolloverCap: 600,
-    description: "Le Social Club pour toute l'année, avec deux mois offerts.",
+  cercle: {
+    id: "cercle",
+    name: "Le Cercle",
+    price: 14900, // en centimes (annuel)
+    priceMonthly: 149,
+    stripePriceId: process.env.STRIPE_PRICE_CERCLE || "price_cercle_annual",
+    credits: 500,
+    rolloverCap: 1500,
+    description: "Adhésion Fondateur à vie — 500 premières places.",
     features: [
-      "Tout le Social Club",
-      "Économisez 30€ par an",
-      "Accès prioritaire aux nouveautés",
-      "Support dédié",
+      "Tout Membre",
+      "Maya mode Prestige",
+      "Le Secret du Jour",
+      "Événements privés Cercle",
+      "2 invitations/mois",
+      "Badge Fondateur (500 places)",
     ],
     limits: {
-      opusMessages: 60,
-      sonnetMessages: 200,
-      perplexitySearches: 20,
+      opusMessages: 100,
+      sonnetMessages: 500,
+      perplexitySearches: 50,
     },
   },
 } as const;
 
-// ─── Packs Crédits One-Time (Sprint 5 V6) ────────────────────────
+// ─── Packs Conversations One-Time (V7) ───────────────────────────
 export const CREDIT_PACKS = {
-  boost_10: {
-    id: "boost_10",
-    name: "Boost 10 crédits",
-    credits: 10,
-    priceEur: 1.99,
-    priceCents: 199,
-    stripePriceId: process.env.STRIPE_PRICE_CREDITS_10 || "price_credits_10",
-    description: "10 crédits supplémentaires pour continuer avec Maya",
+  pack_5: {
+    id: "pack_5",
+    name: "5 conversations",
+    credits: 5,
+    priceEur: 4.90,
+    priceCents: 490,
+    stripePriceId: process.env.STRIPE_PRICE_PACK_5 || "price_pack_5",
+    description: "5 conversations avec Maya",
     icon: "⚡",
     popular: false,
   },
-  boost_50: {
-    id: "boost_50",
-    name: "Pack 50 crédits",
-    credits: 50,
-    priceEur: 7.99,
-    priceCents: 799,
-    stripePriceId: process.env.STRIPE_PRICE_CREDITS_50 || "price_credits_50",
-    description: "50 crédits — idéal pour planifier un voyage complet",
+  pack_15: {
+    id: "pack_15",
+    name: "15 conversations",
+    credits: 15,
+    priceEur: 11.90,
+    priceCents: 1190,
+    stripePriceId: process.env.STRIPE_PRICE_PACK_15 || "price_pack_15",
+    description: "15 conversations — idéal pour planifier un voyage complet",
     icon: "✨",
     popular: true,
   },
-  boost_200: {
-    id: "boost_200",
-    name: "Pack 200 crédits",
-    credits: 200,
-    priceEur: 24.99,
-    priceCents: 2499,
-    stripePriceId: process.env.STRIPE_PRICE_CREDITS_200 || "price_credits_200",
-    description: "200 crédits — l'équivalent d'un mois Social Club",
+  pack_40: {
+    id: "pack_40",
+    name: "40 conversations",
+    credits: 40,
+    priceEur: 24.90,
+    priceCents: 2490,
+    stripePriceId: process.env.STRIPE_PRICE_PACK_40 || "price_pack_40",
+    description: "40 conversations — l'équivalent d'un mois Membre",
     icon: "👑",
     popular: false,
   },
@@ -145,17 +146,6 @@ export const FEATURE_UNLOCKS = {
     stripePriceId: process.env.STRIPE_PRICE_VIP || "price_vip_oneshot",
     description: "Accès aux expériences exclusives pendant 30 jours",
     icon: "👑",
-  },
-  concierge_humain: {
-    id: "concierge_humain",
-    name: "Social Club Humaine",
-    priceEur: 19.90,
-    priceCents: 1990,
-    durationDays: 7,
-    pointsAlternative: 2000,
-    stripePriceId: process.env.STRIPE_PRICE_CONCIERGE || "price_concierge_oneshot",
-    description: "Un expert Maison Baymora dédié pendant 7 jours",
-    icon: "🏛️",
   },
 } as const;
 
@@ -181,15 +171,17 @@ export const CREATOR_POINTS = {
   cashout_max_monthly: 500,
 } as const;
 
-// ─── Tiers d'abonnement → plan ────────────────────────────────────
+// ─── Tiers d'adhésion → plan ──────────────────────────────────────
 export function getTierFromPlan(plan: string): "free" | "premium" | "elite" {
-  if (plan === "duo" || plan === "annuel" || plan === "social") return "premium";
+  if (plan === "cercle") return "elite";
+  if (plan === "duo" || plan === "membre") return "premium";
   return "free";
 }
 
 export function getPlanFromTier(tier: string): keyof typeof PLANS {
-  if (tier === "premium" || tier === "elite") return "social";
-  return "decouverte";
+  if (tier === "elite") return "cercle";
+  if (tier === "premium") return "membre";
+  return "invite";
 }
 
 export function isUnlimited(_plan: string): boolean {

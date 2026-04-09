@@ -209,7 +209,7 @@ export default function Offres() {
           className="text-2xl md:text-3xl font-bold mb-1"
           style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
         >
-          Luxe accessible
+          Nos privilèges
         </h1>
         <p className="text-sm" style={{ color: "#8B8D94" }}>Des adresses d'exception, négociées pour vous.</p>
       </div>
@@ -360,7 +360,9 @@ export default function Offres() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-bold" style={{ color: "#C8A96E" }}>{offer.price}</span>
-                      <span className="text-[10px] line-through" style={{ color: "#8B8D94" }}>{offer.original}</span>
+                      {offer.pct > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: "rgba(200,169,110,0.12)", color: "#C8A96E" }}>-{offer.pct}%</span>
+                      )}
                     </div>
                     <span className="text-[10px]" style={{ color: "#C8A96E" }}>Voir →</span>
                   </div>

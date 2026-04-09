@@ -283,7 +283,7 @@ function SectionParrainage({ onClose }: { onClose: () => void }) {
           <Gift size={18} color="#C8A96E" />
           <span className="text-sm font-semibold text-white">Gagnez 1 mois offert</span>
         </div>
-        <p className="text-xs text-gray-400">Pour chaque ami qui s'inscrit avec votre lien et souscrit un forfait, vous recevez 1 mois Social Club offert. Après 3 filleuls, votre mois est automatiquement crédité.</p>
+        <p className="text-xs text-gray-400">Pour chaque ami qui s'inscrit avec votre lien et souscrit un forfait, vous recevez 1 mois Membre offert. Après 3 filleuls, votre mois est automatiquement crédité.</p>
       </div>
 
       {ambassador ? (
@@ -665,7 +665,7 @@ export default function Profil() {
                 style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
                 onClick={() => navigate("/premium")}
               >
-                Passer au Social Club — 9,90€/mois
+                Rejoindre la Maison — dès 9,90€/mois
               </button>
             </>
           )}
@@ -731,7 +731,7 @@ export default function Profil() {
             <div>
               <p className="text-xs font-semibold mb-2" style={{ color: "#C8A96E" }}>Maison Baymora</p>
               <div className="space-y-1.5">
-                <p><Link href="/maya" className="text-xs" style={{ color: "#8B8D94" }}>Maya IA</Link></p>
+                <p><Link href="/maya" className="text-xs" style={{ color: "#8B8D94" }}>Maya</Link></p>
                 <p><Link href="/offres" className="text-xs" style={{ color: "#8B8D94" }}>Offres</Link></p>
                 <p><Link href="/premium" className="text-xs" style={{ color: "#8B8D94" }}>Forfaits</Link></p>
               </div>

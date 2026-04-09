@@ -1,31 +1,33 @@
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Home, Search, Sparkles, Crown, User, Star, Compass } from "lucide-react";
+import { Home, MapPin, Sparkles, Map, User, Crown } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 
+// ─── Bottom nav mobile : [Maison] [Ma position] [Maya] [Parcours] [Profil]
 const NAV_ITEMS = [
   { path: "/maison", label: "Maison", icon: Home },
-  { path: "/offres", label: "Offres", icon: Search },
+  { path: "/ma-position", label: "Ma position", icon: MapPin },
   { path: "/maya", label: "Maya", icon: Sparkles, center: true },
-  { path: "/parcours", label: "Parcours", icon: Compass },
+  { path: "/parcours", label: "Parcours", icon: Map },
   { path: "/profil", label: "Profil", icon: User },
 ];
 
+// ─── Sidebar desktop : Maison / Maya / Ma position / Privilèges / Parcours / Profil
 const SIDEBAR_ITEMS = [
   { path: "/maison", label: "Maison", icon: Home },
-  { path: "/maya", label: "Maya IA", icon: Sparkles },
-  { path: "/offres", label: "Offres", icon: Star },
-  { path: "/parcours", label: "Parcours", icon: Compass },
-  { path: "/premium", label: "Premium", icon: Crown },
+  { path: "/maya", label: "Maya", icon: Sparkles },
+  { path: "/ma-position", label: "Ma position", icon: MapPin },
+  { path: "/offres", label: "Privilèges", icon: Crown },
+  { path: "/parcours", label: "Parcours", icon: Map },
   { path: "/profil", label: "Profil", icon: User },
 ];
 
 const TOP_PILLS = [
   { path: "/maison", label: "Maison" },
   { path: "/maya", label: "Maya" },
-  { path: "/offres", label: "Offres" },
+  { path: "/ma-position", label: "Ma position" },
   { path: "/parcours", label: "Parcours" },
 ];
 
@@ -63,7 +65,7 @@ function BottomNav() {
                 <div className="flex flex-col items-center -mt-5" onClick={handleMayaClick}>
                   <div className="relative">
                     <div
-                      className="w-14 h-14 rounded-full flex items-center justify-center animate-pulse-gold"
+                      className="w-14 h-14 rounded-full flex items-center justify-center"
                       style={{
                         background: "linear-gradient(135deg, #C8A96E 0%, #E8D5A8 100%)",
                         boxShadow: "0 0 20px rgba(200, 169, 110, 0.4)",
@@ -71,14 +73,12 @@ function BottomNav() {
                     >
                       <Icon size={24} color="#070B14" strokeWidth={2.5} />
                     </div>
-                    {/* Badge rouge si Maya jamais ouverte */}
+                    {/* Badge discret si Maya jamais ouverte */}
                     {!mayaOpened && (
                       <div
-                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
-                        style={{ background: "#ef4444", color: "white", border: "2px solid #070B14" }}
-                      >
-                        1
-                      </div>
+                        className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                        style={{ background: "#C8A96E", border: "2px solid #070B14" }}
+                      />
                     )}
                   </div>
                   <span className="text-[10px] mt-1 font-medium" style={{ color: "#C8A96E" }}>{item.label}</span>
@@ -181,14 +181,6 @@ function Sidebar() {
               >
                 <Icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
                 <span className="text-sm font-medium">{item.label}</span>
-                {item.path === "/maya" && (
-                  <span
-                    className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold"
-                    style={{ background: "rgba(200, 169, 110, 0.15)", color: "#C8A96E" }}
-                  >
-                    IA
-                  </span>
-                )}
               </div>
             </Link>
           );
@@ -213,7 +205,7 @@ function Sidebar() {
                 {user.name || user.email || "Membre"}
               </div>
               <div className="text-[10px]" style={{ color: "#C8A96E" }}>
-                {user.subscriptionTier === "free" ? "Invité" : user.subscriptionTier === "explorer" ? "Membre" : "Illimité"}
+                {(user as any).isCercle ? "Le Cercle" : user.subscriptionTier === "free" ? "Invité" : user.subscriptionTier === "explorer" ? "Membre" : "Membre"}
               </div>
             </div>
           </div>
@@ -223,22 +215,22 @@ function Sidebar() {
   );
 }
 
-// Widget Maya Mini — FAB contextuel
+// Widget Maya Mini — FAB contextuel (sauf /maya et /ma-position)
 function MayaMiniWidget() {
   const [location, navigate] = useLocation();
   const [hovered, setHovered] = useState(false);
-  if (location === "/maya" || location === "/" || location === "/auth" || location === "/maya-demo") return null;
+  if (location === "/maya" || location === "/" || location === "/auth" || location === "/ma-position") return null;
   const contextMap: Record<string, string> = {
     "/offres": "Tu veux que je te trouve mieux ?",
     "/parcours": "Besoin de modifier quelque chose ?",
-    "/maison": "Besoin d'aide ?",
+    "/maison": "Qu'est-ce qui te ferait plaisir aujourd'hui ?",
     "/profil": "Besoin d'aide ?",
-    "/premium": "Besoin d'aide ?",
+    "/premium": "Tu veux en savoir plus sur la Maison ?",
   };
   const isLieu = location.startsWith("/lieu/");
   const contextText = isLieu
     ? "Je connais un secret sur cet endroit..."
-    : contextMap[location] || "Besoin d'aide ?";
+    : contextMap[location] || "Qu'est-ce qui te ferait plaisir ?";
   const contextParam = isLieu
     ? `lieu_${location.split("/lieu/")[1]}`
     : location.replace("/", "") || "home";
@@ -293,7 +285,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Mobile top pills */}
       {!isMayaPage && <TopPills />}
 
-      {/* Main content */}
+      {/* Main content — desktop utilise toute la largeur disponible */}
       <main
         className={`${isMayaPage ? "" : "pb-20 md:pb-0"} md:ml-[250px]`}
         style={{ minHeight: "100vh" }}

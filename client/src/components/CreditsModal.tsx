@@ -11,31 +11,31 @@ interface CreditsModalProps {
 
 const PACKS = [
   {
-    id: "boost_10",
-    name: "Boost",
-    credits: 10,
-    price: "1,99€",
-    description: "Pour continuer une conversation",
+    id: "pack_5",
+    name: "5 conversations",
+    credits: 5,
+    price: "4,90€",
+    description: "Pour continuer une conversation avec Maya",
     icon: Zap,
     iconColor: "#F59E0B",
     popular: false,
   },
   {
-    id: "boost_50",
-    name: "Voyage",
-    credits: 50,
-    price: "7,99€",
+    id: "pack_15",
+    name: "15 conversations",
+    credits: 15,
+    price: "11,90€",
     description: "Idéal pour planifier un voyage complet",
     icon: Sparkles,
     iconColor: "#C8A96E",
     popular: true,
   },
   {
-    id: "boost_200",
-    name: "Cercle",
-    credits: 200,
-    price: "24,99€",
-    description: "L'équivalent d'un mois Social Club",
+    id: "pack_40",
+    name: "40 conversations",
+    credits: 40,
+    price: "24,90€",
+    description: "L'équivalent d'un mois Membre",
     icon: Crown,
     iconColor: "#8B5CF6",
     popular: false,
@@ -61,7 +61,7 @@ export default function CreditsModal({ isOpen, onClose, currentCredits = 0 }: Cr
 
   const handleBuy = (packId: string) => {
     setLoading(packId);
-    buyPackMutation.mutate({ packId: packId as "boost_10" | "boost_50" | "boost_200", origin: window.location.origin });
+    buyPackMutation.mutate({ packId: packId as "pack_5" | "pack_15" | "pack_40", origin: window.location.origin });
   };
 
   if (!isOpen) return null;
@@ -83,10 +83,10 @@ export default function CreditsModal({ isOpen, onClose, currentCredits = 0 }: Cr
               className="text-lg font-bold"
               style={{ color: "#F0EDE6", fontFamily: "'Playfair Display', serif" }}
             >
-              Recharger mes crédits
+              Recharger mes conversations
             </h2>
             <p className="text-xs mt-0.5" style={{ color: "#8B8D94" }}>
-              Solde actuel : <span style={{ color: "#C8A96E" }}>{currentCredits} crédit{currentCredits !== 1 ? "s" : ""}</span>
+              Solde actuel : <span style={{ color: "#C8A96E" }}>{currentCredits} conversation{currentCredits !== 1 ? "s" : ""}</span>
             </p>
           </div>
           <button
@@ -137,7 +137,7 @@ export default function CreditsModal({ isOpen, onClose, currentCredits = 0 }: Cr
                       className="text-xs px-2 py-0.5 rounded-full font-semibold"
                       style={{ background: `${pack.iconColor}20`, color: pack.iconColor }}
                     >
-                      +{pack.credits} crédits
+                      +{pack.credits}
                     </span>
                   </div>
                   <p className="text-xs mt-0.5" style={{ color: "#8B8D94" }}>{pack.description}</p>
@@ -158,12 +158,12 @@ export default function CreditsModal({ isOpen, onClose, currentCredits = 0 }: Cr
         {/* Footer */}
         <div className="text-center">
           <p className="text-xs" style={{ color: "#8B8D94" }}>
-            Paiement sécurisé par Stripe · Les crédits n'expirent pas
+            Paiement sécurisé par Stripe · Les conversations n'expirent pas
           </p>
           <p className="text-xs mt-1" style={{ color: "#8B8D94" }}>
-            Vous préférez un abonnement ?{" "}
+            Vous préférez une adhésion ?{" "}
             <a href="/premium" className="underline" style={{ color: "#C8A96E" }}>
-              Voir les plans
+              Voir les adhésions
             </a>
           </p>
         </div>

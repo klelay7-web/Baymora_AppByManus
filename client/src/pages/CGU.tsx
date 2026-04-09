@@ -17,25 +17,25 @@ export default function CGU() {
         <section className="mb-10">
           <h2 className="font-playfair text-2xl text-[#C8A96E] mb-4">Article 1 — Objet du service</h2>
           <p className="text-gray-400 leading-relaxed">
-            Maison Baymora est une plateforme de Social Club de voyage et lifestyle. Elle met à disposition de ses membres un assistant intelligent (Maya) capable de créer des programmes de voyage personnalisés, de recommander des établissements et d'organiser des expériences sur-mesure.
+            Maison Baymora est un hub IA de conciergerie privée. Elle met à disposition de ses membres Maya, l'accès exclusif qui connaît les meilleures adresses du monde. Maya crée des parcours sur-mesure, recommande des établissements d'exception et organise des expériences exclusives.
           </p>
         </section>
 
         <section className="mb-10">
           <h2 className="font-playfair text-2xl text-[#C8A96E] mb-4">Article 2 — Inscription</h2>
           <p className="text-gray-400 leading-relaxed">
-            L'inscription est gratuite et s'effectue via Manus OAuth. L'utilisateur s'engage à fournir des informations exactes et à maintenir la confidentialité de ses identifiants de connexion.
+            L'inscription est gratuite et s'effectue via Manus OAuth. Le membre s'engage à fournir des informations exactes et à maintenir la confidentialité de ses identifiants de connexion.
           </p>
         </section>
 
         <section className="mb-10">
-          <h2 className="font-playfair text-2xl text-[#C8A96E] mb-4">Article 3 — Abonnements</h2>
+          <h2 className="font-playfair text-2xl text-[#C8A96E] mb-4">Article 3 — Adhésions</h2>
           <div className="space-y-4">
             {[
-              { name: "Invité", price: "Gratuit", desc: "3 conversations avec Maya, accès aux offres avec réductions" },
-              { name: "Membre", price: "9,90€/mois", desc: "Conversations illimitées, accès complet aux parcours et bundles" },
-              { name: "Duo", price: "14,90€/mois", desc: "Tout Social Club + accès pour 2 personnes" },
-              { name: "Le Cercle", price: "89€/an", desc: "Accès complet toute l'année (soit 7,42€/mois)" },
+              { name: "Invité", price: "Gratuit", desc: "3 conversations avec Maya, accès aux adresses publiques, aperçu des privilèges" },
+              { name: "Membre", price: "9,90€/mois ou 99€/an", desc: "Maya illimitée, parcours & cartes illimités, privilèges partenaires, feed local Ma position, Mode Business" },
+              { name: "Duo", price: "14,90€/mois ou 149€/an", desc: "Tout Membre pour 2 profils, parcours en commun, préférences croisées" },
+              { name: "Le Cercle", price: "149€/an — Fondateur à vie", desc: "Tout Membre + Maya mode Prestige, Le Secret du Jour, événements privés, 2 invitations/mois, Badge Fondateur (500 premières places)" },
             ].map((plan) => (
               <div key={plan.name} className="bg-white/5 rounded-lg p-4 border border-white/10">
                 <div className="flex justify-between items-center mb-1">

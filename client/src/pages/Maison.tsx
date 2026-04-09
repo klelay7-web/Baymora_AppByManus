@@ -24,35 +24,35 @@ const BUNDLES = [
 ];
 
 const OFFRES = [
-  { name: "Hôtel Plaza Athénée", city: "Paris", pct: 28, price: "680€", original: "940€", img: HOTEL_IMG, tag: "Palace" },
-  { name: "Le Cinq — Four Seasons", city: "Paris", pct: 22, price: "280€", original: "360€", img: GASTRO_IMG, tag: "Gastronomie" },
-  { name: "Four Seasons Bali", city: "Bali", pct: 35, price: "520€", original: "800€", img: SPA_IMG, tag: "Resort" },
-  { name: "La Mamounia", city: "Marrakech", pct: 18, price: "420€", original: "510€", img: MARRAKECH_IMG, tag: "Palace" },
+  { name: "Hôtel Plaza Athénée", city: "Paris", pct: 28, price: "680€", img: HOTEL_IMG, tag: "Palace" },
+  { name: "Le Cinq — Four Seasons", city: "Paris", pct: 22, price: "280€", img: GASTRO_IMG, tag: "Gastronomie" },
+  { name: "Four Seasons Bali", city: "Bali", pct: 35, price: "520€", img: SPA_IMG, tag: "Resort" },
+  { name: "La Mamounia", city: "Marrakech", pct: 18, price: "420€", img: MARRAKECH_IMG, tag: "Palace" },
 ];
 
 const PLANS = [
-  { name: "Invité", price: "Gratuit", features: ["3 conversations Maya", "Offres avec remise", "1 parcours essai"], highlight: false },
-  { name: "Membre", price: "9,90€/mois", features: ["Maya illimitée", "Parcours illimités", "Offres exclusives", "Évènements privés"], highlight: true },
-  { name: "Duo", price: "14,90€/mois", features: ["Tout Social Club", "2 profils liés", "Parcours en commun"], highlight: false },
-  { name: "Le Cercle", price: "89€/an", features: ["Social Club 12 mois", "25% de réduction", "Accès prioritaire", "Cadeau de bienvenue"], highlight: false },
+  { name: "Invité", price: "Gratuit", features: ["3 conversations avec Maya", "Accès aux adresses publiques", "Aperçu des privilèges"], highlight: false },
+  { name: "Membre", price: "9,90€/mois", features: ["Maya illimitée", "Parcours & cartes illimités", "Privilèges partenaires", "Feed local \"Ma position\""], highlight: true },
+  { name: "Duo", price: "14,90€/mois", features: ["Tout Membre pour 2 profils", "Parcours en commun", "Préférences croisées"], highlight: false },
+  { name: "Le Cercle", price: "149€/an", features: ["Tout Membre", "Maya mode Prestige", "Le Secret du Jour", "Badge Fondateur"], highlight: false },
 ];
 
 const FAQ = [
   {
     q: "Qu'est-ce que Maison Baymora ?",
-    a: "Maison Baymora est un social club virtuel premium. Notre assistante Maya, propulsée par l'IA, crée des parcours sur-mesure : hôtels 5★, restaurants gastronomiques, activités exclusives et transport — le tout personnalisé selon votre profil et votre budget."
+    a: "Maison Baymora est un hub IA de conciergerie privée. Maya connaît les meilleures adresses du monde et quelques secrets que personne d'autre ne partage. Elle crée vos parcours sur-mesure : hôtels, restaurants, activités, lifestyle — le tout personnalisé selon votre profil."
   },
   {
     q: "Maison Baymora est-il gratuit ?",
-    a: "Le forfait Découverte est entièrement gratuit : 3 conversations avec Maya et accès aux offres avec remise. Le Social Club à 9,90€/mois offre un accès illimité à Maya, aux parcours sur-mesure et aux avantages exclusifs."
+    a: "Le plan Invité est entièrement gratuit : 3 conversations avec Maya. Le plan Membre à 9,90€/mois offre un accès illimité à Maya, aux parcours et aux privilèges partenaires. Le Cercle à 149€/an est l'adhésion fondatrice à vie."
   },
   {
-    q: "Les réductions sont-elles réelles ?",
-    a: "Oui. Les remises vont de -15% à -40% sur des hôtels et restaurants premium. Ce sont des offres exclusives réservées aux membres Maison Baymora, négociées en direct avec chaque établissement partenaire."
+    q: "Les privilèges sont-ils réels ?",
+    a: "Oui. Nous négocions en direct avec chaque établissement partenaire. Les privilèges vont de -15% à -40% sur des hôtels et restaurants d'exception. Ce sont des accès exclusifs réservés aux membres de la Maison."
   },
   {
     q: "Quelle est la différence avec ChatGPT ?",
-    a: "ChatGPT donne des listes. Maya donne un accès : des réductions réelles, des réservations en un clic, une mémoire de vos préférences, et un réseau de partenaires physiques. Chaque partenaire Baymora est un représentant du club."
+    a: "ChatGPT donne des listes. Maya ouvre des portes. Elle connaît les secrets, les meilleures tables, les portes dérobées. Elle ne propose jamais deux fois la même adresse."
   },
   {
     q: "Mes données sont-elles protégées ?",
@@ -194,9 +194,9 @@ export default function Maison() {
           <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
             <div>
               <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
-                Luxe accessible
+                Nos privilèges du moment
               </h2>
-              <p className="text-xs mt-0.5" style={{ color: "#8B8D94" }}>Négocié pour vous, jusqu'à -40%</p>
+              <p className="text-xs mt-0.5" style={{ color: "#8B8D94" }}>Réservés aux membres de la Maison</p>
             </div>
             <Link href="/offres">
               <span className="text-xs" style={{ color: "#C8A96E" }}>Tout voir →</span>
@@ -234,7 +234,7 @@ export default function Maison() {
                       <p className="text-xs font-semibold mb-2" style={{ color: "#F0EDE6" }}>{offer.name}</p>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold" style={{ color: "#C8A96E" }}>{offer.price}</span>
-                        <span className="text-xs line-through" style={{ color: "#8B8D94" }}>{offer.original}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: "rgba(22,163,74,0.15)", color: "#16a34a" }}>-{offer.pct}%</span>
                       </div>
                     </div>
                   </div>
@@ -268,7 +268,7 @@ export default function Maison() {
                 className="text-xs font-semibold px-3 py-1 rounded-full inline-block mb-3"
                 style={{ background: "rgba(200, 169, 110, 0.15)", color: "#C8A96E" }}
               >
-                MAYA IA
+                Maya
               </div>
               <h2
                 className="text-xl md:text-2xl font-bold mb-2"

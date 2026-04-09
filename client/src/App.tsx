@@ -7,7 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import AppLayout from "./components/AppLayout";
 import { useAuth } from "./_core/hooks/useAuth";
 
-// 6 pages exactes + auth + fiche etablissement
+// Pages principales
 import Landing from "./pages/Landing";
 import Maison from "./pages/Maison";
 import Maya from "./pages/Maya";
@@ -17,6 +17,7 @@ import Profil from "./pages/Profil";
 import Premium from "./pages/Premium";
 import Auth from "./pages/Auth";
 import LieuDetail from "./pages/LieuDetail";
+import MaPosition from "./pages/MaPosition";
 
 // Maya Demo
 import MayaDemo from "./pages/MayaDemo";
@@ -82,6 +83,9 @@ function Router() {
       </Route>
       <Route path="/premium">
         {() => <Premium />}
+      </Route>
+      <Route path="/ma-position">
+        {() => <ProtectedRoute component={MaPosition} />}
       </Route>
 
       {/* Fiche etablissement */}

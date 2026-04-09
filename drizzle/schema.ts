@@ -34,6 +34,8 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  hasCompletedOnboarding: boolean("hasCompletedOnboarding").default(false).notNull(),
+  isCercle: boolean("isCercle").default(false).notNull(),
 });
 
 export type User = typeof users.$inferSelect;
