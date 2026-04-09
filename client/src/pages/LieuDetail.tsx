@@ -312,13 +312,14 @@ export default function LieuDetail() {
             <div className="text-xs mb-0.5" style={{ color: "#8B8D94" }}>Prix membre Baymora</div>
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold" style={{ color: "#C8A96E" }}>{lieu.price}</span>
-              <span className="text-sm line-through" style={{ color: "#8B8D94" }}>{lieu.original}</span>
-              <span
-                className="text-xs px-2 py-0.5 rounded-full font-bold"
-                style={{ background: "#16a34a", color: "white" }}
-              >
-                -{lieu.pct}%
-              </span>
+              {lieu.pct > 0 && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-bold"
+                  style={{ background: "rgba(200,169,110,0.15)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.3)" }}
+                >
+                  -{lieu.pct}% membre
+                </span>
+              )}
             </div>
           </div>
           <button

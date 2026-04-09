@@ -1,12 +1,13 @@
 import { getLoginUrl } from "@/const";
 import { Sparkles } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Auth() {
   const loginUrl = getLoginUrl("/maison");
 
   return (
     <div
-      className="min-h-scréén flex items-center justify-center px-4"
+      className="min-h-screen flex items-center justify-center px-4"
       style={{ background: "#070B14" }}
     >
       <div
@@ -24,7 +25,7 @@ export default function Auth() {
           <h1 className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
             Maison Baymora
           </h1>
-          <p className="text-sm mt-1" style={{ color: "#8B8D94" }}>Votre club, vos expériences.</p>
+          <p className="text-sm mt-1" style={{ color: "#8B8D94" }}>Maison Baymora.</p>
         </div>
 
         {/* Google login */}
@@ -63,14 +64,18 @@ export default function Auth() {
           }}
         >
           <Sparkles size={16} />
-          Mode fantome (pseudo seul)
+          Mode fantôme (pseudo seul)
         </a>
 
         <p className="text-center text-xs mt-6" style={{ color: "#8B8D94" }}>
           En continuant, vous acceptez nos{" "}
-          <a href="#" style={{ color: "#C8A96E" }}>CGU</a>
+          <Link href="/cgu">
+            <span style={{ color: "#C8A96E", cursor: "pointer" }}>CGU</span>
+          </Link>
           {" "}et notre{" "}
-          <a href="#" style={{ color: "#C8A96E" }}>politique de confidentialite</a>.
+          <Link href="/confidentialite">
+            <span style={{ color: "#C8A96E", cursor: "pointer" }}>politique de confidentialité</span>
+          </Link>.
         </p>
       </div>
     </div>

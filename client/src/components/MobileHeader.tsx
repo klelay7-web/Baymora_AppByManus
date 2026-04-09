@@ -4,13 +4,12 @@ import { useAuth } from "../_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 
-const HIDDEN_PATHS = ["/chat", "/pilotage", "/admin", "/team", "/lena"];
+const HIDDEN_PATHS = ["/maya", "/pilotage", "/admin", "/team", "/lena"];
 
 const TOP_PILLS = [
-  { label: "Maison", path: "/" },
-  { label: "IA Maya", path: "/chat" },
-  { label: "Offres", path: "/offres" },
-  { label: "Bundles", path: "/bundles" },
+  { label: "Maison", path: "/maison" },
+  { label: "Privilèges", path: "/offres" },
+  { label: "Ma position", path: "/ma-position" },
 ];
 
 export default function MobileHeader() {
@@ -82,7 +81,7 @@ export default function MobileHeader() {
               )}
             </button>
             {user && (
-              <Link href="/profile">
+              <Link href="/profil">
                 <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center text-xs font-bold text-black">
                   {(user.name || user.email || "?")[0].toUpperCase()}
                 </div>

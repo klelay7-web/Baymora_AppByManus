@@ -204,7 +204,7 @@ Prix : 650€/nuit × 3 = 1 950€
 
 **Extras inclus :**
 - Accès lounge Al Mourjan (Doha transit)
-- Social Club 24h sur 24
+- Maison Baymora 24h sur 24
 - Check-out tardif 18h
 
 **Budget total : 11 200€** tout compris.
