@@ -41,16 +41,19 @@ export async function handleStripeWebhook(req: Request, res: Response) {
           const plan = PLANS[planId as keyof typeof PLANS];
           if (plan) {
             const tier = getTierFromPlan(planId);
+            // isCercle=true si le plan est cercle (elite) ou duo (explorer)
+            const isCercle = planId === "cercle" || tier === "elite";
             const db = await getDb();
-          if (db) await db.update(users)
+            if (db) await db.update(users)
               .set({
                 subscriptionTier: tier,
                 stripeCustomerId: session.customer as string,
                 stripeSubscriptionId: session.subscription as string,
                 credits: plan.credits,
+                isCercle: isCercle,
               })
               .where(eq(users.id, parseInt(userId)));
-            console.log(`[Stripe] User ${userId} upgraded to ${planId}`);
+            console.log(`[Stripe] User ${userId} upgraded to ${planId} | isCercle: ${isCercle}`);
           }
         }
         break;
@@ -73,9 +76,10 @@ export async function handleStripeWebhook(req: Request, res: Response) {
               subscriptionTier: "free",
               stripeSubscriptionId: null,
               credits: 15,
+              isCercle: false, // Retrait automatique du Cercle à l'annulation
             })
             .where(eq(users.id, userRows[0].id));
-          console.log(`[Stripe] User ${userRows[0].id} downgraded to free`);
+          console.log(`[Stripe] User ${userRows[0].id} downgraded to free | isCercle: false`);
         }
         break;
       }

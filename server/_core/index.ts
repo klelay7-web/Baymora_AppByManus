@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { handleStripeWebhook } from "../stripe/webhook";
+import { startEventMaintenanceCron } from "../services/eventMaintenanceService";
 import { trackAffiliateClick, getDb } from "../db";
 import { affiliatePartners } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -124,6 +125,8 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Démarrer le cron de maintenance des événements (re-seed dates glissantes)
+    startEventMaintenanceCron();
   });
 }
 

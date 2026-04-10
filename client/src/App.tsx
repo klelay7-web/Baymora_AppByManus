@@ -28,6 +28,7 @@ import MentionsLegales from "./pages/MentionsLegales";
 import Confidentialite from "./pages/Confidentialite";
 import CGU from "./pages/CGU";
 import Contact from "./pages/Contact";
+import PartenaireEvenement from "./pages/PartenaireEvenement";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, loading } = useAuth();
@@ -100,6 +101,8 @@ function Router() {
       <Route path="/confidentialite" component={Confidentialite} />
       <Route path="/cgu" component={CGU} />
       <Route path="/contact" component={Contact} />
+      {/* Formulaire partenaire événement — accessible sans connexion */}
+      <Route path="/partenaires/evenement" component={PartenaireEvenement} />
 
       {/* 404 */}
       <Route component={NotFound} />

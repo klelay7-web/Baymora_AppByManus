@@ -4,39 +4,58 @@ import { ENV } from "../_core/env";
 // ─── Client Anthropic ────────────────────────────────────────────────────────
 const anthropic = new Anthropic({ apiKey: ENV.anthropicApiKey });
 
-// ─── Routing Modèle Intelligent Flash → Opus ────────────────────────────────
+// ─── Routing Modèle Intelligent Haiku → Sonnet → Opus ──────────────────────
+// Impact financier : ~60% d'économie vs Opus partout
+// Haiku ($1/$5) : messages simples/courts
+// Sonnet ($3/$15) : conversations moyennes
+// Opus ($5/$25) : scénarios complexes + Cercle toujours
+
+const HAIKU_PATTERNS = [
+  "merci", "ok", "d'accord", "parfait", "super", "top", "cool",
+  "oui", "non", "c'est bon", "à plus", "salut", "bonjour", "bonsoir",
+  "combien", "quel prix", "c'est où", "adresse", "horaires", "ouvert",
+  "génial", "nickel", "impeccable", "noté", "compris", "entendu"
+];
+
 const OPUS_TRIGGERS = [
-  "surprends-moi", "surprends moi", "plan complet", "itinéraire complet", "organise",
-  "week-end", "weekend", "séjour", "programme", "voyage complet", "tout organiser",
-  "prépare", "planifie", "7 jours", "3 jours", "5 jours", "une semaine", "deux semaines",
-  "lune de miel", "anniversaire", "mariage", "événement", "gala", "soirée privée",
-  "yacht", "villa", "jet privé", "3 scénarios", "propose-moi", "propose moi"
+  "voyage", "week-end", "weekend", "séjour", "vacances", "planifie", "organise",
+  "scénario", "programme", "itinéraire", "parcours",
+  "hôtel", "restaurant", "palace", "villa", "yacht", "jet",
+  "sur-mesure", "prestige", "lune de miel", "anniversaire",
+  "business", "déplacement", "réunion",
+  "ma position", "ce soir", "sortir", "événement",
+  "surprends-moi", "surprends moi", "plan complet", "tout organiser",
+  "prépare", "3 scénarios", "propose-moi", "propose moi",
+  "7 jours", "3 jours", "5 jours", "une semaine", "deux semaines",
+  "gala", "soirée privée", "jet privé"
 ];
 
-const SONNET_TRIGGERS = [
-  "merci", "parfait", "ok", "d'accord", "oui", "non", "bien sûr",
-  "combien", "quel prix", "c'est quoi", "c'est où", "horaires", "ouvert"
-];
-
-export function selectModel(messageIndex: number, userMessage: string): string {
+export function selectModel(messageIndex: number, userMessage: string, userPlan?: string): string {
   const lower = userMessage.toLowerCase();
-  const isVeryShort = userMessage.length < 30;
-  const hasSonnetTrigger = SONNET_TRIGGERS.some(t => lower.includes(t));
-  const hasOpusTrigger = OPUS_TRIGGERS.some(t => lower.includes(t));
 
-  // Messages 1-3 : toujours Opus (effet WOW immédiat)
-  if (messageIndex <= 3) return "claude-opus-4-5";
+  // Cercle (elite) → toujours Opus pour la meilleure expérience
+  if (userPlan === "elite" || userPlan === "cercle") {
+    return "claude-opus-4-5";
+  }
 
-  // Réponses courtes simples → Sonnet (rapidité)
-  if (isVeryShort && hasSonnetTrigger && !hasOpusTrigger) return "claude-sonnet-4-5";
+  // Messages très courts ou simples → Haiku (le moins cher)
+  const isSimple = userMessage.length < 30 || HAIKU_PATTERNS.some(p => lower.includes(p));
+  if (isSimple && !OPUS_TRIGGERS.some(t => lower.includes(t))) {
+    return "claude-haiku-4-5";
+  }
 
   // Demandes complexes → Opus
-  if (hasOpusTrigger) return "claude-opus-4-5";
+  if (OPUS_TRIGGERS.some(t => lower.includes(t))) {
+    return "claude-opus-4-5";
+  }
 
-  // Messages moyens → Sonnet (équilibre vitesse/qualité)
-  if (messageIndex > 10 && userMessage.length < 100 && !hasOpusTrigger) return "claude-sonnet-4-5";
+  // Premier message → Opus (effet WOW)
+  if (messageIndex <= 1) {
+    return "claude-opus-4-5";
+  }
 
-  return "claude-opus-4-5";
+  // Tout le reste → Sonnet (bon rapport qualité/prix)
+  return "claude-sonnet-4-5";
 }
 
 // ─── Géolocalisation ─────────────────────────────────────────────────────────
@@ -846,9 +865,10 @@ export async function callClaude(
   messages: ClaudeMessage[],
   systemPrompt: string,
   messageIndex: number,
-  userMessage: string
+  userMessage: string,
+  userPlan?: string
 ): Promise<ClaudeResponse> {
-  const model = selectModel(messageIndex, userMessage);
+  const model = selectModel(messageIndex, userMessage, userPlan);
 
   const response = await anthropic.messages.create({
     model,

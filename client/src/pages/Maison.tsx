@@ -5,6 +5,7 @@ import { Sparkles, ChevronRight, Heart, Star, Gift, Calendar, Clock, Flame, Lock
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { VideoBackground } from "@/components/VideoBackground";
+import { RUNWAY_VIDEOS } from "@/lib/runwayAssets";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 const HERO_IMG = `${CDN}/hero_yacht_sunset_b173a771.jpg`;
@@ -66,6 +67,64 @@ const sectionVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
+
+// ─── Composant InspirationSection ──────────────────────────────────────────────
+const DESTINATIONS = [
+  { key: "destSaintTropez", label: "Saint-Tropez", sub: "Côte d'Azur" },
+  { key: "destAlpesSki", label: "Alpes", sub: "Ski & montagne" },
+  { key: "destNyc", label: "New York", sub: "City break" },
+  { key: "destSantorin", label: "Santorin", sub: "Mer Égée" },
+  { key: "destTokyo", label: "Tokyo", sub: "Asie & culture" },
+  { key: "destMarrakech", label: "Marrakech", sub: "Escapade soleil" },
+] as const;
+
+function InspirationSection() {
+  return (
+    <motion.section
+      className="px-4"
+      style={{ marginTop: 48 }}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="max-w-5xl mx-auto">
+        <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} style={{ color: "#C8A96E" }} />
+            <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Inspirations</h2>
+          </div>
+          <a href="/maya" className="text-xs" style={{ color: "#C8A96E" }}>Explorer avec Maya →</a>
+        </div>
+        <div className="flex overflow-x-auto pb-2" style={{ gap: 12, scrollbarWidth: "none" }}>
+          {DESTINATIONS.map(dest => (
+            <div key={dest.key} className="flex-shrink-0 rounded-2xl overflow-hidden relative" style={{ width: 140, height: 220 }}>
+              {/* Vidéo 9:16 */}
+              <video
+                src={RUNWAY_VIDEOS[dest.key]}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ opacity: 0.85 }}
+              />
+              {/* Overlay gradient */}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.92) 40%, rgba(7,11,20,0.1) 100%)" }} />
+              {/* Texte */}
+              <div className="absolute bottom-0 left-0 right-0 p-3">
+                <p className="font-bold text-sm" style={{ color: "#F0EDE6", fontFamily: "'Playfair Display', serif" }}>{dest.label}</p>
+                <p className="text-[10px]" style={{ color: "#C8A96E" }}>{dest.sub}</p>
+              </div>
+              {/* CTA overlay cliquable */}
+              <a href="/maya" className="absolute inset-0" aria-label={`Explorer ${dest.label}`} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.section>
+  );
+}
 
 // ─── Composant EventsSection ─────────────────────────────────────────────────
 const CATEGORY_LABELS: Record<string, string> = {
@@ -207,8 +266,11 @@ export default function Maison() {
         </div>
       </VideoBackground>
 
-      {/* ─── Section Événements ─────────────────────────────── */}
+      {/* ─── Section Événements ────────────────────────────── */}
       <EventsSection />
+
+      {/* ─── Section Inspirations ────────────────────────── */}
+      <InspirationSection />
 
       {/* Bundles */}
       <motion.section

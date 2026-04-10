@@ -88,8 +88,11 @@ async function runFlash(input: OrchestratorInput): Promise<OrchestratorOutput> {
 
   const enrichedSystem = input.systemPrompt + atlasBriefing;
 
+  // Haiku pour les messages simples (Membre/Duo), Sonnet pour Cercle
+  const flashModel = input.subscriptionTier === "elite" ? "claude-sonnet-4-5" : "claude-haiku-4-5";
+
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
+    model: flashModel,
     max_tokens: 1200,
     system: enrichedSystem,
     messages: [...input.history, { role: "user", content: input.userMessage }],
@@ -99,7 +102,7 @@ async function runFlash(input: OrchestratorInput): Promise<OrchestratorOutput> {
 
   return {
     content,
-    model: "claude-sonnet-4-5",
+    model: flashModel,
     scenario: "FLASH",
     agentsUsed: atlasResults.length > 0 ? ["Atlas"] : [],
     processingTime: Date.now() - start,
