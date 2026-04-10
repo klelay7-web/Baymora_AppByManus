@@ -4,6 +4,7 @@ import { getLoginUrl } from "@/const";
 import { Sparkles, Shield, Zap, ChevronRight, MapPin, Star, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
+import { VideoBackground } from "@/components/VideoBackground";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 const HERO_IMG = `${CDN}/hero_yacht_sunset_b173a771.jpg`;
@@ -309,15 +310,12 @@ export default function Landing() {
       </nav>
 
       {/* Hero */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-        <div
-          className="absolute inset-0"
-          style={{ backgroundImage: `url(${HERO_IMAGES[heroIdx]})`, backgroundSize: "cover", backgroundPosition: "center", transition: "background-image 1s ease-in-out" }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(135deg, rgba(7,11,20,0.88) 0%, rgba(7,11,20,0.6) 50%, rgba(7,11,20,0.82) 100%)" }}
-        />
+      <VideoBackground
+        src="https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm/hero-landing_f93a6fb1.mp4"
+        fallbackImage={HERO_IMAGES[heroIdx]}
+        overlay={0.55}
+        className="min-h-screen flex items-center justify-center pt-16"
+      >
         <motion.div
           className="relative z-10 text-center px-4 max-w-3xl mx-auto"
           initial={{ opacity: 0, y: 30 }}
@@ -380,9 +378,7 @@ export default function Landing() {
             3 conversations gratuites · Sans carte bancaire
           </p>
         </motion.div>
-
-
-      </section>
+      </VideoBackground>
 
       {/* Chiffres réels */}
       <motion.section
