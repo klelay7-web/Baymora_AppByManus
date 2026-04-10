@@ -54,8 +54,8 @@ const FAQ = [
     a: "Oui. Nous négocions en direct avec chaque établissement partenaire. Les privilèges vont de -15% à -40% sur des hôtels et restaurants d'exception. Ce sont des accès exclusifs réservés aux membres de la Maison."
   },
   {
-    q: "Quelle est la différence avec ChatGPT ?",
-    a: "ChatGPT donne des listes. Maya ouvre des portes. Elle connaît les secrets, les meilleures tables, les portes dérobées. Elle ne propose jamais deux fois la même adresse."
+    q: "Quelle est la différence avec les autres IA ?",
+    a: "Les comparateurs donnent des listes. Maya ouvre des portes. Elle connaît les secrets, les meilleures tables, les portes dérobées. Elle ne propose jamais deux fois la même adresse."
   },
   {
     q: "Mes données sont-elles protégées ?",

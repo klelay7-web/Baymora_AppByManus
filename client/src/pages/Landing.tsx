@@ -51,7 +51,7 @@ const DIFFERENTIATORS = [
   {
     icon: <Sparkles size={20} color="#C8A96E" />,
     title: "Pas une liste. Un accès.",
-    desc: "ChatGPT donne des idées. Maya ouvre des portes. Chaque recommandation est liée à un partenaire réel, avec des privilèges négociés.",
+    desc: "Les autres donnent des idées. Maya ouvre des portes. Chaque recommandation est liée à un partenaire réel, avec des privilèges négociés.",
   },
   {
     icon: <MapPin size={20} color="#C8A96E" />,
@@ -79,7 +79,7 @@ const HOW_IT_WORKS = [
 
 const SOCIAL_PROOF = [
   { name: "Sophie M.", city: "Paris", text: "Maya m'a ouvert des adresses que je ne connaissais pas. Week-end à Venise planifié en 3 messages. Hôtel, restos, gondole privée.", stars: 5 },
-  { name: "Thomas R.", city: "Lyon", text: "J'ai économisé 340€ sur mon accès Dubai. Les privilèges Baymora sont réels et négociés. Le Cercle vaut chaque centime.", stars: 5 },
+  { name: "Thomas R.", city: "Lyon", text: "Mon week-end à Dubai organisé en 3 messages. Suite au Four Seasons, dîner privé sur la Marina, transfert inclus. Le Cercle vaut chaque centime.", stars: 5 },
   { name: "Camille D.", city: "Bordeaux", text: "Le Cercle Baymora vaut largement l'abonnement. Maya connaît mes goûts, elle ne propose jamais deux fois la même adresse.", stars: 5 },
 ];
 
@@ -112,7 +112,7 @@ const FAQ = [
   },
   {
     q: "Dans quels pays Baymora est-il disponible ?",
-    a: "Maya couvre le monde entier : France, Europe, États-Unis, Asie, Moyen-Orient. Les offres avec privilèges sont concentrées sur la France et l'Europe, avec une expansion internationale en cours.",
+    a: "Maya couvre le monde entier : France, Europe, États-Unis, Asie, Moyen-Orient. Les privilèges partenaires sont concentrés sur la France et l'Europe, avec une expansion internationale en cours.",
   },
   {
     q: "Mes données sont-elles protégées ?",
@@ -123,8 +123,8 @@ const FAQ = [
     a: "Oui. Envoyez votre parcours par lien, email ou PDF. Vos proches peuvent créer un compte gratuit pour collaborer et modifier le parcours ensemble.",
   },
   {
-    q: "Quelle est la différence avec ChatGPT ?",
-    a: "ChatGPT donne des listes. Maya donne un accès : des privilèges réels négociés, des réservations en un clic, une mémoire de vos préférences, et un réseau de partenaires physiques.",
+    q: "Quelle est la différence avec les autres IA ?",
+    a: "Les comparateurs donnent des listes. Maya ouvre des portes : des privilèges négociés en direct, des réservations en un clic, une mémoire de vos goûts, et un réseau de partenaires exclusifs.",
   },
   {
     q: "Comment devenir partenaire Baymora ?",
@@ -497,16 +497,16 @@ export default function Landing() {
             Des adresses d'exception
           </h2>
           <p className="text-sm text-center mb-8" style={{ color: "#8B8D94" }}>
-            Sélectionnées et négociées par notre équipe
+            Sélectionnées par la Maison pour ses membres
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[
-              { img: HOTEL_IMG, name: "Plaza Athénée", city: "Paris", pct: 28 },
-              { img: SPA_IMG, name: "Four Seasons", city: "Bali", pct: 35 },
-              { img: SANTORINI_IMG, name: "Canaves Oia", city: "Santorin", pct: 22 },
-              { img: TOKYO_IMG, name: "Aman Tokyo", city: "Tokyo", pct: 15 },
-              { img: MARRAKECH_IMG, name: "La Mamounia", city: "Marrakech", pct: 18 },
-              { img: GASTRO_IMG, name: "Le Cinq", city: "Paris", pct: 22 },
+              { img: HOTEL_IMG, name: "Plaza Athénée", city: "Paris", badge: "Accès Membre" },
+              { img: SPA_IMG, name: "Four Seasons", city: "Bali", badge: "Privilège exclusif" },
+              { img: SANTORINI_IMG, name: "Canaves Oia", city: "Santorin", badge: "Accès Membre" },
+              { img: TOKYO_IMG, name: "Aman Tokyo", city: "Tokyo", badge: "Accès Membre" },
+              { img: MARRAKECH_IMG, name: "La Mamounia", city: "Marrakech", badge: "Privilège exclusif" },
+              { img: GASTRO_IMG, name: "Le Cinq", city: "Paris", badge: "Accès Membre" },
             ].map((item, i) => (
               <motion.div
                 key={i}
@@ -523,7 +523,7 @@ export default function Landing() {
                   className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold"
                   style={{ background: "#16a34a", color: "white" }}
                 >
-                  -{item.pct}%
+                  {item.badge}
                 </div>
                 <div className="absolute bottom-3 left-3">
                   <div className="text-sm font-semibold" style={{ color: "#F0EDE6", fontFamily: "'Playfair Display', serif" }}>{item.name}</div>
