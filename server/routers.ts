@@ -3477,5 +3477,115 @@ export const appRouter = router({
       return stats;
     }),
   }),
+
+  // ─── Events (Pivot Sortir V7.2b) ──────────────────────────────────────────────
+  events: router({
+    list: publicProcedure
+      .input(z.object({
+        city: z.string(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+        category: z.string().optional(),
+        limit: z.number().default(20),
+      }))
+      .query(async ({ input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          let sql = 'SELECT * FROM events WHERE city = ? AND date >= CURDATE()';
+          const params: any[] = [input.city];
+          if (input.dateFrom) { sql += ' AND date >= ?'; params.push(input.dateFrom); }
+          if (input.dateTo) { sql += ' AND date <= ?'; params.push(input.dateTo); }
+          if (input.category) { sql += ' AND category = ?'; params.push(input.category); }
+          sql += ' ORDER BY date ASC, time_start ASC LIMIT ?';
+          params.push(input.limit);
+          const [rows] = await conn.execute(sql, params) as any[];
+          return rows as any[];
+        } finally { await conn.end(); }
+      }),
+
+    tonight: publicProcedure
+      .input(z.object({ city: z.string() }))
+      .query(async ({ input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          const [rows] = await conn.execute(
+            'SELECT * FROM events WHERE city = ? AND date = CURDATE() ORDER BY time_start ASC',
+            [input.city]
+          ) as any[];
+          return rows as any[];
+        } finally { await conn.end(); }
+      }),
+
+    thisWeekend: publicProcedure
+      .input(z.object({ city: z.string() }))
+      .query(async ({ input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          // Samedi et dimanche prochains
+          const [rows] = await conn.execute(
+            `SELECT * FROM events WHERE city = ? AND DAYOFWEEK(date) IN (1, 7) AND date >= CURDATE() AND date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) ORDER BY date ASC, time_start ASC`,
+            [input.city]
+          ) as any[];
+          return rows as any[];
+        } finally { await conn.end(); }
+      }),
+
+    thisWeek: publicProcedure
+      .input(z.object({ city: z.string(), limit: z.number().default(5) }))
+      .query(async ({ input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          const [rows] = await conn.execute(
+            'SELECT * FROM events WHERE city = ? AND date >= CURDATE() AND date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) ORDER BY date ASC, time_start ASC LIMIT ?',
+            [input.city, input.limit]
+          ) as any[];
+          return rows as any[];
+        } finally { await conn.end(); }
+      }),
+
+    create: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin' && ctx.user.role !== 'team') throw new TRPCError({ code: 'FORBIDDEN' });
+        return next({ ctx });
+      })
+      .input(z.object({
+        title: z.string(),
+        description: z.string().optional(),
+        category: z.enum(['soiree','concert','expo','degustation','spectacle','festival','sport','diner_secret','vip','afterwork','brunch','marche','autre']),
+        venueName: z.string().optional(),
+        venueAddress: z.string().optional(),
+        city: z.string(),
+        lat: z.string().optional(),
+        lng: z.string().optional(),
+        date: z.string(),
+        timeStart: z.string().optional(),
+        timeEnd: z.string().optional(),
+        price: z.string().optional(),
+        dressCode: z.string().optional(),
+        imageUrl: z.string().optional(),
+        bookingUrl: z.string().optional(),
+        isVip: z.boolean().default(false),
+        isMembersOnly: z.boolean().default(false),
+      }))
+      .mutation(async ({ input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          const [result] = await conn.execute(
+            `INSERT INTO events (title, description, category, venue_name, venue_address, city, lat, lng, date, time_start, time_end, price, dress_code, image_url, booking_url, is_vip, is_members_only, source)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual')`,
+            [input.title, input.description, input.category, input.venueName, input.venueAddress,
+             input.city, input.lat, input.lng, input.date, input.timeStart, input.timeEnd,
+             input.price, input.dressCode, input.imageUrl, input.bookingUrl,
+             input.isVip ? 1 : 0, input.isMembersOnly ? 1 : 0]
+          ) as any[];
+          return { id: result.insertId };
+        } finally { await conn.end(); }
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

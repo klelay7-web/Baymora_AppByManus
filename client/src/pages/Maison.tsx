@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Sparkles, ChevronRight, Heart, Star, Gift } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { Sparkles, ChevronRight, Heart, Star, Gift, Calendar, Clock, Flame, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { VideoBackground } from "@/components/VideoBackground";
@@ -66,6 +67,90 @@ const sectionVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
+// ─── Composant EventsSection ─────────────────────────────────────────────────
+const CATEGORY_LABELS: Record<string, string> = {
+  soiree: "Soirée", concert: "Concert", expo: "Expo", degustation: "Dégustation",
+  spectacle: "Spectacle", festival: "Festival", sport: "Sport",
+  diner_secret: "Dîner secret", vip: "VIP", afterwork: "After-work",
+  brunch: "Brunch", marche: "Marché", autre: "Événement",
+};
+
+function EventsSection() {
+  const { user } = useAuth();
+  const isMember = !!user;
+  const weekQuery = trpc.events.thisWeek.useQuery({ city: "Bordeaux", limit: 8 }, { staleTime: 300000 });
+  const events = (weekQuery.data || []) as Array<{
+    id: number; title: string; category: string; venue_name?: string;
+    date: string; time_start?: string; price?: string;
+    booking_url?: string; is_vip: boolean; is_members_only: boolean;
+  }>;
+
+  if (!weekQuery.isLoading && events.length === 0) return null;
+
+  return (
+    <motion.section
+      className="px-4"
+      style={{ marginTop: 40 }}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="max-w-5xl mx-auto">
+        <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+          <div className="flex items-center gap-2">
+            <Flame size={16} style={{ color: "#E8A87C" }} />
+            <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Cette semaine</h2>
+          </div>
+          <a href="/ma-position" className="text-xs" style={{ color: "#C8A96E" }}>Tout voir →</a>
+        </div>
+        <div className="flex overflow-x-auto pb-2" style={{ gap: 16, scrollbarWidth: "none" }}>
+          {weekQuery.isLoading ? (
+            [1,2,3].map(i => (
+              <div key={i} className="flex-shrink-0 rounded-2xl animate-pulse" style={{ width: 200, height: 240, background: "rgba(255,255,255,0.04)" }} />
+            ))
+          ) : (
+            events.map(event => {
+              const isLocked = event.is_members_only && !isMember;
+              const catLabel = CATEGORY_LABELS[event.category] || event.category;
+              const dateStr = event.date ? new Date(event.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) : "";
+              return (
+                <div key={event.id} className="flex-shrink-0 rounded-2xl overflow-hidden" style={{ width: 200, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(200,169,110,0.12)", opacity: isLocked ? 0.65 : 1 }}>
+                  <div className="w-full flex items-center justify-center relative" style={{ height: 110, background: "linear-gradient(135deg, rgba(200,169,110,0.15), rgba(7,11,20,0.8))" }}>
+                    <Calendar size={24} style={{ color: "#C8A96E", opacity: 0.4 }} />
+                    <div className="absolute top-2 left-2 flex gap-1">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.2)", color: "#C8A96E" }}>{catLabel}</span>
+                      {event.is_vip && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.9)", color: "#070B14" }}>VIP</span>}
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <h3 className="font-semibold text-xs mb-1 line-clamp-2" style={{ color: "#F0EDE6" }}>
+                      {isLocked ? <><Lock size={10} className="inline mr-1" />Réservé membres</> : event.title}
+                    </h3>
+                    {event.venue_name && <p className="text-[10px] mb-1" style={{ color: "#8B8D94" }}>{event.venue_name}</p>}
+                    <p className="text-[10px] mb-2 flex items-center gap-1" style={{ color: "#8B8D94" }}>
+                      <Clock size={9} /> {dateStr}{event.time_start ? ` · ${event.time_start}` : ""}
+                    </p>
+                    {event.price && <p className="text-xs font-medium mb-2" style={{ color: "#C8A96E" }}>{event.price}</p>}
+                    {!isLocked ? (
+                      <button className="w-full py-1.5 rounded-xl text-[10px] font-semibold" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
+                        onClick={() => event.booking_url ? window.open(event.booking_url, "_blank") : null}>
+                        {event.booking_url ? "Réserver" : "J'y vais"}
+                      </button>
+                    ) : (
+                      <a href="/premium"><button className="w-full py-1.5 rounded-xl text-[10px] font-semibold" style={{ background: "rgba(200,169,110,0.15)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.3)" }}>Devenir membre</button></a>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
 export default function Maison() {
   const { user } = useAuth();
   const firstName = user?.name?.split(" ")[0] || "vous";
@@ -121,6 +206,9 @@ export default function Maison() {
           </div>
         </div>
       </VideoBackground>
+
+      {/* ─── Section Événements ─────────────────────────────── */}
+      <EventsSection />
 
       {/* Bundles */}
       <motion.section

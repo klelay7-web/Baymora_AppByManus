@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, decimal, bigint, float } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, decimal, bigint, float, date } from "drizzle-orm/mysql-core";
 
 // ─── Users ───────────────────────────────────────────────────────────
 export const users = mysqlTable("users", {
@@ -1212,3 +1212,33 @@ export const discountOfferSaves = mysqlTable("discountOfferSaves", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type DiscountOfferSave = typeof discountOfferSaves.$inferSelect;
+
+// ─── Events (Pivot Sortir V7.2b) ─────────────────────────────────────
+export const events = mysqlTable("events", {
+  id: int("id").primaryKey().autoincrement(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  category: mysqlEnum("category", [
+    "soiree", "concert", "expo", "degustation", "spectacle",
+    "festival", "sport", "diner_secret", "vip", "afterwork",
+    "brunch", "marche", "autre"
+  ]).notNull(),
+  venueName: varchar("venue_name", { length: 255 }),
+  venueAddress: varchar("venue_address", { length: 500 }),
+  city: varchar("city", { length: 100 }).notNull(),
+  lat: decimal("lat", { precision: 10, scale: 7 }),
+  lng: decimal("lng", { precision: 10, scale: 7 }),
+  date: date("date").notNull(),
+  timeStart: varchar("time_start", { length: 10 }),
+  timeEnd: varchar("time_end", { length: 10 }),
+  price: varchar("price", { length: 100 }),
+  dressCode: varchar("dress_code", { length: 100 }),
+  imageUrl: varchar("image_url", { length: 500 }),
+  bookingUrl: varchar("booking_url", { length: 500 }),
+  isVip: boolean("is_vip").default(false),
+  isMembersOnly: boolean("is_members_only").default(false),
+  source: varchar("source", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type Event = typeof events.$inferSelect;
+export type InsertEvent = typeof events.$inferInsert;
