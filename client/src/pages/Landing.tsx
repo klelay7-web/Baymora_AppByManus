@@ -104,7 +104,7 @@ const FAQ = [
   },
   {
     q: "Les privilèges sont-ils réels ?",
-    a: "Oui. Nous négocions en direct avec chaque établissement partenaire. Les privilèges vont de -15% à -40% sur des hôtels et restaurants d'exception. Ce sont des accès exclusifs réservés aux membres de la Maison.",
+    a: "Oui. Nous négocions en direct avec chaque établissement partenaire. Les privilèges couvrent des hôtels et restaurants d'exception. Ce sont des accès exclusifs réservés aux membres de la Maison.",
   },
   {
     q: "Baymora est-il gratuit ?",
@@ -219,25 +219,25 @@ const DEMO_PERSONAS = [
     label: "Ce soir à Bordeaux",
     icon: "🌙",
     prompt: "Qu'est-ce qu'il se passe ce soir à Bordeaux ?",
-    reply: "Ce soir à Bordeaux, voici ce que j'ai pour vous :\n\n**Soirée** : Dégustation privée Grands Crus — Chai des Chartrons, 19h30 | 45€/pers (réservé membres)\n**Concert** : Jazz au Rooftop Darwin — 21h, entrée libre\n**Dîner** : La Tupina (bistronomique) — table disponible 20h30, -15% membres\n\nDress code : smart casual pour les Chartrons.\n\nJe vous réserve une place pour la dégustation ?",
+    reply: "Ce soir à Bordeaux, voici ce que j'ai pour vous :\n\n**Soirée** : Dégustation privée Grands Crus — Chai des Chartrons, 19h30 | 45€/pers (réservé membres)\n**Concert** : Jazz au Rooftop Darwin — 21h, entrée libre\n**Dîner** : La Tupina (bistronomique) — table disponible 20h30, Accès Membre\n\nDress code : smart casual pour les Chartrons.\n\nJe vous réserve une place pour la dégustation ?",
   },
   {
     label: "Week-end romantique",
     icon: "💛",
     prompt: "Week-end romantique à Paris, budget 1500€, 2 nuits.",
-    reply: "Pour un week-end romantique à Paris avec 1500€, voici mon accès **Privilège** :\n\n**Hôtel** : Hôtel Le Marais Bastille (4★) — -22% membres → **290€/nuit** au lieu de 370€\n**Dîner** : Septime (bistronomique étoilé) — réservation directe, table fenêtre disponible vendredi\n**Matin** : Brunch au Bal Café (Montmartre) + balade Sacré-Cœur\n\nBudget total estimé : **1 340€** pour 2 (hôtel + 2 dîners + brunch)\n\nVous voulez que j'affine l'hôtel ou le restaurant ?",
+    reply: "Pour un week-end romantique à Paris avec 1500€, voici mon accès **Privilège** :\n\n**Hôtel** : Hôtel Le Marais Bastille (4★) — Privilège Membre → **290€/nuit**\n**Dîner** : Septime (bistronomique étoilé) — réservation directe, table fenêtre disponible vendredi\n**Matin** : Brunch au Bal Café (Montmartre) + balade Sacré-Cœur\n\nBudget total estimé : **1 340€** pour 2 (hôtel + 2 dîners + brunch)\n\nVous voulez que j'affine l'hôtel ou le restaurant ?",
   },
   {
     label: "Business à Dubai",
     icon: "💼",
     prompt: "Déplacement business Dubai 3 jours, hôtel proche DIFC.",
-    reply: "Pour 3 jours business au DIFC Dubai, voici mon accès **Prestige** :\n\n**Hôtel** : Address Boulevard (5★) — -18% membres → **420€/nuit** | 5min DIFC à pied\n**Déjeuner d'affaires** : Zuma Dubai — table privée, dress code smart casual\n**Transport** : VTC Careem pré-réservé aéroport → hôtel (45min, 35€)\n\n**Programme J1** : Arrivée 14h → check-in → spa express → dîner Zuma 20h\n**J2** : RDV DIFC 9h → déj Zuma 13h → RDV 15h → rooftop Level 43 20h\n\nDress code pour vos RDV ?",
+    reply: "Pour 3 jours business au DIFC Dubai, voici mon accès **Prestige** :\n\n**Hôtel** : Address Boulevard (5★) — Accès Membre → **420€/nuit** | 5min DIFC à pied\n**Déjeuner d'affaires** : Zuma Dubai — table privée, dress code smart casual\n**Transport** : VTC Careem pré-réservé aéroport → hôtel (45min, 35€)\n\n**Programme J1** : Arrivée 14h → check-in → spa express → dîner Zuma 20h\n**J2** : RDV DIFC 9h → déj Zuma 13h → RDV 15h → rooftop Level 43 20h\n\nDress code pour vos RDV ?",
   },
   {
     label: "Famille à Barcelone",
     icon: "👨‍👩‍👧",
     prompt: "Barcelone en famille, 4 jours, 2 enfants 8 et 12 ans.",
-    reply: "Barcelone en famille 4 jours — voici mon accès **Signature** :\n\n**Hôtel** : Hotel Arts Barcelona (5★) — suite familiale -15% membres | piscine + plage privée\n**J1** : Sagrada Familia (entrée coupe-file) + Park Güell + diner La Barceloneta\n**J2** : Aquarium BCN (accès membres -20%) + Las Ramblas + Boqueria\n**J3** : Tibidabo (parc d'attractions) + Montjuïc + show flamenco familial\n\n**Budget estimé** : 2 800€ pour 4 (hôtel + activités + repas)\n\nLes enfants ont des allergies alimentaires ?",
+    reply: "Barcelone en famille 4 jours — voici mon accès **Signature** :\n\n**Hôtel** : Hotel Arts Barcelona (5★) — suite familiale Accès Membre | piscine + plage privée\n**J1** : Sagrada Familia (entrée coupe-file) + Park Güell + diner La Barceloneta\n**J2** : Aquarium BCN (Privilège exclusif) + Las Ramblas + Boqueria\n**J3** : Tibidabo (parc d'attractions) + Montjuïc + show flamenco familial\n\n**Budget estimé** : 2 800€ pour 4 (hôtel + activités + repas)\n\nLes enfants ont des allergies alimentaires ?",
   },
 ];
 
