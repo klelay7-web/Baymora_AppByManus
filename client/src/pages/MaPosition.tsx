@@ -6,6 +6,7 @@ import {
   MapPin, Sparkles, Calendar, Clock, Lock,
   Utensils, Heart, Dumbbell, Briefcase, Home, Users, Plane, Star, Flame, RefreshCw
 } from "lucide-react";
+import { RUNWAY_IMAGES, NIGHTLIFE_VIDEOS } from "../lib/runwayAssets";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface EventCard {
@@ -51,14 +52,14 @@ const SPOTS = [
 ];
 
 const SERVICES = [
-  { icon: Utensils, label: "Manger", context: "Je cherche un restaurant pour ce soir", color: "#E8A87C" },
-  { icon: Heart, label: "Bien-être", context: "Je veux réserver un spa ou massage", color: "#C8A96E" },
-  { icon: Dumbbell, label: "Bouger", context: "Je cherche une activité sportive ou outdoor", color: "#7CB9E8" },
-  { icon: Briefcase, label: "Travailler", context: "Je cherche un espace de coworking ou café pour travailler", color: "#8B8D94" },
-  { icon: Home, label: "À domicile", context: "Je veux commander un service à domicile", color: "#C8A96E" },
-  { icon: Users, label: "Rencontrer", context: "Je cherche des événements networking ou rencontres", color: "#A87CB9" },
-  { icon: Plane, label: "S'évader", context: "Je veux planifier un week-end ou voyage", color: "#7CE8C8" },
-  { icon: Sparkles, label: "Maya", context: "Bonjour Maya, que me conseilles-tu ce soir ?", color: "#C8A96E" },
+  { icon: Utensils, label: "Manger", context: "Je cherche un restaurant pour ce soir", color: "#E8A87C", img: RUNWAY_IMAGES.catManger },
+  { icon: Heart, label: "Bien-être", context: "Je veux réserver un spa ou massage", color: "#C8A96E", img: RUNWAY_IMAGES.catRessourcer },
+  { icon: Dumbbell, label: "Bouger", context: "Je cherche une activité sportive ou outdoor", color: "#7CB9E8", img: RUNWAY_IMAGES.catBouger },
+  { icon: Briefcase, label: "Travailler", context: "Je cherche un espace de coworking ou café pour travailler", color: "#8B8D94", img: RUNWAY_IMAGES.catTravailler },
+  { icon: Home, label: "À domicile", context: "Je veux commander un service à domicile", color: "#C8A96E", img: RUNWAY_IMAGES.catDomicile },
+  { icon: Users, label: "Rencontrer", context: "Je cherche des événements networking ou rencontres", color: "#A87CB9", img: RUNWAY_IMAGES.catRencontrer },
+  { icon: Plane, label: "S'évader", context: "Je veux planifier un week-end ou voyage", color: "#7CE8C8", img: RUNWAY_IMAGES.catEvader },
+  { icon: Sparkles, label: "Sortir", context: "Qu'est-ce qu'il se passe ce soir près de moi ?", color: "#C8A96E", img: RUNWAY_IMAGES.catSortir },
 ];
 
 // ─── EventCardComponent ───────────────────────────────────────────────────────
@@ -79,12 +80,19 @@ function EventCardComponent({ event, isMember }: { event: EventCard; isMember: b
         opacity: isLocked ? 0.65 : 1,
       }}
     >
-      {/* Image placeholder */}
+      {/* Vidéo nightlife ou gradient */}
       <div
-        className="w-full flex items-center justify-center relative"
-        style={{ height: 120, background: "linear-gradient(135deg, rgba(200,169,110,0.15), rgba(7,11,20,0.8))" }}
+        className="w-full flex items-center justify-center relative overflow-hidden"
+        style={{ height: 120 }}
       >
-        <Calendar size={28} style={{ color: "#C8A96E", opacity: 0.4 }} />
+        <video
+          src={NIGHTLIFE_VIDEOS[event.id % NIGHTLIFE_VIDEOS.length]}
+          autoPlay muted loop playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ opacity: 0.7 }}
+        />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.8), transparent)" }} />
+        <Calendar size={28} style={{ color: "#C8A96E", opacity: 0.3, position: "relative", zIndex: 1 }} />
         {/* Badges */}
         <div className="absolute top-2 left-2 flex gap-1 flex-wrap">
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.2)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.3)" }}>
@@ -318,11 +326,13 @@ export default function MaPosition() {
               <button
                 key={i}
                 onClick={() => navigate(`/maya?q=${encodeURIComponent(svc.context)}`)}
-                className="flex flex-col items-center justify-center rounded-2xl p-3 cursor-pointer active:scale-95"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(200,169,110,0.1)", minHeight: 72 }}
+                className="flex flex-col items-center justify-center rounded-2xl overflow-hidden cursor-pointer active:scale-95 relative"
+                style={{ minHeight: 80, border: "1px solid rgba(200,169,110,0.15)" }}
               >
-                <Icon size={20} style={{ color: svc.color, marginBottom: 6 }} />
-                <span className="text-xs text-center font-medium" style={{ color: "#8B8D94" }}>{svc.label}</span>
+                <img src={svc.img} alt={svc.label} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.35 }} />
+                <div className="absolute inset-0" style={{ background: "rgba(7,11,20,0.55)" }} />
+                <Icon size={18} style={{ color: svc.color, marginBottom: 4, position: "relative", zIndex: 1 }} />
+                <span className="text-xs text-center font-semibold" style={{ color: "#F0EDE6", position: "relative", zIndex: 1 }}>{svc.label}</span>
               </button>
             );
           })}

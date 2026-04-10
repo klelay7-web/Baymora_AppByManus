@@ -3146,10 +3146,11 @@ export const appRouter = router({
       .query(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
         const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const limitNum = parseInt(String(input.limit), 10) || 20;
         const query = input.unreadOnly
-          ? 'SELECT * FROM notifications WHERE userId = ? AND readAt IS NULL ORDER BY createdAt DESC LIMIT ?'
-          : 'SELECT * FROM notifications WHERE userId = ? ORDER BY createdAt DESC LIMIT ?';
-        const [rows] = await conn.execute(query, [ctx.user.id, input.limit]) as any;
+          ? `SELECT * FROM notifications WHERE userId = ? AND readAt IS NULL ORDER BY createdAt DESC LIMIT ${limitNum}`
+          : `SELECT * FROM notifications WHERE userId = ? ORDER BY createdAt DESC LIMIT ${limitNum}`;
+        const [rows] = await conn.execute(query, [ctx.user.id]) as any;
         await conn.end();
         return rows as any[];
       }),
@@ -3497,8 +3498,8 @@ export const appRouter = router({
           if (input.dateFrom) { sql += ' AND date >= ?'; params.push(input.dateFrom); }
           if (input.dateTo) { sql += ' AND date <= ?'; params.push(input.dateTo); }
           if (input.category) { sql += ' AND category = ?'; params.push(input.category); }
-          sql += ' ORDER BY date ASC, time_start ASC LIMIT ?';
-          params.push(input.limit);
+          const limitNum = parseInt(String(input.limit), 10) || 20;
+          sql += ` ORDER BY date ASC, time_start ASC LIMIT ${limitNum}`;
           const [rows] = await conn.execute(sql, params) as any[];
           return rows as any[];
         } finally { await conn.end(); }
@@ -3540,8 +3541,8 @@ export const appRouter = router({
         const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
         try {
           const [rows] = await conn.execute(
-            'SELECT * FROM events WHERE city = ? AND date >= CURDATE() AND date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) ORDER BY date ASC, time_start ASC LIMIT ?',
-            [input.city, input.limit]
+            `SELECT * FROM events WHERE city = ? AND date >= CURDATE() AND date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) ORDER BY date ASC, time_start ASC LIMIT ${parseInt(String(input.limit), 10) || 5}`,
+            [input.city]
           ) as any[];
           return rows as any[];
         } finally { await conn.end(); }
