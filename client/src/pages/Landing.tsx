@@ -4,7 +4,8 @@ import { getLoginUrl } from "@/const";
 import { Sparkles, Shield, Zap, ChevronRight, MapPin, Star, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
-import { VideoBackground } from "@/components/VideoBackground";
+import { VideoBackground } from "../components/VideoBackground";
+import { RUNWAY_VIDEOS, RUNWAY_IMAGES, NIGHTLIFE_VIDEOS } from "../lib/runwayAssets";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 const HERO_IMG = `${CDN}/hero_yacht_sunset_b173a771.jpg`;
@@ -317,7 +318,7 @@ export default function Landing() {
 
       {/* Hero */}
       <VideoBackground
-        src="https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm/hero-landing_f93a6fb1.mp4"
+        src={RUNWAY_VIDEOS.heroLanding}
         fallbackImage={HERO_IMAGES[heroIdx]}
         overlay={0.55}
         className="min-h-screen flex items-center justify-center pt-16"
