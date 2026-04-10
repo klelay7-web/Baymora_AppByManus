@@ -137,6 +137,75 @@ const sectionVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.55 } },
 };
 
+// Fallback statique pour la section Ce soir
+const STATIC_TONIGHT_EVENTS = [
+  { cat: "Dégustation", title: "Grands Crus privés", lieu: "Chai des Chartrons", ville: "Bordeaux", heure: "19h30", prix: "45€", vip: true },
+  { cat: "Concert", title: "Jazz au Rooftop", lieu: "Darwin Bordeaux", ville: "Bordeaux", heure: "21h", prix: "Entrée libre", vip: false },
+  { cat: "Dîner secret", title: "Table d'hôtes privée", lieu: "Adresse révélée aux membres", ville: "Paris", heure: "20h", prix: "120€", vip: true },
+];
+
+function LandingTonightSection() {
+  const { data: tonightEvents } = trpc.events.tonight.useQuery(
+    { city: "Bordeaux" },
+    { retry: false, staleTime: 300000 }
+  );
+  const eventsToShow = (tonightEvents && tonightEvents.length > 0)
+    ? (tonightEvents as any[]).slice(0, 3).map((e: any) => ({
+        cat: e.category || "Soirée",
+        title: e.title,
+        lieu: e.venue_name || "",
+        ville: e.city || "",
+        heure: e.time_start || "",
+        prix: e.price || "Voir détails",
+        vip: e.is_members_only || false,
+      }))
+    : STATIC_TONIGHT_EVENTS;
+
+  return (
+    <motion.section
+      className="py-10 px-4"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-50px" }}
+      variants={sectionVariants}
+    >
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-2 mb-6">
+          <span style={{ fontSize: 18 }}>🌙</span>
+          <h2 className="text-xl md:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Ce soir dans votre ville</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {eventsToShow.map((ev, i) => (
+            <motion.div
+              key={i}
+              className="rounded-2xl p-4"
+              style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)" }}
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1, duration: 0.4 }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.15)", color: "#C8A96E" }}>{ev.cat}</span>
+                {ev.vip && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.9)", color: "#070B14" }}>Membres</span>}
+              </div>
+              <h3 className="font-semibold text-sm mb-1" style={{ color: "#F0EDE6" }}>{ev.title}</h3>
+              {ev.lieu && <p className="text-xs mb-1" style={{ color: "#8B8D94" }}>{ev.lieu}{ev.ville ? ` · ${ev.ville}` : ""}</p>}
+              {ev.heure && <p className="text-xs mb-3" style={{ color: "#8B8D94" }}>{ev.heure}{ev.prix ? ` · ${ev.prix}` : ""}</p>}
+              <a href={ev.vip ? "/premium" : "/maya"}>
+                <button className="w-full py-2 rounded-xl text-xs font-semibold" style={{ background: ev.vip ? "rgba(200,169,110,0.12)" : "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: ev.vip ? "#C8A96E" : "#070B14", border: ev.vip ? "1px solid rgba(200,169,110,0.3)" : "none" }}>
+                  {ev.vip ? "Accès membres" : "J'y vais"}
+                </button>
+              </a>
+            </motion.div>
+          ))}
+        </div>
+        <p className="text-center text-xs mt-4" style={{ color: "#8B8D94" }}>Maya met à jour les événements chaque jour. <a href="/ma-position" style={{ color: "#C8A96E" }}>Voir tout →</a></p>
+      </div>
+    </motion.section>
+  );
+}
+
 const HERO_SUBTITLES = [
   "Hôtels 5★ · Restaurants gastronomiques · Expériences exclusives",
   "Vos voyages planifiés en 3 messages · Jusqu'à -40% négociés",
@@ -547,52 +616,8 @@ export default function Landing() {
         </div>
       </motion.section>
 
-      {/* Ce soir dans votre ville */}
-      <motion.section
-        className="py-10 px-4"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-50px" }}
-        variants={sectionVariants}
-      >
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-2 mb-6">
-            <span style={{ fontSize: 18 }}>🌙</span>
-            <h2 className="text-xl md:text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Ce soir dans votre ville</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { cat: "Dégustation", title: "Grands Crus privés", lieu: "Chai des Chartrons", ville: "Bordeaux", heure: "19h30", prix: "45€", vip: true },
-              { cat: "Concert", title: "Jazz au Rooftop", lieu: "Darwin Bordeaux", ville: "Bordeaux", heure: "21h", prix: "Entrée libre", vip: false },
-              { cat: "Diner secret", title: "Table d'hôtes privée", lieu: "Adresse révélée aux membres", ville: "Paris", heure: "20h", prix: "120€", vip: true },
-            ].map((ev, i) => (
-              <motion.div
-                key={i}
-                className="rounded-2xl p-4"
-                style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)" }}
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.4 }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.15)", color: "#C8A96E" }}>{ev.cat}</span>
-                  {ev.vip && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.9)", color: "#070B14" }}>Membres</span>}
-                </div>
-                <h3 className="font-semibold text-sm mb-1" style={{ color: "#F0EDE6" }}>{ev.title}</h3>
-                <p className="text-xs mb-1" style={{ color: "#8B8D94" }}>{ev.lieu} · {ev.ville}</p>
-                <p className="text-xs mb-3" style={{ color: "#8B8D94" }}>{ev.heure} · {ev.prix}</p>
-                <a href={ev.vip ? "/premium" : "/maya"}>
-                  <button className="w-full py-2 rounded-xl text-xs font-semibold" style={{ background: ev.vip ? "rgba(200,169,110,0.12)" : "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: ev.vip ? "#C8A96E" : "#070B14", border: ev.vip ? "1px solid rgba(200,169,110,0.3)" : "none" }}>
-                    {ev.vip ? "Accès membres" : "J'y vais"}
-                  </button>
-                </a>
-              </motion.div>
-            ))}
-          </div>
-          <p className="text-center text-xs mt-4" style={{ color: "#8B8D94" }}>Maya met à jour les événements chaque jour. <a href="/ma-position" style={{ color: "#C8A96E" }}>Voir tout →</a></p>
-        </div>
-      </motion.section>
+      {/* Ce soir dans votre ville — branché sur DB avec fallback statique */}
+      <LandingTonightSection />
 
       {/* Social Proof */}
       <motion.section
@@ -812,11 +837,12 @@ export default function Landing() {
             </div>
             <span className="text-sm font-semibold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Maison Baymora</span>
           </div>
-          <div className="flex gap-5 text-xs" style={{ color: "#8B8D94" }}>
+          <div className="flex flex-wrap justify-center gap-5 text-xs" style={{ color: "#8B8D94" }}>
             <a href="/mentions-legales" className="hover:text-[#C8A96E] transition-colors">Mentions légales</a>
             <a href="/confidentialite" className="hover:text-[#C8A96E] transition-colors">Confidentialité</a>
             <a href="/cgu" className="hover:text-[#C8A96E] transition-colors">CGU</a>
             <a href="/contact" className="hover:text-[#C8A96E] transition-colors">Contact</a>
+            <a href="/partenaires/evenement" className="hover:text-[#C8A96E] transition-colors" style={{ color: "#C8A96E", opacity: 0.8 }}>Soumettre un événement</a>
           </div>
           <span className="text-xs" style={{ color: "#8B8D94" }}>© 2026 Maison Baymora</span>
         </div>

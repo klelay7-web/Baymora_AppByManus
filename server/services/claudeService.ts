@@ -31,21 +31,44 @@ const OPUS_TRIGGERS = [
 ];
 
 export function selectModel(messageIndex: number, userMessage: string, userPlan?: string): string {
-  const lower = userMessage.toLowerCase();
+  const msg = userMessage.toLowerCase();
 
-  // Cercle (elite) → toujours Opus pour la meilleure expérience
+  // ──── CERCLE : toujours Opus (privilège du plan) ────
   if (userPlan === "elite" || userPlan === "cercle") {
     return "claude-opus-4-5";
   }
 
-  // Messages très courts ou simples → Haiku (le moins cher)
-  const isSimple = userMessage.length < 30 || HAIKU_PATTERNS.some(p => lower.includes(p));
-  if (isSimple && !OPUS_TRIGGERS.some(t => lower.includes(t))) {
+  // ──── INVITÉ : Haiku sauf 1er message (effet WOW pour convertir) ────
+  if (userPlan === "free" || userPlan === "invite" || !userPlan) {
+    if (messageIndex <= 1) return "claude-opus-4-5";
+    return "claude-haiku-4-5";
+  }
+
+  // ──── MEMBRE / DUO : routing hybride par contenu ────
+
+  // Messages très courts ou simples → Haiku
+  const simplePatterns = [
+    "merci", "ok", "d'accord", "parfait", "super", "top", "cool",
+    "oui", "non", "c'est bon", "à plus", "salut", "bonjour", "bonsoir",
+    "combien", "quel prix", "c'est où", "adresse", "horaires"
+  ];
+  if (userMessage.length < 25 || simplePatterns.some(p => msg.includes(p))) {
     return "claude-haiku-4-5";
   }
 
   // Demandes complexes → Opus
-  if (OPUS_TRIGGERS.some(t => lower.includes(t))) {
+  const opusTriggers = [
+    "voyage", "week-end", "weekend", "séjour", "vacances", "planifie", "organise",
+    "scénario", "programme", "itinéraire", "parcours",
+    "hôtel", "restaurant", "palace", "villa", "yacht", "jet",
+    "sur-mesure", "prestige", "lune de miel", "anniversaire",
+    "business", "déplacement", "réunion",
+    "ce soir", "sortir", "événement", "soirée", "concert",
+    "spa", "golf", "sport", "bien-être",
+    "surprends-moi", "surprends moi", "plan complet", "tout organiser",
+    "prépare", "3 scénarios", "propose-moi", "propose moi"
+  ];
+  if (opusTriggers.some(t => msg.includes(t))) {
     return "claude-opus-4-5";
   }
 
@@ -54,7 +77,7 @@ export function selectModel(messageIndex: number, userMessage: string, userPlan?
     return "claude-opus-4-5";
   }
 
-  // Tout le reste → Sonnet (bon rapport qualité/prix)
+  // Tout le reste → Sonnet
   return "claude-sonnet-4-5";
 }
 

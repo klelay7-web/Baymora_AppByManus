@@ -307,6 +307,8 @@ export const appRouter = router({
         travelStyle: z.enum(["adventure", "relaxation", "cultural", "business", "romantic", "family"]).optional(),
         language: z.string().optional(),
         currency: z.string().optional(),
+        notifySorties: z.boolean().optional(),
+        city: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await updateUser(ctx.user.id, input);
@@ -3493,7 +3495,7 @@ export const appRouter = router({
         const mysql = await import('mysql2/promise');
         const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
         try {
-          let sql = 'SELECT * FROM events WHERE city = ? AND date >= CURDATE()';
+          let sql = "SELECT * FROM events WHERE city = ? AND date >= CURDATE() AND (status = 'approved' OR source = 'baymora-seed')";
           const params: any[] = [input.city];
           if (input.dateFrom) { sql += ' AND date >= ?'; params.push(input.dateFrom); }
           if (input.dateTo) { sql += ' AND date <= ?'; params.push(input.dateTo); }
@@ -3512,7 +3514,7 @@ export const appRouter = router({
         const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
         try {
           const [rows] = await conn.execute(
-            'SELECT * FROM events WHERE city = ? AND date = CURDATE() ORDER BY time_start ASC',
+            "SELECT * FROM events WHERE city = ? AND date = CURDATE() AND (status = 'approved' OR source = 'baymora-seed') ORDER BY time_start ASC",
             [input.city]
           ) as any[];
           return rows as any[];
@@ -3527,7 +3529,7 @@ export const appRouter = router({
         try {
           // Samedi et dimanche prochains
           const [rows] = await conn.execute(
-            `SELECT * FROM events WHERE city = ? AND DAYOFWEEK(date) IN (1, 7) AND date >= CURDATE() AND date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) ORDER BY date ASC, time_start ASC`,
+            `SELECT * FROM events WHERE city = ? AND DAYOFWEEK(date) IN (1, 7) AND date >= CURDATE() AND date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND (status = 'approved' OR source = 'baymora-seed') ORDER BY date ASC, time_start ASC`,
             [input.city]
           ) as any[];
           return rows as any[];
@@ -3541,18 +3543,14 @@ export const appRouter = router({
         const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
         try {
           const [rows] = await conn.execute(
-            `SELECT * FROM events WHERE city = ? AND date >= CURDATE() AND date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) ORDER BY date ASC, time_start ASC LIMIT ${parseInt(String(input.limit), 10) || 5}`,
+            `SELECT * FROM events WHERE city = ? AND date >= CURDATE() AND date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND (status = 'approved' OR source = 'baymora-seed') ORDER BY date ASC, time_start ASC LIMIT ${parseInt(String(input.limit), 10) || 5}`,
             [input.city]
           ) as any[];
           return rows as any[];
         } finally { await conn.end(); }
       }),
 
-    create: protectedProcedure
-      .use(({ ctx, next }) => {
-        if (ctx.user.role !== 'admin' && ctx.user.role !== 'team') throw new TRPCError({ code: 'FORBIDDEN' });
-        return next({ ctx });
-      })
+    create: publicProcedure
       .input(z.object({
         title: z.string(),
         description: z.string().optional(),
@@ -3571,20 +3569,72 @@ export const appRouter = router({
         bookingUrl: z.string().optional(),
         isVip: z.boolean().default(false),
         isMembersOnly: z.boolean().default(false),
+        submitterEmail: z.string().email().optional(),
       }))
+      .mutation(async ({ ctx, input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          const isAdmin = ctx.user?.role === 'admin' || ctx.user?.role === 'team';
+          const status = isAdmin ? 'approved' : 'pending';
+          const [result] = await conn.execute(
+            `INSERT INTO events (title, description, category, venue_name, venue_address, city, lat, lng, date, time_start, time_end, price, dress_code, image_url, booking_url, is_vip, is_members_only, source, status, submitter_email)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?)`,
+            [input.title, input.description, input.category, input.venueName, input.venueAddress,
+             input.city, input.lat, input.lng, input.date, input.timeStart, input.timeEnd,
+             input.price, input.dressCode, input.imageUrl, input.bookingUrl,
+             input.isVip ? 1 : 0, input.isMembersOnly ? 1 : 0, status, input.submitterEmail || null]
+          ) as any[];
+          if (!isAdmin) {
+            try {
+              await notifyOwner({
+                title: `✨ Nouvel événement soumis : ${input.title}`,
+                content: `Ville : ${input.city} | Date : ${input.date} | Soumis par : ${input.submitterEmail || 'anonyme'}\nÀ valider sur /admin/events`,
+              });
+            } catch (_) { /* non-bloquant */ }
+          }
+          return { id: result.insertId, status };
+        } finally { await conn.end(); }
+      }),
+    listPending: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin' && ctx.user.role !== 'team') throw new TRPCError({ code: 'FORBIDDEN' });
+        return next({ ctx });
+      })
+      .query(async () => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          const [rows] = await conn.execute("SELECT * FROM events WHERE status = 'pending' ORDER BY created_at DESC") as any[];
+          return rows as any[];
+        } finally { await conn.end(); }
+      }),
+    approve: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin' && ctx.user.role !== 'team') throw new TRPCError({ code: 'FORBIDDEN' });
+        return next({ ctx });
+      })
+      .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const mysql = await import('mysql2/promise');
         const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
         try {
-          const [result] = await conn.execute(
-            `INSERT INTO events (title, description, category, venue_name, venue_address, city, lat, lng, date, time_start, time_end, price, dress_code, image_url, booking_url, is_vip, is_members_only, source)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual')`,
-            [input.title, input.description, input.category, input.venueName, input.venueAddress,
-             input.city, input.lat, input.lng, input.date, input.timeStart, input.timeEnd,
-             input.price, input.dressCode, input.imageUrl, input.bookingUrl,
-             input.isVip ? 1 : 0, input.isMembersOnly ? 1 : 0]
-          ) as any[];
-          return { id: result.insertId };
+          await conn.execute("UPDATE events SET status = 'approved' WHERE id = ?", [input.id]);
+          return { success: true };
+        } finally { await conn.end(); }
+      }),
+    reject: protectedProcedure
+      .use(({ ctx, next }) => {
+        if (ctx.user.role !== 'admin' && ctx.user.role !== 'team') throw new TRPCError({ code: 'FORBIDDEN' });
+        return next({ ctx });
+      })
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const mysql = await import('mysql2/promise');
+        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        try {
+          await conn.execute("UPDATE events SET status = 'rejected' WHERE id = ?", [input.id]);
+          return { success: true };
         } finally { await conn.end(); }
       }),
   }),

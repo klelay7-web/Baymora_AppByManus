@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { handleStripeWebhook } from "../stripe/webhook";
 import { startEventMaintenanceCron } from "../services/eventMaintenanceService";
+import { startEventNotificationCron } from "../services/eventNotificationService";
 import { trackAffiliateClick, getDb } from "../db";
 import { affiliatePartners } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -127,6 +128,8 @@ async function startServer() {
     console.log(`Server running on http://localhost:${port}/`);
     // Démarrer le cron de maintenance des événements (re-seed dates glissantes)
     startEventMaintenanceCron();
+    // Démarrer les notifications Ce soir (18h lun-ven) et Ce week-end (vendredi 17h)
+    startEventNotificationCron();
   });
 }
 

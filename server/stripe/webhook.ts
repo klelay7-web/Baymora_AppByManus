@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import type { Request, Response } from "express";
 import { getDb, updateUser } from "../db";
-import { users } from "../../drizzle/schema";
+import { users, creditTransactions } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { PLANS, getTierFromPlan } from "./products";
 
@@ -71,15 +71,41 @@ export async function handleStripeWebhook(req: Request, res: Response) {
           .limit(1) : [];
 
         if (userRows.length > 0) {
-          if (db1) await db1.update(users)
-            .set({
-              subscriptionTier: "free",
-              stripeSubscriptionId: null,
-              credits: 15,
-              isCercle: false, // Retrait automatique du Cercle à l'annulation
-            })
-            .where(eq(users.id, userRows[0].id));
-          console.log(`[Stripe] User ${userRows[0].id} downgraded to free | isCercle: false`);
+          const user = userRows[0];
+          // Crédits de grâce : 5 crédits offerts à l'annulation (anti-abus : max 1 fois par 30j)
+          const GRACE_CREDITS = 5;
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          let graceAlreadyGiven = false;
+          if (db1) {
+            const recentGrace = await db1.select()
+              .from(creditTransactions)
+              .where(eq(creditTransactions.userId, user.id))
+              .limit(100);
+            graceAlreadyGiven = recentGrace.some(
+              (t: any) => t.type === 'grace' && new Date(t.createdAt) > thirtyDaysAgo
+            );
+          }
+          const newCredits = graceAlreadyGiven ? 0 : GRACE_CREDITS;
+          if (db1) {
+            await db1.update(users)
+              .set({
+                subscriptionTier: "free",
+                stripeSubscriptionId: null,
+                credits: newCredits,
+                isCercle: false,
+              })
+              .where(eq(users.id, user.id));
+            if (!graceAlreadyGiven) {
+              await db1.insert(creditTransactions).values({
+                userId: user.id,
+                amount: GRACE_CREDITS,
+                type: 'grace',
+                description: 'Crédits de grâce à la résiliation — merci pour votre confiance',
+                balanceAfter: GRACE_CREDITS,
+              });
+            }
+          }
+          console.log(`[Stripe] User ${user.id} downgraded to free | grace: ${!graceAlreadyGiven} | credits: ${newCredits}`);
         }
         break;
       }

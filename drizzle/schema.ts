@@ -36,6 +36,8 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   hasCompletedOnboarding: boolean("hasCompletedOnboarding").default(false).notNull(),
   isCercle: boolean("isCercle").default(false).notNull(),
+  city: varchar("city", { length: 128 }),
+  notifySorties: boolean("notifySorties").default(true).notNull(),
 });
 
 export type User = typeof users.$inferSelect;
@@ -346,7 +348,7 @@ export const creditTransactions = mysqlTable("creditTransactions", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   amount: int("amount").notNull(),
-  type: mysqlEnum("type", ["subscription", "recharge", "usage", "rollover", "bonus", "refund"]).notNull(),
+  type: mysqlEnum("type", ["subscription", "recharge", "usage", "rollover", "bonus", "refund", "grace", "purchase", "referral"]).notNull(),
   description: text("description"),
   balanceAfter: int("balanceAfter").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -1238,6 +1240,8 @@ export const events = mysqlTable("events", {
   isVip: boolean("is_vip").default(false),
   isMembersOnly: boolean("is_members_only").default(false),
   source: varchar("source", { length: 100 }),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("approved").notNull(),
+  submitterEmail: varchar("submitter_email", { length: 320 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 export type Event = typeof events.$inferSelect;

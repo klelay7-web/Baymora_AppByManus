@@ -341,6 +341,12 @@ export default function MaPosition() {
         <p className="text-center text-xs mt-6" style={{ color: "#4A4D56" }}>
           Ma position fonctionne partout dans le monde. À Barcelone ? Les résultats s'adaptent.
         </p>
+        <div className="text-center mt-8 pb-2">
+          <p className="text-xs mb-2" style={{ color: "#4A4D56" }}>Vous organisez un événement ?</p>
+          <Link href="/partenaires/evenement" className="text-xs font-medium hover:opacity-80 transition-opacity" style={{ color: "#C8A96E" }}>
+            Soumettre à la Maison →
+          </Link>
+        </div>
       </section>
     </div>
   );

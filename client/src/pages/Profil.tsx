@@ -340,10 +340,22 @@ function SectionParrainage({ onClose }: { onClose: () => void }) {
 
 // ─── Section : Notifications ──────────────────────────────────────────────────
 function SectionNotifications({ onClose }: { onClose: () => void }) {
+  const { user } = useAuth();
   const { data: notifications, isLoading } = trpc.notifications.list.useQuery({ limit: 20 });
   const markReadMutation = trpc.notifications.markRead.useMutation({
     onSuccess: () => {},
   });
+  const updateProfileMutation = trpc.profile.updateProfile.useMutation({
+    onSuccess: () => toast.success("Préférence mise à jour ✓"),
+  });
+  const [notifSorties, setNotifSorties] = useState<boolean>(
+    (user as any)?.notifySorties !== false
+  );
+  // user est bien fourni par useAuth()
+  const handleToggleSorties = (val: boolean) => {
+    setNotifSorties(val);
+    updateProfileMutation.mutate({ notifySorties: val });
+  };
 
   const TYPE_ICON: Record<string, string> = {
     offer_flash: "🎁",
@@ -401,6 +413,25 @@ function SectionNotifications({ onClose }: { onClose: () => void }) {
           ))}
         </div>
       )}
+      {/* Toggle Suggestions sorties */}
+      <div className="mt-6 p-4 rounded-xl" style={{ background: "rgba(200,169,110,0.04)", border: "1px solid rgba(200,169,110,0.12)" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium" style={{ color: "#F0EDE6" }}>Suggestions sorties</p>
+            <p className="text-xs mt-0.5" style={{ color: "#8B8D94" }}>Recevez chaque soir les meilleurs événements de votre ville</p>
+          </div>
+          <button
+            onClick={() => handleToggleSorties(!notifSorties)}
+            className="relative w-11 h-6 rounded-full transition-colors flex-shrink-0"
+            style={{ background: notifSorties ? "#C8A96E" : "rgba(255,255,255,0.1)" }}
+          >
+            <span
+              className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform"
+              style={{ transform: notifSorties ? "translateX(20px)" : "translateX(0)" }}
+            />
+          </button>
+        </div>
+      </div>
       {(notifications as any[])?.some((n: any) => !n.readAt) && (
         <button
           onClick={() => markReadMutation.mutate({ all: true } as any)}
