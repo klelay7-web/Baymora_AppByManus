@@ -3,6 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Sparkles, ChevronRight, Heart, Star, Gift } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { VideoBackground } from "@/components/VideoBackground";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 const HERO_IMG = `${CDN}/hero_yacht_sunset_b173a771.jpg`;
@@ -80,18 +81,14 @@ export default function Maison() {
   return (
     <div style={{ background: "#070B14", color: "#F0EDE6", minHeight: "100vh" }}>
       {/* Hero */}
-      <motion.section
-        className="relative overflow-hidden px-4"
-        style={{ paddingTop: 48, paddingBottom: 56 }}
-        initial="hidden"
-        animate="visible"
-        variants={sectionVariants}
+      <VideoBackground
+        src="https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm/hero-maison_91ad129b.mp4"
+        fallbackImage={HERO_IMG}
+        overlay={0.72}
+        className="overflow-hidden px-4"
+        style={{ paddingTop: 48, paddingBottom: 56 } as React.CSSProperties}
       >
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: `url(${HERO_IMG})`, backgroundSize: "cover", backgroundPosition: "center" }}
-        />
-        <div className="relative z-10 max-w-5xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
               <h1
@@ -123,7 +120,7 @@ export default function Maison() {
             </div>
           </div>
         </div>
-      </motion.section>
+      </VideoBackground>
 
       {/* Bundles */}
       <motion.section

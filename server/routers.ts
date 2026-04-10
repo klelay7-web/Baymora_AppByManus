@@ -3359,7 +3359,7 @@ export const appRouter = router({
       }),
   }),
 
-  // ───   // ─── Stripe Checkout ──────────────────────────────────────────────
+  // ─── Stripe Checkout ──────────────────────────────────────────────
   stripe: router({
     // Compteur réel de membres fondateurs (subscriptionTier = elite)
     getFounderCount: publicProcedure.query(async () => {
