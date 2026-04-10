@@ -43,7 +43,7 @@ const FEATURES = [
 const STATS = [
   { value: "340+", label: "adresses partenaires" },
   { value: "12", label: "pays couverts" },
-  { value: "-40%", label: "de réduction max" },
+  { value: "-40%", label: "en moyenne négocié" },
   { value: "4.9/5", label: "satisfaction" },
 ];
 
@@ -74,12 +74,12 @@ const HOW_IT_WORKS = [
   { step: "01", title: "Dites à Maya ce dont vous rêvez", desc: "\"Week-end romantique à Paris, budget 1500€, 2 nuits.\" C'est tout ce qu'il faut." },
   { step: "02", title: "Maya propose 4 accès", desc: "Signature, Privilège, Prestige, Sur-Mesure. Choisissez celui qui vous correspond." },
   { step: "03", title: "Affinez en un clic", desc: "\"Changer l'hôtel\", \"Autre restaurant\" — Maya s'adapte instantanément." },
-  { step: "04", title: "Réservez avec vos remises", desc: "Liens directs vers les partenaires avec vos remises négociées. Votre programme est prêt." },
+  { step: "04", title: "Réservez avec vos privilèges", desc: "Liens directs vers les partenaires avec vos privilèges négociés. Votre programme est prêt." },
 ];
 
 const SOCIAL_PROOF = [
   { name: "Sophie M.", city: "Paris", text: "Maya m'a ouvert des adresses que je ne connaissais pas. Week-end à Venise planifié en 3 messages. Hôtel, restos, gondole privée.", stars: 5 },
-  { name: "Thomas R.", city: "Lyon", text: "J'ai économisé 340€ sur mon accès Dubai. Les remises Baymora sont réelles et négociées. Le Cercle vaut chaque centime.", stars: 5 },
+  { name: "Thomas R.", city: "Lyon", text: "J'ai économisé 340€ sur mon accès Dubai. Les privilèges Baymora sont réels et négociés. Le Cercle vaut chaque centime.", stars: 5 },
   { name: "Camille D.", city: "Bordeaux", text: "Le Cercle Baymora vaut largement l'abonnement. Maya connaît mes goûts, elle ne propose jamais deux fois la même adresse.", stars: 5 },
 ];
 
@@ -112,7 +112,7 @@ const FAQ = [
   },
   {
     q: "Dans quels pays Baymora est-il disponible ?",
-    a: "Maya couvre le monde entier : France, Europe, États-Unis, Asie, Moyen-Orient. Les offres avec remise sont concentrées sur la France et l'Europe, avec une expansion internationale en cours.",
+    a: "Maya couvre le monde entier : France, Europe, États-Unis, Asie, Moyen-Orient. Les offres avec privilèges sont concentrées sur la France et l'Europe, avec une expansion internationale en cours.",
   },
   {
     q: "Mes données sont-elles protégées ?",
@@ -124,7 +124,7 @@ const FAQ = [
   },
   {
     q: "Quelle est la différence avec ChatGPT ?",
-    a: "ChatGPT donne des listes. Maya donne un accès : des réductions réelles négociées, des réservations en un clic, une mémoire de vos préférences, et un réseau de partenaires physiques.",
+    a: "ChatGPT donne des listes. Maya donne un accès : des privilèges réels négociés, des réservations en un clic, une mémoire de vos préférences, et un réseau de partenaires physiques.",
   },
   {
     q: "Comment devenir partenaire Baymora ?",
@@ -237,7 +237,7 @@ const DEMO_PERSONAS = [
     label: "Famille à Barcelone",
     icon: "👨‍👩‍👧",
     prompt: "Barcelone en famille, 4 jours, 2 enfants 8 et 12 ans.",
-    reply: "Barcelone en famille 4 jours — voici mon accès **Signature** :\n\n**Hôtel** : Hotel Arts Barcelona (5★) — suite familiale -15% membres | piscine + plage privée\n**J1** : Sagrada Familia (entrée coupe-file) + Park Güell + diner La Barceloneta\n**J2** : Aquarium BCN (réduction -20%) + Las Ramblas + Boqueria\n**J3** : Tibidabo (parc d'attractions) + Montjuïc + show flamenco familial\n\n**Budget estimé** : 2 800€ pour 4 (hôtel + activités + repas)\n\nLes enfants ont des allergies alimentaires ?",
+    reply: "Barcelone en famille 4 jours — voici mon accès **Signature** :\n\n**Hôtel** : Hotel Arts Barcelona (5★) — suite familiale -15% membres | piscine + plage privée\n**J1** : Sagrada Familia (entrée coupe-file) + Park Güell + diner La Barceloneta\n**J2** : Aquarium BCN (accès membres -20%) + Las Ramblas + Boqueria\n**J3** : Tibidabo (parc d'attractions) + Montjuïc + show flamenco familial\n\n**Budget estimé** : 2 800€ pour 4 (hôtel + activités + repas)\n\nLes enfants ont des allergies alimentaires ?",
   },
 ];
 
@@ -410,8 +410,8 @@ export default function Landing() {
             className="text-4xl md:text-6xl font-bold mb-4 leading-tight"
             style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
           >
-            L'accès privé
-            <span className="block" style={{ color: "#C8A96E" }}>que vous méritez.</span>
+            Là où les portes s'ouvrent.
+            <span className="block" style={{ color: "#C8A96E" }}></span>
           </h1>
 
           <p className="text-base md:text-lg mb-5 max-w-xl mx-auto" style={{ color: "rgba(240, 237, 230, 0.7)", minHeight: "2rem" }}>
@@ -426,7 +426,7 @@ export default function Landing() {
               ))}
             </div>
             <div className="text-left">
-              <p className="text-xs font-semibold" style={{ color: "#C8A96E" }}>{founderCount}/{founderTotal} membres fondateurs</p>
+              <p className="text-xs font-semibold" style={{ color: "#C8A96E" }}>{founderCount === 0 ? `${founderTotal} places disponibles` : founderCount < founderTotal ? `${founderTotal - founderCount} places restantes` : "Complet"}</p>
               <p className="text-xs" style={{ color: "#8B8D94" }}>{founderTotal - founderCount} places restantes au tarif fondateur</p>
             </div>
           </div>

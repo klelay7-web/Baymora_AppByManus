@@ -17,7 +17,7 @@ const FEED_ITEMS = [
     rating: 5,
     tag: "Adresse du jour",
     tagColor: "#C8A96E",
-    remise: "-20%",
+    privilege: "-20%",
     teaser: "Le palace qui accueille les présidents depuis 1925. Suite Royale avec vue sur les jardins.",
     likes: 142,
   },
@@ -31,7 +31,7 @@ const FEED_ITEMS = [
     rating: 5,
     tag: "Table secrète",
     tagColor: "#8B5CF6",
-    remise: "-15%",
+    privilege: "-15%",
     teaser: "1 étoile Michelin. Menu dégustation 7 plats. Réservation impossible — sauf pour les membres Baymora.",
     likes: 89,
   },
@@ -45,7 +45,7 @@ const FEED_ITEMS = [
     rating: 5,
     tag: "Expérience exclusive",
     tagColor: "#10B981",
-    remise: "-25%",
+    privilege: "-25%",
     teaser: "Retraite wellness sur les falaises d'Ibiza. Soin signature 3h + accès hammam privatif.",
     likes: 67,
   },
@@ -122,13 +122,13 @@ export default function DailyFeed() {
               >
                 {item.tag}
               </div>
-              {/* Badge remise */}
-              {item.remise && (
+              {/* Badge privilège */}
+              {item.privilege && (
                 <div
                   className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold"
                   style={{ background: "rgba(200,169,110,0.9)", color: "#070B14" }}
                 >
-                  {item.remise} membres
+                  {item.privilege} membres
                 </div>
               )}
               {/* Nom en bas de l'image */}

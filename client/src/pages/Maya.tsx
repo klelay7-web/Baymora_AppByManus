@@ -20,7 +20,7 @@ function reverseGeocode(lat: number, lng: number): Promise<{ address: string; ci
 }
 
 const QUICK_CHOICES = [
-  { icon: "🏨", title: "Escapade luxe à proximité", desc: "Hôtel premium avec remise, proche de chez vous", prompt: "Je cherche une escapade luxe à proximité avec un hôtel premium" },
+  { icon: "🏨", title: "Escapade luxe à proximité", desc: "Hôtel premium avec privilèges, proche de chez vous", prompt: "Je cherche une escapade luxe à proximité avec un hôtel premium" },
   { icon: "✨", title: "Parcours sur-mesure", desc: "Maya crée votre voyage idéal de A à Z", prompt: "Je veux un parcours sur-mesure complet" },
   { icon: "🎯", title: "Découvrir les bons plans", desc: "Restos, bars, activités autour de vous", prompt: "Montre-moi les bons plans et activités" },
   { icon: "👑", title: "Déléguer totalement", desc: "Maison Baymora s'occupe de tout", prompt: "Je veux déléguer totalement mon voyage à votre équipe" },

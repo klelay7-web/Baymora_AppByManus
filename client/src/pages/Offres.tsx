@@ -294,7 +294,7 @@ export default function Offres() {
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                   <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.7) 0%, transparent 50%)" }} />
-                  {/* Badge remise */}
+                  {/* Badge privilège */}
                   <div
                     className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold"
                     style={{ background: "#16a34a", color: "white" }}

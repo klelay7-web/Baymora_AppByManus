@@ -14,7 +14,7 @@ const getSecretOfDay = () => {
       city: "Lac de Garde, Italie",
       image: `${CDN}/baymora-canaves-oia-santorini-dYNNPqBiH8GUcPC6dZMq4y.webp`,
       teaser: "Villa privée du XIXème siècle sur le lac de Garde. 21 suites. Réservée aux membres Le Cercle.",
-      remise: "-30%",
+      privilege: "-30%",
       type: "Villa exclusive",
     },
     {
@@ -23,7 +23,7 @@ const getSecretOfDay = () => {
       city: "Tokyo, Japon",
       image: `${CDN}/baymora-aman-tokyo-aZXaYUrFDjjHKPFBHjghJ9.webp`,
       teaser: "Dernier étage du Tour Otemachi. Vue sur le Mont Fuji. Spa onsen privé. Accès Baymora uniquement.",
-      remise: "-20%",
+      privilege: "-20%",
       type: "Palace urbain",
     },
     {
@@ -32,7 +32,7 @@ const getSecretOfDay = () => {
       city: "Marrakech, Maroc",
       image: `${CDN}/baymora-mamounia-marrakech-WXuKtndnzDxsWbaZf8RMed.webp`,
       teaser: "Le palace légendaire de Marrakech. Suite Winston Churchill. Jardins d'orangers centenaires.",
-      remise: "-25%",
+      privilege: "-25%",
       type: "Palace historique",
     },
   ];
@@ -113,12 +113,12 @@ export default function SecretOfDay() {
           {secret.type}
         </div>
 
-        {/* Badge remise */}
+        {/* Badge privilège */}
         <div
           className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold"
           style={{ background: "rgba(139,92,246,0.9)", color: "#fff" }}
         >
-          {secret.remise} Le Cercle
+          {secret.privilege} Le Cercle
         </div>
 
         {/* Overlay lock si non membre */}

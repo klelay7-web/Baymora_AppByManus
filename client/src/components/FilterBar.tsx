@@ -38,7 +38,7 @@ const SORT_OPTIONS = [
   { value: "relevance", label: "Pertinence" },
   { value: "price_asc", label: "Prix croissant" },
   { value: "price_desc", label: "Prix décroissant" },
-  { value: "discount", label: "Meilleure réduction" },
+  { value: "discount", label: "Meilleur privilège" },
   { value: "newest", label: "Nouveautés" },
   { value: "popular", label: "Populaires" },
 ] as const;

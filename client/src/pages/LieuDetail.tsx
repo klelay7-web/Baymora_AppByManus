@@ -239,7 +239,7 @@ export default function LieuDetail() {
           </button>
         </div>
 
-        {/* Badge remise */}
+        {/* Badge privilège */}
         <div
           className="absolute bottom-4 left-4 px-3 py-1 rounded-full text-sm font-bold"
           style={{ background: "#16a34a", color: "white" }}

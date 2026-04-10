@@ -45,7 +45,7 @@ const DEFAULT_REVIEWS: Review[] = [
     memberInitial: "T",
     rating: 5,
     title: "Dubai en accès Signature",
-    text: "J'ai économisé 340€ sur mon accès Dubai. Les remises Baymora sont réelles et négociées. Le Cercle vaut chaque centime. Maya connaît mes goûts — elle ne propose jamais deux fois la même adresse.",
+    text: "J'ai économisé 340€ sur mon accès Dubai. Les privilèges Baymora sont réels et négociés. Le Cercle vaut chaque centime. Maya connaît mes goûts — elle ne propose jamais deux fois la même adresse.",
     date: "Février 2026",
     scenario: "Signature",
     establishmentName: "Atlantis The Palm, Dubai",
