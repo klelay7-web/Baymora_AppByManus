@@ -168,6 +168,28 @@ export const CREDIT_PACKS = {
   },
 } as const;
 
+// ─── Radar Subscription ─────────────────────────────────────────
+export const RADAR_PLANS = {
+  radar_membre: {
+    id: "radar_membre",
+    name: "Mon Radar — Membre",
+    priceEur: 3.99,
+    priceCents: 399,
+    stripePriceId: process.env.STRIPE_PRICE_RADAR_MEMBRE || "price_radar_membre",
+    description: "Accès mensuel au Radar pour les membres",
+    icon: "📍",
+  },
+  radar_duo: {
+    id: "radar_duo",
+    name: "Mon Radar — Duo",
+    priceEur: 5.99,
+    priceCents: 599,
+    stripePriceId: process.env.STRIPE_PRICE_RADAR_DUO || "price_radar_duo",
+    description: "Accès mensuel au Radar pour les duos",
+    icon: "📍",
+  },
+} as const;
+
 // ─── Feature Unlocks (one-shot) ───────────────────────────────────
 export const FEATURE_UNLOCKS = {
   vip_experiences: {

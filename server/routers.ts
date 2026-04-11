@@ -152,6 +152,27 @@ const radarRouter = router({
       const hasAccess = subscribed || trialActive || !!(unlockedUntil && new Date(unlockedUntil) > now);
       return { hasAccess, trialActive, subscribed, trialEnd: user.radarTrialEnd, searchesUsed: (user as any).radarSearchesUsed || 0, unlockedUntil };
     }),
+  createRadarCheckout: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const { RADAR_PLANS } = await import('./stripe/products');
+      const StripeLib = (await import('stripe')).default;
+      const stripe = new StripeLib(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" as any });
+      const plan = (ctx.user as any).subscriptionTier || "free";
+      const isDuo = plan === "duo" || plan === "explorer";
+      const radarPlan = isDuo ? RADAR_PLANS.radar_duo : RADAR_PLANS.radar_membre;
+      const origin = (ctx.req.headers.origin as string) || "https://maisonbaymora.com";
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        line_items: [{ price: radarPlan.stripePriceId, quantity: 1 }],
+        customer_email: ctx.user.email || undefined,
+        client_reference_id: ctx.user.id.toString(),
+        metadata: { user_id: ctx.user.id.toString(), plan_id: radarPlan.id, customer_email: ctx.user.email || "", customer_name: ctx.user.name || "" },
+        success_url: `${origin}/ma-position?radar=activated`,
+        cancel_url: `${origin}/ma-position`,
+        allow_promotion_codes: true,
+      });
+      return { url: session.url };
+    }),
 });
 
 export const appRouter = router({

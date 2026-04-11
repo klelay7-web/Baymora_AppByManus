@@ -212,12 +212,19 @@ export default function Maison() {
   const firstName = user?.name?.split(" ")[0] || "vous";
 
   const hour = new Date().getHours();
-  const subtitle =
-    hour >= 6 && hour < 12
-      ? "Où partons-nous aujourd'hui ?"
-      : hour >= 12 && hour < 18
-      ? "Votre prochaine escapade est à portée de main."
-      : "Ce soir, laissez-vous surprendre.";
+  const isMorning = hour >= 6 && hour < 12;
+  const isAfternoon = hour >= 12 && hour < 18;
+  const greeting = isMorning
+    ? `Bonjour, ${firstName}`
+    : isAfternoon
+    ? `Bonne après-midi, ${firstName}`
+    : `Bonsoir, ${firstName}`;
+  const subtitle = isMorning
+    ? "Où partons-nous aujourd'hui ?"
+    : isAfternoon
+    ? "Votre prochaine escapade est à portée de main."
+    : "Ce soir, laissez-vous surprendre.";
+  const heroAccent = isMorning ? "#E8D5A8" : isAfternoon ? "#C8A96E" : "#9B7FD4";
 
   return (
     <div style={{ background: "#070B14", color: "#F0EDE6", minHeight: "100vh" }}>
@@ -236,7 +243,7 @@ export default function Maison() {
                 className="text-2xl md:text-4xl font-bold mb-2"
                 style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
               >
-                Bienvenue, <span style={{ color: "#C8A96E" }}>{firstName}</span>
+                <span style={{ color: heroAccent }}>{greeting.split(",")[0]},</span>{" "}{greeting.split(",")[1]?.trim() || firstName}
               </h1>
               <p className="text-sm" style={{ color: "#8B8D94" }}>{subtitle}</p>
             </div>

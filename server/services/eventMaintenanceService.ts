@@ -341,7 +341,27 @@ export async function runEventMaintenance(): Promise<void> {
   }
 }
 
-// ─── Démarrage du cron (toutes les heures) ───────────────────────────────────
+// ─── Reset mensuel parcours + radar ───────────────────────────────────────────────
+
+async function runMonthlyReset(): Promise<void> {
+  try {
+    const mysql = await import('mysql2/promise');
+    const conn = await (mysql.default).createConnection(process.env.DATABASE_URL!);
+    try {
+      await conn.execute(
+        `UPDATE users SET monthlyParcours = 0, monthlyParcoursReset = NOW() WHERE monthlyParcoursReset IS NULL OR DATEDIFF(NOW(), monthlyParcoursReset) >= 30`
+      );
+      await conn.execute(`UPDATE users SET radar_searches_used = 0`);
+      console.log("[MonthlyReset] monthlyParcours + radarSearchesUsed réinitialisés");
+    } finally {
+      await conn.end();
+    }
+  } catch (err) {
+    console.error("[MonthlyReset] Erreur:", err);
+  }
+}
+
+// ─── Démarrage du cron (toutes les heures) ───────────────────────────────────────────────
 
 export function startEventMaintenanceCron(): void {
   console.log("[EventMaintenance] Cron démarré — vérification toutes les heures");
@@ -359,4 +379,14 @@ export function startEventMaintenanceCron(): void {
       console.error("[EventMaintenance] Erreur cron:", err)
     );
   }, 60 * 60 * 1000);
+
+  // Cron mensuel (toutes les 24h, vérifie si le 1er du mois)
+  setInterval(() => {
+    const now = new Date();
+    if (now.getDate() === 1 && now.getHours() === 0) {
+      runMonthlyReset().catch(err =>
+        console.error("[MonthlyReset] Erreur cron:", err)
+      );
+    }
+  }, 60 * 60 * 1000); // vérifie toutes les heures
 }
