@@ -244,6 +244,28 @@ export const appRouter = router({
         // Stocker la réponse complète (avec tags) pour le frontend
         await addMessage(input.conversationId, "assistant", claudeResponse.content);
 
+        // C4 — Compteur parcours mensuel : incrémenter si Maya génère un parcours (:::PLAN:::)
+        if (parsed.plan && !isPrivileged) {
+          const PARCOURS_LIMITS: Record<string, number> = {
+            free: 0, invite: 0,
+            membre: 5, premium: 5,
+            explorer: 8, duo: 8,
+            elite: 10, cercle: 10,
+          };
+          const tier = ctx.user.subscriptionTier || "free";
+          const limit = PARCOURS_LIMITS[tier] ?? 3;
+          if (limit > 0) {
+            const now = new Date();
+            const resetDate = ctx.user.monthlyParcoursReset ? new Date(ctx.user.monthlyParcoursReset as any) : null;
+            const needsReset = !resetDate || (now.getFullYear() !== resetDate.getFullYear() || now.getMonth() !== resetDate.getMonth());
+            const currentCount = needsReset ? 0 : (ctx.user.monthlyParcours || 0);
+            await updateUser(ctx.user.id, {
+              monthlyParcours: currentCount + 1,
+              ...(needsReset ? { monthlyParcoursReset: now } : {}),
+            } as any);
+          }
+        }
+
         // Retourner la réponse parsée au frontend
         return {
           rawContent: claudeResponse.content,
@@ -384,14 +406,34 @@ export const appRouter = router({
         return { id };
       }),
 
-    publish: adminProcedure
+     publish: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         await updateEstablishment(input.id, { status: "published", publishedAt: new Date() });
         return { success: true };
       }),
+    getSimilar: publicProcedure
+      .input(z.object({ id: z.number(), city: z.string(), limit: z.number().default(3) }))
+      .query(async ({ input }) => {
+        const { getDb } = await import("./db");
+        const { eq, and, ne } = await import("drizzle-orm");
+        const s = await import("../drizzle/schema");
+        const db = await getDb();
+        if (!db) return [];
+        const rows = await db
+          .select()
+          .from(s.establishments)
+          .where(
+            and(
+              eq(s.establishments.city, input.city),
+              eq(s.establishments.status, "published"),
+              ne(s.establishments.id, input.id)
+            )
+          )
+          .limit(input.limit);
+        return rows;
+      }),
   }),
-
   // ─── Establishment Comments (Engagement IA) ─────────────────────
   comments: router({
     getByEstablishment: publicProcedure
@@ -3426,7 +3468,7 @@ export const appRouter = router({
       }),
     buyCreditPack: protectedProcedure
       .input(z.object({
-        packId: z.enum(["pack_5", "pack_15", "pack_40"]),
+        packId: z.enum(["pack_5", "pack_15", "pack_40", "pack_intensif", "pack_prestige", "pack_liberte"]),
         origin: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -3459,6 +3501,50 @@ export const appRouter = router({
           cancel_url: `${input.origin}/maya`,
         });
         return { url: session.url };
+      }),
+    // D2 — Montant libre : price_data dynamique côté serveur
+    buyCustomCredits: protectedProcedure
+      .input(z.object({
+        amountEur: z.number().min(5).max(500),
+        origin: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const StripeLib = (await import("stripe")).default;
+        const stripe = new StripeLib(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" as any });
+        const amountCents = Math.round(input.amountEur * 100);
+        let credits: number;
+        if (input.amountEur >= 100) credits = Math.round(input.amountEur * 3.2);
+        else if (input.amountEur >= 50) credits = Math.round(input.amountEur * 2.8);
+        else if (input.amountEur >= 20) credits = Math.round(input.amountEur * 2.4);
+        else credits = Math.round(input.amountEur * 2.0);
+        const session = await stripe.checkout.sessions.create({
+          mode: "payment",
+          payment_method_types: ["card"],
+          customer_email: ctx.user.email ?? undefined,
+          line_items: [{
+            price_data: {
+              currency: "eur",
+              unit_amount: amountCents,
+              product_data: {
+                name: `${credits} crédits Maison Baymora`,
+                description: `Rechargement libre — ${credits} crédits (${input.amountEur}€)`,
+              },
+            },
+            quantity: 1,
+          }],
+          allow_promotion_codes: true,
+          client_reference_id: ctx.user.id.toString(),
+          metadata: {
+            user_id: ctx.user.id.toString(),
+            pack_id: "custom",
+            credits: credits.toString(),
+            type: "credit_pack",
+            amount_eur: input.amountEur.toString(),
+          },
+          success_url: `${input.origin}/maya?credits=added&pack=custom`,
+          cancel_url: `${input.origin}/premium`,
+        });
+        return { url: session.url, credits };
       }),
   }),
   // ─── Dashboard Affilié (owner Kevin uniquement)) ───────────────────────

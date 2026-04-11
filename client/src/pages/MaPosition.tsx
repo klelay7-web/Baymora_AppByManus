@@ -64,7 +64,7 @@ const SERVICES = [
 
 // ─── EventCardComponent ───────────────────────────────────────────────────────
 function EventCardComponent({ event, isMember }: { event: EventCard; isMember: boolean }) {
-  const isLocked = event.is_members_only && !isMember;
+  const isLocked = !!event.is_members_only && !isMember;
   const catLabel = CATEGORY_LABELS[event.category] || event.category;
   const dateStr = event.date
     ? new Date(event.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })
@@ -98,7 +98,7 @@ function EventCardComponent({ event, isMember }: { event: EventCard; isMember: b
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.2)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.3)" }}>
             {catLabel}
           </span>
-          {event.is_vip && (
+          {!!event.is_vip && (
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.9)", color: "#070B14" }}>
               🔑 VIP
             </span>

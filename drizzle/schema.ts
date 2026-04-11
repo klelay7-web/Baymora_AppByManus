@@ -38,6 +38,8 @@ export const users = mysqlTable("users", {
   isCercle: boolean("isCercle").default(false).notNull(),
   city: varchar("city", { length: 128 }),
   notifySorties: boolean("notifySorties").default(true).notNull(),
+  monthlyParcours: int("monthlyParcours").default(0).notNull(),
+  monthlyParcoursReset: timestamp("monthlyParcoursReset"),
 });
 
 export type User = typeof users.$inferSelect;
@@ -141,6 +143,24 @@ export const establishments = mysqlTable("establishments", {
   viralVideos: text("viralVideos"), // JSON array of { platform, url, title, thumbnail }
   // Affiliation
   affiliateLinks: text("affiliateLinks"), // JSON { booking: url, thefork: url, ... }
+  isAffiliated: boolean("isAffiliated").default(false),
+  affiliateSource: varchar("affiliateSource", { length: 50 }),
+  affiliateUrl: text("affiliateUrl"),
+  affiliateCommission: decimal("affiliateCommission", { precision: 4, scale: 2 }),
+  privilegeDescription: varchar("privilegeDescription", { length: 255 }),
+  // Extended fields
+  googlePlaceId: varchar("googlePlaceId", { length: 255 }),
+  featuredPhoto: text("featuredPhoto"),
+  photos: json("photos").$type<string[]>(),
+  ambiance: varchar("ambiance", { length: 100 }),
+  signature: varchar("signature", { length: 255 }),
+  source: varchar("source", { length: 50 }).default("google_places"),
+  verified: boolean("verified").default(false),
+  createdBy: varchar("createdBy", { length: 50 }).default("system"),
+  timesRecommended: int("timesRecommended").default(0),
+  timesSaved: int("timesSaved").default(0),
+  timesClicked: int("timesClicked").default(0),
+  lastRecommended: timestamp("lastRecommended"),
   // Status
   status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
   viewCount: int("viewCount").default(0),

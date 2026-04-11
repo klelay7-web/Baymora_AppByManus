@@ -10,6 +10,32 @@ const anthropic = new Anthropic({ apiKey: ENV.anthropicApiKey });
 // Sonnet ($3/$15) : conversations moyennes
 // Opus ($5/$25) : scénarios complexes + Cercle toujours
 
+// ─── Routing hybride par complexité (C6) ───────────────────────────────────────
+// Étape 1 : Haiku classifie la complexité (~0.001€)
+// Étape 2 : simple → Sonnet, complex → Opus
+// Tout le monde accède à Opus sur les demandes complexes
+export async function classifyComplexity(userMessage: string): Promise<"simple" | "complex"> {
+  const msg = userMessage.toLowerCase().trim();
+  // Shortcut local pour les messages très courts (évite un appel API)
+  if (userMessage.length < 20) return "simple";
+  const simpleKeywords = ["merci", "ok", "d'accord", "parfait", "super", "top", "cool", "oui", "non", "c'est bon", "à plus", "salut", "bonjour", "bonsoir", "génial", "nickel", "noté", "compris", "entendu"];
+  if (simpleKeywords.some(k => msg === k || msg.startsWith(k + " ") || msg.endsWith(" " + k))) return "simple";
+  try {
+    const res = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 10,
+      system: "Classify the user message as 'simple' or 'complex'. Simple = greetings, thanks, short questions (price, address, hours). Complex = trip planning, itinerary, multi-step organization, venue search, event planning. Reply with only one word: simple or complex.",
+      messages: [{ role: "user", content: userMessage }],
+    });
+    const result = (res.content[0] as any).text?.trim().toLowerCase();
+    return result === "simple" ? "simple" : "complex";
+  } catch {
+    // Fallback local si l'API échoue
+    const complexKeywords = ["voyage", "week-end", "weekend", "séjour", "vacances", "planifie", "organise", "scénario", "programme", "itinéraire", "parcours", "hôtel", "restaurant", "palace", "villa", "sur-mesure", "prestige", "lune de miel", "anniversaire", "business", "ce soir", "sortir", "événement", "soirée", "concert", "spa", "surprends-moi", "plan complet", "tout organiser", "prépare", "propose"];
+    return complexKeywords.some(k => msg.includes(k)) ? "complex" : "simple";
+  }
+}
+
 const HAIKU_PATTERNS = [
   "merci", "ok", "d'accord", "parfait", "super", "top", "cool",
   "oui", "non", "c'est bon", "à plus", "salut", "bonjour", "bonsoir",

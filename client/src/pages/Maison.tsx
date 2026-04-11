@@ -70,13 +70,13 @@ const sectionVariants = {
 
 // ─── Composant InspirationSection ──────────────────────────────────────────────
 const DESTINATIONS = [
-  { key: "destSaintTropez", label: "Saint-Tropez", sub: "Côte d'Azur" },
-  { key: "destAlpesSki", label: "Alpes", sub: "Ski & montagne" },
-  { key: "destNyc", label: "New York", sub: "City break" },
-  { key: "destSantorin", label: "Santorin", sub: "Mer Égée" },
-  { key: "destTokyo", label: "Tokyo", sub: "Asie & culture" },
-  { key: "destMarrakech", label: "Marrakech", sub: "Escapade soleil" },
-] as const;
+  { label: "Saint-Tropez", sub: "Côte d'Azur", img: "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=400&q=80" },
+  { label: "Alpes", sub: "Ski & montagne", img: "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&q=80" },
+  { label: "New York", sub: "City break", img: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&q=80" },
+  { label: "Santorin", sub: "Mer Égée", img: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=400&q=80" },
+  { label: "Tokyo", sub: "Asie & culture", img: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&q=80" },
+  { label: "Marrakech", sub: "Escapade soleil", img: "https://images.unsplash.com/photo-1489493887464-892be6d1daae?w=400&q=80" },
+];
 
 function InspirationSection() {
   return (
@@ -98,14 +98,11 @@ function InspirationSection() {
         </div>
         <div className="flex overflow-x-auto pb-2" style={{ gap: 12, scrollbarWidth: "none" }}>
           {DESTINATIONS.map(dest => (
-            <div key={dest.key} className="flex-shrink-0 rounded-2xl overflow-hidden relative" style={{ width: 140, height: 220 }}>
-              {/* Vidéo 9:16 */}
-              <video
-                src={RUNWAY_VIDEOS[dest.key]}
-                autoPlay
-                muted
-                loop
-                playsInline
+            <div key={dest.label} className="flex-shrink-0 rounded-2xl overflow-hidden relative" style={{ width: 140, height: 220 }}>
+              {/* Image de destination */}
+              <img
+                src={dest.img}
+                alt={dest.label}
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{ opacity: 0.85 }}
               />
@@ -179,7 +176,7 @@ function EventsSection() {
                     <Calendar size={24} style={{ color: "#C8A96E", opacity: 0.4 }} />
                     <div className="absolute top-2 left-2 flex gap-1">
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.2)", color: "#C8A96E" }}>{catLabel}</span>
-                      {event.is_vip && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.9)", color: "#070B14" }}>VIP</span>}
+                      {!!event.is_vip && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(200,169,110,0.9)", color: "#070B14" }}>VIP</span>}
                     </div>
                   </div>
                   <div className="p-3">

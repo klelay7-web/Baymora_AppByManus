@@ -132,6 +132,40 @@ export const CREDIT_PACKS = {
     icon: "👑",
     popular: false,
   },
+  // ─── Packs Premium (V8 Définitif) ────────────────────────────────────────────────────
+  pack_intensif: {
+    id: "pack_intensif",
+    name: "Intensif",
+    credits: 120,
+    priceEur: 49.99,
+    priceCents: 4999,
+    stripePriceId: process.env.STRIPE_PRICE_PACK_INTENSIF || "price_pack_intensif",
+    description: "120 crédits — taux 0,42€/crédit",
+    icon: "🔥",
+    popular: true,
+  },
+  pack_prestige: {
+    id: "pack_prestige",
+    name: "Prestige",
+    credits: 280,
+    priceEur: 99.99,
+    priceCents: 9999,
+    stripePriceId: process.env.STRIPE_PRICE_PACK_PRESTIGE || "price_pack_prestige",
+    description: "280 crédits — taux 0,36€/crédit",
+    icon: "⭐",
+    popular: false,
+  },
+  pack_liberte: {
+    id: "pack_liberte",
+    name: "Liberté",
+    credits: 600,
+    priceEur: 199.99,
+    priceCents: 19999,
+    stripePriceId: process.env.STRIPE_PRICE_PACK_LIBERTE || "price_pack_liberte",
+    description: "600 crédits — taux 0,33€/crédit",
+    icon: "💎",
+    popular: false,
+  },
 } as const;
 
 // ─── Feature Unlocks (one-shot) ───────────────────────────────────

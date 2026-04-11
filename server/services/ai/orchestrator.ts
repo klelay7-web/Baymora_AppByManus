@@ -14,6 +14,7 @@ import { agentAtlas, formatAtlasBriefing } from "./agentAtlas";
 import { agentScout, agentScoutMulti, formatScoutBriefing } from "./agentScout";
 import { ENV } from "../../_core/env";
 import Anthropic from "@anthropic-ai/sdk";
+import { classifyComplexity } from "../claudeService";
 
 const anthropic = new Anthropic({ apiKey: ENV.anthropicApiKey });
 
@@ -26,6 +27,7 @@ export interface OrchestratorInput {
   subscriptionTier?: string;
   messageIndex?: number;
   userCity?: string;
+  _complexity?: "simple" | "complex"; // injecté par orchestrate(), ne pas passer manuellement
 }
 
 export interface OrchestratorOutput {
@@ -88,8 +90,13 @@ async function runFlash(input: OrchestratorInput): Promise<OrchestratorOutput> {
 
   const enrichedSystem = input.systemPrompt + atlasBriefing;
 
-  // Haiku pour les messages simples (Membre/Duo), Sonnet pour Cercle
-  const flashModel = input.subscriptionTier === "elite" ? "claude-sonnet-4-5" : "claude-haiku-4-5";
+  // classifyComplexity alimente le choix du modèle :
+  // - simple + Cercle → Sonnet | simple + autres → Haiku
+  // - complex (ne devrait pas arriver en FLASH, fallback Sonnet)
+  const isComplex = input._complexity === "complex";
+  const flashModel = (input.subscriptionTier === "elite" || isComplex)
+    ? "claude-sonnet-4-5"
+    : "claude-haiku-4-5";
 
   const response = await anthropic.messages.create({
     model: flashModel,
@@ -125,8 +132,13 @@ async function runExplore(input: OrchestratorInput): Promise<OrchestratorOutput>
 
   const enrichedSystem = input.systemPrompt + atlasBriefing + scoutBriefing;
 
+  // classifyComplexity alimente le modèle :
+  // - simple → Sonnet (suffisant pour EXPLORE simple)
+  // - complex → Opus (planification profonde)
+  const exploreModel = input._complexity === "simple" ? "claude-sonnet-4-5" : "claude-opus-4-5";
+
   const response = await anthropic.messages.create({
-    model: "claude-opus-4-5",
+    model: exploreModel,
     max_tokens: 1800,
     system: enrichedSystem,
     messages: [...input.history, { role: "user", content: input.userMessage }],
@@ -140,7 +152,7 @@ async function runExplore(input: OrchestratorInput): Promise<OrchestratorOutput>
 
   return {
     content,
-    model: "claude-opus-4-5",
+    model: exploreModel,
     scenario: "EXPLORE",
     agentsUsed,
     processingTime: Date.now() - start,
@@ -195,20 +207,23 @@ async function runExcellence(input: OrchestratorInput): Promise<OrchestratorOutp
 // ─── Point d'entrée principal ─────────────────────────────────────────────────
 
 export async function orchestrate(input: OrchestratorInput): Promise<OrchestratorOutput> {
-  const scenario = detectScenario(
-    input.userMessage,
-    input.subscriptionTier,
-    input.messageIndex
-  );
+  // Flux : classifyComplexity choisit le MODÈLE → detectScenario choisit le MODE DE RÉPONSE
+  // Les deux coexistent : classifyComplexity alimente l'orchestrateur, il ne le remplace pas.
+  const [complexity, scenario] = await Promise.all([
+    classifyComplexity(input.userMessage),
+    Promise.resolve(detectScenario(input.userMessage, input.subscriptionTier, input.messageIndex)),
+  ]);
 
-  console.log(`[Orchestrateur] Scénario: ${scenario} | Message: "${input.userMessage.slice(0, 50)}..."`);
+  const enrichedInput: OrchestratorInput = { ...input, _complexity: complexity };
+
+  console.log(`[Orchestrateur] Scénario: ${scenario} | Complexité: ${complexity} | Message: "${input.userMessage.slice(0, 50)}..."`);
 
   switch (scenario) {
     case "FLASH":
-      return runFlash(input);
+      return runFlash(enrichedInput);
     case "EXPLORE":
-      return runExplore(input);
+      return runExplore(enrichedInput);
     case "EXCELLENCE":
-      return runExcellence(input);
+      return runExcellence(enrichedInput);
   }
 }

@@ -29,6 +29,7 @@ import Confidentialite from "./pages/Confidentialite";
 import CGU from "./pages/CGU";
 import Contact from "./pages/Contact";
 import PartenaireEvenement from "./pages/PartenaireEvenement";
+import EstablishmentDetail from "./pages/EstablishmentDetail";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, loading } = useAuth();
@@ -93,6 +94,8 @@ function Router() {
       <Route path="/lieu/:id">
         {() => <LieuDetail />}
       </Route>
+      {/* Fiche etablissement par slug (EstablishmentDetail) */}
+      <Route path="/adresse/:slug" component={EstablishmentDetail} />
 
       {/* Maya Demo — accessible sans connexion */}
       <Route path="/maya-demo" component={MayaDemo} />

@@ -35,15 +35,15 @@ const FEATURES = [
   {
     icon: "🏠",
     title: "Un club, pas un outil.",
-    desc: "Maison Baymora est une communauté de membres qui vivent différemment.",
+    desc: "Maison Baymora est une communauté de membres qui vivent intensément.",
   },
 ];
 
 // Chiffres réels — pas de faux témoignages
 const STATS = [
-  { value: "340+", label: "adresses partenaires" },
-  { value: "12", label: "pays couverts" },
-  { value: "-40%", label: "en moyenne négocié" },
+  { value: "∞", label: "Adresses d'exception dans le monde entier" },
+  { value: "De Bordeaux à Tokyo", label: "partout dans le monde" },
+  { value: "✓", label: "Privilèges négociés en direct" },
   { value: "4.9/5", label: "satisfaction" },
 ];
 
@@ -61,17 +61,17 @@ const DIFFERENTIATORS = [
   {
     icon: <Zap size={20} color="#C8A96E" />,
     title: "Maya détient les clés.",
-    desc: "Elle connaît les secrets, les meilleures tables, les portes dérobées. Elle ne propose jamais deux fois la même adresse.",
+    desc: "Elle connaît les secrets, les meilleures tables, les portes dérobées. Elle ne propose jamais deux fois le même parcours.",
   },
   {
     icon: <Star size={20} color="#C8A96E" />,
     title: "Un club, pas un outil.",
-    desc: "Maison Baymora est une communauté de membres qui vivent différemment. Bienvenue chez vous.",
+    desc: "Maison Baymora est une communauté de membres qui vivent intensément. Bienvenue chez vous.",
   },
 ];
 
 const HOW_IT_WORKS = [
-  { step: "01", title: "Dites à Maya ce dont vous rêvez", desc: "\"Week-end romantique à Paris, budget 1500€, 2 nuits.\" C'est tout ce qu'il faut." },
+  { step: "01", title: "Dites à Maya ce dont vous rêvez", desc: "\"Ce soir à Bordeaux, on veut sortir.\" \"Surprendre ma femme pour notre anniversaire.\" \"3 jours à Lisbonne entre amis.\" C'est tout ce qu'il faut." },
   { step: "02", title: "Maya propose 4 accès", desc: "Signature, Privilège, Prestige, Sur-Mesure. Choisissez celui qui vous correspond." },
   { step: "03", title: "Affinez en un clic", desc: "\"Changer l'hôtel\", \"Autre restaurant\" — Maya s'adapte instantanément." },
   { step: "04", title: "Réservez avec vos privilèges", desc: "Liens directs vers les partenaires avec vos privilèges négociés. Votre programme est prêt." },
@@ -80,7 +80,7 @@ const HOW_IT_WORKS = [
 const SOCIAL_PROOF = [
   { name: "Sophie M.", city: "Paris", text: "Maya m'a ouvert des adresses que je ne connaissais pas. Week-end à Venise planifié en 3 messages. Hôtel, restos, gondole privée.", stars: 5 },
   { name: "Thomas R.", city: "Lyon", text: "Mon week-end à Dubai organisé en 3 messages. Suite au Four Seasons, dîner privé sur la Marina, transfert inclus. Le Cercle vaut chaque centime.", stars: 5 },
-  { name: "Camille D.", city: "Bordeaux", text: "Le Cercle Baymora vaut largement l'abonnement. Maya connaît mes goûts, elle ne propose jamais deux fois la même adresse.", stars: 5 },
+  { name: "Camille D.", city: "Bordeaux", text: "Le Cercle Baymora vaut largement l'adhésion. Maya connaît mes goûts, elle ne propose jamais deux fois le même parcours.", stars: 5 },
 ];
 
 const HERO_IMAGES = [
@@ -209,7 +209,7 @@ function LandingTonightSection() {
 const HERO_SUBTITLES = [
   "Hôtels 5★ · Restaurants gastronomiques · Expériences exclusives",
   "Vos voyages planifiés en 3 messages · Jusqu'à -40% négociés",
-  "Maya connaît vos goûts · Elle ne propose jamais deux fois la même adresse",
+  "Maya connaît vos goûts · Elle ne propose jamais deux fois le même parcours",
   "Accès privé aux meilleures adresses du monde · Sans effort",
 ];
 
@@ -224,7 +224,7 @@ const DEMO_PERSONAS = [
   {
     label: "Week-end romantique",
     icon: "💛",
-    prompt: "Week-end romantique à Paris, budget 1500€, 2 nuits.",
+    prompt: "Ce soir à Bordeaux, on veut sortir.",
     reply: "Pour un week-end romantique à Paris avec 1500€, voici mon accès **Privilège** :\n\n**Hôtel** : Hôtel Le Marais Bastille (4★) — Privilège Membre → **290€/nuit**\n**Dîner** : Septime (bistronomique étoilé) — réservation directe, table fenêtre disponible vendredi\n**Matin** : Brunch au Bal Café (Montmartre) + balade Sacré-Cœur\n\nBudget total estimé : **1 340€** pour 2 (hôtel + 2 dîners + brunch)\n\nVous voulez que j'affine l'hôtel ou le restaurant ?",
   },
   {

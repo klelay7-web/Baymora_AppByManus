@@ -4,7 +4,7 @@ import { Check, Crown, Zap, Star, ArrowLeft, Loader2, Users, Gem } from "lucide-
 import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 // Compteur fondateurs
 const FOUNDER_TOTAL = 500;
@@ -101,6 +101,16 @@ export default function Premium() {
   const [, navigate] = useLocation();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [founderLeft, setFounderLeft] = useState(FOUNDER_TOTAL);
+  const [customAmount, setCustomAmount] = useState<number>(20);
+  const [loadingPack, setLoadingPack] = useState<string | null>(null);
+  const [loadingCustom, setLoadingCustom] = useState(false);
+  const { data: creditData } = trpc.credits.getBalance.useQuery(undefined, { enabled: !!user });
+  const customCredits = useMemo(() => {
+    if (customAmount >= 100) return Math.round(customAmount * 3.2);
+    if (customAmount >= 50) return Math.round(customAmount * 2.8);
+    if (customAmount >= 20) return Math.round(customAmount * 2.4);
+    return Math.round(customAmount * 2.0);
+  }, [customAmount]);
 
   // Animation compteur fondateurs (valeur initiale = 423 prises, 77 restantes)
   useEffect(() => {
@@ -117,6 +127,20 @@ export default function Premium() {
     return () => clearInterval(interval);
   }, []);
 
+  const buyCreditPack = trpc.stripe.buyCreditPack.useMutation({
+    onSuccess: (data) => {
+      if (data.url) { window.open(data.url, "_blank"); toast.success("Redirection vers le paiement..."); }
+      setLoadingPack(null);
+    },
+    onError: (err) => { toast.error(err.message || "Erreur paiement"); setLoadingPack(null); },
+  });
+  const buyCustomCredits = trpc.stripe.buyCustomCredits.useMutation({
+    onSuccess: (data) => {
+      if (data.url) { window.open(data.url, "_blank"); toast.success(`Redirection — ${data.credits} crédits en cours d'achat`); }
+      setLoadingCustom(false);
+    },
+    onError: (err) => { toast.error(err.message || "Erreur paiement"); setLoadingCustom(false); },
+  });
   const createCheckoutSession = trpc.stripe.createCheckoutSession.useMutation({
     onSuccess: (data) => {
       if (data.url) {
@@ -307,22 +331,42 @@ export default function Premium() {
           })}
         </div>
 
-        {/* Packs crédits */}
-        <div className="mt-8 p-5 rounded-2xl" style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)" }}>
-          <h3 className="text-base font-semibold mb-1" style={{ color: "#F0EDE6" }}>Packs conversations</h3>
+        {/* D3 — Portefeuille crédits */}
+        {user && creditData !== undefined && (
+          <div className="mt-6 p-4 rounded-2xl flex items-center gap-4" style={{ background: "rgba(200,169,110,0.06)", border: "1px solid rgba(200,169,110,0.2)" }}>
+            <div className="text-2xl">💰</div>
+            <div>
+              <p className="text-xs" style={{ color: "#8B8D94" }}>Votre portefeuille</p>
+              <p className="text-xl font-bold" style={{ color: "#C8A96E" }}>{creditData?.credits ?? 0} <span className="text-sm font-normal" style={{ color: "#8B8D94" }}>crédits</span></p>
+            </div>
+          </div>
+        )}
+        {/* D1 — Packs crédits (6 packs) */}
+        <div className="mt-6 p-5 rounded-2xl" style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)" }}>
+          <h3 className="text-base font-semibold mb-1" style={{ color: "#F0EDE6" }}>Packs crédits</h3>
           <p className="text-xs mb-4" style={{ color: "#8B8D94" }}>Sans abonnement — utilisables à tout moment</p>
           <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: "5 conv.", price: "4,99€", id: "pack_5" },
-              { label: "15 conv.", price: "9,99€", id: "pack_15", popular: true },
-              { label: "40 conv.", price: "19,99€", id: "pack_40" },
-            ].map((pack) => (
-              <div
+            {([
+              { label: "5 crédits", price: "4,99€", id: "pack_5", icon: "✨", popular: false, badge: "" },
+              { label: "15 crédits", price: "9,99€", id: "pack_15", popular: true, icon: "⭐", badge: "" },
+              { label: "40 crédits", price: "19,99€", id: "pack_40", icon: "👑", popular: false, badge: "" },
+              { label: "120 crédits", price: "49,99€", id: "pack_intensif", popular: true, icon: "🔥", badge: "Intensif" },
+              { label: "280 crédits", price: "99,99€", id: "pack_prestige", icon: "⭐", popular: false, badge: "Prestige" },
+              { label: "600 crédits", price: "199,99€", id: "pack_liberte", icon: "💎", popular: false, badge: "Liberté" },
+            ] as Array<{ label: string; price: string; id: string; icon: string; popular: boolean; badge: string }>).map((pack) => (
+              <button
                 key={pack.id}
-                className="rounded-xl p-3 text-center relative"
+                onClick={() => {
+                  if (!user) { toast.error("Connecte-toi pour acheter des crédits"); return; }
+                  setLoadingPack(pack.id);
+                  buyCreditPack.mutate({ packId: pack.id as any, origin: window.location.origin });
+                }}
+                disabled={loadingPack === pack.id}
+                className="rounded-xl p-3 text-center relative cursor-pointer transition-all"
                 style={{
                   background: pack.popular ? "rgba(200,169,110,0.08)" : "rgba(255,255,255,0.02)",
                   border: pack.popular ? "1px solid rgba(200,169,110,0.3)" : "1px solid rgba(200,169,110,0.08)",
+                  opacity: loadingPack === pack.id ? 0.7 : 1,
                 }}
               >
                 {pack.popular && (
@@ -331,10 +375,45 @@ export default function Premium() {
                     Populaire
                   </div>
                 )}
-                <p className="text-sm font-semibold mt-1" style={{ color: "#F0EDE6" }}>{pack.label}</p>
+                <p className="text-lg mb-0.5">{pack.icon}</p>
+                {"badge" in pack && pack.badge && <p className="text-[10px] font-bold mb-0.5" style={{ color: "#C8A96E" }}>{pack.badge}</p>}
+                <p className="text-sm font-semibold" style={{ color: "#F0EDE6" }}>{pack.label}</p>
                 <p className="text-base font-bold" style={{ color: "#C8A96E" }}>{pack.price}</p>
-              </div>
+              </button>
             ))}
+          </div>
+          {/* D2 — Montant libre */}
+          <div className="mt-5 pt-5" style={{ borderTop: "1px solid rgba(200,169,110,0.08)" }}>
+            <p className="text-xs font-semibold mb-3" style={{ color: "#F0EDE6" }}>Montant libre</p>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <input
+                  type="range" min={5} max={500} step={5}
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(Number(e.target.value))}
+                  className="w-full accent-[#C8A96E]"
+                />
+                <div className="flex justify-between text-[10px] mt-1" style={{ color: "#8B8D94" }}>
+                  <span>5€</span><span>500€</span>
+                </div>
+              </div>
+              <div className="text-right min-w-[80px]">
+                <p className="text-xl font-bold" style={{ color: "#C8A96E" }}>{customAmount}€</p>
+                <p className="text-[10px]" style={{ color: "#8B8D94" }}>{customCredits} crédits</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (!user) { toast.error("Connecte-toi pour acheter des crédits"); return; }
+                setLoadingCustom(true);
+                buyCustomCredits.mutate({ amountEur: customAmount, origin: window.location.origin });
+              }}
+              disabled={loadingCustom}
+              className="mt-3 w-full py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: "rgba(200,169,110,0.12)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.25)" }}
+            >
+              {loadingCustom ? "Redirection..." : `Acheter ${customCredits} crédits pour ${customAmount}€`}
+            </button>
           </div>
         </div>
 
