@@ -1,4 +1,5 @@
 import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, decimal, bigint, float, date } from "drizzle-orm/mysql-core";
+import { sql } from "drizzle-orm";
 
 // ─── Users ───────────────────────────────────────────────────────────
 export const users = mysqlTable("users", {
@@ -40,6 +41,12 @@ export const users = mysqlTable("users", {
   notifySorties: boolean("notifySorties").default(true).notNull(),
   monthlyParcours: int("monthlyParcours").default(0).notNull(),
   monthlyParcoursReset: timestamp("monthlyParcoursReset"),
+  // Radar
+  radarUnlockedUntil: timestamp("radar_unlocked_until"),
+  radarTrialEnd: timestamp("radar_trial_end"),
+  radarSearchesUsed: int("radar_searches_used").default(0),
+  radarSubscribed: boolean("radar_subscribed").default(false),
+  radarFrequency: varchar("radar_frequency", { length: 20 }).default("weekly"),
 });
 
 export type User = typeof users.$inferSelect;
@@ -1266,3 +1273,21 @@ export const events = mysqlTable("events", {
 });
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = typeof events.$inferInsert;
+
+// ─── Affiliate Programs ──────────────────────────────────────────────
+export const affiliatePrograms = mysqlTable('affiliate_programs', {
+  id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+  name: varchar('name', { length: 100 }).notNull(),
+  slug: varchar('slug', { length: 50 }).notNull().unique(),
+  category: varchar('category', { length: 50 }).notNull(),
+  baseUrl: varchar('base_url', { length: 500 }),
+  affiliateId: varchar('affiliate_id', { length: 255 }),
+  commissionRate: varchar('commission_rate', { length: 50 }),
+  cookieDuration: varchar('cookie_duration', { length: 50 }),
+  urlTemplate: text('url_template'),
+  isActive: boolean('is_active').default(false),
+  priority: int('priority').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+export type AffiliateProgram = typeof affiliatePrograms.$inferSelect;
+export type InsertAffiliateProgram = typeof affiliatePrograms.$inferInsert;

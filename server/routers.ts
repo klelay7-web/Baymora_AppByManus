@@ -76,6 +76,7 @@ import { genererArticleBlog, genererPostSocial, genererCalendrierEditorial, rech
 import { genererEmail, repondreCommentaire, gererMessagePrive, genererEmailProspection } from "./services/ai/communicationAgent";
 import { rechercherPrestataires, genererStrategieAffiliation, analyserPartenaire, PROGRAMMES_AFFILIATION } from "./services/ai/affiliationAgent";
 import { createMission, getActiveMission, getMissionHistory, addMissionProgress, closeMission, buildMissionContext } from "./services/missionService";
+import { getRadarForPosition, unlockRadarForUser, searchCityRadar } from "./services/radarService";
 
 // ─── Rate Limiter en mémoire (par userId, par minute) ───────────────────────
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -119,9 +120,43 @@ const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+// ─── Radar Router ──────────────────────────────────────────────────────────────────
+const radarRouter = router({
+  getForPosition: protectedProcedure
+    .input(z.object({ lat: z.number(), lng: z.number(), city: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return getRadarForPosition(input.lat, input.lng, input.city, ctx.user.id);
+    }),
+  unlock: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      return unlockRadarForUser(ctx.user.id);
+    }),
+  searchCity: protectedProcedure
+    .input(z.object({ city: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return searchCityRadar(input.city, ctx.user.id);
+    }),
+  getStatus: protectedProcedure
+    .query(async ({ ctx }) => {
+      const db = await (await import('./db')).getDb();
+      if (!db) return { hasAccess: false, trialActive: false, subscribed: false, searchesUsed: 0 };
+      const { users } = await import('../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      const rows = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+      const user = rows[0];
+      if (!user) return { hasAccess: false, trialActive: false, subscribed: false, searchesUsed: 0 };
+      const now = new Date();
+      const trialActive = !!(user.radarTrialEnd && new Date(user.radarTrialEnd as any) > now);
+      const subscribed = !!(user as any).radarSubscribed;
+      const unlockedUntil = (user as any).radarUnlockedUntil;
+      const hasAccess = subscribed || trialActive || !!(unlockedUntil && new Date(unlockedUntil) > now);
+      return { hasAccess, trialActive, subscribed, trialEnd: user.radarTrialEnd, searchesUsed: (user as any).radarSearchesUsed || 0, unlockedUntil };
+    }),
+});
+
 export const appRouter = router({
   system: systemRouter,
-
+  radar: radarRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

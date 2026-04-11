@@ -1,0 +1,44 @@
+{
+  "name": "Maison Baymora",
+  "short_name": "Baymora",
+  "description": "Social Club personnelle propulsée par l'IA MAYA. Parcours de voyage luxe sur-mesure, offres exclusives 5 étoiles.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "lang": "fr",
+  "categories": ["travel", "lifestyle", "luxury"],
+  "icons": [
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm/icon-192_3f4136fc.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm/icon-192_3f4136fc.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Chat avec Maya",
+      "short_name": "Maya",
+      "description": "Démarrer une conversation avec Maya",
+      "url": "/maya",
+      "icons": [{ "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm/icon-192_3f4136fc.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Ma Position",
+      "short_name": "Radar",
+      "description": "Découvrir les adresses autour de moi",
+      "url": "/ma-position",
+      "icons": [{ "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm/icon-192_3f4136fc.png", "sizes": "96x96" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

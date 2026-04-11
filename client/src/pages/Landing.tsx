@@ -29,7 +29,7 @@ const FEATURES = [
   },
   {
     icon: "🗺️",
-    title: "Parcours sur-mesure illimités",
+    title: "Parcours sur-mesure personnalisés",
     desc: "Créez, sauvegardez et partagez vos voyages. Chaque parcours est unique, coordonné et personnalisé.",
   },
   {
@@ -694,21 +694,21 @@ export default function Landing() {
               {
                 name: "Membre",
                 price: "9,90€/mois ou 99€/an",
-                features: ["Maya illimitée", "Parcours & cartes illimités", "Privilèges partenaires", "Feed local \"Ma position\"", "Mode Business"],
+                features: ["Maya illimitée", "5 parcours par mois", "Privilèges partenaires", "Feed local \"Ma position\"", "Mode Business"],
                 highlight: true,
                 cta: "Rejoindre la Maison",
               },
               {
                 name: "Duo",
                 price: "14,90€/mois ou 149€/an",
-                features: ["Tout Membre pour 2 profils", "Parcours en commun", "Préférences croisées"],
+                features: ["Tout Membre pour 2 profils", "Parcours en commun", "8 parcours partagés par mois", "Préférences croisées"],
                 highlight: false,
                 cta: "Choisir Duo",
               },
               {
                 name: "Le Cercle",
                 price: "149€/an — Fondateur à vie",
-                features: ["Tout Membre", "Maya mode Prestige", "Le Secret du Jour", "Événements privés Cercle", "2 invitations/mois", "Badge Fondateur (500 places)"],
+                features: ["Tout Membre", "10 parcours par mois", "Maya mode Prestige", "Badge Fondateur (500 places)", "Support prioritaire (réponse sous 2h)", "Accès aux expériences Sur-Mesure exclusives"],
                 highlight: false,
                 cta: "Rejoindre Le Cercle",
               },
@@ -806,7 +806,7 @@ export default function Landing() {
             className="text-2xl md:text-3xl font-bold mb-3"
             style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
           >
-            Prêt à vivre autrement ?
+            Prêt à vivre intensément ?
           </h2>
           <p className="text-sm mb-6" style={{ color: "#8B8D94" }}>
             Rejoignez les membres qui savent où aller.

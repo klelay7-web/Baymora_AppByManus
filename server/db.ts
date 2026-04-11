@@ -11,7 +11,8 @@ import {
   serviceProviders, aiDirectives, aiDepartmentReports, bundles, contentCalendar,
   establishmentComments,
   fieldReports, fieldReportServices, fieldReportJourney, fieldReportContacts, fieldReportMedia,
-  userDestinations, destinationSaves, clientProfiles, companions, pilotageMessages
+  userDestinations, destinationSaves, clientProfiles, companions, pilotageMessages,
+  affiliatePrograms
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
