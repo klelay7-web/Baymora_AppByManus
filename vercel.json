@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm install && vite build && esbuild api/index.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js --alias:@shared=./shared --alias:@=./client/src && rm api/index.ts",
+  "buildCommand": "pnpm install && vite build && mkdir -p api && esbuild server/vercel-entry.ts --bundle --platform=node --format=cjs --packages=external --outfile=api/index.js --alias:@shared=./shared --alias:@=./client/src",
   "outputDirectory": "dist/public",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },

@@ -2,11 +2,11 @@ import "dotenv/config";
 import express from "express";
 import crypto from "crypto";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "../server/_core/oauth";
-import { appRouter } from "../server/routers";
-import { createContext } from "../server/_core/context";
-import { handleStripeWebhook } from "../server/stripe/webhook";
-import { trackAffiliateClick, getDb } from "../server/db";
+import { registerOAuthRoutes } from "./_core/oauth";
+import { appRouter } from "./routers";
+import { createContext } from "./_core/context";
+import { handleStripeWebhook } from "./stripe/webhook";
+import { trackAffiliateClick, getDb } from "./db";
 import { affiliatePartners } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
@@ -33,7 +33,7 @@ app.post("/api/upload/field-report", async (req, res) => {
         const contentType = req.headers["content-type"] || "application/octet-stream";
         const fileName = (req.headers["x-file-name"] as string) || `upload-${Date.now()}`;
         const userId = (req.headers["x-user-id"] as string) || "unknown";
-        const { storagePut } = await import("../server/storage");
+        const { storagePut } = await import("./storage");
         const suffix = Math.random().toString(36).substring(2, 8);
         const key = `field-reports/${userId}/${Date.now()}-${suffix}-${fileName}`;
         const { url } = await storagePut(key, body, contentType);
