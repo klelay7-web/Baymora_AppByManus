@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "build:vercel": "vite build"
+    "build:vercel": "vite build",
+    "db:migrate": "drizzle-kit push"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
