@@ -23,7 +23,6 @@ CREATE TABLE `affiliateClicks` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `affiliateClicks_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `affiliateConversions` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`clickId` int NOT NULL,
@@ -38,7 +37,6 @@ CREATE TABLE `affiliateConversions` (
 	`confirmedAt` timestamp,
 	CONSTRAINT `affiliateConversions_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `affiliatePartners` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`name` varchar(128) NOT NULL,
@@ -54,7 +52,6 @@ CREATE TABLE `affiliatePartners` (
 	CONSTRAINT `affiliatePartners_id` PRIMARY KEY(`id`),
 	CONSTRAINT `affiliatePartners_slug_unique` UNIQUE(`slug`)
 );
---> statement-breakpoint
 CREATE TABLE `agentTasks` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`department` enum('acquisition','concierge','logistics','quality') NOT NULL,
@@ -72,7 +69,6 @@ CREATE TABLE `agentTasks` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `agentTasks_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `conversations` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -83,7 +79,6 @@ CREATE TABLE `conversations` (
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `conversations_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `creditTransactions` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -94,7 +89,6 @@ CREATE TABLE `creditTransactions` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `creditTransactions_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `messages` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`conversationId` int NOT NULL,
@@ -105,7 +99,6 @@ CREATE TABLE `messages` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `messages_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `seoCards` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`slug` varchar(256) NOT NULL,
@@ -137,7 +130,6 @@ CREATE TABLE `seoCards` (
 	CONSTRAINT `seoCards_id` PRIMARY KEY(`id`),
 	CONSTRAINT `seoCards_slug_unique` UNIQUE(`slug`)
 );
---> statement-breakpoint
 CREATE TABLE `socialMediaPosts` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`seoCardId` int,
@@ -154,7 +146,6 @@ CREATE TABLE `socialMediaPosts` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `socialMediaPosts_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `travelCompanions` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -166,7 +157,6 @@ CREATE TABLE `travelCompanions` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `travelCompanions_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `travelItineraries` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -185,7 +175,6 @@ CREATE TABLE `travelItineraries` (
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `travelItineraries_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `userPreferences` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -198,12 +187,6 @@ CREATE TABLE `userPreferences` (
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `userPreferences_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
-ALTER TABLE `users` ADD `subscriptionTier` enum('free','premium') DEFAULT 'free' NOT NULL;--> statement-breakpoint
-ALTER TABLE `users` ADD `credits` int DEFAULT 3 NOT NULL;--> statement-breakpoint
-ALTER TABLE `users` ADD `creditsRollover` int DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE `users` ADD `freeMessagesUsed` int DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE `users` ADD `stripeCustomerId` varchar(128);--> statement-breakpoint
 ALTER TABLE `users` ADD `stripeSubscriptionId` varchar(128);CREATE TABLE `establishmentMedia` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`establishmentId` int NOT NULL,
@@ -217,7 +200,6 @@ ALTER TABLE `users` ADD `stripeSubscriptionId` varchar(128);CREATE TABLE `establ
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `establishmentMedia_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `establishments` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`slug` varchar(256) NOT NULL,
@@ -262,7 +244,6 @@ CREATE TABLE `establishments` (
 	CONSTRAINT `establishments_id` PRIMARY KEY(`id`),
 	CONSTRAINT `establishments_slug_unique` UNIQUE(`slug`)
 );
---> statement-breakpoint
 CREATE TABLE `tripDays` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`tripPlanId` int NOT NULL,
@@ -277,7 +258,6 @@ CREATE TABLE `tripDays` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `tripDays_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `tripPlans` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -306,7 +286,6 @@ CREATE TABLE `tripPlans` (
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `tripPlans_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `tripSteps` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`tripDayId` int NOT NULL,
@@ -335,24 +314,6 @@ CREATE TABLE `tripSteps` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `tripSteps_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
-ALTER TABLE `affiliateClicks` ADD `establishmentId` int;--> statement-breakpoint
-ALTER TABLE `conversations` ADD `tripType` enum('leisure','business','romantic','family','staycation','adventure','wellness');--> statement-breakpoint
-ALTER TABLE `messages` ADD `attachmentType` enum('none','trip_plan','establishment','map_route','offer') DEFAULT 'none';--> statement-breakpoint
-ALTER TABLE `messages` ADD `attachmentData` text;--> statement-breakpoint
-ALTER TABLE `socialMediaPosts` ADD `establishmentId` int;--> statement-breakpoint
-ALTER TABLE `travelCompanions` ADD `allergies` text;--> statement-breakpoint
-ALTER TABLE `travelCompanions` ADD `passportCountry` varchar(64);--> statement-breakpoint
-ALTER TABLE `users` ADD `phone` varchar(32);--> statement-breakpoint
-ALTER TABLE `users` ADD `avatarUrl` text;--> statement-breakpoint
-ALTER TABLE `users` ADD `language` varchar(8) DEFAULT 'fr';--> statement-breakpoint
-ALTER TABLE `users` ADD `currency` varchar(3) DEFAULT 'EUR';--> statement-breakpoint
-ALTER TABLE `users` ADD `homeCity` varchar(128);--> statement-breakpoint
-ALTER TABLE `users` ADD `homeCountry` varchar(128);--> statement-breakpoint
-ALTER TABLE `users` ADD `homeAddress` text;--> statement-breakpoint
-ALTER TABLE `users` ADD `homeLat` float;--> statement-breakpoint
-ALTER TABLE `users` ADD `homeLng` float;--> statement-breakpoint
-ALTER TABLE `users` ADD `budgetPreference` enum('economy','moderate','premium','ultra_premium') DEFAULT 'moderate';--> statement-breakpoint
 ALTER TABLE `users` ADD `travelStyle` enum('adventure','relaxation','cultural','business','romantic','family') DEFAULT 'cultural';CREATE TABLE `aiDepartmentReports` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`department` enum('seo','content','acquisition','concierge','analytics') NOT NULL,
@@ -364,7 +325,6 @@ ALTER TABLE `users` ADD `travelStyle` enum('adventure','relaxation','cultural','
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `aiDepartmentReports_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `aiDirectives` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`authorId` int NOT NULL,
@@ -380,7 +340,6 @@ CREATE TABLE `aiDirectives` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `aiDirectives_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `ambassadors` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -400,7 +359,6 @@ CREATE TABLE `ambassadors` (
 	CONSTRAINT `ambassadors_id` PRIMARY KEY(`id`),
 	CONSTRAINT `ambassadors_referralCode_unique` UNIQUE(`referralCode`)
 );
---> statement-breakpoint
 CREATE TABLE `bundles` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`slug` varchar(256) NOT NULL,
@@ -427,7 +385,6 @@ CREATE TABLE `bundles` (
 	CONSTRAINT `bundles_id` PRIMARY KEY(`id`),
 	CONSTRAINT `bundles_slug_unique` UNIQUE(`slug`)
 );
---> statement-breakpoint
 CREATE TABLE `collections` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -439,7 +396,6 @@ CREATE TABLE `collections` (
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `collections_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `commissionPayments` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`recipientType` enum('ambassador','partner','influencer','concierge') NOT NULL,
@@ -456,7 +412,6 @@ CREATE TABLE `commissionPayments` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `commissionPayments_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `contentCalendar` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`title` varchar(256) NOT NULL,
@@ -474,7 +429,6 @@ CREATE TABLE `contentCalendar` (
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `contentCalendar_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `favorites` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -485,7 +439,6 @@ CREATE TABLE `favorites` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `favorites_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `referrals` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`ambassadorId` int NOT NULL,
@@ -498,7 +451,6 @@ CREATE TABLE `referrals` (
 	`convertedAt` timestamp,
 	CONSTRAINT `referrals_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `serviceProviders` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`name` varchar(256) NOT NULL,
@@ -560,7 +512,6 @@ CREATE TABLE `fieldReportContacts` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `fieldReportContacts_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `fieldReportJourney` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`fieldReportId` int NOT NULL,
@@ -586,7 +537,6 @@ CREATE TABLE `fieldReportJourney` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `fieldReportJourney_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `fieldReportMedia` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`fieldReportId` int NOT NULL,
@@ -599,7 +549,6 @@ CREATE TABLE `fieldReportMedia` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `fieldReportMedia_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `fieldReportServices` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`fieldReportId` int NOT NULL,
@@ -617,7 +566,6 @@ CREATE TABLE `fieldReportServices` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `fieldReportServices_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `fieldReports` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -655,13 +603,6 @@ CREATE TABLE `fieldReports` (
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `fieldReports_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
-ALTER TABLE `users` MODIFY COLUMN `role` enum('user','admin','team') NOT NULL DEFAULT 'user';ALTER TABLE `users` MODIFY COLUMN `subscriptionTier` enum('free','premium','elite') NOT NULL DEFAULT 'free';--> statement-breakpoint
-ALTER TABLE `users` MODIFY COLUMN `credits` int NOT NULL DEFAULT 15;--> statement-breakpoint
-ALTER TABLE `users` ADD `points` int DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE `users` ADD `pointsLifetime` int DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE `users` ADD `featureVipExpiry` timestamp;--> statement-breakpoint
-ALTER TABLE `users` ADD `featureConciergeExpiry` timestamp;--> statement-breakpoint
 ALTER TABLE `users` ADD `featureOffMarketExpiry` timestamp;CREATE TABLE `pilotageMessages` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`role` enum('user','assistant','system') NOT NULL,
@@ -709,7 +650,6 @@ CREATE TABLE `clientProfiles` (
 	CONSTRAINT `clientProfiles_id` PRIMARY KEY(`id`),
 	CONSTRAINT `clientProfiles_userId_unique` UNIQUE(`userId`)
 );
---> statement-breakpoint
 CREATE TABLE `companions` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -736,7 +676,6 @@ CREATE TABLE `companions` (
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `companions_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `destinationSaves` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -744,7 +683,6 @@ CREATE TABLE `destinationSaves` (
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `destinationSaves_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `userDestinations` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
@@ -772,33 +710,6 @@ CREATE TABLE `userDestinations` (
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `userDestinations_id` PRIMARY KEY(`id`)
 );
-ALTER TABLE `seoCards` MODIFY COLUMN `generatedBy` enum('ai','manual','lena') NOT NULL DEFAULT 'ai';--> statement-breakpoint
-ALTER TABLE `bundles` ADD `isVerified` boolean DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE `bundles` ADD `lenaCreated` boolean DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE `bundles` ADD `seoCardIds` text;--> statement-breakpoint
-ALTER TABLE `bundles` ADD `fieldReportIds` text;--> statement-breakpoint
-ALTER TABLE `bundles` ADD `sourceType` enum('manual','lena_chat','lena_generate','field_report','ai_auto') DEFAULT 'manual';--> statement-breakpoint
-ALTER TABLE `seoCards` ADD `isVerified` boolean DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE `seoCards` ADD `lenaCreated` boolean DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE `seoCards` ADD `fieldReportId` int;--> statement-breakpoint
-ALTER TABLE `seoCards` ADD `sourceType` enum('manual','lena_chat','lena_generate','field_report','ai_auto') DEFAULT 'manual';--> statement-breakpoint
-ALTER TABLE `userDestinations` ADD `isLenaGenerated` boolean DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE `userDestinations` ADD `lenaSessionId` varchar(64);--> statement-breakpoint
-ALTER TABLE `userDestinations` ADD `sourceFieldReportId` int;--> statement-breakpoint
-ALTER TABLE `userDestinations` ADD `sourceConversationId` int;--> statement-breakpoint
-ALTER TABLE `userDestinations` ADD `lenaDecision` enum('pending','keep','delete','convert_bundle','convert_seocard') DEFAULT 'pending';--> statement-breakpoint
-ALTER TABLE `userDestinations` ADD `lenaDecisionAt` timestamp;--> statement-breakpoint
-ALTER TABLE `userDestinations` ADD `lenaDecisionNotes` text;ALTER TABLE `seoCards` MODIFY COLUMN `category` enum('restaurant','hotel','activity','bar','spa','guide','experience','transport','cityGuide','rooftop','vip','event','boutique','airport','spa_wellness','park_garden','beach','viewpoint','secret_spot','nightlife','shopping_luxury','concierge','villa','private_jet') NOT NULL;--> statement-breakpoint
-ALTER TABLE `bundles` ADD `budgetTarget` enum('budget','moderate','premium','luxury') DEFAULT 'moderate';--> statement-breakpoint
-ALTER TABLE `bundles` ADD `cityFocus` varchar(128);--> statement-breakpoint
-ALTER TABLE `bundles` ADD `seoCardCount` int DEFAULT 0;--> statement-breakpoint
-ALTER TABLE `contentCalendar` ADD `blogContent` text;--> statement-breakpoint
-ALTER TABLE `contentCalendar` ADD `blogSeoCity` varchar(128);--> statement-breakpoint
-ALTER TABLE `contentCalendar` ADD `blogKeywords` text;--> statement-breakpoint
-ALTER TABLE `contentCalendar` ADD `blogSlug` varchar(256);--> statement-breakpoint
-ALTER TABLE `contentCalendar` ADD `linkedSeoCardIds` text;--> statement-breakpoint
-ALTER TABLE `seoCards` ADD `viralVideos` text;ALTER TABLE `clientProfiles` ADD `ariaInstructions` text;--> statement-breakpoint
-ALTER TABLE `clientProfiles` ADD `ariaInstructionsUpdatedAt` timestamp;--> statement-breakpoint
 ALTER TABLE `clientProfiles` ADD `profileExtractedFields` text;CREATE TABLE `ariaMissions` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`title` varchar(256) NOT NULL,
@@ -816,11 +727,6 @@ ALTER TABLE `clientProfiles` ADD `profileExtractedFields` text;CREATE TABLE `ari
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `ariaMissions_id` PRIMARY KEY(`id`)
 );
-ALTER TABLE `ariaMissions` ADD `finalReport` text;--> statement-breakpoint
-ALTER TABLE `ariaMissions` ADD `finalReportAt` timestamp;--> statement-breakpoint
-ALTER TABLE `ariaMissions` ADD `successScore` int;--> statement-breakpoint
-ALTER TABLE `ariaMissions` ADD `completedTasks` int DEFAULT 0;--> statement-breakpoint
-ALTER TABLE `ariaMissions` ADD `totalTasks` int DEFAULT 0;--> statement-breakpoint
 ALTER TABLE `ariaMissions` ADD `durationHours` int DEFAULT 24;CREATE TABLE `agentTaskOrders` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`title` varchar(256) NOT NULL,
@@ -842,7 +748,6 @@ ALTER TABLE `ariaMissions` ADD `durationHours` int DEFAULT 24;CREATE TABLE `agen
 	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `agentTaskOrders_id` PRIMARY KEY(`id`)
 );
---> statement-breakpoint
 CREATE TABLE `lenaSessions` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`userId` int NOT NULL,
