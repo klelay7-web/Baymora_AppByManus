@@ -1,6 +1,7 @@
 import { eq, desc, and, sql, asc, like, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
+// force rebuild
 import {
   InsertUser, users,
   conversations, messages,
