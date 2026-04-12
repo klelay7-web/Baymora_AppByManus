@@ -4,6 +4,8 @@
  * Appelé par un cron job ou au démarrage du serveur.
  */
 
+import { getMysqlConnOpts } from "../db";
+
 interface TripPlanRow {
   id: number;
   userId: number;
@@ -24,7 +26,7 @@ interface NotificationInsert {
 async function insertNotification(notif: NotificationInsert): Promise<void> {
   try {
     const mysql = await import("mysql2/promise");
-    const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+    const conn = await mysql.default.createConnection(getMysqlConnOpts());
     await conn.execute(
       "INSERT INTO notifications (userId, title, message, type, createdAt) VALUES (?, ?, ?, ?, NOW())",
       [notif.userId, notif.title, notif.message, notif.type]
@@ -38,7 +40,7 @@ async function insertNotification(notif: NotificationInsert): Promise<void> {
 async function sendReminderEmail(userId: number, subject: string, body: string): Promise<void> {
   try {
     const mysql = await import("mysql2/promise");
-    const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+    const conn = await mysql.default.createConnection(getMysqlConnOpts());
     const [rows] = await conn.execute("SELECT email FROM users WHERE id = ?", [userId]) as any;
     await conn.end();
     if (!rows[0]?.email) return;
@@ -69,7 +71,7 @@ export async function runDailyReminders(): Promise<void> {
 
   try {
     const mysql = await import("mysql2/promise");
-    const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+    const conn = await mysql.default.createConnection(getMysqlConnOpts());
 
     // Récupérer tous les plans actifs ou validés avec une date de départ
     const [rows] = await conn.execute(

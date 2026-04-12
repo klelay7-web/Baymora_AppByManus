@@ -5,12 +5,13 @@
  */
 
 import { notifyOwner } from "../_core/notification";
+import { getMysqlConnOpts } from "../db";
 
 // ─── Helpers DB ──────────────────────────────────────────────────────────────
 
 async function getEventsTonight(): Promise<Record<string, any[]>> {
   const mysql = await import("mysql2/promise");
-  const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+  const conn = await mysql.default.createConnection(getMysqlConnOpts());
   try {
     const [rows] = await conn.execute(
       `SELECT * FROM events WHERE date = CURDATE() AND (status = 'approved' OR source = 'baymora-seed') ORDER BY city, time_start ASC`
@@ -28,7 +29,7 @@ async function getEventsTonight(): Promise<Record<string, any[]>> {
 
 async function getEventsThisWeekend(): Promise<Record<string, any[]>> {
   const mysql = await import("mysql2/promise");
-  const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+  const conn = await mysql.default.createConnection(getMysqlConnOpts());
   try {
     const [rows] = await conn.execute(
       `SELECT * FROM events WHERE DAYOFWEEK(date) IN (1, 7) AND date >= CURDATE() AND date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND (status = 'approved' OR source = 'baymora-seed') ORDER BY city, date ASC, time_start ASC`
@@ -46,7 +47,7 @@ async function getEventsThisWeekend(): Promise<Record<string, any[]>> {
 
 async function getMembersInCity(city: string): Promise<any[]> {
   const mysql = await import("mysql2/promise");
-  const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+  const conn = await mysql.default.createConnection(getMysqlConnOpts());
   try {
     // Chercher dans users.city ET users.homeCity
     const [rows] = await conn.execute(

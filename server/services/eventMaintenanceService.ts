@@ -7,7 +7,7 @@
  * Déclenchement : au démarrage du serveur + cron toutes les heures
  */
 
-import { getDb } from "../db";
+import { getDb, getMysqlConnOpts } from "../db";
 import { events } from "../../drizzle/schema";
 import { lt, count } from "drizzle-orm";
 
@@ -346,7 +346,7 @@ export async function runEventMaintenance(): Promise<void> {
 async function runMonthlyReset(): Promise<void> {
   try {
     const mysql = await import('mysql2/promise');
-    const conn = await (mysql.default).createConnection(process.env.DATABASE_URL!);
+    const conn = await (mysql.default).createConnection(getMysqlConnOpts());
     try {
       await conn.execute(
         `UPDATE users SET monthlyParcours = 0, monthlyParcoursReset = NOW() WHERE monthlyParcoursReset IS NULL OR DATEDIFF(NOW(), monthlyParcoursReset) >= 30`

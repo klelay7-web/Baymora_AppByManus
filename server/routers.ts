@@ -43,6 +43,7 @@ import {
   updateDestinationLenaDecision, getAllDestinationsAdmin, getDestinationSavesAdmin,
   saveDestination, unsaveDestination, getUserSavedDestinations, getLenaCreatedContent,
   getPilotageMessages, addPilotageMessage,
+  getMysqlConnOpts,
 } from "./db";
 import { generateConciergeResponse, getWelcomeResponse } from "./services/concierge";
 import { PLANS } from "./stripe/products";
@@ -1046,7 +1047,7 @@ export const appRouter = router({
       const { eq, or, desc } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const reports = await db.select().from(schema.fieldReports)
         .where(or(eq(schema.fieldReports.status, "submitted"), eq(schema.fieldReports.status, "review")))
@@ -1075,7 +1076,7 @@ export const appRouter = router({
           const { drizzle } = await import("drizzle-orm/mysql2");
           const mysql = await import("mysql2/promise");
           const schema = await import("../drizzle/schema");
-          const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+          const conn = await mysql.default.createConnection(getMysqlConnOpts());
           const db = drizzle(conn);
           const notifContent = input.action === "approve"
             ? `✅ Votre fiche "${report.establishmentName}" a été approuvée et est maintenant publiée.${input.notes ? ` Note : ${input.notes}` : ""}`
@@ -2313,7 +2314,7 @@ export const appRouter = router({
       const { desc } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const cards = await db.select({
         id: schema.seoCards.id,
@@ -2342,7 +2343,7 @@ export const appRouter = router({
       const { desc } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const rows = await db.select({
         id: schema.establishments.id,
@@ -2386,7 +2387,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const { id, ...updates } = input;
         const cleanUpdates: Record<string, unknown> = {};
@@ -2427,7 +2428,7 @@ export const appRouter = router({
         const { drizzle } = await import("drizzle-orm/mysql2");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const insertData = {
           ...input,
@@ -2473,7 +2474,7 @@ export const appRouter = router({
         const { drizzle } = await import("drizzle-orm/mysql2");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const [result] = await db.insert(schema.establishments).values({ ...input, generatedBy: "ai" } as any);
         await conn.end();
@@ -2510,7 +2511,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const { id, ...updates } = input;
         const cleanUpdates: Record<string, unknown> = {};
@@ -2543,7 +2544,7 @@ export const appRouter = router({
         const { drizzle } = await import("drizzle-orm/mysql2");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const [result] = await db.insert(schema.socialMediaPosts).values(input as any);
         await conn.end();
@@ -2572,7 +2573,7 @@ export const appRouter = router({
         const { drizzle } = await import("drizzle-orm/mysql2");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const [result] = await db.insert(schema.contentCalendar).values(input as any);
         await conn.end();
@@ -2585,7 +2586,7 @@ export const appRouter = router({
       const { desc } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const rows = await db.select().from(schema.contentCalendar).orderBy(desc(schema.contentCalendar.scheduledDate));
       await conn.end();
@@ -2605,7 +2606,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const { id, ...updates } = input;
         const cleanUpdates: Record<string, unknown> = {};
@@ -2659,7 +2660,7 @@ export const appRouter = router({
         const { drizzle } = await import("drizzle-orm/mysql2");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         await db.insert(schema.teamInvitations).values({
           token,
@@ -2683,7 +2684,7 @@ export const appRouter = router({
       const { desc } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const rows = await db.select().from(schema.teamInvitations).orderBy(desc(schema.teamInvitations.createdAt));
       await conn.end();
@@ -2697,7 +2698,7 @@ export const appRouter = router({
       const { eq } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const [admin] = await db.select({ id: schema.users.id, name: schema.users.name })
         .from(schema.users).where(eq(schema.users.role, "admin")).limit(1);
@@ -2709,7 +2710,7 @@ export const appRouter = router({
       const { or, eq } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const rows = await db.select({
         id: schema.users.id,
@@ -2733,7 +2734,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const [inv] = await db.select().from(schema.teamInvitations).where(eq(schema.teamInvitations.token, input.token));
         await conn.end();
@@ -2752,7 +2753,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const [inv] = await db.select().from(schema.teamInvitations).where(eq(schema.teamInvitations.token, input.token));
         if (!inv) { await conn.end(); throw new TRPCError({ code: "NOT_FOUND" }); }
@@ -2786,7 +2787,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const [inv] = await db.select().from(schema.teamInvitations).where(eq(schema.teamInvitations.token, input.token));
         await conn.end();
@@ -2813,7 +2814,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         await db.update(schema.teamInvitations).set({ status: "cancelled" }).where(eq(schema.teamInvitations.token, input.token));
         await conn.end();
@@ -2831,7 +2832,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         await db.update(schema.users)
           .set({ subscriptionTier: input.tier as any })
@@ -2850,7 +2851,7 @@ export const appRouter = router({
         const { drizzle } = await import("drizzle-orm/mysql2");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         await db.insert(schema.operatorMessages).values({
           fromUserId: ctx.user.id,
@@ -2875,7 +2876,7 @@ export const appRouter = router({
         const { drizzle } = await import("drizzle-orm/mysql2");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         await db.insert(schema.operatorMessages).values({
           fromUserId: ctx.user.id,
@@ -2895,7 +2896,7 @@ export const appRouter = router({
         const { or, and, eq, desc } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const msgs = await db.select().from(schema.operatorMessages)
           .where(
@@ -2922,7 +2923,7 @@ export const appRouter = router({
       const { eq, and } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const rows = await db.select().from(schema.operatorMessages)
         .where(and(eq(schema.operatorMessages.toUserId, ctx.user.id), eq(schema.operatorMessages.isRead, false)));
@@ -2935,7 +2936,7 @@ export const appRouter = router({
       const { eq, desc } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const msgs = await db.select().from(schema.operatorMessages)
         .where(eq(schema.operatorMessages.toUserId, ctx.user.id))
@@ -2950,7 +2951,7 @@ export const appRouter = router({
       const { eq } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       await db.update(schema.operatorMessages)
         .set({ isRead: true })
@@ -2984,7 +2985,7 @@ export const appRouter = router({
         const { drizzle } = await import("drizzle-orm/mysql2");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const [result] = await db.insert(schema.operatorRoutes).values({
           createdByUserId: ctx.user.id,
@@ -3011,7 +3012,7 @@ export const appRouter = router({
       const { eq, desc } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const routes = await db.select().from(schema.operatorRoutes)
         .where(eq(schema.operatorRoutes.createdByUserId, ctx.user.id))
@@ -3026,7 +3027,7 @@ export const appRouter = router({
       const { desc } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const routes = await db.select().from(schema.operatorRoutes)
         .orderBy(desc(schema.operatorRoutes.createdAt));
@@ -3046,7 +3047,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         await db.update(schema.operatorRoutes)
           .set({ status: input.status, adminFeedback: input.feedback })
@@ -3073,7 +3074,7 @@ export const appRouter = router({
         const { eq, and, desc } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const conditions: any[] = [eq(schema.discountOffers.status, "published")];
         if (input?.sector) conditions.push(eq(schema.discountOffers.sector, input.sector as any));
@@ -3098,7 +3099,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const [offer] = await db.select().from(schema.discountOffers)
           .where(eq(schema.discountOffers.slug, input.slug));
@@ -3154,7 +3155,7 @@ export const appRouter = router({
         const { drizzle } = await import("drizzle-orm/mysql2");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         await db.insert(schema.discountOffers).values(input as any);
         await conn.end();
@@ -3168,7 +3169,7 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         await db.update(schema.discountOffers).set(input.data).where(eq(schema.discountOffers.id, input.id));
         await conn.end();
@@ -3182,7 +3183,7 @@ export const appRouter = router({
         const { eq, and } = await import("drizzle-orm");
         const mysql = await import("mysql2/promise");
         const schema = await import("../drizzle/schema");
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const db = drizzle(conn);
         const [existing] = await db.select().from(schema.discountOfferSaves)
           .where(and(eq(schema.discountOfferSaves.userId, ctx.user.id), eq(schema.discountOfferSaves.offerId, input.offerId)));
@@ -3202,7 +3203,7 @@ export const appRouter = router({
       const { eq, desc } = await import("drizzle-orm");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const saves = await db.select().from(schema.discountOfferSaves)
         .where(eq(schema.discountOfferSaves.userId, ctx.user.id))
@@ -3215,7 +3216,7 @@ export const appRouter = router({
       const { drizzle } = await import("drizzle-orm/mysql2");
       const mysql = await import("mysql2/promise");
       const schema = await import("../drizzle/schema");
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const db = drizzle(conn);
       const seedOffers = [
         { slug: "hotel-de-paris-monaco-weekend", title: "H\u00f4tel de Paris Monte-Carlo", subtitle: "Suite Deluxe avec vue mer \u2014 Weekend d'exception", tagline: "L'adresse mythique de la Principaut\u00e9", establishmentName: "H\u00f4tel de Paris Monte-Carlo", establishmentCategory: "hotel" as const, city: "Monaco", country: "Monaco", region: "C\u00f4te d'Azur", lat: 43.7396, lng: 7.4278, originalPricePerNight: 2800, discountedPricePerNight: 1960, originalPriceTotal: 5600, discountedPriceTotal: 3920, discountPercent: 30, currency: "EUR", packageType: "weekend" as const, durationNights: 2, maxGuests: 2, priceTier: "tier3" as const, sector: "hotelerie" as const, heroImageUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600&q=90", description: "Symbole absolu du luxe mon\u00e9gasque depuis 1864, l'H\u00f4tel de Paris incarne l'excellence \u00e0 la fran\u00e7aise sur la Place du Casino.", shortDescription: "Suite Deluxe vue mer, petit-d\u00e9jeuner Ducasse, spa Thermes Marins inclus.", highlights: JSON.stringify(["Vue panoramique sur la M\u00e9diterran\u00e9e","Petit-d\u00e9jeuner au Louis XV d'Alain Ducasse","Acc\u00e8s spa Thermes Marins Monte-Carlo","Service Social Club 24h/24","Parking voiturier inclus"]), included: JSON.stringify(["2 nuits en Suite Deluxe","Petit-d\u00e9jeuner gastronomique x2","Acc\u00e8s spa illimit\u00e9","Bouteille de champagne \u00e0 l'arriv\u00e9e","Late check-out 14h"]), insiderTip: "Demandez la Suite M\u00e9diterran\u00e9e au 5\u00e8me \u00e9tage \u2014 la vue sur le port de Monaco au coucher du soleil est \u00e0 couper le souffle.", accessLevel: "free" as const, status: "published" as const, isFeatured: true, isFlashOffer: false, sortOrder: 10 },
@@ -3245,7 +3246,7 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().default(20), unreadOnly: z.boolean().default(false) }))
       .query(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const limitNum = parseInt(String(input.limit), 10) || 20;
         const query = input.unreadOnly
           ? `SELECT * FROM notifications WHERE userId = ? AND readAt IS NULL ORDER BY createdAt DESC LIMIT ${limitNum}`
@@ -3256,7 +3257,7 @@ export const appRouter = router({
       }),
     unreadCount: protectedProcedure.query(async ({ ctx }) => {
       const mysql = await import('mysql2/promise');
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const [rows] = await conn.execute(
         'SELECT COUNT(*) as count FROM notifications WHERE userId = ? AND readAt IS NULL',
         [ctx.user.id]
@@ -3268,7 +3269,7 @@ export const appRouter = router({
       .input(z.object({ id: z.number().optional() }))
       .mutation(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         if (input.id) {
           await conn.execute('UPDATE notifications SET readAt = NOW() WHERE id = ? AND userId = ?', [input.id, ctx.user.id]);
         } else {
@@ -3279,7 +3280,7 @@ export const appRouter = router({
       }),
     getSettings: protectedProcedure.query(async ({ ctx }) => {
       const mysql = await import('mysql2/promise');
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const [rows] = await conn.execute('SELECT * FROM notificationSettings WHERE userId = ?', [ctx.user.id]) as any;
       await conn.end();
       if (rows.length === 0) return { activeTripNotifs: true, discoveryNotifs: true, emailNotifs: true, emailFrequency: 'daily' };
@@ -3294,7 +3295,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         await conn.execute(
           `INSERT INTO notificationSettings (userId, activeTripNotifs, discoveryNotifs, emailNotifs, emailFrequency) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE activeTripNotifs = COALESCE(?, activeTripNotifs), discoveryNotifs = COALESCE(?, discoveryNotifs), emailNotifs = COALESCE(?, emailNotifs), emailFrequency = COALESCE(?, emailFrequency)`,
           [ctx.user.id, input.activeTripNotifs ?? true, input.discoveryNotifs ?? true, input.emailNotifs ?? true, input.emailFrequency ?? 'daily', input.activeTripNotifs ?? null, input.discoveryNotifs ?? null, input.emailNotifs ?? null, input.emailFrequency ?? null]
@@ -3310,7 +3311,7 @@ export const appRouter = router({
       .input(z.object({ status: z.enum(['draft', 'proposed', 'accepted', 'confirmed', 'completed', 'cancelled', 'all']).default('all') }))
       .query(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         const where = input.status === 'all' ? 'userId = ?' : 'userId = ? AND status = ?';
         const params: any[] = input.status === 'all' ? [ctx.user.id] : [ctx.user.id, input.status];
         const [rows] = await conn.execute(`SELECT * FROM tripPlans WHERE ${where} ORDER BY updatedAt DESC LIMIT 50`, params) as any;
@@ -3319,7 +3320,7 @@ export const appRouter = router({
       }),
     getActiveTrip: protectedProcedure.query(async ({ ctx }) => {
       const mysql = await import('mysql2/promise');
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const [rows] = await conn.execute(
         'SELECT ats.*, tp.title, tp.destinationCity, tp.destinationCountry, tp.startDate, tp.endDate FROM activeTripSessions ats JOIN tripPlans tp ON ats.tripPlanId = tp.id WHERE ats.userId = ? AND ats.isActive = 1 ORDER BY ats.startedAt DESC LIMIT 1',
         [ctx.user.id]
@@ -3331,7 +3332,7 @@ export const appRouter = router({
       .input(z.object({ tripPlanId: z.number() }))
       .mutation(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         await conn.execute('UPDATE activeTripSessions SET isActive = 0 WHERE userId = ?', [ctx.user.id]);
         await conn.execute('INSERT INTO activeTripSessions (tripPlanId, userId, isActive) VALUES (?, ?, 1)', [input.tripPlanId, ctx.user.id]);
         await conn.execute('UPDATE tripPlans SET status = "confirmed" WHERE id = ? AND userId = ?', [input.tripPlanId, ctx.user.id]);
@@ -3343,14 +3344,14 @@ export const appRouter = router({
       .input(z.object({ sessionId: z.number() }))
       .mutation(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         await conn.execute('UPDATE activeTripSessions SET isActive = 0, completedAt = NOW() WHERE id = ? AND userId = ?', [input.sessionId, ctx.user.id]);
         await conn.end();
         return { success: true };
       }),
     getCompanions: protectedProcedure.query(async ({ ctx }) => {
       const mysql = await import('mysql2/promise');
-      const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+      const conn = await mysql.default.createConnection(getMysqlConnOpts());
       const [rows] = await conn.execute('SELECT * FROM travelCompanions WHERE userId = ? ORDER BY name ASC', [ctx.user.id]) as any;
       await conn.end();
       return rows as any[];
@@ -3359,7 +3360,7 @@ export const appRouter = router({
       .input(z.object({ name: z.string().min(1), relationship: z.string().optional(), dietaryRestrictions: z.string().optional(), preferences: z.string().optional(), birthDate: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         await conn.execute('INSERT INTO travelCompanions (userId, name, relationship, dietaryRestrictions, preferences, birthDate) VALUES (?, ?, ?, ?, ?, ?)', [ctx.user.id, input.name, input.relationship || null, input.dietaryRestrictions || null, input.preferences || null, input.birthDate || null]);
         await conn.end();
         return { success: true };
@@ -3368,7 +3369,7 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         await conn.execute('DELETE FROM travelCompanions WHERE id = ? AND userId = ?', [input.id, ctx.user.id]);
         await conn.end();
         return { success: true };
@@ -3377,7 +3378,7 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         await conn.execute('DELETE FROM tripPlans WHERE id = ? AND userId = ?', [input.id, ctx.user.id]);
         await conn.end();
          return { success: true };
@@ -3397,7 +3398,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           const [existing] = await conn.execute(
             'SELECT token FROM shareLinks WHERE userId = ? AND type = ? AND resourceId = ? AND (expiresAt IS NULL OR expiresAt > NOW()) LIMIT 1',
@@ -3420,7 +3421,7 @@ export const appRouter = router({
       .input(z.object({ token: z.string() }))
       .query(async ({ input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           const [links] = await conn.execute(
             'SELECT * FROM shareLinks WHERE token = ? AND (expiresAt IS NULL OR expiresAt > NOW()) LIMIT 1',
@@ -3449,7 +3450,7 @@ export const appRouter = router({
     getMyLinks: protectedProcedure
       .query(async ({ ctx }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           const [rows] = await conn.execute(
             'SELECT * FROM shareLinks WHERE userId = ? ORDER BY createdAt DESC LIMIT 50',
@@ -3635,7 +3636,7 @@ export const appRouter = router({
       }))
       .query(async ({ input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           let sql = "SELECT * FROM events WHERE city = ? AND date >= CURDATE() AND (status = 'approved' OR source = 'baymora-seed')";
           const params: any[] = [input.city];
@@ -3653,7 +3654,7 @@ export const appRouter = router({
       .input(z.object({ city: z.string() }))
       .query(async ({ input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           const [rows] = await conn.execute(
             "SELECT * FROM events WHERE city = ? AND date = CURDATE() AND (status = 'approved' OR source = 'baymora-seed') ORDER BY time_start ASC",
@@ -3667,7 +3668,7 @@ export const appRouter = router({
       .input(z.object({ city: z.string() }))
       .query(async ({ input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           // Samedi et dimanche prochains
           const [rows] = await conn.execute(
@@ -3682,7 +3683,7 @@ export const appRouter = router({
       .input(z.object({ city: z.string(), limit: z.number().default(5) }))
       .query(async ({ input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           const [rows] = await conn.execute(
             `SELECT * FROM events WHERE city = ? AND date >= CURDATE() AND date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND (status = 'approved' OR source = 'baymora-seed') ORDER BY date ASC, time_start ASC LIMIT ${parseInt(String(input.limit), 10) || 5}`,
@@ -3715,7 +3716,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           const isAdmin = ctx.user?.role === 'admin' || ctx.user?.role === 'team';
           const status = isAdmin ? 'approved' : 'pending';
@@ -3745,7 +3746,7 @@ export const appRouter = router({
       })
       .query(async () => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           const [rows] = await conn.execute("SELECT * FROM events WHERE status = 'pending' ORDER BY created_at DESC") as any[];
           return rows as any[];
@@ -3759,7 +3760,7 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           await conn.execute("UPDATE events SET status = 'approved' WHERE id = ?", [input.id]);
           return { success: true };
@@ -3773,7 +3774,7 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const mysql = await import('mysql2/promise');
-        const conn = await mysql.default.createConnection(process.env.DATABASE_URL!);
+        const conn = await mysql.default.createConnection(getMysqlConnOpts());
         try {
           await conn.execute("UPDATE events SET status = 'rejected' WHERE id = ?", [input.id]);
           return { success: true };
