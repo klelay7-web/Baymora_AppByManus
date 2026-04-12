@@ -1,5 +1,6 @@
 import { eq, desc, and, sql, asc, like, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import {
   InsertUser, users,
   conversations, messages,
@@ -17,11 +18,10 @@ import {
 import { ENV } from './_core/env';
 
 const isTiDB = (process.env.DATABASE_URL || "").includes("tidbcloud");
-const sslOpts = isTiDB ? { ssl: { rejectUnauthorized: true } } : {};
 
-export function getMysqlConnOpts(): string | { uri: string; ssl?: { rejectUnauthorized: boolean } } {
+export function getMysqlConnOpts(): any {
   const url = process.env.DATABASE_URL!;
-  return isTiDB ? { uri: url, ...sslOpts } : url;
+  return isTiDB ? { uri: url, ssl: { rejectUnauthorized: true } } : url;
 }
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -29,8 +29,11 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const isTiDB = process.env.DATABASE_URL.includes("tidbcloud");
-      _db = drizzle(process.env.DATABASE_URL, isTiDB ? { connection: { ssl: { rejectUnauthorized: true } } } : undefined);
+      const pool = mysql.createPool({
+        uri: process.env.DATABASE_URL,
+        ssl: isTiDB ? { rejectUnauthorized: true } : undefined,
+      });
+      _db = drizzle(pool);
     }
     catch (error) { console.warn("[Database] Failed to connect:", error); _db = null; }
   }
