@@ -1,13 +1,8 @@
 {
-  "buildCommand": "pnpm install && vite build",
+  "buildCommand": "pnpm install && vite build && esbuild api/index.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js --alias:@shared=./shared --alias:@=./client/src",
   "outputDirectory": "dist/public",
-  "functions": {
-    "api/index.ts": {
-      "includeFiles": "server/**,shared/**,drizzle/**"
-    }
-  },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.ts" },
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
