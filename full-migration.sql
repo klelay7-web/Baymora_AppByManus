@@ -1,0 +1,1045 @@
+CREATE TABLE `users` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`openId` varchar(64) NOT NULL,
+	`name` text,
+	`email` varchar(320),
+	`loginMethod` varchar(64),
+	`role` enum('user','admin') NOT NULL DEFAULT 'user',
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	`lastSignedIn` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `users_id` PRIMARY KEY(`id`),
+	CONSTRAINT `users_openId_unique` UNIQUE(`openId`)
+);
+CREATE TABLE `affiliateClicks` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`partnerId` int NOT NULL,
+	`seoCardId` int,
+	`userId` int,
+	`clickedUrl` text NOT NULL,
+	`referrer` text,
+	`userAgent` text,
+	`ipHash` varchar(64),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `affiliateClicks_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `affiliateConversions` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`clickId` int NOT NULL,
+	`partnerId` int NOT NULL,
+	`userId` int,
+	`orderValue` decimal(10,2),
+	`commission` decimal(10,2),
+	`currency` varchar(3) DEFAULT 'EUR',
+	`status` enum('pending','confirmed','paid','rejected') NOT NULL DEFAULT 'pending',
+	`externalOrderId` varchar(256),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`confirmedAt` timestamp,
+	CONSTRAINT `affiliateConversions_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `affiliatePartners` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`name` varchar(128) NOT NULL,
+	`slug` varchar(128) NOT NULL,
+	`category` varchar(64) NOT NULL,
+	`apiEndpoint` text,
+	`apiKey` text,
+	`commissionRate` decimal(5,2) NOT NULL,
+	`trackingParam` varchar(64) DEFAULT 'ref',
+	`baseUrl` text,
+	`isActive` boolean DEFAULT true,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `affiliatePartners_id` PRIMARY KEY(`id`),
+	CONSTRAINT `affiliatePartners_slug_unique` UNIQUE(`slug`)
+);
+--> statement-breakpoint
+CREATE TABLE `agentTasks` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`department` enum('acquisition','concierge','logistics','quality') NOT NULL,
+	`agentType` varchar(64) NOT NULL,
+	`taskType` varchar(64) NOT NULL,
+	`input` text,
+	`output` text,
+	`status` enum('queued','processing','completed','failed','cancelled') NOT NULL DEFAULT 'queued',
+	`priority` int DEFAULT 5,
+	`retryCount` int DEFAULT 0,
+	`maxRetries` int DEFAULT 3,
+	`errorMessage` text,
+	`startedAt` timestamp,
+	`completedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `agentTasks_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `conversations` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`title` varchar(256) DEFAULT 'Nouvelle conversation',
+	`status` enum('active','archived','closed') NOT NULL DEFAULT 'active',
+	`context` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `conversations_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `creditTransactions` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`amount` int NOT NULL,
+	`type` enum('subscription','recharge','usage','rollover','bonus','refund') NOT NULL,
+	`description` text,
+	`balanceAfter` int NOT NULL,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `creditTransactions_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `messages` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`conversationId` int NOT NULL,
+	`role` enum('user','assistant','system') NOT NULL,
+	`content` text NOT NULL,
+	`metadata` text,
+	`isVoice` boolean DEFAULT false,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `messages_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `seoCards` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`slug` varchar(256) NOT NULL,
+	`title` varchar(256) NOT NULL,
+	`subtitle` varchar(256),
+	`category` enum('restaurant','hotel','activity','bar','spa','guide','experience') NOT NULL,
+	`city` varchar(128) NOT NULL,
+	`country` varchar(128) NOT NULL,
+	`region` varchar(128),
+	`description` text NOT NULL,
+	`highlights` text,
+	`practicalInfo` text,
+	`schemaOrg` text,
+	`metaTitle` varchar(160),
+	`metaDescription` varchar(320),
+	`imageUrl` text,
+	`imageAlt` varchar(256),
+	`galleryUrls` text,
+	`affiliateLinks` text,
+	`rating` decimal(2,1),
+	`priceLevel` enum('budget','moderate','upscale','luxury') DEFAULT 'upscale',
+	`tags` text,
+	`status` enum('draft','published','archived') NOT NULL DEFAULT 'draft',
+	`viewCount` int DEFAULT 0,
+	`generatedBy` enum('ai','manual') NOT NULL DEFAULT 'ai',
+	`publishedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `seoCards_id` PRIMARY KEY(`id`),
+	CONSTRAINT `seoCards_slug_unique` UNIQUE(`slug`)
+);
+--> statement-breakpoint
+CREATE TABLE `socialMediaPosts` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`seoCardId` int,
+	`platform` enum('instagram','tiktok','linkedin','twitter') NOT NULL,
+	`contentType` enum('carousel','reel','story','post','script') NOT NULL,
+	`title` varchar(256),
+	`content` text NOT NULL,
+	`hashtags` text,
+	`mediaUrls` text,
+	`scheduledAt` timestamp,
+	`publishedAt` timestamp,
+	`status` enum('draft','scheduled','published','failed') NOT NULL DEFAULT 'draft',
+	`engagement` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `socialMediaPosts_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `travelCompanions` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`name` varchar(128) NOT NULL,
+	`relationship` varchar(64),
+	`dietaryRestrictions` text,
+	`preferences` text,
+	`birthDate` varchar(10),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `travelCompanions_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `travelItineraries` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`conversationId` int,
+	`title` varchar(256) NOT NULL,
+	`destination` varchar(256),
+	`startDate` varchar(10),
+	`endDate` varchar(10),
+	`travelers` int DEFAULT 1,
+	`budget` varchar(64),
+	`status` enum('planning','confirmed','completed','cancelled') NOT NULL DEFAULT 'planning',
+	`itineraryData` text,
+	`affiliateLinksUsed` text,
+	`totalEstimatedCost` decimal(10,2),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `travelItineraries_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `userPreferences` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`category` varchar(64) NOT NULL,
+	`key` varchar(128) NOT NULL,
+	`value` text NOT NULL,
+	`confidence` decimal(3,2) DEFAULT '0.80',
+	`source` enum('explicit','inferred','conversation') NOT NULL DEFAULT 'conversation',
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `userPreferences_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+ALTER TABLE `users` ADD `subscriptionTier` enum('free','premium') DEFAULT 'free' NOT NULL;--> statement-breakpoint
+ALTER TABLE `users` ADD `credits` int DEFAULT 3 NOT NULL;--> statement-breakpoint
+ALTER TABLE `users` ADD `creditsRollover` int DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `users` ADD `freeMessagesUsed` int DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `users` ADD `stripeCustomerId` varchar(128);--> statement-breakpoint
+ALTER TABLE `users` ADD `stripeSubscriptionId` varchar(128);CREATE TABLE `establishmentMedia` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`establishmentId` int NOT NULL,
+	`type` enum('photo','video','tiktok','instagram_reel') NOT NULL,
+	`url` text NOT NULL,
+	`thumbnailUrl` text,
+	`caption` varchar(256),
+	`alt` varchar(256),
+	`source` varchar(128),
+	`sortOrder` int DEFAULT 0,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `establishmentMedia_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `establishments` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`slug` varchar(256) NOT NULL,
+	`name` varchar(256) NOT NULL,
+	`subtitle` varchar(256),
+	`category` enum('restaurant','hotel','bar','spa','museum','park','beach','nightclub','shopping','transport','activity','experience','wellness') NOT NULL,
+	`subcategory` varchar(128),
+	`city` varchar(128) NOT NULL,
+	`country` varchar(128) NOT NULL,
+	`region` varchar(128),
+	`address` text,
+	`lat` float,
+	`lng` float,
+	`heroImageUrl` text,
+	`description` text NOT NULL,
+	`shortDescription` varchar(500),
+	`anecdotes` text,
+	`thingsToKnow` text,
+	`highlights` text,
+	`phone` varchar(32),
+	`website` text,
+	`openingHours` text,
+	`priceRange` varchar(64),
+	`priceLevel` enum('budget','moderate','upscale','luxury') DEFAULT 'upscale',
+	`cuisineType` varchar(128),
+	`dressCode` varchar(128),
+	`metaTitle` varchar(160),
+	`metaDescription` varchar(320),
+	`schemaOrg` text,
+	`tags` text,
+	`rating` decimal(2,1),
+	`reviewCount` int DEFAULT 0,
+	`reviews` text,
+	`viralVideos` text,
+	`affiliateLinks` text,
+	`status` enum('draft','published','archived') NOT NULL DEFAULT 'draft',
+	`viewCount` int DEFAULT 0,
+	`generatedBy` enum('ai','manual') NOT NULL DEFAULT 'ai',
+	`publishedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `establishments_id` PRIMARY KEY(`id`),
+	CONSTRAINT `establishments_slug_unique` UNIQUE(`slug`)
+);
+--> statement-breakpoint
+CREATE TABLE `tripDays` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`tripPlanId` int NOT NULL,
+	`dayNumber` int NOT NULL,
+	`date` varchar(10) NOT NULL,
+	`title` varchar(256),
+	`summary` text,
+	`weatherForecast` text,
+	`centerLat` float,
+	`centerLng` float,
+	`zoomLevel` int DEFAULT 13,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `tripDays_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `tripPlans` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`conversationId` int,
+	`title` varchar(256) NOT NULL,
+	`tripType` enum('leisure','business','romantic','family','staycation','adventure','wellness') NOT NULL,
+	`budgetLevel` enum('economy','moderate','premium','ultra_premium') NOT NULL,
+	`originCity` varchar(128),
+	`originCountry` varchar(128),
+	`originLat` float,
+	`originLng` float,
+	`destinationCity` varchar(128) NOT NULL,
+	`destinationCountry` varchar(128) NOT NULL,
+	`destinationLat` float,
+	`destinationLng` float,
+	`startDate` varchar(10) NOT NULL,
+	`endDate` varchar(10) NOT NULL,
+	`travelers` int DEFAULT 1,
+	`companionIds` text,
+	`estimatedTotal` decimal(10,2),
+	`currency` varchar(3) DEFAULT 'EUR',
+	`outboundTransport` text,
+	`returnTransport` text,
+	`status` enum('draft','proposed','accepted','confirmed','completed','cancelled') NOT NULL DEFAULT 'draft',
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `tripPlans_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `tripSteps` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`tripDayId` int NOT NULL,
+	`stepOrder` int NOT NULL,
+	`title` varchar(256) NOT NULL,
+	`description` text,
+	`stepType` enum('transport_departure','flight','checkin','meal','activity','sightseeing','shopping','relaxation','meeting','transfer','checkout','transport_return','free_time','walk') NOT NULL,
+	`establishmentId` int,
+	`locationName` varchar(256),
+	`address` text,
+	`lat` float,
+	`lng` float,
+	`startTime` varchar(5),
+	`endTime` varchar(5),
+	`durationMinutes` int,
+	`transportMode` enum('walk','car','taxi','uber','chauffeur','bus','metro','train','flight','boat','bike','scooter'),
+	`transportDurationMinutes` int,
+	`transportDistanceKm` decimal(8,2),
+	`transportNotes` text,
+	`estimatedCost` decimal(10,2),
+	`currency` varchar(3) DEFAULT 'EUR',
+	`affiliateLink` text,
+	`tips` text,
+	`photoUrl` text,
+	`confirmed` boolean DEFAULT false,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `tripSteps_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+ALTER TABLE `affiliateClicks` ADD `establishmentId` int;--> statement-breakpoint
+ALTER TABLE `conversations` ADD `tripType` enum('leisure','business','romantic','family','staycation','adventure','wellness');--> statement-breakpoint
+ALTER TABLE `messages` ADD `attachmentType` enum('none','trip_plan','establishment','map_route','offer') DEFAULT 'none';--> statement-breakpoint
+ALTER TABLE `messages` ADD `attachmentData` text;--> statement-breakpoint
+ALTER TABLE `socialMediaPosts` ADD `establishmentId` int;--> statement-breakpoint
+ALTER TABLE `travelCompanions` ADD `allergies` text;--> statement-breakpoint
+ALTER TABLE `travelCompanions` ADD `passportCountry` varchar(64);--> statement-breakpoint
+ALTER TABLE `users` ADD `phone` varchar(32);--> statement-breakpoint
+ALTER TABLE `users` ADD `avatarUrl` text;--> statement-breakpoint
+ALTER TABLE `users` ADD `language` varchar(8) DEFAULT 'fr';--> statement-breakpoint
+ALTER TABLE `users` ADD `currency` varchar(3) DEFAULT 'EUR';--> statement-breakpoint
+ALTER TABLE `users` ADD `homeCity` varchar(128);--> statement-breakpoint
+ALTER TABLE `users` ADD `homeCountry` varchar(128);--> statement-breakpoint
+ALTER TABLE `users` ADD `homeAddress` text;--> statement-breakpoint
+ALTER TABLE `users` ADD `homeLat` float;--> statement-breakpoint
+ALTER TABLE `users` ADD `homeLng` float;--> statement-breakpoint
+ALTER TABLE `users` ADD `budgetPreference` enum('economy','moderate','premium','ultra_premium') DEFAULT 'moderate';--> statement-breakpoint
+ALTER TABLE `users` ADD `travelStyle` enum('adventure','relaxation','cultural','business','romantic','family') DEFAULT 'cultural';CREATE TABLE `aiDepartmentReports` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`department` enum('seo','content','acquisition','concierge','analytics') NOT NULL,
+	`reportDate` varchar(10) NOT NULL,
+	`summary` text NOT NULL,
+	`metrics` text,
+	`alerts` text,
+	`status` enum('healthy','attention','critical') NOT NULL DEFAULT 'healthy',
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `aiDepartmentReports_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `aiDirectives` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`authorId` int NOT NULL,
+	`department` enum('seo','content','acquisition','concierge','analytics','all') NOT NULL,
+	`directive` text NOT NULL,
+	`priority` enum('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
+	`status` enum('active','completed','cancelled','expired') NOT NULL DEFAULT 'active',
+	`completedTasks` int DEFAULT 0,
+	`totalTasks` int DEFAULT 0,
+	`aiResponse` text,
+	`completedAt` timestamp,
+	`expiresAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `aiDirectives_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `ambassadors` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`referralCode` varchar(32) NOT NULL,
+	`tier` enum('bronze','silver','gold','platinum') NOT NULL DEFAULT 'bronze',
+	`totalReferrals` int DEFAULT 0,
+	`activeReferrals` int DEFAULT 0,
+	`totalEarnings` decimal(10,2) DEFAULT '0.00',
+	`pendingEarnings` decimal(10,2) DEFAULT '0.00',
+	`commissionRate` decimal(5,2) DEFAULT '10.00',
+	`paypalEmail` varchar(320),
+	`iban` varchar(64),
+	`status` enum('active','suspended','pending') NOT NULL DEFAULT 'pending',
+	`activatedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `ambassadors_id` PRIMARY KEY(`id`),
+	CONSTRAINT `ambassadors_referralCode_unique` UNIQUE(`referralCode`)
+);
+--> statement-breakpoint
+CREATE TABLE `bundles` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`slug` varchar(256) NOT NULL,
+	`title` varchar(256) NOT NULL,
+	`subtitle` varchar(256),
+	`description` text NOT NULL,
+	`coverImageUrl` text,
+	`category` enum('weekend','honeymoon','gastronomie','aventure','wellness','culture','business','family','seasonal') NOT NULL,
+	`destination` varchar(256),
+	`duration` varchar(64),
+	`priceFrom` decimal(10,2),
+	`priceTo` decimal(10,2),
+	`currency` varchar(3) DEFAULT 'EUR',
+	`includes` text,
+	`establishmentIds` text,
+	`accessLevel` enum('free','explorer','premium','elite') NOT NULL DEFAULT 'explorer',
+	`isVip` boolean DEFAULT false,
+	`isFeatured` boolean DEFAULT false,
+	`status` enum('draft','published','archived') NOT NULL DEFAULT 'draft',
+	`viewCount` int DEFAULT 0,
+	`bookingCount` int DEFAULT 0,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `bundles_id` PRIMARY KEY(`id`),
+	CONSTRAINT `bundles_slug_unique` UNIQUE(`slug`)
+);
+--> statement-breakpoint
+CREATE TABLE `collections` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`name` varchar(128) NOT NULL,
+	`description` text,
+	`coverImageUrl` text,
+	`isPublic` boolean DEFAULT false,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `collections_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `commissionPayments` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`recipientType` enum('ambassador','partner','influencer','concierge') NOT NULL,
+	`recipientId` int NOT NULL,
+	`recipientName` varchar(256),
+	`sourceType` enum('referral','booking','affiliation','subscription') NOT NULL,
+	`sourceId` int,
+	`amount` decimal(10,2) NOT NULL,
+	`currency` varchar(3) DEFAULT 'EUR',
+	`status` enum('pending','processing','paid','failed','cancelled') NOT NULL DEFAULT 'pending',
+	`paymentMethod` varchar(64),
+	`transactionRef` varchar(256),
+	`paidAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `commissionPayments_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `contentCalendar` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`title` varchar(256) NOT NULL,
+	`contentType` enum('blog_article','instagram_post','instagram_reel','tiktok_video','linkedin_post','youtube_video','twitter_post') NOT NULL,
+	`topic` text,
+	`brief` text,
+	`generatedContent` text,
+	`generatedMediaUrls` text,
+	`scheduledDate` varchar(10) NOT NULL,
+	`scheduledTime` varchar(5),
+	`platform` enum('instagram','tiktok','linkedin','twitter','youtube','blog') NOT NULL,
+	`status` enum('idea','generating','review','approved','scheduled','published','failed') NOT NULL DEFAULT 'idea',
+	`performance` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `contentCalendar_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `favorites` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`targetType` enum('establishment','seoCard','tripPlan','bundle') NOT NULL,
+	`targetId` int NOT NULL,
+	`collectionId` int,
+	`notes` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `favorites_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `referrals` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`ambassadorId` int NOT NULL,
+	`referredUserId` int NOT NULL,
+	`referralCode` varchar(32) NOT NULL,
+	`status` enum('signed_up','subscribed','churned') NOT NULL DEFAULT 'signed_up',
+	`subscriptionTier` varchar(32),
+	`commissionEarned` decimal(10,2) DEFAULT '0.00',
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`convertedAt` timestamp,
+	CONSTRAINT `referrals_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `serviceProviders` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`name` varchar(256) NOT NULL,
+	`slug` varchar(256) NOT NULL,
+	`category` enum('hotel','restaurant','yacht','chauffeur','spa','concierge_local','concierge_international','real_estate','luxury_goods','experience','transport') NOT NULL,
+	`contactName` varchar(256),
+	`contactEmail` varchar(320),
+	`contactPhone` varchar(32),
+	`city` varchar(128),
+	`country` varchar(128),
+	`website` text,
+	`logoUrl` text,
+	`description` text,
+	`commissionRate` decimal(5,2) DEFAULT '10.00',
+	`contractType` enum('standard','premium','exclusive') DEFAULT 'standard',
+	`contractExpiry` varchar(10),
+	`totalReservations` int DEFAULT 0,
+	`totalRevenue` decimal(10,2) DEFAULT '0.00',
+	`rating` decimal(2,1),
+	`linkedEstablishments` int DEFAULT 0,
+	`status` enum('active','pending','suspended','rejected') NOT NULL DEFAULT 'pending',
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `serviceProviders_id` PRIMARY KEY(`id`),
+	CONSTRAINT `serviceProviders_slug_unique` UNIQUE(`slug`)
+);
+CREATE TABLE `establishmentComments` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`establishmentId` int NOT NULL,
+	`authorName` varchar(128) NOT NULL,
+	`authorAvatar` varchar(16),
+	`authorCountry` varchar(64),
+	`authorTravelStyle` varchar(64),
+	`rating` int NOT NULL,
+	`title` varchar(256),
+	`content` text NOT NULL,
+	`visitDate` varchar(32),
+	`helpfulCount` int DEFAULT 0,
+	`replyCount` int DEFAULT 0,
+	`isAiGenerated` boolean DEFAULT true,
+	`isVerified` boolean DEFAULT false,
+	`language` varchar(8) DEFAULT 'fr',
+	`status` enum('published','hidden','flagged') NOT NULL DEFAULT 'published',
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `establishmentComments_id` PRIMARY KEY(`id`)
+);
+CREATE TABLE `fieldReportContacts` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`fieldReportId` int NOT NULL,
+	`contactName` varchar(256) NOT NULL,
+	`role` varchar(128),
+	`phone` varchar(64),
+	`email` varchar(320),
+	`whatsapp` varchar(64),
+	`languages` text,
+	`notes` text,
+	`isMainContact` boolean DEFAULT false,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `fieldReportContacts_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `fieldReportJourney` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`fieldReportId` int NOT NULL,
+	`stepOrder` int NOT NULL,
+	`stepType` enum('chauffeur','avion','train','taxi','transfert','arrivee','prise_en_charge','prestation','depart','autre') NOT NULL,
+	`title` varchar(256) NOT NULL,
+	`description` text,
+	`fromLocation` varchar(256),
+	`toLocation` varchar(256),
+	`companyName` varchar(256),
+	`flightNumber` varchar(32),
+	`vehicleType` varchar(128),
+	`departureTime` varchar(16),
+	`arrivalTime` varchar(16),
+	`durationMinutes` int,
+	`estimatedCost` decimal(10,2),
+	`currency` varchar(3) DEFAULT 'EUR',
+	`isIncluded` boolean DEFAULT false,
+	`affiliateLink` text,
+	`bookingReference` varchar(128),
+	`notes` text,
+	`photoUrl` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `fieldReportJourney_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `fieldReportMedia` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`fieldReportId` int NOT NULL,
+	`type` enum('photo','video') NOT NULL,
+	`url` text NOT NULL,
+	`thumbnailUrl` text,
+	`caption` varchar(256),
+	`category` enum('facade','interieur','prestation','equipement','chambre','transport','parcours','equipe','resultat','vue','repas','autre') NOT NULL DEFAULT 'autre',
+	`sortOrder` int DEFAULT 0,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `fieldReportMedia_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `fieldReportServices` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`fieldReportId` int NOT NULL,
+	`serviceName` varchar(256) NOT NULL,
+	`serviceCategory` varchar(128),
+	`description` text,
+	`priceFrom` decimal(10,2),
+	`priceTo` decimal(10,2),
+	`currency` varchar(3) DEFAULT 'EUR',
+	`isOnQuote` boolean DEFAULT false,
+	`duration` varchar(64),
+	`includes` text,
+	`notes` text,
+	`sortOrder` int DEFAULT 0,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `fieldReportServices_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `fieldReports` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`establishmentName` varchar(256) NOT NULL,
+	`establishmentType` enum('clinique','hotel','restaurant','spa','bar','activite','experience','transport','autre') NOT NULL,
+	`specialty` varchar(256),
+	`city` varchar(128) NOT NULL,
+	`country` varchar(128) NOT NULL,
+	`region` varchar(128),
+	`address` text,
+	`lat` float,
+	`lng` float,
+	`googleMapsUrl` text,
+	`description` text,
+	`ambiance` text,
+	`highlights` text,
+	`languagesSpoken` text,
+	`paymentMethods` text,
+	`openingHours` text,
+	`website` text,
+	`personalAdvice` text,
+	`overallRating` int,
+	`wouldRecommend` boolean DEFAULT true,
+	`targetClientele` text,
+	`aiEnrichedDescription` text,
+	`aiResearchNotes` text,
+	`aiRecommendation` text,
+	`aiSeoData` text,
+	`convertedEstablishmentId` int,
+	`status` enum('draft','submitted','ai_processing','review','approved','published','rejected') NOT NULL DEFAULT 'draft',
+	`adminNotes` text,
+	`submittedAt` timestamp,
+	`reviewedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `fieldReports_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+ALTER TABLE `users` MODIFY COLUMN `role` enum('user','admin','team') NOT NULL DEFAULT 'user';ALTER TABLE `users` MODIFY COLUMN `subscriptionTier` enum('free','premium','elite') NOT NULL DEFAULT 'free';--> statement-breakpoint
+ALTER TABLE `users` MODIFY COLUMN `credits` int NOT NULL DEFAULT 15;--> statement-breakpoint
+ALTER TABLE `users` ADD `points` int DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `users` ADD `pointsLifetime` int DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `users` ADD `featureVipExpiry` timestamp;--> statement-breakpoint
+ALTER TABLE `users` ADD `featureConciergeExpiry` timestamp;--> statement-breakpoint
+ALTER TABLE `users` ADD `featureOffMarketExpiry` timestamp;CREATE TABLE `pilotageMessages` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`role` enum('user','assistant','system') NOT NULL,
+	`content` text NOT NULL,
+	`actionType` enum('chat','order_team','modify_app','analyze','report','alert') DEFAULT 'chat',
+	`targetDepartment` varchar(64),
+	`orderStatus` enum('pending','in_progress','done','cancelled') DEFAULT 'pending',
+	`metadata` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `pilotageMessages_id` PRIMARY KEY(`id`)
+);
+CREATE TABLE `clientProfiles` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`pseudo` varchar(64),
+	`mode` enum('signature','fantome') DEFAULT 'signature',
+	`dietRegime` varchar(256),
+	`dietAllergies` text,
+	`dietOther` text,
+	`travelStyles` text,
+	`travelBudget` enum('economique','confort','premium','luxe','sans_limite') DEFAULT 'confort',
+	`travelGroup` enum('solo','couple','famille','amis','business') DEFAULT 'couple',
+	`travelMobility` enum('aucune','pmr','reduite','poussette') DEFAULT 'aucune',
+	`languages` text,
+	`pet` enum('aucun','chien','chat','autre') DEFAULT 'aucun',
+	`smoking` enum('non_fumeur','fumeur','cigare','vape') DEFAULT 'non_fumeur',
+	`dresscode` enum('casual','smart_casual','chic','formel') DEFAULT 'smart_casual',
+	`ecofriendly` boolean DEFAULT false,
+	`homeCity` varchar(128),
+	`homeAddress` text,
+	`preferredAirport` varchar(16),
+	`airportLounge` boolean DEFAULT false,
+	`priorityLane` boolean DEFAULT false,
+	`clothingSize` varchar(16),
+	`shoeSize` varchar(8),
+	`favoriteAlcohol` varchar(128),
+	`favoriteCuisine` varchar(256),
+	`sleepPreference` varchar(128),
+	`tempPreference` varchar(64),
+	`freeNotes` text,
+	`aiLastExtracted` timestamp,
+	`aiExtractionCount` int DEFAULT 0,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `clientProfiles_id` PRIMARY KEY(`id`),
+	CONSTRAINT `clientProfiles_userId_unique` UNIQUE(`userId`)
+);
+--> statement-breakpoint
+CREATE TABLE `companions` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`name` varchar(128) NOT NULL,
+	`relationship` enum('conjoint','enfant','parent','ami','collegue','autre') DEFAULT 'autre',
+	`birthDate` varchar(10),
+	`avatarUrl` text,
+	`dietRegime` varchar(256),
+	`dietAllergies` text,
+	`dietOther` text,
+	`travelStyles` text,
+	`travelBudget` enum('economique','confort','premium','luxe','sans_limite') DEFAULT 'confort',
+	`travelMobility` enum('aucune','pmr','reduite','poussette') DEFAULT 'aucune',
+	`languages` text,
+	`pet` enum('aucun','chien','chat','autre') DEFAULT 'aucun',
+	`smoking` enum('non_fumeur','fumeur','cigare','vape') DEFAULT 'non_fumeur',
+	`clothingSize` varchar(16),
+	`shoeSize` varchar(8),
+	`favoriteAlcohol` varchar(128),
+	`favoriteCuisine` varchar(256),
+	`freeNotes` text,
+	`isActive` boolean DEFAULT true,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `companions_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `destinationSaves` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`destinationId` int NOT NULL,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `destinationSaves_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `userDestinations` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`title` varchar(256) NOT NULL,
+	`description` text,
+	`coverImageUrl` text,
+	`tags` text,
+	`tripType` enum('leisure','business','romantic','family','staycation','adventure','wellness') DEFAULT 'leisure',
+	`budget` enum('economique','confort','premium','luxe') DEFAULT 'confort',
+	`duration` int,
+	`destination` varchar(256),
+	`country` varchar(128),
+	`lat` float,
+	`lng` float,
+	`steps` text,
+	`highlights` text,
+	`tips` text,
+	`visibility` enum('private','family','public') DEFAULT 'private',
+	`isVerified` boolean DEFAULT false,
+	`isFeatured` boolean DEFAULT false,
+	`viewCount` int DEFAULT 0,
+	`saveCount` int DEFAULT 0,
+	`likeCount` int DEFAULT 0,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `userDestinations_id` PRIMARY KEY(`id`)
+);
+ALTER TABLE `seoCards` MODIFY COLUMN `generatedBy` enum('ai','manual','lena') NOT NULL DEFAULT 'ai';--> statement-breakpoint
+ALTER TABLE `bundles` ADD `isVerified` boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE `bundles` ADD `lenaCreated` boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE `bundles` ADD `seoCardIds` text;--> statement-breakpoint
+ALTER TABLE `bundles` ADD `fieldReportIds` text;--> statement-breakpoint
+ALTER TABLE `bundles` ADD `sourceType` enum('manual','lena_chat','lena_generate','field_report','ai_auto') DEFAULT 'manual';--> statement-breakpoint
+ALTER TABLE `seoCards` ADD `isVerified` boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE `seoCards` ADD `lenaCreated` boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE `seoCards` ADD `fieldReportId` int;--> statement-breakpoint
+ALTER TABLE `seoCards` ADD `sourceType` enum('manual','lena_chat','lena_generate','field_report','ai_auto') DEFAULT 'manual';--> statement-breakpoint
+ALTER TABLE `userDestinations` ADD `isLenaGenerated` boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE `userDestinations` ADD `lenaSessionId` varchar(64);--> statement-breakpoint
+ALTER TABLE `userDestinations` ADD `sourceFieldReportId` int;--> statement-breakpoint
+ALTER TABLE `userDestinations` ADD `sourceConversationId` int;--> statement-breakpoint
+ALTER TABLE `userDestinations` ADD `lenaDecision` enum('pending','keep','delete','convert_bundle','convert_seocard') DEFAULT 'pending';--> statement-breakpoint
+ALTER TABLE `userDestinations` ADD `lenaDecisionAt` timestamp;--> statement-breakpoint
+ALTER TABLE `userDestinations` ADD `lenaDecisionNotes` text;ALTER TABLE `seoCards` MODIFY COLUMN `category` enum('restaurant','hotel','activity','bar','spa','guide','experience','transport','cityGuide','rooftop','vip','event','boutique','airport','spa_wellness','park_garden','beach','viewpoint','secret_spot','nightlife','shopping_luxury','concierge','villa','private_jet') NOT NULL;--> statement-breakpoint
+ALTER TABLE `bundles` ADD `budgetTarget` enum('budget','moderate','premium','luxury') DEFAULT 'moderate';--> statement-breakpoint
+ALTER TABLE `bundles` ADD `cityFocus` varchar(128);--> statement-breakpoint
+ALTER TABLE `bundles` ADD `seoCardCount` int DEFAULT 0;--> statement-breakpoint
+ALTER TABLE `contentCalendar` ADD `blogContent` text;--> statement-breakpoint
+ALTER TABLE `contentCalendar` ADD `blogSeoCity` varchar(128);--> statement-breakpoint
+ALTER TABLE `contentCalendar` ADD `blogKeywords` text;--> statement-breakpoint
+ALTER TABLE `contentCalendar` ADD `blogSlug` varchar(256);--> statement-breakpoint
+ALTER TABLE `contentCalendar` ADD `linkedSeoCardIds` text;--> statement-breakpoint
+ALTER TABLE `seoCards` ADD `viralVideos` text;ALTER TABLE `clientProfiles` ADD `ariaInstructions` text;--> statement-breakpoint
+ALTER TABLE `clientProfiles` ADD `ariaInstructionsUpdatedAt` timestamp;--> statement-breakpoint
+ALTER TABLE `clientProfiles` ADD `profileExtractedFields` text;CREATE TABLE `ariaMissions` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`title` varchar(256) NOT NULL,
+	`content` text NOT NULL,
+	`status` enum('active','completed','cancelled','expired') NOT NULL DEFAULT 'active',
+	`priority` enum('normal','high','urgent') NOT NULL DEFAULT 'normal',
+	`authorId` int NOT NULL,
+	`startsAt` timestamp NOT NULL DEFAULT (now()),
+	`expiresAt` timestamp NOT NULL,
+	`completedAt` timestamp,
+	`ariaAck` text,
+	`ariaAckAt` timestamp,
+	`progressNotes` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `ariaMissions_id` PRIMARY KEY(`id`)
+);
+ALTER TABLE `ariaMissions` ADD `finalReport` text;--> statement-breakpoint
+ALTER TABLE `ariaMissions` ADD `finalReportAt` timestamp;--> statement-breakpoint
+ALTER TABLE `ariaMissions` ADD `successScore` int;--> statement-breakpoint
+ALTER TABLE `ariaMissions` ADD `completedTasks` int DEFAULT 0;--> statement-breakpoint
+ALTER TABLE `ariaMissions` ADD `totalTasks` int DEFAULT 0;--> statement-breakpoint
+ALTER TABLE `ariaMissions` ADD `durationHours` int DEFAULT 24;CREATE TABLE `agentTaskOrders` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`title` varchar(256) NOT NULL,
+	`description` text,
+	`agent` varchar(64) NOT NULL,
+	`requestedBy` varchar(64) NOT NULL DEFAULT 'fondateur',
+	`status` enum('pending','in_progress','completed','failed','cancelled') NOT NULL DEFAULT 'pending',
+	`priority` enum('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
+	`progressPercent` int DEFAULT 0,
+	`progressNotes` text,
+	`result` text,
+	`linkedMissionId` int,
+	`linkedFieldReportId` int,
+	`linkedSeoCardId` int,
+	`dueAt` timestamp,
+	`startedAt` timestamp,
+	`completedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `agentTaskOrders_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+CREATE TABLE `lenaSessions` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`sessionKey` varchar(64) NOT NULL,
+	`establishmentName` varchar(256),
+	`city` varchar(128),
+	`currentStep` varchar(64) NOT NULL DEFAULT 'ACCUEIL',
+	`collectedData` text,
+	`history` text,
+	`scoutBriefing` text,
+	`fieldReportId` int,
+	`status` enum('active','completed','abandoned') NOT NULL DEFAULT 'active',
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `lenaSessions_id` PRIMARY KEY(`id`)
+);
+ALTER TABLE `users` MODIFY COLUMN `subscriptionTier` enum('free','explorer','premium','elite') NOT NULL DEFAULT 'free';
+-- Migration: Add operatorMessages and operatorRoutes tables
+
+CREATE TABLE IF NOT EXISTS `operatorMessages` (
+  `id` int AUTO_INCREMENT PRIMARY KEY NOT NULL,
+  `fromUserId` int NOT NULL,
+  `toUserId` int NOT NULL,
+  `content` text NOT NULL,
+  `isRead` boolean NOT NULL DEFAULT false,
+  `attachmentUrl` text,
+  `createdAt` timestamp NOT NULL DEFAULT (now())
+);
+
+CREATE TABLE IF NOT EXISTS `operatorRoutes` (
+  `id` int AUTO_INCREMENT PRIMARY KEY NOT NULL,
+  `createdByUserId` int NOT NULL,
+  `title` varchar(256) NOT NULL,
+  `description` text,
+  `city` varchar(128) NOT NULL,
+  `country` varchar(128) NOT NULL DEFAULT 'France',
+  `category` enum('decouverte','gastronomie','plages','culture','shopping','nature','nightlife','wellness','business','famille','autre') NOT NULL DEFAULT 'decouverte',
+  `durationMinutes` int,
+  `status` enum('draft','submitted','approved','published') NOT NULL DEFAULT 'draft',
+  `coverImageUrl` text,
+  `establishmentIds` text,
+  `steps` text,
+  `notes` text,
+  `adminFeedback` text,
+  `createdAt` timestamp NOT NULL DEFAULT (now()),
+  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP
+);
+-- Migration: Discount Offers (Offres avec Réductions Premium)
+CREATE TABLE `discountOffers` (
+  `id` int AUTO_INCREMENT PRIMARY KEY NOT NULL,
+  `slug` varchar(256) NOT NULL UNIQUE,
+  `title` varchar(256) NOT NULL,
+  `subtitle` varchar(512),
+  `tagline` varchar(256),
+  `establishmentId` int,
+  `establishmentName` varchar(256) NOT NULL,
+  `establishmentCategory` enum('hotel','villa','restaurant','spa','experience','transport','wellness','yacht','chalet') NOT NULL,
+  `city` varchar(128) NOT NULL,
+  `country` varchar(128) NOT NULL,
+  `region` varchar(128),
+  `lat` float,
+  `lng` float,
+  `isPremiumDestination` boolean NOT NULL DEFAULT true,
+  `originalPricePerNight` int,
+  `discountedPricePerNight` int,
+  `originalPriceTotal` int,
+  `discountedPriceTotal` int,
+  `discountPercent` int,
+  `currency` varchar(3) NOT NULL DEFAULT 'EUR',
+  `packageType` enum('1_night','2_nights','3_nights','weekend','week','custom') NOT NULL DEFAULT '2_nights',
+  `durationNights` int NOT NULL DEFAULT 2,
+  `maxGuests` int DEFAULT 2,
+  `priceTier` enum('tier1','tier2','tier3','tier4') NOT NULL,
+  `sector` enum('hotelerie','gastronomie','experiences','villas','transport','bienetre','yachting','ski') NOT NULL,
+  `heroImageUrl` text,
+  `galleryImages` text,
+  `coverImageUrl` text,
+  `description` text NOT NULL,
+  `shortDescription` varchar(500),
+  `highlights` text,
+  `included` text,
+  `notIncluded` text,
+  `conditions` text,
+  `insiderTip` text,
+  `availableFrom` timestamp,
+  `availableTo` timestamp,
+  `isFlashOffer` boolean NOT NULL DEFAULT false,
+  `flashExpiresAt` timestamp,
+  `totalSlots` int,
+  `bookedSlots` int DEFAULT 0,
+  `bookingUrl` text,
+  `affiliateCode` varchar(128),
+  `commissionPercent` decimal(5,2),
+  `accessLevel` enum('free','premium_only') NOT NULL DEFAULT 'free',
+  `status` enum('draft','published','expired','sold_out') NOT NULL DEFAULT 'draft',
+  `isFeatured` boolean NOT NULL DEFAULT false,
+  `sortOrder` int DEFAULT 0,
+  `viewCount` int DEFAULT 0,
+  `bookingCount` int DEFAULT 0,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE `discountOfferSaves` (
+  `id` int AUTO_INCREMENT PRIMARY KEY NOT NULL,
+  `userId` int NOT NULL,
+  `offerId` int NOT NULL,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+-- Migration 0018: Notifications + Active Trip Sessions
+
+-- Notifications table
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `userId` int NOT NULL,
+  `type` enum('trip_reminder','trip_departure','trip_meal','trip_activity','discovery','new_offer','new_itinerary','system') NOT NULL DEFAULT 'system',
+  `title` varchar(256) NOT NULL,
+  `body` text NOT NULL,
+  `data` text,
+  `readAt` timestamp NULL,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_notifications_userId` (`userId`),
+  KEY `idx_notifications_readAt` (`readAt`)
+);
+
+-- Notification Settings table
+CREATE TABLE IF NOT EXISTS `notificationSettings` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `userId` int NOT NULL UNIQUE,
+  `activeTripNotifs` tinyint(1) NOT NULL DEFAULT 1,
+  `discoveryNotifs` tinyint(1) NOT NULL DEFAULT 1,
+  `emailNotifs` tinyint(1) NOT NULL DEFAULT 1,
+  `emailFrequency` enum('instant','daily','weekly') NOT NULL DEFAULT 'daily',
+  `quietHoursStart` varchar(5) DEFAULT '22:00',
+  `quietHoursEnd` varchar(5) DEFAULT '08:00',
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_notifSettings_userId` (`userId`)
+);
+
+-- Active Trip Sessions table
+CREATE TABLE IF NOT EXISTS `activeTripSessions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `tripPlanId` int NOT NULL,
+  `userId` int NOT NULL,
+  `startedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `currentDayIndex` int NOT NULL DEFAULT 0,
+  `isActive` tinyint(1) NOT NULL DEFAULT 1,
+  `lastNotifSentAt` timestamp NULL,
+  `completedAt` timestamp NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_activeTripSessions_userId` (`userId`),
+  KEY `idx_activeTripSessions_tripPlanId` (`tripPlanId`)
+);
+CREATE TABLE IF NOT EXISTS shareLinks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  token VARCHAR(64) NOT NULL UNIQUE,
+  type ENUM('trip', 'offer', 'destination') NOT NULL DEFAULT 'trip',
+  resourceId INT NOT NULL,
+  userId INT NOT NULL,
+  title VARCHAR(255),
+  description TEXT,
+  coverImage VARCHAR(512),
+  viewCount INT DEFAULT 0,
+  expiresAt TIMESTAMP NULL,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_token (token),
+  INDEX idx_userId (userId)
+);
+-- Migration: Extend affiliatePartners with affiliateId, signupUrl, status
+ALTER TABLE `affiliatePartners` ADD COLUMN `affiliateId` varchar(256);
+ALTER TABLE `affiliatePartners` ADD COLUMN `signupUrl` text;
+ALTER TABLE `affiliatePartners` ADD COLUMN `status` enum('pending','active','rejected') NOT NULL DEFAULT 'pending';
+ALTER TABLE `users` ADD COLUMN `hasCompletedOnboarding` boolean NOT NULL DEFAULT false;
+ALTER TABLE `users` ADD COLUMN `isCercle` boolean NOT NULL DEFAULT false;
+-- Migration V7.2b: Table events (Pivot Sortir)
+CREATE TABLE IF NOT EXISTS `events` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `description` text,
+  `category` enum('soiree','concert','expo','degustation','spectacle','festival','sport','diner_secret','vip','afterwork','brunch','marche','autre') NOT NULL,
+  `venue_name` varchar(255),
+  `venue_address` varchar(500),
+  `city` varchar(100) NOT NULL,
+  `lat` decimal(10,7),
+  `lng` decimal(10,7),
+  `date` date NOT NULL,
+  `time_start` varchar(10),
+  `time_end` varchar(10),
+  `price` varchar(100),
+  `dress_code` varchar(100),
+  `image_url` varchar(500),
+  `booking_url` varchar(500),
+  `is_vip` boolean DEFAULT false,
+  `is_members_only` boolean DEFAULT false,
+  `source` varchar(100),
+  `created_at` timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+);
