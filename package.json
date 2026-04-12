@@ -10,7 +10,8 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
+    "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "build:vercel": "vite build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
