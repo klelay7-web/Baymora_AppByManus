@@ -6,6 +6,21 @@ import { ArrowLeft, Sparkles, Send, Mic, MicOff, RotateCcw, MapPin } from "lucid
 import MessageRenderer from "@/components/MessageRenderer";
 
 const GEOLOC_KEY = "baymora_geoloc_asked";
+const GUEST_KEY = "baymora_guest_conversations";
+const GUEST_FREE_LIMIT = 3;
+
+function getGuestCount(): number {
+  if (typeof window === "undefined") return 0;
+  const raw = localStorage.getItem(GUEST_KEY);
+  const n = raw ? parseInt(raw, 10) : 0;
+  return isNaN(n) ? 0 : n;
+}
+
+function incrementGuestCount(): number {
+  const next = getGuestCount() + 1;
+  localStorage.setItem(GUEST_KEY, String(next));
+  return next;
+}
 
 function reverseGeocode(lat: number, lng: number): Promise<{ address: string; city: string }> {
   return fetch(
@@ -48,6 +63,8 @@ export default function Maya() {
     return stored ? parseInt(stored, 10) : null;
   });
   const [showGpsPopup, setShowGpsPopup] = useState(false);
+  const [guestCount, setGuestCount] = useState<number>(() => getGuestCount());
+  const [showGuestUpgradeModal, setShowGuestUpgradeModal] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; address?: string; city?: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -63,11 +80,15 @@ export default function Maya() {
 
   const OWNER_EMAILS = ["k.lelay7@gmail.com", "klelay7@gmail.com"];
   const isOwner = user?.openId === import.meta.env.VITE_OWNER_OPEN_ID || OWNER_EMAILS.includes(user?.email || "") || user?.role === "admin";
-  const isPaid = user?.subscriptionTier !== "free";
+  const isPaid = user?.subscriptionTier !== undefined && user?.subscriptionTier !== "free";
   const isUnlimited = isOwner || isPaid;
   const freeUsed = creditsData?.freeMessagesUsed ?? 0;
   const FREE_LIMIT = 3;
-  const creditsLeft = isUnlimited ? 999 : Math.max(0, FREE_LIMIT - freeUsed);
+  const creditsLeft = isUnlimited
+    ? 999
+    : user
+      ? Math.max(0, FREE_LIMIT - freeUsed)
+      : Math.max(0, GUEST_FREE_LIMIT - guestCount);
 
   // ─── Créer une conversation au mount si pas de session ─────────────────────
   const createConvMutation = trpc.chat.createConversation.useMutation({
@@ -85,10 +106,10 @@ export default function Maya() {
 
   // ─── Popup GPS au premier contact ─────────────────────────────────────────
   useEffect(() => {
-    if (user && !localStorage.getItem(GEOLOC_KEY)) {
+    if (!localStorage.getItem(GEOLOC_KEY)) {
       setShowGpsPopup(true);
     }
-  }, [user]);
+  }, []);
 
   const handleGpsAllow = () => {
     localStorage.setItem(GEOLOC_KEY, "true");
@@ -118,23 +139,24 @@ export default function Maya() {
   };
 
   // ─── Envoyer un message ────────────────────────────────────────────────────
+  const onMayaResponse = (text: string | undefined) => {
+    if (text) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString() + "_maya",
+          role: "maya",
+          content: text,
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  };
+
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
     onMutate: () => setIsTyping(true),
     onSettled: () => setIsTyping(false),
-    onSuccess: (data) => {
-      const text = data?.rawContent || data?.cleanMessage;
-      if (text) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString() + "_maya",
-            role: "maya",
-            content: text,
-            timestamp: new Date(),
-          },
-        ]);
-      }
-    },
+    onSuccess: (data) => onMayaResponse(data?.rawContent || data?.cleanMessage),
     onError: (err) => {
       const isUpgrade = err.message === "UPGRADE_REQUIRED";
       setMessages((prev) => [
@@ -151,6 +173,30 @@ export default function Maya() {
     },
   });
 
+  const sendMessageGuestMutation = trpc.chat.sendMessageGuest.useMutation({
+    onMutate: () => setIsTyping(true),
+    onSettled: () => setIsTyping(false),
+    onSuccess: (data) => {
+      onMayaResponse(data?.rawContent || data?.cleanMessage);
+      const next = incrementGuestCount();
+      setGuestCount(next);
+      if (next >= GUEST_FREE_LIMIT) {
+        setTimeout(() => setShowGuestUpgradeModal(true), 800);
+      }
+    },
+    onError: () => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString() + "_err",
+          role: "maya",
+          content: "Désolée, une erreur est survenue. Réessayez dans un instant.",
+          timestamp: new Date(),
+        },
+      ]);
+    },
+  });
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
@@ -158,7 +204,10 @@ export default function Maya() {
   const handleSend = (text?: string) => {
     const msg = text || input.trim();
     if (!msg) return;
-    if (!user && creditsLeft <= 0) return;
+    if (!user && guestCount >= GUEST_FREE_LIMIT) {
+      setShowGuestUpgradeModal(true);
+      return;
+    }
     if (!conversationId && user) return; // Attendre la création de la conv
 
     const userMsg: Message = {
@@ -170,13 +219,27 @@ export default function Maya() {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
 
-    sendMessageMutation.mutate({
-      content: msg,
-      conversationId: conversationId ?? 0,
-      userLocation: userLocation
-        ? { lat: userLocation.lat, lng: userLocation.lng, city: userLocation.city || "", country: "France" }
-        : undefined,
-    });
+    if (user) {
+      sendMessageMutation.mutate({
+        content: msg,
+        conversationId: conversationId ?? 0,
+        userLocation: userLocation
+          ? { lat: userLocation.lat, lng: userLocation.lng, city: userLocation.city || "", country: "France" }
+          : undefined,
+      });
+    } else {
+      const history = messages.map(m => ({
+        role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+        content: m.content,
+      }));
+      sendMessageGuestMutation.mutate({
+        content: msg,
+        history,
+        userLocation: userLocation
+          ? { lat: userLocation.lat, lng: userLocation.lng, city: userLocation.city || "", country: "France" }
+          : undefined,
+      });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -258,6 +321,54 @@ export default function Maya() {
           </div>
         </div>
       )}
+      {/* Modal upgrade pour invité après 3 conversations */}
+      {showGuestUpgradeModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: "rgba(7, 11, 20, 0.9)", backdropFilter: "blur(12px)" }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-6 flex flex-col items-center text-center"
+            style={{
+              background: "rgba(13, 17, 23, 0.98)",
+              border: "1px solid rgba(200, 169, 110, 0.4)",
+              boxShadow: "0 0 50px rgba(200, 169, 110, 0.18)",
+            }}
+          >
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+              style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)" }}
+            >
+              <Sparkles size={28} color="#070B14" />
+            </div>
+            <h3
+              className="text-xl font-bold mb-3"
+              style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
+            >
+              Vous avez utilisé vos 3 conversations offertes
+            </h3>
+            <p className="text-sm mb-6" style={{ color: "#8B8D94", lineHeight: 1.6 }}>
+              Rejoignez La Maison pour continuer avec Maya, accéder aux parcours sur-mesure et débloquer les privilèges partenaires.
+            </p>
+            <Link href="/auth">
+              <button
+                className="w-full py-3 rounded-xl font-semibold text-sm mb-3"
+                style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
+              >
+                Créer un compte
+              </button>
+            </Link>
+            <button
+              className="w-full py-3 rounded-xl text-sm"
+              style={{ border: "1px solid rgba(139, 141, 148, 0.3)", color: "#8B8D94", background: "transparent" }}
+              onClick={() => setShowGuestUpgradeModal(false)}
+            >
+              Plus tard
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"

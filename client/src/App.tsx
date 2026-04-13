@@ -71,9 +71,8 @@ function Router() {
       <Route path="/maison">
         {() => <ProtectedRoute component={Maison} />}
       </Route>
-      <Route path="/maya">
-        {() => <ProtectedRoute component={Maya} />}
-      </Route>
+      {/* Maya — accessible aux invités (3 conversations gratuites via localStorage) */}
+      <Route path="/maya" component={Maya} />
       <Route path="/offres">
         {() => <ProtectedRoute component={Offres} />}
       </Route>

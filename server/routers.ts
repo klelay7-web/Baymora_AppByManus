@@ -354,6 +354,75 @@ export const appRouter = router({
         };
       }),
 
+    // ─── Guest mode: 3 free conversations without auth ─────────────────────
+    // Counter is enforced client-side via localStorage. No DB writes, no rate limit.
+    sendMessageGuest: publicProcedure
+      .input(z.object({
+        content: z.string().min(1).max(5000),
+        history: z.array(z.object({
+          role: z.enum(["user", "assistant"]),
+          content: z.string(),
+        })).max(20).optional(),
+        userLocation: z.object({
+          city: z.string().optional(),
+          country: z.string().optional(),
+          lat: z.number().optional(),
+          lng: z.number().optional(),
+        }).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const systemPrompt = buildSystemPrompt(
+          { name: undefined, preferences: [], companions: [], homeCity: undefined, homeCountry: undefined },
+          new Date(),
+          input.userLocation || undefined
+        );
+
+        const claudeMessages: ClaudeMessage[] = (input.history || []).map(m => ({
+          role: m.role,
+          content: m.content,
+        }));
+        claudeMessages.push({ role: "user", content: input.content });
+
+        const orchestratorResult = await orchestrate({
+          userMessage: input.content,
+          systemPrompt,
+          history: claudeMessages.slice(0, -1),
+          subscriptionTier: "free",
+          messageIndex: claudeMessages.filter(m => m.role === "user").length,
+          userCity: input.userLocation?.city || undefined,
+        });
+
+        const parsed = parseStructuredTags(orchestratorResult.content);
+
+        return {
+          rawContent: orchestratorResult.content,
+          cleanMessage: parsed.cleanMessage,
+          places: parsed.places || [],
+          map: parsed.map || null,
+          journey: parsed.journey || null,
+          gcal: parsed.gcal || [],
+          booking: parsed.booking || [],
+          quickReplies: parsed.qr || [],
+          plan: parsed.plan || null,
+          scenarios: parsed.scenarios || null,
+          model: orchestratorResult.model,
+          message: parsed.cleanMessage,
+          establishments: (parsed.places || []).map((p: any) => ({
+            name: p.name,
+            type: p.type,
+            city: p.city,
+            country: p.country,
+            description: p.description,
+            priceRange: p.priceRange,
+            rating: p.rating,
+            coordinates: p.coordinates,
+            imageUrl: p.imageUrl,
+          })),
+          tripSuggestion: null,
+          action: null,
+        };
+      }),
+
     transcribeVoice: protectedProcedure
       .input(z.object({ audioUrl: z.string() }))
       .mutation(async ({ input }) => {
