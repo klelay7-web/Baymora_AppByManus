@@ -3606,7 +3606,7 @@ export const appRouter = router({
       }),
     buyCreditPack: protectedProcedure
       .input(z.object({
-        packId: z.enum(["pack_5", "pack_15", "pack_40", "pack_intensif", "pack_prestige", "pack_liberte"]),
+        packId: z.enum(["pack_5", "pack_15", "pack_30", "pack_60", "pack_150", "pack_liberte"]),
         origin: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -3640,10 +3640,10 @@ export const appRouter = router({
         });
         return { url: session.url };
       }),
-    // D2 — Montant libre : price_data dynamique côté serveur
+    // D2 — Montant libre : price_data dynamique côté serveur (minimum 1€)
     buyCustomCredits: protectedProcedure
       .input(z.object({
-        amountEur: z.number().min(5).max(500),
+        amountEur: z.number().min(1).max(500),
         origin: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {

@@ -12,7 +12,7 @@ interface CreditsModalProps {
 const PACKS = [
   {
     id: "pack_5",
-    name: "5 conversations",
+    name: "5 crédits",
     credits: 5,
     price: "4,99€",
     description: "Pour continuer une conversation avec Maya",
@@ -22,20 +22,20 @@ const PACKS = [
   },
   {
     id: "pack_15",
-    name: "15 conversations",
+    name: "15 crédits",
     credits: 15,
-    price: "9,99€",
-    description: "Idéal pour planifier un voyage complet",
+    price: "12,99€",
+    description: "Idéal pour planifier un week-end",
     icon: Sparkles,
     iconColor: "#C8A96E",
     popular: true,
   },
   {
-    id: "pack_40",
-    name: "40 conversations",
-    credits: 40,
-    price: "19,99€",
-    description: "L'équivalent d'un mois Membre",
+    id: "pack_30",
+    name: "30 crédits",
+    credits: 30,
+    price: "22,99€",
+    description: "L'équivalent d'un mois actif",
     icon: Crown,
     iconColor: "#8B5CF6",
     popular: false,
@@ -61,7 +61,7 @@ export default function CreditsModal({ isOpen, onClose, currentCredits = 0 }: Cr
 
   const handleBuy = (packId: string) => {
     setLoading(packId);
-    buyPackMutation.mutate({ packId: packId as "pack_5" | "pack_15" | "pack_40", origin: window.location.origin });
+    buyPackMutation.mutate({ packId: packId as "pack_5" | "pack_15" | "pack_30", origin: window.location.origin });
   };
 
   if (!isOpen) return null;
