@@ -16,13 +16,14 @@ const PLANS = [
     name: "Invité",
     price: "0",
     period: "",
-    badge: "Gratuit",
+    badge: "Découvrir",
     highlight: false,
     color: "#8B8D94",
     icon: Star,
-    description: "Découvrez la Maison avec 3 conversations gratuites.",
+    description: "Découvrez la Maison avec 3 conversations Maya offertes.",
     features: [
       "3 conversations avec Maya",
+      "1 parcours",
       "Accès aux adresses publiques",
       "Aperçu des privilèges",
     ],
@@ -34,15 +35,15 @@ const PLANS = [
     price: "9,90",
     period: "mois",
     annualPrice: "99",
-    annualSavings: "économisez 20%",
-    badge: "Le plus choisi",
+    annualSavings: "2 mois offerts",
+    badge: "Essentiel",
     highlight: true,
     color: "#C8A96E",
     icon: Star,
     description: "L'accès complet à Maya et aux meilleures adresses de la Maison.",
     features: [
       "Maya illimitée",
-      "Parcours & cartes illimités",
+      "5 parcours",
       "Privilèges partenaires",
       "Feed local \"Ma position\"",
       "Mode Business",
@@ -55,14 +56,15 @@ const PLANS = [
     price: "14,90",
     period: "mois",
     annualPrice: "149",
-    annualSavings: "économisez 17%",
-    badge: "Pour deux",
+    annualSavings: "2 mois offerts",
+    badge: "Complice",
     highlight: false,
     color: "#8B8D94",
     icon: Users,
     description: "Tout Membre pour 2 profils avec parcours en commun.",
     features: [
       "Tout Membre pour 2 profils",
+      "8 parcours",
       "Parcours en commun",
       "Préférences croisées",
     ],
@@ -73,22 +75,23 @@ const PLANS = [
     name: "Le Cercle",
     price: "149",
     period: "an",
-    badge: "Membre Fondateur — à vie",
+    badge: "Fondateur",
     highlight: false,
     color: "#E8D5A8",
     icon: Gem,
-    description: "L'adhésion fondatrice. Accès à vie aux privilèges exclusifs de la Maison.",
+    description: "L'adhésion fondatrice. 500 places à vie, puis 249€/an. Places limitées.",
     features: [
       "Tout Membre",
+      "10 parcours",
       "Maya mode Prestige (scénarios Sur-Mesure par défaut)",
       "Le Secret du Jour chaque matin",
       "Événements privés Cercle (1/mois min.)",
       "Offres flash 24h avant les Membres",
+      "Option Radar incluse",
       "2 invitations/mois pour vos proches",
       "Badge Fondateur (500 premières places)",
       "Cadeau de bienvenue",
       "Support prioritaire (réponse sous 2h)",
-      "Accès aux expériences Sur-Mesure exclusives",
     ],
     cercleHighlight: true,
   },
@@ -255,12 +258,25 @@ export default function Premium() {
                       background: plan.highlight
                         ? "linear-gradient(135deg, #C8A96E, #E8D5A8)"
                         : isCercle
-                        ? "rgba(232,213,168,0.15)"
+                        ? "linear-gradient(135deg, rgba(232,213,168,0.25), rgba(200,169,110,0.15))"
                         : "rgba(200,169,110,0.12)",
                       color: plan.highlight ? "#070B14" : isCercle ? "#E8D5A8" : "#C8A96E",
+                      border: isCercle ? "1px solid rgba(232,213,168,0.4)" : "none",
                     }}
                   >
                     {plan.badge}
+                  </div>
+                )}
+                {isCercle && (
+                  <div
+                    className="absolute top-4 left-4 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                    style={{
+                      background: "rgba(232,75,75,0.15)",
+                      color: "#E84B4B",
+                      border: "1px solid rgba(232,75,75,0.35)",
+                    }}
+                  >
+                    Places limitées
                   </div>
                 )}
 
@@ -331,6 +347,38 @@ export default function Premium() {
           })}
         </div>
 
+        {/* Option Radar */}
+        <div className="mt-8 p-5 rounded-2xl" style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)" }}>
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h3 className="text-base font-semibold" style={{ color: "#F0EDE6", fontFamily: "'Playfair Display', serif" }}>
+                Option Radar
+              </h3>
+              <p className="text-xs mt-1" style={{ color: "#8B8D94" }}>
+                Recevez des alertes personnalisées sur les nouveaux lieux et événements près de vous
+              </p>
+            </div>
+            <div className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full"
+              style={{ background: "rgba(200,169,110,0.12)", color: "#C8A96E" }}>
+              Add-on
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 mt-4">
+            <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(200,169,110,0.12)" }}>
+              <p className="text-xs mb-1" style={{ color: "#8B8D94" }}>Membre</p>
+              <p className="text-lg font-bold" style={{ color: "#C8A96E" }}>+3,99€<span className="text-[10px] font-normal" style={{ color: "#8B8D94" }}>/mois</span></p>
+            </div>
+            <div className="rounded-xl p-3 text-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(200,169,110,0.12)" }}>
+              <p className="text-xs mb-1" style={{ color: "#8B8D94" }}>Duo</p>
+              <p className="text-lg font-bold" style={{ color: "#C8A96E" }}>+5,99€<span className="text-[10px] font-normal" style={{ color: "#8B8D94" }}>/mois</span></p>
+            </div>
+            <div className="rounded-xl p-3 text-center" style={{ background: "linear-gradient(135deg, rgba(232,213,168,0.12), rgba(200,169,110,0.06))", border: "1px solid rgba(232,213,168,0.35)" }}>
+              <p className="text-xs mb-1" style={{ color: "#E8D5A8" }}>Le Cercle</p>
+              <p className="text-lg font-bold" style={{ color: "#E8D5A8" }}>Inclus</p>
+            </div>
+          </div>
+        </div>
+
         {/* D3 — Portefeuille crédits */}
         {user && creditData !== undefined && (
           <div className="mt-6 p-4 rounded-2xl flex items-center gap-4" style={{ background: "rgba(200,169,110,0.06)", border: "1px solid rgba(200,169,110,0.2)" }}>
@@ -341,17 +389,17 @@ export default function Premium() {
             </div>
           </div>
         )}
-        {/* D1 — Packs crédits (6 packs) */}
+        {/* D1 — Packs crédits */}
         <div className="mt-6 p-5 rounded-2xl" style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)" }}>
-          <h3 className="text-base font-semibold mb-1" style={{ color: "#F0EDE6" }}>Packs crédits</h3>
+          <h3 className="text-base font-semibold mb-1" style={{ color: "#F0EDE6", fontFamily: "'Playfair Display', serif" }}>Packs crédits</h3>
           <p className="text-xs mb-4" style={{ color: "#8B8D94" }}>Sans abonnement — utilisables à tout moment</p>
           <div className="grid grid-cols-3 gap-3">
             {([
               { label: "5 crédits", price: "4,99€", id: "pack_5", icon: "✨", popular: false, badge: "" },
-              { label: "15 crédits", price: "9,99€", id: "pack_15", popular: true, icon: "⭐", badge: "" },
-              { label: "40 crédits", price: "19,99€", id: "pack_40", icon: "👑", popular: false, badge: "" },
-              { label: "120 crédits", price: "49,99€", id: "pack_intensif", popular: true, icon: "🔥", badge: "Intensif" },
-              { label: "280 crédits", price: "99,99€", id: "pack_prestige", icon: "⭐", popular: false, badge: "Prestige" },
+              { label: "15 crédits", price: "12,99€", id: "pack_15", popular: true, icon: "⭐", badge: "" },
+              { label: "30 crédits", price: "22,99€", id: "pack_30", icon: "👑", popular: false, badge: "" },
+              { label: "60 crédits", price: "39,99€", id: "pack_60", popular: true, icon: "🔥", badge: "" },
+              { label: "150 crédits", price: "89,99€", id: "pack_150", icon: "⭐", popular: false, badge: "" },
               { label: "600 crédits", price: "199,99€", id: "pack_liberte", icon: "💎", popular: false, badge: "Liberté" },
             ] as Array<{ label: string; price: string; id: string; icon: string; popular: boolean; badge: string }>).map((pack) => (
               <button
@@ -384,17 +432,17 @@ export default function Premium() {
           </div>
           {/* D2 — Montant libre */}
           <div className="mt-5 pt-5" style={{ borderTop: "1px solid rgba(200,169,110,0.08)" }}>
-            <p className="text-xs font-semibold mb-3" style={{ color: "#F0EDE6" }}>Montant libre</p>
+            <p className="text-xs font-semibold mb-3" style={{ color: "#F0EDE6" }}>Montant libre (à partir de 1€)</p>
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <input
-                  type="range" min={5} max={500} step={5}
+                  type="range" min={1} max={500} step={1}
                   value={customAmount}
                   onChange={(e) => setCustomAmount(Number(e.target.value))}
                   className="w-full accent-[#C8A96E]"
                 />
                 <div className="flex justify-between text-[10px] mt-1" style={{ color: "#8B8D94" }}>
-                  <span>5€</span><span>500€</span>
+                  <span>1€</span><span>500€</span>
                 </div>
               </div>
               <div className="text-right min-w-[80px]">
@@ -414,6 +462,14 @@ export default function Premium() {
             >
               {loadingCustom ? "Redirection..." : `Acheter ${customCredits} crédits pour ${customAmount}€`}
             </button>
+          </div>
+          {/* Note explicative crédits */}
+          <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(200,169,110,0.08)" }}>
+            <p className="text-[11px] leading-relaxed" style={{ color: "#8B8D94" }}>
+              <span style={{ color: "#C8A96E" }}>1 crédit</span> = 1 conversation Maya <span style={{ opacity: 0.6 }}>OU</span> 1 recherche <span style={{ opacity: 0.6 }}>OU</span> 1 parcours.
+              <br />
+              <span style={{ color: "#C8A96E" }}>10 crédits</span> = 1 recherche Prestige (approfondie via Manus).
+            </p>
           </div>
         </div>
 
