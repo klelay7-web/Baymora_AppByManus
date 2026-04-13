@@ -80,19 +80,25 @@ export async function getRadarForPosition(
     const user = userRows[0];
     if (!user) return { locked: true, message: "Membre introuvable." };
 
-    const hasAccess = checkRadarAccess(user);
-    if (!hasAccess) {
-      return {
-        locked: true,
-        message: "Débloquez votre Radar pour découvrir ce qui se passe autour de vous.",
-      };
+    // Exploration par ville (lat=0, lng=0) = ouvert à tous les utilisateurs authentifiés.
+    // Le gate Radar payant s'applique uniquement au radar géolocalisé (lat/lng réels).
+    const isCitySearch = lat === 0 && lng === 0;
+    if (!isCitySearch) {
+      const hasAccess = checkRadarAccess(user);
+      if (!hasAccess) {
+        return {
+          locked: true,
+          message: "Débloquez votre Radar pour découvrir ce qui se passe autour de vous.",
+        };
+      }
     }
 
-    // 2. Chercher les fiches existantes dans un rayon de ~15km et < 7 jours
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // 2. Chercher les fiches existantes
     let existingEstablishments: any[] = [];
 
-    if (lat !== 0 && lng !== 0) {
+    if (!isCitySearch) {
+      // Radar GPS : rayon ~15km, fiches récentes
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       existingEstablishments = await db
         .select()
         .from(establishments)
@@ -105,6 +111,9 @@ export async function getRadarForPosition(
         )
         .orderBy(desc(establishments.rating))
         .limit(30);
+      console.log(
+        `[radarService] GPS search lat=${lat} lng=${lng} → ${existingEstablishments.length} results`
+      );
     } else {
       // Recherche par ville
       existingEstablishments = await db
@@ -118,6 +127,12 @@ export async function getRadarForPosition(
         )
         .orderBy(desc(establishments.rating))
         .limit(30);
+      console.log(
+        `[radarService] City search "${city}" (status=published) → ${existingEstablishments.length} results` +
+          (existingEstablishments.length > 0
+            ? ` | first: ${existingEstablishments[0].name} (${existingEstablishments[0].category})`
+            : "")
+      );
     }
 
     // 3. Catégoriser les résultats

@@ -194,6 +194,11 @@ function RadarActive({ status }: { status: any }) {
           <AnimatePresence>
             {categories.map((cat: any) => <RadarSection key={cat.title} icon={cat.icon} title={cat.title} items={cat.items} />)}
           </AnimatePresence>
+        ) : (radarData as any)?.locked && (radarData as any)?.message ? (
+          <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+            <Lock size={40} color="#C8A96E" className="mb-4 opacity-60" />
+            <p className="text-sm" style={{ color: "#F0EDE6" }}>{(radarData as any).message}</p>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
             <MapPin size={40} color="#C8A96E" className="mb-4 opacity-40" />
