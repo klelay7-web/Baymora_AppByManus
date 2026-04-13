@@ -140,18 +140,30 @@ const radarRouter = router({
   getStatus: protectedProcedure
     .query(async ({ ctx }) => {
       const db = await (await import('./db')).getDb();
-      if (!db) return { hasAccess: false, trialActive: false, subscribed: false, searchesUsed: 0 };
+      const { getRadarMaxSearches } = await import('./services/radarService');
+      const defaultMax = getRadarMaxSearches((ctx.user as any).subscriptionTier, (ctx.user as any).isCercle);
+      if (!db) return { hasAccess: false, trialActive: false, subscribed: false, searchesUsed: 0, maxSearches: defaultMax, unlimited: defaultMax === null };
       const { users } = await import('../drizzle/schema');
       const { eq } = await import('drizzle-orm');
       const rows = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
       const user = rows[0];
-      if (!user) return { hasAccess: false, trialActive: false, subscribed: false, searchesUsed: 0 };
+      if (!user) return { hasAccess: false, trialActive: false, subscribed: false, searchesUsed: 0, maxSearches: defaultMax, unlimited: defaultMax === null };
       const now = new Date();
       const trialActive = !!(user.radarTrialEnd && new Date(user.radarTrialEnd as any) > now);
       const subscribed = !!(user as any).radarSubscribed;
       const unlockedUntil = (user as any).radarUnlockedUntil;
       const hasAccess = subscribed || trialActive || !!(unlockedUntil && new Date(unlockedUntil) > now);
-      return { hasAccess, trialActive, subscribed, trialEnd: user.radarTrialEnd, searchesUsed: (user as any).radarSearchesUsed || 0, unlockedUntil };
+      const maxSearches = getRadarMaxSearches((user as any).subscriptionTier, (user as any).isCercle);
+      return {
+        hasAccess,
+        trialActive,
+        subscribed,
+        trialEnd: user.radarTrialEnd,
+        searchesUsed: (user as any).radarSearchesUsed || 0,
+        unlockedUntil,
+        maxSearches,
+        unlimited: maxSearches === null,
+      };
     }),
   createRadarCheckout: protectedProcedure
     .mutation(async ({ ctx }) => {

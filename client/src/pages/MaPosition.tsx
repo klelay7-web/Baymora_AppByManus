@@ -116,14 +116,16 @@ function RadarActive({ status }: { status: any }) {
 
   const handleSearch = useCallback(() => {
     if (!searchInput.trim()) return;
-    if ((status?.searchesUsed || 0) >= 3) {
+    const maxSearches = status?.maxSearches;
+    const isUnlimited = status?.unlimited || maxSearches === null;
+    if (!isUnlimited && typeof maxSearches === "number" && (status?.searchesUsed || 0) >= maxSearches) {
       toast.error("Limite atteinte. Utilisez 1 crédit pour une recherche supplémentaire.");
       navigate("/premium");
       return;
     }
     setIsSearching(true);
     searchMutation.mutate({ city: searchInput.trim() });
-  }, [searchInput, status?.searchesUsed, searchMutation, navigate]);
+  }, [searchInput, status?.searchesUsed, status?.maxSearches, status?.unlimited, searchMutation, navigate]);
 
   const categories = radarData && !(radarData as any).locked ? (radarData as any).categories || [] : [];
   const hasResults = categories.some((c: any) => c.items && c.items.length > 0);
@@ -162,16 +164,20 @@ function RadarActive({ status }: { status: any }) {
             {isSearching ? <Loader2 size={14} className="animate-spin" /> : "Go"}
           </button>
         </div>
-        {status && (
+        {status && (status.unlimited ? (
+          <p className="text-xs mt-2" style={{ color: "#C8A96E" }}>
+            Recherches illimitées
+          </p>
+        ) : typeof status.maxSearches === "number" ? (
           <p className="text-xs mt-2" style={{ color: "#8B8D94" }}>
-            Recherches : {status.searchesUsed || 0}/3 utilisées ce mois
-            {(status.searchesUsed || 0) >= 3 && (
+            Recherches : {status.searchesUsed || 0}/{status.maxSearches} utilisées ce mois
+            {(status.searchesUsed || 0) >= status.maxSearches && (
               <span className="ml-2 underline cursor-pointer" style={{ color: "#C8A96E" }} onClick={() => navigate("/premium")}>
                 Utiliser 1 crédit
               </span>
             )}
           </p>
-        )}
+        ) : null)}
       </div>
       <div className="pt-6">
         {isLoadingRadar || isSearching ? (

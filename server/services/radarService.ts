@@ -7,6 +7,24 @@ import { getDb } from "../db";
 import { users, establishments } from "../../drizzle/schema";
 import { eq, and, between, gt, desc } from "drizzle-orm";
 
+/**
+ * Quota mensuel de recherches radar selon le tier d'abonnement.
+ * - Invité (free) : 3
+ * - Membre (explorer) : 5
+ * - Duo (premium) : 8
+ * - Le Cercle (elite ou isCercle=true) : illimité
+ * Retourne `null` quand le quota est illimité.
+ */
+export function getRadarMaxSearches(
+  subscriptionTier: string | null | undefined,
+  isCercle: boolean | null | undefined
+): number | null {
+  if (isCercle || subscriptionTier === "elite") return null;
+  if (subscriptionTier === "premium") return 8;
+  if (subscriptionTier === "explorer") return 5;
+  return 3;
+}
+
 export interface RadarCategory {
   icon: string;
   title: string;
@@ -169,10 +187,10 @@ export async function searchCityRadar(
     const user = userRows[0];
     if (!user) return { success: false, message: "Membre introuvable." };
 
-    const maxSearches = user.radarSubscribed ? 3 : 2;
+    const maxSearches = getRadarMaxSearches((user as any).subscriptionTier, (user as any).isCercle);
     const searchesUsed = user.radarSearchesUsed || 0;
 
-    if (searchesUsed >= maxSearches) {
+    if (maxSearches !== null && searchesUsed >= maxSearches) {
       return {
         success: false,
         message: `Vous avez utilisé vos ${maxSearches} recherches du mois. Utilisez 1 crédit pour une recherche supplémentaire.`,
@@ -188,7 +206,7 @@ export async function searchCityRadar(
     return {
       success: true,
       results,
-      searchesRemaining: maxSearches - searchesUsed - 1,
+      searchesRemaining: maxSearches === null ? undefined : maxSearches - searchesUsed - 1,
     };
   } catch (e) {
     console.error("[radarService] searchCityRadar error:", e);
