@@ -36,7 +36,43 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.user_id;
         const planId = session.metadata?.plan_id;
+        const purchaseType = session.metadata?.type;
 
+        // ─── Credit pack / custom credits purchase ─────────────────────
+        if (userId && (purchaseType === "credit_pack" || purchaseType === "custom_credits")) {
+          const creditsToAdd = parseInt(session.metadata?.credits || "0", 10);
+          const packId = session.metadata?.pack_id || "unknown";
+          if (!Number.isFinite(creditsToAdd) || creditsToAdd <= 0) {
+            console.warn(`[Stripe] Credit pack purchase ignored — invalid credits metadata for user ${userId}`);
+            break;
+          }
+          const db = await getDb();
+          if (db) {
+            const rows = await db.select().from(users).where(eq(users.id, parseInt(userId))).limit(1);
+            const user = rows[0];
+            if (user) {
+              const newBalance = (user.credits || 0) + creditsToAdd;
+              await db.update(users)
+                .set({ credits: newBalance })
+                .where(eq(users.id, user.id));
+              await db.insert(creditTransactions).values({
+                userId: user.id,
+                amount: creditsToAdd,
+                type: "purchase",
+                description: purchaseType === "custom_credits"
+                  ? `Achat montant libre — ${session.metadata?.amount_eur || "?"}€ (${creditsToAdd} crédits)`
+                  : `Achat pack crédits — ${packId} (${creditsToAdd} crédits)`,
+                balanceAfter: newBalance,
+              });
+              console.log(`[Stripe] User ${userId} purchased ${creditsToAdd} credits via ${packId} | balance: ${newBalance}`);
+            } else {
+              console.warn(`[Stripe] Credit purchase — user ${userId} not found`);
+            }
+          }
+          break;
+        }
+
+        // ─── Subscription plan purchase ─────────────────────────────────
         if (userId && planId) {
           const plan = PLANS[planId as keyof typeof PLANS];
           if (plan) {

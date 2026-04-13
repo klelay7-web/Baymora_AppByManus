@@ -3676,7 +3676,7 @@ export const appRouter = router({
             user_id: ctx.user.id.toString(),
             pack_id: "custom",
             credits: credits.toString(),
-            type: "credit_pack",
+            type: "custom_credits",
             amount_eur: input.amountEur.toString(),
           },
           success_url: `${input.origin}/maya?credits=added&pack=custom`,
