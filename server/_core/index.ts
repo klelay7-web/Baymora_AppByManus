@@ -11,6 +11,8 @@ import { serveStatic, setupVite } from "./vite";
 import { handleStripeWebhook } from "../stripe/webhook";
 import { startEventMaintenanceCron } from "../services/eventMaintenanceService";
 import { startEventNotificationCron } from "../services/eventNotificationService";
+import { runEnrichBatch, startEnrichCron } from "../cron/enrichCron";
+import { sdk } from "./sdk";
 import { trackAffiliateClick, getDb } from "../db";
 import { affiliatePartners } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -102,6 +104,21 @@ async function startServer() {
     }
   });
 
+  // Admin-only manual enrichment trigger
+  app.get("/api/admin/enrich", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (user.role !== "admin") {
+        return res.status(403).json({ error: "admin only" });
+      }
+      const result = await runEnrichBatch();
+      res.json({ success: true, ...result });
+    } catch (err: any) {
+      console.error("[admin/enrich] error:", err);
+      res.status(err?.status || 500).json({ error: err?.message || "enrich failed" });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -130,6 +147,8 @@ async function startServer() {
     startEventMaintenanceCron();
     // Démarrer les notifications Ce soir (18h lun-ven) et Ce week-end (vendredi 17h)
     startEventNotificationCron();
+    // Démarrer le cron d'enrichissement des établissements (toutes les 2h)
+    startEnrichCron();
   });
 }
 
