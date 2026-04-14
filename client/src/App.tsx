@@ -16,7 +16,7 @@ import Parcours from "./pages/Parcours";
 import Profil from "./pages/Profil";
 import Premium from "./pages/Premium";
 import Auth from "./pages/Auth";
-import LieuDetail from "./pages/LieuDetail";
+import EstablishmentDetail from "./pages/EstablishmentDetail";
 import MaPosition from "./pages/MaPosition";
 
 // Maya Demo
@@ -29,7 +29,6 @@ import Confidentialite from "./pages/Confidentialite";
 import CGU from "./pages/CGU";
 import Contact from "./pages/Contact";
 import PartenaireEvenement from "./pages/PartenaireEvenement";
-import EstablishmentDetail from "./pages/EstablishmentDetail";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, loading } = useAuth();
@@ -89,11 +88,9 @@ function Router() {
         {() => <ProtectedRoute component={MaPosition} />}
       </Route>
 
-      {/* Fiche etablissement */}
-      <Route path="/lieu/:id">
-        {() => <LieuDetail />}
-      </Route>
-      {/* Fiche etablissement par slug (EstablishmentDetail) */}
+      {/* Fiche établissement — tRPC backed, via slug */}
+      <Route path="/lieu/:slug" component={EstablishmentDetail} />
+      {/* Legacy alias /adresse/:slug */}
       <Route path="/adresse/:slug" component={EstablishmentDetail} />
 
       {/* Maya Demo — accessible sans connexion */}
