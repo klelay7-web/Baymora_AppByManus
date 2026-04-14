@@ -312,8 +312,15 @@ export const appRouter = router({
           homeCountry: ctx.user.homeCountry || undefined,
         };
 
-        // Construire le system prompt dynamique avec profil client + géoloc réelle
-        const systemPrompt = buildSystemPrompt(clientProfile, new Date(), input.userLocation || undefined);
+        // Construire le system prompt dynamique avec profil client + géoloc réelle + profil dynamique Membre
+        const memberProfileDoc = await getOrCreateMemberProfile(ctx.user.id).catch(() => null);
+        const systemPrompt = buildSystemPrompt(
+          clientProfile,
+          new Date(),
+          input.userLocation || undefined,
+          memberProfileDoc,
+          undefined
+        );
 
         // Formater l'historique pour Claude (exclure le dernier message user déjà ajouté)
         const claudeMessages: ClaudeMessage[] = history
