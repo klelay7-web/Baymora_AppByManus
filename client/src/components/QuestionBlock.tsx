@@ -97,7 +97,14 @@ export default function QuestionBlockGroup({
   };
 
   return (
-    <div className="mt-3 space-y-4">
+    <div
+      className="mt-3 space-y-4"
+      style={{
+        opacity: disabled ? 0.5 : 1,
+        pointerEvents: disabled ? "none" : "auto",
+        transition: "opacity 300ms",
+      }}
+    >
       {blocks.map((block, idx) => {
         const selected = answers[idx] || new Set();
         const textVal = textAnswers[idx] || "";
@@ -174,24 +181,25 @@ export default function QuestionBlockGroup({
         );
       })}
 
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={!allAnswered || disabled}
-        className="w-full rounded-xl text-sm font-semibold transition-opacity"
-        style={{
-          minHeight: 48,
-          background:
-            allAnswered && !disabled
+      {!disabled && (
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!allAnswered}
+          className="w-full rounded-xl text-sm font-semibold transition-opacity"
+          style={{
+            minHeight: 48,
+            background: allAnswered
               ? "linear-gradient(135deg, #C8A96E, #E8D5A8)"
               : "rgba(200,169,110,0.15)",
-          color: allAnswered && !disabled ? "#070B14" : "rgba(255,255,255,0.4)",
-          cursor: allAnswered && !disabled ? "pointer" : "not-allowed",
-          border: "1px solid rgba(200,169,110,0.3)",
-        }}
-      >
-        Envoyer
-      </button>
+            color: allAnswered ? "#070B14" : "rgba(255,255,255,0.4)",
+            cursor: allAnswered ? "pointer" : "not-allowed",
+            border: "1px solid rgba(200,169,110,0.3)",
+          }}
+        >
+          Envoyer
+        </button>
+      )}
     </div>
   );
 }

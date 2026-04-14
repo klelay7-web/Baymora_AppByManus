@@ -76,6 +76,7 @@ export default function Maya() {
     return stored ? parseInt(stored, 10) : null;
   });
   const [showGpsPopup, setShowGpsPopup] = useState(false);
+  const [answeredBlocks, setAnsweredBlocks] = useState<Set<string>>(new Set());
   const [guestCount, setGuestCount] = useState<number>(() => getGuestCount());
   const [showGuestUpgradeModal, setShowGuestUpgradeModal] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; address?: string; city?: string } | null>(null);
@@ -505,7 +506,15 @@ Et bientôt, je connaîtrai les vôtres.
                         {msg.questionBlocks && msg.questionBlocks.length > 0 && (
                           <QuestionBlockGroup
                             blocks={msg.questionBlocks}
-                            onSubmitAll={(combined) => handleSend(combined)}
+                            disabled={answeredBlocks.has(msg.id)}
+                            onSubmitAll={(combined) => {
+                              setAnsweredBlocks((prev) => {
+                                const next = new Set(prev);
+                                next.add(msg.id);
+                                return next;
+                              });
+                              handleSend(combined);
+                            }}
                           />
                         )}
                       </>
