@@ -95,15 +95,24 @@ export default function EstablishmentDetail() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto pb-16">
-        {/* Back button */}
+      <div
+        className="pb-16"
+        style={{
+          maxWidth: "900px",
+          margin: "0 auto",
+          paddingLeft: "clamp(16px, 4vw, 32px)",
+          paddingRight: "clamp(16px, 4vw, 32px)",
+        }}
+      >
+        {/* Back button — retour à la page d'où vient le Membre */}
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/maison">
-            <button className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm">
-              <ArrowLeft className="w-4 h-4" />
-              Retour
-            </button>
-          </Link>
+          <button
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Retour
+          </button>
           <span className="text-white/20">/</span>
           <span className="text-white/40 text-sm">{categoryLabel}</span>
           <span className="text-white/20">/</span>
@@ -224,42 +233,165 @@ export default function EstablishmentDetail() {
           </div>
         </div>
 
-        {/* Description */}
+        {/* Mini-carte Google Maps */}
+        {establishment.lat != null && establishment.lng != null && (
+          <div className="mb-8">
+            {import.meta.env.VITE_GOOGLE_MAPS_KEY ? (
+              <iframe
+                title={`Carte ${establishment.name}`}
+                src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}&q=${establishment.lat},${establishment.lng}&zoom=15`}
+                style={{
+                  width: "100%",
+                  height: 250,
+                  border: 0,
+                  borderRadius: 12,
+                  display: "block",
+                }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            ) : (
+              <div
+                className="w-full flex items-center justify-center text-white/40 text-xs"
+                style={{
+                  height: 250,
+                  borderRadius: 12,
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                Carte indisponible — VITE_GOOGLE_MAPS_KEY non configurée
+              </div>
+            )}
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${establishment.lat},${establishment.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
+              style={{
+                background: "linear-gradient(135deg, #C8A96E, #E8D5A8)",
+                color: "#070B14",
+              }}
+            >
+              <MapPin className="w-4 h-4" />
+              Y aller
+            </a>
+          </div>
+        )}
+
+        {/* Séparation dorée */}
+        <div className="mb-8" style={{ borderTop: "1px solid rgba(200,169,110,0.2)" }} />
+
+        {/* Signature + description */}
         <div className="mb-8">
-          <p className="text-white/80 leading-relaxed text-base">{establishment.description}</p>
           {establishment.signature && (
-            <p className="mt-3 text-amber-400/80 italic text-sm">✦ {establishment.signature}</p>
+            <p
+              className="mb-5"
+              style={{
+                fontSize: "1.3rem",
+                fontStyle: "italic",
+                color: "#C8A96E",
+                fontFamily: "'Playfair Display', serif",
+                lineHeight: 1.4,
+              }}
+            >
+              ✦ {establishment.signature}
+            </p>
           )}
+          <p className="text-white/80 leading-relaxed text-base">{establishment.description}</p>
         </div>
 
-        {/* Editorial magazine content (enrichi via Google Places + Claude) */}
+        {/* Séparation dorée */}
+        {((establishment as any).editorialContent ||
+          highlights.length > 0 ||
+          (establishment as any).secretTip) && (
+          <div className="mb-8" style={{ borderTop: "1px solid rgba(200,169,110,0.2)" }} />
+        )}
+
+        {/* Editorial magazine content avec lettrine */}
         {(establishment as any).editorialContent && (
-          <div className="mb-8 p-6 rounded-2xl bg-white/3 border border-white/8">
-            <h2 className="text-lg font-semibold text-white mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
+          <div className="mb-8">
+            <h2
+              className="mb-5"
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                color: "#F0EDE6",
+                fontSize: "1.5rem",
+                fontWeight: 600,
+              }}
+            >
               Le point de vue Maison Baymora
             </h2>
-            <div className="space-y-4 text-white/75 leading-relaxed text-[15px]">
-              {String((establishment as any).editorialContent)
-                .split(/\n\s*\n/)
-                .filter(p => p.trim().length > 0)
-                .map((p, i) => (
-                  <p key={i}>{p.trim()}</p>
-                ))}
+            <div style={{ color: "rgba(255,255,255,0.82)" }}>
+              {(() => {
+                const paragraphs = String((establishment as any).editorialContent)
+                  .split(/\n\s*\n/)
+                  .map((p) => p.trim())
+                  .filter((p) => p.length > 0);
+                return paragraphs.map((p, i) => {
+                  if (i === 0 && p.length > 1) {
+                    const first = p.charAt(0);
+                    const rest = p.slice(1);
+                    return (
+                      <p
+                        key={i}
+                        style={{
+                          fontSize: "1.05rem",
+                          lineHeight: 1.8,
+                          marginBottom: "1.2rem",
+                        }}
+                      >
+                        <span
+                          style={{
+                            float: "left",
+                            fontSize: "3.5rem",
+                            fontFamily: "'Playfair Display', serif",
+                            color: "#C8A96E",
+                            lineHeight: 1,
+                            marginRight: 8,
+                            marginTop: 4,
+                          }}
+                        >
+                          {first}
+                        </span>
+                        {rest}
+                      </p>
+                    );
+                  }
+                  return (
+                    <p
+                      key={i}
+                      style={{
+                        fontSize: "1.05rem",
+                        lineHeight: 1.8,
+                        marginBottom: "1.2rem",
+                      }}
+                    >
+                      {p}
+                    </p>
+                  );
+                });
+              })()}
+              <div style={{ clear: "both" }} />
             </div>
           </div>
         )}
 
         {/* Secret tip Maison Baymora */}
         {(establishment as any).secretTip && (
-          <div className="mb-8 p-5 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(200,169,110,0.12), rgba(232,213,168,0.06))", border: "1px solid rgba(200,169,110,0.3)" }}>
-            <h2 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: "#E8D5A8" }}>
-              <Sparkles className="w-4 h-4" />
-              Le secret Maison Baymora
-            </h2>
-            <p className="text-white/80 text-sm leading-relaxed italic">
-              {(establishment as any).secretTip}
-            </p>
-          </div>
+          <>
+            <div className="mb-8" style={{ borderTop: "1px solid rgba(200,169,110,0.2)" }} />
+            <div className="mb-8 p-5 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(200,169,110,0.12), rgba(232,213,168,0.06))", border: "1px solid rgba(200,169,110,0.3)" }}>
+              <h2 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: "#E8D5A8" }}>
+                <Sparkles className="w-4 h-4" />
+                Le secret Maison Baymora
+              </h2>
+              <p className="text-white/80 text-sm leading-relaxed italic">
+                {(establishment as any).secretTip}
+              </p>
+            </div>
+          </>
         )}
 
         {/* Highlights */}
