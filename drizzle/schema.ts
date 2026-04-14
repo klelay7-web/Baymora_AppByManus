@@ -1326,3 +1326,26 @@ export const memberProfiles = mysqlTable("member_profiles", {
 });
 export type MemberProfile = typeof memberProfiles.$inferSelect;
 export type InsertMemberProfile = typeof memberProfiles.$inferInsert;
+
+// ─── Inspiration Themes (pages thématiques immersives) ──────────────
+export const inspirationThemes = mysqlTable("inspiration_themes", {
+  id: int("id").autoincrement().primaryKey(),
+  slug: varchar("slug", { length: 128 }).notNull().unique(),
+  title: varchar("title", { length: 256 }).notNull(),
+  subtitle: varchar("subtitle", { length: 256 }),
+  accroche: text("accroche"),
+  city: varchar("city", { length: 128 }).notNull(),
+  country: varchar("country", { length: 128 }).notNull(),
+  cityAliases: json("cityAliases").$type<string[]>(),
+  doorType: mysqlEnum("doorType", [
+    "beach", "riad", "palace", "japanese", "haussmann", "temple", "chalet", "artdeco",
+  ]).notNull(),
+  heroImageUrl: text("heroImageUrl"),
+  videoUrl: text("videoUrl"),
+  displayOrder: int("displayOrder").default(0),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type InspirationTheme = typeof inspirationThemes.$inferSelect;
+export type InsertInspirationTheme = typeof inspirationThemes.$inferInsert;

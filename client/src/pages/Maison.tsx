@@ -70,12 +70,12 @@ const sectionVariants = {
 
 // ─── Composant InspirationSection ──────────────────────────────────────────────
 const DESTINATIONS = [
-  { label: "Saint-Tropez", sub: "Côte d'Azur", img: "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=400&q=80" },
-  { label: "Alpes", sub: "Ski & montagne", img: "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&q=80" },
-  { label: "New York", sub: "City break", img: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&q=80" },
-  { label: "Santorin", sub: "Mer Égée", img: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=400&q=80" },
-  { label: "Tokyo", sub: "Asie & culture", img: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&q=80" },
-  { label: "Marrakech", sub: "Escapade soleil", img: "https://images.unsplash.com/photo-1489493887464-892be6d1daae?w=400&q=80" },
+  { label: "Saint-Tropez", slug: "saint-tropez", sub: "Côte d'Azur", img: "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?w=400&q=80" },
+  { label: "Paris", slug: "paris", sub: "La capitale intime", img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&q=80" },
+  { label: "New York", slug: "new-york", sub: "City break", img: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&q=80" },
+  { label: "Bali", slug: "bali", sub: "L'île qui respire", img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&q=80" },
+  { label: "Tokyo", slug: "tokyo", sub: "Asie & culture", img: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&q=80" },
+  { label: "Marrakech", slug: "marrakech", sub: "Escapade soleil", img: "https://images.unsplash.com/photo-1489493887464-892be6d1daae?w=400&q=80" },
 ];
 
 function InspirationSection() {
@@ -113,8 +113,8 @@ function InspirationSection() {
                 <p className="font-bold text-sm" style={{ color: "#F0EDE6", fontFamily: "'Playfair Display', serif" }}>{dest.label}</p>
                 <p className="text-[10px]" style={{ color: "#C8A96E" }}>{dest.sub}</p>
               </div>
-              {/* CTA overlay cliquable */}
-              <a href="/maya" className="absolute inset-0" aria-label={`Explorer ${dest.label}`} />
+              {/* CTA overlay cliquable → page thématique immersive */}
+              <a href={`/inspiration/${dest.slug}`} className="absolute inset-0" aria-label={`Explorer ${dest.label}`} />
             </div>
           ))}
         </div>

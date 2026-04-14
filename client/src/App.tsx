@@ -28,6 +28,7 @@ import MentionsLegales from "./pages/MentionsLegales";
 import Confidentialite from "./pages/Confidentialite";
 import CGU from "./pages/CGU";
 import Contact from "./pages/Contact";
+import ThemePage from "./pages/ThemePage";
 import PartenaireEvenement from "./pages/PartenaireEvenement";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -92,6 +93,8 @@ function Router() {
       <Route path="/lieu/:slug" component={EstablishmentDetail} />
       {/* Legacy alias /adresse/:slug */}
       <Route path="/adresse/:slug" component={EstablishmentDetail} />
+      {/* Inspiration theme pages */}
+      <Route path="/inspiration/:slug" component={ThemePage} />
 
       {/* Maya Demo — accessible sans connexion */}
       <Route path="/maya-demo" component={MayaDemo} />

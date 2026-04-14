@@ -52,7 +52,7 @@ import type { EmailType } from "./services/emailService";
 import { callClaude, buildSystemPrompt, parseStructuredTags, type ClaudeMessage } from "./services/claudeService";
 import { orchestrate } from "./services/ai/orchestrator";
 import type { User } from "../drizzle/schema";
-import { outboundClicks } from "../drizzle/schema";
+import { outboundClicks, inspirationThemes, establishments as establishmentsTable } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
 import { notifyOwner } from "./_core/notification";
@@ -217,6 +217,72 @@ export const appRouter = router({
           console.error("[tracking.outboundClick] error:", err);
           return { success: false as const };
         }
+      }),
+  }),
+  inspiration: router({
+    // List active themes, ordered by displayOrder
+    list: publicProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { eq, asc } = await import("drizzle-orm");
+      const rows = await db
+        .select()
+        .from(inspirationThemes)
+        .where(eq(inspirationThemes.active, true))
+        .orderBy(asc(inspirationThemes.displayOrder));
+      return rows;
+    }),
+
+    // Get a single theme with its grouped establishments
+    getTheme: publicProcedure
+      .input(z.object({ slug: z.string().min(1) }))
+      .query(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB indisponible" });
+        }
+
+        const { eq, and, inArray, desc } = await import("drizzle-orm");
+
+        const themeRows = await db
+          .select()
+          .from(inspirationThemes)
+          .where(eq(inspirationThemes.slug, input.slug))
+          .limit(1);
+        const theme = themeRows[0];
+        if (!theme) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Thème introuvable" });
+        }
+
+        // Resolve the list of cities that belong to this theme
+        const aliases = theme.cityAliases as unknown as string[] | null;
+        const cities: string[] = Array.isArray(aliases) && aliases.length > 0
+          ? aliases
+          : [theme.city];
+
+        const rows = await db
+          .select()
+          .from(establishmentsTable)
+          .where(
+            and(
+              inArray(establishmentsTable.city, cities),
+              eq(establishmentsTable.status, "published"),
+            )
+          )
+          .orderBy(desc(establishmentsTable.rating))
+          .limit(80);
+
+        // Group by section
+        const sorties = rows.filter((e: any) => e.category === "bar" || e.category === "nightclub");
+        const tables = rows.filter((e: any) => e.category === "restaurant");
+        const hebergement = rows.filter((e: any) => e.category === "hotel" || e.category === "spa" || e.category === "wellness");
+        const experiences = rows.filter((e: any) => e.category === "experience" || e.category === "activity" || e.category === "museum");
+
+        return {
+          theme,
+          sections: { sorties, tables, hebergement, experiences },
+          total: rows.length,
+        };
       }),
   }),
   auth: router({
