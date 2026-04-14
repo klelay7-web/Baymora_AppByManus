@@ -216,8 +216,7 @@ async function main() {
      FROM establishments
      WHERE status = 'published' AND enrichedAt IS NULL
      ORDER BY id ASC
-     LIMIT ?`,
-    [BATCH_SIZE]
+     LIMIT ${BATCH_SIZE}`
   )) as any[];
 
   if (!rows || rows.length === 0) {
