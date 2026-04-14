@@ -293,11 +293,47 @@ Le frontend parse automatiquement des balises invisibles pour afficher des compo
 - \`:::SCENARIOS:::[{name, priceFrom, summary}]:::END:::\` — pour comparer plusieurs scénarios
 
 ### Règles sur les tags
-- Chaque question que tu poses DOIT avoir son :::QR::: attaché. Pas de bloc de boutons séparé.
-- Propose toujours une option "💬 Autre chose" ou "💬 Autre" dans les :::QR::: pour laisser une sortie libre.
+- Chaque question que tu poses DOIT avoir ses options attachées. Pas de bloc de boutons séparé.
+- Propose toujours une option "Autre" avec type="text" pour laisser une sortie libre.
 - Le Membre ne doit JAMAIS avoir besoin d'écrire quand il peut cliquer.
 - Quand tu suggères un lieu, inclus :::PLACES::: pour qu'il apparaisse sous forme de carte cliquable.
 - Quand tu construis un parcours, inclus :::MAP::: avec tous les markers.
+
+### Quick replies — NOUVEAU FORMAT \`<question_block>\` (préféré)
+Quand tu poses UNE OU PLUSIEURS questions dans un même message, utilise le format structuré \`<question_block>\`. Chaque question devient un bloc indépendant avec ses propres options. Le Membre répond à toutes les questions avant d'envoyer (un seul bouton "Envoyer" en bas, géré par l'UI — ne l'écris pas).
+
+Attributs :
+- \`question="..."\` — le texte de la question (obligatoire)
+- \`multi="true"\` ou \`multi="false"\` — autoriser plusieurs choix ou non (défaut false)
+
+Options :
+- \`<option>Label</option>\` — bouton standard
+- \`<option type="text" placeholder="...">Autre</option>\` — champ texte libre avec placeholder contextuel
+
+Exemple (2 questions dans un même message) :
+
+\`\`\`
+<question_block question="C'est pour quand ?" multi="false">
+<option>Ce soir</option>
+<option>Ce week-end</option>
+<option>La semaine prochaine</option>
+<option type="text" placeholder="Autre date...">Autre</option>
+</question_block>
+
+<question_block question="Plutôt quelle ambiance ?" multi="true">
+<option>Rooftop & cocktails</option>
+<option>Intimate & cosy</option>
+<option>Festif & dancefloor</option>
+<option>Gastro & raffiné</option>
+<option type="text" placeholder="Décris ton ambiance...">Autre</option>
+</question_block>
+\`\`\`
+
+**Règles critiques** :
+- Utilise \`<question_block>\` quand tu poses 2+ questions dans un message (c'est fait pour ça).
+- Tu peux aussi l'utiliser pour UNE seule question — c'est plus clair que :::QR:::.
+- Les \`<question_block>\` sont invisibles dans le texte (strippés par le parser) — n'écris pas de reformulation de la question ailleurs dans le message.
+- L'ancien \`:::QR:::\` reste supporté pour compatibilité ascendante (bloc de boutons unique en bas, clic = envoi immédiat) mais **préfère toujours \`<question_block>\` quand tu poses une question**.
 
 ## LANGUE
 Réponds dans la langue du Membre. Français par défaut. Si le Membre écrit en anglais, réponds en anglais. Si en italien, en italien. Etc.`;
@@ -441,6 +477,18 @@ export async function searchWithPerplexity(query: string): Promise<string> {
 }
 
 // ─── Parser de Tags Structurés ───────────────────────────────────────────────
+export interface ParsedQuestionOption {
+  label: string;
+  type: "button" | "text";
+  placeholder?: string;
+}
+
+export interface ParsedQuestionBlock {
+  question: string;
+  multi: boolean;
+  options: ParsedQuestionOption[];
+}
+
 export interface ParsedTags {
   places?: any[];
   map?: { query: string; zoom?: number; center?: { lat: number; lng: number } };
@@ -448,6 +496,7 @@ export interface ParsedTags {
   gcal?: any[];
   booking?: any[];
   qr?: string[];
+  questionBlocks?: ParsedQuestionBlock[];
   plan?: any;
   scenarios?: any[];
   cleanMessage: string;
@@ -519,6 +568,48 @@ export function parseStructuredTags(content: string): ParsedTags {
       .slice(0, 6);
   }
 
+  // Extract <question_block> tags — new multi-question UI (XML-ish)
+  // Format :
+  //   <question_block question="..." multi="true|false">
+  //     <option>Label</option>
+  //     <option type="text" placeholder="...">Autre</option>
+  //   </question_block>
+  const blockRegex = /<question_block\s+([^>]*)>([\s\S]*?)<\/question_block>/g;
+  const blocks: ParsedQuestionBlock[] = [];
+  const blockMatches = Array.from(content.matchAll(blockRegex));
+  for (const m of blockMatches) {
+    const attrs = m[1];
+    const inner = m[2];
+    const qMatch = attrs.match(/question\s*=\s*"([^"]*)"/);
+    const multiMatch = attrs.match(/multi\s*=\s*"([^"]*)"/);
+    const question = qMatch ? qMatch[1].trim() : "";
+    const multi = multiMatch ? multiMatch[1].trim() === "true" : false;
+    if (!question) continue;
+
+    const options: ParsedQuestionOption[] = [];
+    const optRegex = /<option([^>]*)>([\s\S]*?)<\/option>/g;
+    const optMatches = Array.from(inner.matchAll(optRegex));
+    for (const om of optMatches) {
+      const oAttrs = om[1];
+      const label = om[2].trim();
+      if (!label) continue;
+      const typeMatch = oAttrs.match(/type\s*=\s*"([^"]*)"/);
+      const phMatch = oAttrs.match(/placeholder\s*=\s*"([^"]*)"/);
+      const type = typeMatch && typeMatch[1] === "text" ? "text" : "button";
+      options.push({
+        label,
+        type,
+        ...(type === "text" && phMatch ? { placeholder: phMatch[1] } : {}),
+      });
+    }
+    if (options.length > 0) {
+      blocks.push({ question, multi, options });
+    }
+  }
+  if (blocks.length > 0) {
+    result.questionBlocks = blocks;
+  }
+
   // Extract PLAN
   const planRaw = extractTag("PLAN", content);
   if (planRaw) {
@@ -544,6 +635,8 @@ export function parseStructuredTags(content: string): ParsedTags {
     .replace(/:::GCAL:::[\.\s\S]*?(:::END:::|$)/g, "")
     .replace(/:::QR:::[\.\s\S]*?(:::END:::|$)/g, "")
     .replace(/:::PLAN:::[\.\s\S]*?(:::END:::|$)/g, "")
+    // Supprimer les question_block (rendus en UI par le composant QuestionBlock)
+    .replace(/<question_block[\s\S]*?<\/question_block>/g, "")
     // Sécurité finale : supprimer tout tag résiduel
     .replace(/:::[A-Z_]+:::[\s\S]*/g, "")
     .trim();

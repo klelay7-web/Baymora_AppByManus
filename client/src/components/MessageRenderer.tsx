@@ -139,7 +139,11 @@ interface ParsedSegment {
   data?: unknown;
 }
 
-function parseMessage(raw: string): ParsedSegment[] {
+function parseMessage(rawInput: string): ParsedSegment[] {
+  // Strip <question_block> XML blocks — they're rendered separately by the
+  // QuestionBlockGroup component using data from the tRPC response, not from
+  // the raw text.
+  const raw = rawInput.replace(/<question_block[\s\S]*?<\/question_block>/g, "");
   const segments: ParsedSegment[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;

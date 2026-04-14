@@ -4,6 +4,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Sparkles, Send, Mic, MicOff, RotateCcw, MapPin } from "lucide-react";
 import MessageRenderer from "@/components/MessageRenderer";
+import QuestionBlockGroup from "@/components/QuestionBlock";
 
 const GEOLOC_KEY = "baymora_geoloc_asked";
 const GUEST_KEY = "baymora_guest_conversations";
@@ -45,11 +46,23 @@ const DESTINATIONS = ["Paris", "Côte d'Azur", "Reims", "Deauville", "New York",
 
 const SESSION_KEY = "baymora_conv_id";
 
+interface QuestionOption {
+  label: string;
+  type: "button" | "text";
+  placeholder?: string;
+}
+interface QuestionBlockData {
+  question: string;
+  multi: boolean;
+  options: QuestionOption[];
+}
+
 interface Message {
   id: string;
   role: "user" | "maya";
   content: string;
   timestamp: Date;
+  questionBlocks?: QuestionBlockData[];
 }
 
 export default function Maya() {
@@ -139,24 +152,28 @@ export default function Maya() {
   };
 
   // ─── Envoyer un message ────────────────────────────────────────────────────
-  const onMayaResponse = (text: string | undefined) => {
-    if (text) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString() + "_maya",
-          role: "maya",
-          content: text,
-          timestamp: new Date(),
-        },
-      ]);
-    }
+  const onMayaResponse = (data: any) => {
+    const text = data?.rawContent || data?.cleanMessage;
+    if (!text) return;
+    const qb: QuestionBlockData[] | undefined = Array.isArray(data?.questionBlocks)
+      ? data.questionBlocks
+      : undefined;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString() + "_maya",
+        role: "maya",
+        content: text,
+        timestamp: new Date(),
+        questionBlocks: qb && qb.length > 0 ? qb : undefined,
+      },
+    ]);
   };
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
     onMutate: () => setIsTyping(true),
     onSettled: () => setIsTyping(false),
-    onSuccess: (data) => onMayaResponse(data?.rawContent || data?.cleanMessage),
+    onSuccess: (data) => onMayaResponse(data),
     onError: (err) => {
       const isUpgrade = err.message === "UPGRADE_REQUIRED";
       setMessages((prev) => [
@@ -177,7 +194,7 @@ export default function Maya() {
     onMutate: () => setIsTyping(true),
     onSettled: () => setIsTyping(false),
     onSuccess: (data) => {
-      onMayaResponse(data?.rawContent || data?.cleanMessage);
+      onMayaResponse(data);
       const next = incrementGuestCount();
       setGuestCount(next);
       if (next >= GUEST_FREE_LIMIT) {
@@ -483,7 +500,15 @@ Et bientôt, je connaîtrai les vôtres.
                     }}
                   >
                     {msg.role === "maya" ? (
-                      <MessageRenderer content={msg.content} onSend={handleSend} />
+                      <>
+                        <MessageRenderer content={msg.content} onSend={handleSend} />
+                        {msg.questionBlocks && msg.questionBlocks.length > 0 && (
+                          <QuestionBlockGroup
+                            blocks={msg.questionBlocks}
+                            onSubmitAll={(combined) => handleSend(combined)}
+                          />
+                        )}
+                      </>
                     ) : (
                       <span className="text-sm" style={{ color: "#F0EDE6" }}>{msg.content}</span>
                     )}
