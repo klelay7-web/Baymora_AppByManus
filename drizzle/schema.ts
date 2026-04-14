@@ -1295,3 +1295,15 @@ export const affiliatePrograms = mysqlTable('affiliate_programs', {
 });
 export type AffiliateProgram = typeof affiliatePrograms.$inferSelect;
 export type InsertAffiliateProgram = typeof affiliatePrograms.$inferInsert;
+
+// ─── Outbound Clicks (tracking liens sortants) ──────────────────────
+export const outboundClicks = mysqlTable("outbound_clicks", {
+  id: int("id").autoincrement().primaryKey(),
+  establishmentId: int("establishmentId").notNull(),
+  type: mysqlEnum("type", ["website", "phone", "maps", "reservation"]).notNull(),
+  url: text("url").notNull(),
+  userId: int("userId"),
+  clickedAt: timestamp("clickedAt").defaultNow().notNull(),
+});
+export type OutboundClick = typeof outboundClicks.$inferSelect;
+export type InsertOutboundClick = typeof outboundClicks.$inferInsert;

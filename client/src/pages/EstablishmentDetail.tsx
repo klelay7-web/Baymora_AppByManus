@@ -46,11 +46,22 @@ export default function EstablishmentDetail() {
   const slug = params?.slug || "";
   const [currentPhoto, setCurrentPhoto] = useState(0);
   const [saved, setSaved] = useState(false);
+  const [mapExpanded, setMapExpanded] = useState(false);
+
+  const trackOutbound = trpc.tracking.outboundClick.useMutation();
 
   const { data: establishment, isLoading } = trpc.establishments.getBySlug.useQuery(
     { slug },
     { enabled: !!slug }
   );
+
+  // Fire-and-forget outbound tracker; never blocks navigation
+  const handleOutbound = (type: "website" | "phone" | "maps" | "reservation", url: string) => {
+    if (!establishment?.id) return;
+    try {
+      trackOutbound.mutate({ establishmentId: establishment.id, type, url });
+    } catch { /* ignore */ }
+  };
 
   const { data: similar } = trpc.establishments.getSimilar.useQuery(
     { id: establishment?.id || 0, city: establishment?.city || "", limit: 3 },
@@ -120,7 +131,7 @@ export default function EstablishmentDetail() {
         </div>
 
         {/* Hero Gallery */}
-        <div className="relative rounded-2xl overflow-hidden mb-8 h-72 md:h-96 bg-white/5">
+        <div className="relative rounded-2xl overflow-hidden mb-8 bg-white/5" style={{ height: "55vh", maxHeight: 560 }}>
           {heroImage ? (
             <img
               src={heroImage}
@@ -233,49 +244,81 @@ export default function EstablishmentDetail() {
           </div>
         </div>
 
-        {/* Mini-carte Google Maps */}
+        {/* Mini-carte Google Maps — aperçu mobile 200px / desktop 280px, expand 70vh */}
         {establishment.lat != null && establishment.lng != null && (
           <div className="mb-8">
-            {import.meta.env.VITE_GOOGLE_MAPS_KEY ? (
-              <iframe
-                title={`Carte ${establishment.name}`}
-                src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}&q=${establishment.lat},${establishment.lng}&zoom=15`}
-                style={{
-                  width: "100%",
-                  height: 250,
-                  border: 0,
-                  borderRadius: 12,
-                  display: "block",
-                }}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-              />
-            ) : (
-              <div
-                className="w-full flex items-center justify-center text-white/40 text-xs"
-                style={{
-                  height: 250,
-                  borderRadius: 12,
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                }}
-              >
-                Carte indisponible — VITE_GOOGLE_MAPS_KEY non configurée
-              </div>
-            )}
-            <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${establishment.lat},${establishment.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
+            <div
+              className="relative w-full overflow-hidden"
               style={{
+                height: mapExpanded ? "70vh" : undefined,
+                borderRadius: 12,
+                transition: "height 400ms cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            >
+              {import.meta.env.VITE_GOOGLE_MAPS_KEY ? (
+                <iframe
+                  title={`Carte ${establishment.name}`}
+                  src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}&q=${establishment.lat},${establishment.lng}&zoom=15`}
+                  className={cn(
+                    "w-full block border-0",
+                    mapExpanded ? "h-full" : "h-[200px] md:h-[280px]"
+                  )}
+                  style={{
+                    borderRadius: 12,
+                    transition: "height 400ms cubic-bezier(0.4, 0, 0.2, 1)",
+                  }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              ) : (
+                <div
+                  className={cn(
+                    "w-full flex items-center justify-center text-white/40 text-xs",
+                    mapExpanded ? "h-full" : "h-[200px] md:h-[280px]"
+                  )}
+                  style={{
+                    borderRadius: 12,
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  Carte indisponible — VITE_GOOGLE_MAPS_KEY non configurée
+                </div>
+              )}
+            </div>
+
+            {/* Actions carte : bouton principal expand/collapse + bouton secondaire ouverture Google Maps */}
+            <button
+              type="button"
+              onClick={() => setMapExpanded((v) => !v)}
+              className="mt-3 inline-flex items-center justify-center gap-2 w-full rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
+              style={{
+                minHeight: 48,
                 background: "linear-gradient(135deg, #C8A96E, #E8D5A8)",
                 color: "#070B14",
               }}
             >
               <MapPin className="w-4 h-4" />
-              Y aller
+              {mapExpanded ? "Réduire la carte" : "Voir sur la carte"}
+            </button>
+
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${establishment.lat},${establishment.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => handleOutbound("maps", `https://www.google.com/maps/dir/?api=1&destination=${establishment.lat},${establishment.lng}`)}
+              className="mt-2 inline-flex items-center justify-center gap-1.5 w-full rounded-xl text-xs transition-colors"
+              style={{
+                minHeight: 44,
+                color: "rgba(255,255,255,0.55)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                background: "transparent",
+              }}
+            >
+              Ouvrir dans Google Maps
+              <ExternalLink className="w-3 h-3" />
+              <span className="text-[10px] opacity-60 ml-1">· vous sortez de La Maison</span>
             </a>
           </div>
         )}
@@ -284,22 +327,29 @@ export default function EstablishmentDetail() {
         <div className="mb-8" style={{ borderTop: "1px solid rgba(200,169,110,0.2)" }} />
 
         {/* Signature + description */}
-        <div className="mb-8">
+        <div className="mb-8" style={{ maxWidth: "85ch" }}>
           {establishment.signature && (
             <p
-              className="mb-5"
+              className="mb-4"
               style={{
-                fontSize: "1.3rem",
+                fontSize: "1.05rem",
                 fontStyle: "italic",
                 color: "#C8A96E",
-                fontFamily: "'Playfair Display', serif",
-                lineHeight: 1.4,
+                lineHeight: 1.5,
               }}
             >
               ✦ {establishment.signature}
             </p>
           )}
-          <p className="text-white/80 leading-relaxed text-base">{establishment.description}</p>
+          <p
+            style={{
+              fontSize: "1rem",
+              lineHeight: 1.75,
+              color: "rgba(255,255,255,0.75)",
+            }}
+          >
+            {establishment.description}
+          </p>
         </div>
 
         {/* Séparation dorée */}
@@ -309,21 +359,21 @@ export default function EstablishmentDetail() {
           <div className="mb-8" style={{ borderTop: "1px solid rgba(200,169,110,0.2)" }} />
         )}
 
-        {/* Editorial magazine content avec lettrine */}
+        {/* Editorial magazine content avec lettrine sobre */}
         {(establishment as any).editorialContent && (
-          <div className="mb-8">
+          <div className="mb-8" style={{ maxWidth: "85ch" }}>
             <h2
-              className="mb-5"
+              className="mb-4"
               style={{
                 fontFamily: "'Playfair Display', serif",
                 color: "#F0EDE6",
-                fontSize: "1.5rem",
+                fontSize: "1.15rem",
                 fontWeight: 600,
               }}
             >
               Le point de vue Maison Baymora
             </h2>
-            <div style={{ color: "rgba(255,255,255,0.82)" }}>
+            <div>
               {(() => {
                 const paragraphs = String((establishment as any).editorialContent)
                   .split(/\n\s*\n/)
@@ -337,20 +387,21 @@ export default function EstablishmentDetail() {
                       <p
                         key={i}
                         style={{
-                          fontSize: "1.05rem",
-                          lineHeight: 1.8,
+                          fontSize: "1rem",
+                          lineHeight: 1.75,
                           marginBottom: "1.2rem",
+                          color: "rgba(255,255,255,0.75)",
                         }}
                       >
                         <span
                           style={{
                             float: "left",
-                            fontSize: "3.5rem",
+                            fontSize: "2.2rem",
                             fontFamily: "'Playfair Display', serif",
-                            color: "#C8A96E",
+                            color: "rgba(255,255,255,0.85)",
                             lineHeight: 1,
-                            marginRight: 8,
-                            marginTop: 4,
+                            marginRight: 6,
+                            marginTop: 2,
                           }}
                         >
                           {first}
@@ -363,9 +414,10 @@ export default function EstablishmentDetail() {
                     <p
                       key={i}
                       style={{
-                        fontSize: "1.05rem",
-                        lineHeight: 1.8,
+                        fontSize: "1rem",
+                        lineHeight: 1.75,
                         marginBottom: "1.2rem",
+                        color: "rgba(255,255,255,0.75)",
                       }}
                     >
                       {p}
@@ -397,7 +449,7 @@ export default function EstablishmentDetail() {
         {/* Highlights */}
         {highlights.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-white mb-4">Points forts</h2>
+            <h2 className="mb-4" style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", fontWeight: 600, color: "#F0EDE6" }}>Points forts</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {highlights.map((h, i) => (
                 <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-white/5">
@@ -412,7 +464,7 @@ export default function EstablishmentDetail() {
         {/* Things to know */}
         {thingsToKnow.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-white mb-4">À savoir</h2>
+            <h2 className="mb-4" style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", fontWeight: 600, color: "#F0EDE6" }}>À savoir</h2>
             <div className="space-y-2">
               {thingsToKnow.map((t, i) => (
                 <div key={i} className="flex items-start gap-3 text-sm text-white/60">
@@ -427,7 +479,7 @@ export default function EstablishmentDetail() {
         {/* Anecdotes */}
         {anecdotes.length > 0 && (
           <div className="mb-8 p-5 rounded-2xl bg-amber-500/8 border border-amber-500/20">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <h2 className="mb-4 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", fontWeight: 600, color: "#F0EDE6" }}>
               <Sparkles className="w-4 h-4 text-amber-400" />
               Le saviez-vous ?
             </h2>
@@ -439,51 +491,92 @@ export default function EstablishmentDetail() {
           </div>
         )}
 
-        {/* Practical info */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Practical info — en colonne sur mobile, 2 cols desktop */}
+        <div className="mb-8 flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-4">
           {establishment.phone && (
-            <a href={`tel:${establishment.phone}`} className="flex items-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-white/8 transition-colors">
-              <Phone className="w-5 h-5 text-white/40" />
-              <div>
+            <a
+              href={`tel:${establishment.phone}`}
+              onClick={() => handleOutbound("phone", `tel:${establishment.phone}`)}
+              className="flex items-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-white/8 transition-colors"
+              style={{ minHeight: 48 }}
+            >
+              <Phone className="w-5 h-5 text-white/40 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-white/40 mb-0.5">Téléphone</p>
                 <p className="text-white text-sm">{establishment.phone}</p>
               </div>
             </a>
           )}
           {establishment.website && (
-            <a href={establishment.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-white/8 transition-colors">
-              <Globe className="w-5 h-5 text-white/40" />
-              <div>
-                <p className="text-xs text-white/40 mb-0.5">Site web</p>
+            <a
+              href={establishment.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => handleOutbound("website", establishment.website!)}
+              className="flex items-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-white/8 transition-colors"
+              style={{ minHeight: 48 }}
+            >
+              <Globe className="w-5 h-5 text-white/40 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-white/40 mb-0.5 flex items-center gap-1">
+                  Site web
+                  <ExternalLink className="w-3 h-3" />
+                </p>
                 <p className="text-white text-sm truncate">{establishment.website.replace(/^https?:\/\//, "")}</p>
               </div>
             </a>
           )}
         </div>
 
-        {/* Affiliate CTA */}
+        {/* Affiliate CTA — touch targets + tracking */}
         {(Object.keys(affiliateLinks).length > 0 || establishment.affiliateUrl) && (
           <div className="mb-8 p-5 rounded-2xl bg-white/5 border border-white/10">
-            <h2 className="text-base font-semibold text-white mb-3">Réserver</h2>
-            <div className="flex flex-wrap gap-2">
+            <h2
+              className="mb-4"
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: "1.15rem",
+                fontWeight: 600,
+                color: "#F0EDE6",
+              }}
+            >
+              Réserver
+            </h2>
+            <div className="flex flex-col gap-3">
               {establishment.affiliateUrl && (
-                <Button
-                  asChild
-                  className="bg-amber-500 hover:bg-amber-600 text-black font-semibold"
+                <a
+                  href={establishment.affiliateUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => handleOutbound("reservation", establishment.affiliateUrl!)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-sm transition-opacity hover:opacity-90"
+                  style={{
+                    minHeight: 48,
+                    background: "#F59E0B",
+                    color: "#070B14",
+                  }}
                 >
-                  <a href={establishment.affiliateUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Réserver maintenant
-                  </a>
-                </Button>
+                  Réserver maintenant
+                  <ExternalLink className="w-4 h-4" />
+                </a>
               )}
               {Object.entries(affiliateLinks).map(([platform, url]) => (
-                <Button key={platform} variant="outline" asChild className="border-white/20 text-white hover:bg-white/10">
-                  <a href={url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                    {platform.charAt(0).toUpperCase() + platform.slice(1)}
-                  </a>
-                </Button>
+                <a
+                  key={platform}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => handleOutbound("reservation", url)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl text-sm transition-colors"
+                  style={{
+                    minHeight: 48,
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    color: "rgba(255,255,255,0.85)",
+                  }}
+                >
+                  {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               ))}
             </div>
           </div>
@@ -492,7 +585,7 @@ export default function EstablishmentDetail() {
         {/* Reviews */}
         {reviews.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-white mb-4">Avis sélectionnés</h2>
+            <h2 className="mb-4" style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", fontWeight: 600, color: "#F0EDE6" }}>Avis sélectionnés</h2>
             <div className="space-y-3">
               {reviews.slice(0, 3).map((r, i) => (
                 <div key={i} className="p-4 rounded-xl bg-white/5">
@@ -511,13 +604,32 @@ export default function EstablishmentDetail() {
           </div>
         )}
 
-        {/* Similar establishments */}
+        {/* Similar establishments — scroll horizontal snap mobile, stack desktop */}
         {similar && similar.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold text-white mb-4">Dans le même esprit</h2>
-            <div className="space-y-3">
+            <h2
+              className="mb-4"
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: "1.15rem",
+                fontWeight: 600,
+                color: "#F0EDE6",
+              }}
+            >
+              Dans le même esprit
+            </h2>
+            <div
+              className="flex md:flex-col gap-3 md:gap-3 overflow-x-auto md:overflow-visible pb-2 md:pb-0 -mx-4 md:mx-0 px-4 md:px-0"
+              style={{ scrollSnapType: "x mandatory" }}
+            >
               {similar.map((s) => (
-                <EstablishmentCard key={s.id} establishment={s} variant="compact" />
+                <div
+                  key={s.id}
+                  className="flex-shrink-0 w-[85%] md:w-auto"
+                  style={{ scrollSnapAlign: "start" }}
+                >
+                  <EstablishmentCard establishment={s} variant="compact" />
+                </div>
               ))}
             </div>
           </div>

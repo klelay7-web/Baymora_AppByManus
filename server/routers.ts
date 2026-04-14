@@ -52,6 +52,7 @@ import type { EmailType } from "./services/emailService";
 import { callClaude, buildSystemPrompt, parseStructuredTags, type ClaudeMessage } from "./services/claudeService";
 import { orchestrate } from "./services/ai/orchestrator";
 import type { User } from "../drizzle/schema";
+import { outboundClicks } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
 import { notifyOwner } from "./_core/notification";
@@ -191,6 +192,32 @@ const radarRouter = router({
 export const appRouter = router({
   system: systemRouter,
   radar: radarRouter,
+  tracking: router({
+    outboundClick: publicProcedure
+      .input(
+        z.object({
+          establishmentId: z.number(),
+          type: z.enum(["website", "phone", "maps", "reservation"]),
+          url: z.string().max(2048),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const db = await (await import("./db")).getDb();
+          if (!db) return { success: false as const };
+          await db.insert(outboundClicks).values({
+            establishmentId: input.establishmentId,
+            type: input.type,
+            url: input.url,
+            userId: ctx.user?.id ?? null,
+          });
+          return { success: true as const };
+        } catch (err) {
+          console.error("[tracking.outboundClick] error:", err);
+          return { success: false as const };
+        }
+      }),
+  }),
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
