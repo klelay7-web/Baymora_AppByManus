@@ -1307,3 +1307,22 @@ export const outboundClicks = mysqlTable("outbound_clicks", {
 });
 export type OutboundClick = typeof outboundClicks.$inferSelect;
 export type InsertOutboundClick = typeof outboundClicks.$inferInsert;
+
+// ─── Member Profiles (profil dynamique enrichi par Maya) ────────────
+export const memberProfiles = mysqlTable("member_profiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  preferences: json("preferences").$type<Record<string, unknown>>().default({}),
+  habits: json("habits").$type<Record<string, unknown>>().default({}),
+  companions: json("companions").$type<Array<{ name: string; relation: string }>>().default([]),
+  visitedSlugs: json("visitedSlugs").$type<string[]>().default([]),
+  favoriteCities: json("favoriteCities").$type<string[]>().default([]),
+  conversationCount: int("conversationCount").default(0),
+  lastConversationAt: timestamp("lastConversationAt"),
+  creatorStatus: mysqlEnum("creatorStatus", ["member", "creator", "eclaireur"]).default("member"),
+  walletCredits: int("walletCredits").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MemberProfile = typeof memberProfiles.$inferSelect;
+export type InsertMemberProfile = typeof memberProfiles.$inferInsert;

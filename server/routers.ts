@@ -61,6 +61,7 @@ import {
   getClientProfile, upsertClientProfile,
   listCompanions, getCompanion, createCompanion, updateCompanion, deleteCompanion,
   listMyDestinations, listPublicDestinations, getDestination, createDestination, updateDestination, deleteDestination, saveDestinationForUser,
+  getOrCreateMemberProfile, updateMemberProfile, enrichProfileFromConversation,
 } from "./services/profileService";
 import { generateImage } from "./_core/imageGeneration";
 import { extractProfileFromMessage } from "./services/profileExtractor";
@@ -340,6 +341,16 @@ export const appRouter = router({
         // Stocker la réponse complète (avec tags) pour le frontend
         await addMessage(input.conversationId, "assistant", claudeResponse.content);
 
+        // Enrichissement fire-and-forget du member profile à partir de la conversation.
+        // N'attend pas la fin, ne bloque jamais la réponse.
+        const enrichmentMessages = [
+          ...claudeMessages,
+          { role: "assistant" as const, content: claudeResponse.content },
+        ];
+        enrichProfileFromConversation(ctx.user.id, enrichmentMessages).catch((err) =>
+          console.error("[chat.sendMessage] profile enrichment failed:", err)
+        );
+
         // C4 — Compteur parcours mensuel : incrémenter si Maya génère un parcours (:::PLAN:::)
         if (parsed.plan && !isPrivileged) {
           const PARCOURS_LIMITS: Record<string, number> = {
@@ -517,6 +528,28 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await addCompanion(ctx.user.id, input);
         return { success: true };
+      }),
+
+    // ─── Member profile (profil dynamique enrichi par Maya) ─────────
+    get: protectedProcedure.query(async ({ ctx }) => {
+      return getOrCreateMemberProfile(ctx.user.id);
+    }),
+
+    update: protectedProcedure
+      .input(
+        z.object({
+          preferences: z.record(z.string(), z.any()).optional(),
+          habits: z.record(z.string(), z.any()).optional(),
+          companions: z.array(z.object({ name: z.string(), relation: z.string() })).optional(),
+          visitedSlugs: z.array(z.string()).optional(),
+          favoriteCities: z.array(z.string()).optional(),
+          conversationCount: z.number().int().optional(),
+          creatorStatus: z.enum(["member", "creator", "eclaireur"]).optional(),
+          walletCredits: z.number().int().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        return updateMemberProfile(ctx.user.id, input);
       }),
   }),
 
