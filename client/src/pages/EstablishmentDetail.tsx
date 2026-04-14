@@ -232,6 +232,36 @@ export default function EstablishmentDetail() {
           )}
         </div>
 
+        {/* Editorial magazine content (enrichi via Google Places + Claude) */}
+        {(establishment as any).editorialContent && (
+          <div className="mb-8 p-6 rounded-2xl bg-white/3 border border-white/8">
+            <h2 className="text-lg font-semibold text-white mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Le point de vue Maison Baymora
+            </h2>
+            <div className="space-y-4 text-white/75 leading-relaxed text-[15px]">
+              {String((establishment as any).editorialContent)
+                .split(/\n\s*\n/)
+                .filter(p => p.trim().length > 0)
+                .map((p, i) => (
+                  <p key={i}>{p.trim()}</p>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Secret tip Maison Baymora */}
+        {(establishment as any).secretTip && (
+          <div className="mb-8 p-5 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(200,169,110,0.12), rgba(232,213,168,0.06))", border: "1px solid rgba(200,169,110,0.3)" }}>
+            <h2 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: "#E8D5A8" }}>
+              <Sparkles className="w-4 h-4" />
+              Le secret Maison Baymora
+            </h2>
+            <p className="text-white/80 text-sm leading-relaxed italic">
+              {(establishment as any).secretTip}
+            </p>
+          </div>
+        )}
+
         {/* Highlights */}
         {highlights.length > 0 && (
           <div className="mb-8">

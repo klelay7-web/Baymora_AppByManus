@@ -22,6 +22,7 @@ export interface EstablishmentCardData {
   shortDescription?: string | null;
   heroImageUrl?: string | null;
   featuredPhoto?: string | null;
+  photos?: string[] | string | null;
   rating?: string | null;
   reviewCount?: number | null;
   priceLevel?: string | null;
@@ -31,6 +32,20 @@ export interface EstablishmentCardData {
   ambiance?: string | null;
   signature?: string | null;
   timesRecommended?: number | null;
+}
+
+function resolveCardImage(e: EstablishmentCardData): string | null {
+  // Priorité : photos[0] (enrichi Google) → heroImageUrl → featuredPhoto
+  try {
+    if (Array.isArray(e.photos) && e.photos.length > 0) return e.photos[0];
+    if (typeof e.photos === "string" && e.photos.trim().length > 0) {
+      const parsed = JSON.parse(e.photos);
+      if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "string") return parsed[0];
+    }
+  } catch {
+    /* ignore malformed json */
+  }
+  return e.heroImageUrl || e.featuredPhoto || null;
 }
 
 interface EstablishmentCardProps {
@@ -72,7 +87,7 @@ export function EstablishmentCard({
   className,
 }: EstablishmentCardProps) {
   const [isSaved, setIsSaved] = useState(saved);
-  const imageUrl = e.heroImageUrl || e.featuredPhoto || null;
+  const imageUrl = resolveCardImage(e);
   const rating = e.rating ? parseFloat(e.rating) : null;
   const priceLabel = e.priceLevel ? PRICE_LABELS[e.priceLevel] || "€€€" : "€€€";
   const categoryLabel = CATEGORY_LABELS[e.category] || e.category;

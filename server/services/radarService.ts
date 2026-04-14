@@ -5,7 +5,7 @@
  */
 import { getDb } from "../db";
 import { users, establishments } from "../../drizzle/schema";
-import { eq, and, between, gt, desc } from "drizzle-orm";
+import { eq, and, between, gt, desc, sql } from "drizzle-orm";
 
 /**
  * Quota mensuel de recherches radar selon le tier d'abonnement.
@@ -115,20 +115,20 @@ export async function getRadarForPosition(
         `[radarService] GPS search lat=${lat} lng=${lng} → ${existingEstablishments.length} results`
       );
     } else {
-      // Recherche par ville
+      // Recherche par ville (case-insensitive)
       existingEstablishments = await db
         .select()
         .from(establishments)
         .where(
           and(
-            eq(establishments.city, city),
+            sql`LOWER(${establishments.city}) = LOWER(${city})`,
             eq(establishments.status, "published"),
           )
         )
         .orderBy(desc(establishments.rating))
         .limit(30);
       console.log(
-        `[radarService] City search "${city}" (status=published) → ${existingEstablishments.length} results` +
+        `[radarService] City search "${city}" (case-insensitive, status=published) → ${existingEstablishments.length} results` +
           (existingEstablishments.length > 0
             ? ` | first: ${existingEstablishments[0].name} (${existingEstablishments[0].category})`
             : "")
