@@ -173,6 +173,10 @@ export const establishments = mysqlTable("establishments", {
   viewCount: int("viewCount").default(0),
   generatedBy: mysqlEnum("generatedBy", ["ai", "manual"]).default("ai").notNull(),
   publishedAt: timestamp("publishedAt"),
+  // Editorial enrichment (filled by scripts/enrichEstablishments.ts)
+  editorialContent: text("editorialContent"),
+  secretTip: text("secretTip"),
+  enrichedAt: timestamp("enrichedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
