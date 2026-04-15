@@ -52,7 +52,7 @@ import type { EmailType } from "./services/emailService";
 import { callClaude, buildSystemPrompt, parseStructuredTags, type ClaudeMessage } from "./services/claudeService";
 import { orchestrate } from "./services/ai/orchestrator";
 import type { User } from "../drizzle/schema";
-import { outboundClicks, inspirationThemes, establishments as establishmentsTable } from "../drizzle/schema";
+import { outboundClicks, inspirationThemes, establishments as establishmentsTable, savedParcours } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
 import { notifyOwner } from "./_core/notification";
@@ -190,6 +190,50 @@ const radarRouter = router({
     }),
 });
 
+// ─── Auto-migration helper for saved_parcours ─────────────────────────
+let savedParcoursSchemaEnsured = false;
+async function ensureSavedParcoursSchema(): Promise<void> {
+  if (savedParcoursSchemaEnsured) return;
+  const url = process.env.DATABASE_URL;
+  if (!url) return;
+  try {
+    const mysql = await import("mysql2/promise");
+    const { getMysqlConnOpts } = await import("./db");
+    const conn = await mysql.default.createConnection(getMysqlConnOpts());
+    try {
+      const dbNameMatch = url.match(/\/([^/?]+)(?:\?|$)/);
+      const dbName = dbNameMatch ? dbNameMatch[1] : "baymora";
+      const [rows] = (await conn.execute(
+        `SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.TABLES
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'saved_parcours'`,
+        [dbName]
+      )) as any[];
+      if (!rows || rows[0].c === 0) {
+        console.log("[parcours] Creating saved_parcours table…");
+        await conn.query(`CREATE TABLE IF NOT EXISTS \`saved_parcours\` (
+          \`id\` int NOT NULL AUTO_INCREMENT,
+          \`userId\` int NOT NULL,
+          \`title\` varchar(255) NOT NULL,
+          \`steps\` json NOT NULL,
+          \`totalBudget\` int DEFAULT 0,
+          \`personCount\` int DEFAULT 1,
+          \`scenarioLabel\` varchar(100),
+          \`heroPhoto\` varchar(500),
+          \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (\`id\`),
+          KEY \`idx_user\` (\`userId\`)
+        )`);
+      }
+      savedParcoursSchemaEnsured = true;
+    } finally {
+      await conn.end();
+    }
+  } catch (err) {
+    console.error("[parcours] ensureSavedParcoursSchema failed:", err);
+  }
+}
+
 export const appRouter = router({
   system: systemRouter,
   radar: radarRouter,
@@ -283,6 +327,92 @@ export const appRouter = router({
           sections: { sorties, tables, hebergement, experiences },
           total: rows.length,
         };
+      }),
+  }),
+  parcours: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      await ensureSavedParcoursSchema();
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { eq, desc } = await import("drizzle-orm");
+      const rows = await db
+        .select()
+        .from(savedParcours)
+        .where(eq(savedParcours.userId, ctx.user.id))
+        .orderBy(desc(savedParcours.createdAt));
+      return rows;
+    }),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.number().int() }))
+      .query(async ({ ctx, input }) => {
+        await ensureSavedParcoursSchema();
+        const db = await (await import("./db")).getDb();
+        if (!db) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB indisponible" });
+        }
+        const { eq, and } = await import("drizzle-orm");
+        const rows = await db
+          .select()
+          .from(savedParcours)
+          .where(and(eq(savedParcours.id, input.id), eq(savedParcours.userId, ctx.user.id)))
+          .limit(1);
+        if (rows.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Parcours introuvable" });
+        }
+        return rows[0];
+      }),
+
+    save: protectedProcedure
+      .input(
+        z.object({
+          title: z.string().min(1).max(255),
+          steps: z.array(z.record(z.string(), z.any())).min(1),
+          totalBudget: z.number().int().min(0).default(0),
+          personCount: z.number().int().min(1).default(1),
+          scenarioLabel: z.string().max(100).optional(),
+          heroPhoto: z.string().max(500).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await ensureSavedParcoursSchema();
+        const db = await (await import("./db")).getDb();
+        if (!db) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB indisponible" });
+        }
+        const inserted: any = await db.insert(savedParcours).values({
+          userId: ctx.user.id,
+          title: input.title,
+          steps: input.steps as any,
+          totalBudget: input.totalBudget,
+          personCount: input.personCount,
+          scenarioLabel: input.scenarioLabel ?? null,
+          heroPhoto: input.heroPhoto ?? null,
+        } as any);
+        // mysql2 returns { insertId } via the underlying header packet
+        const insertId = inserted?.[0]?.insertId ?? inserted?.insertId ?? null;
+        return { id: insertId };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        await ensureSavedParcoursSchema();
+        const db = await (await import("./db")).getDb();
+        if (!db) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB indisponible" });
+        }
+        const { eq, and } = await import("drizzle-orm");
+        const rows = await db
+          .select({ id: savedParcours.id })
+          .from(savedParcours)
+          .where(and(eq(savedParcours.id, input.id), eq(savedParcours.userId, ctx.user.id)))
+          .limit(1);
+        if (rows.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Parcours introuvable" });
+        }
+        await db.delete(savedParcours).where(eq(savedParcours.id, input.id));
+        return { success: true };
       }),
   }),
   auth: router({

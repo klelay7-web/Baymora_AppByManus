@@ -1356,11 +1356,12 @@ export type InsertInspirationTheme = typeof inspirationThemes.$inferInsert;
 export const savedParcours = mysqlTable("saved_parcours", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  title: varchar("title", { length: 256 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
   steps: json("steps").$type<Array<Record<string, unknown>>>().default([]),
   totalBudget: int("totalBudget").default(0),
   personCount: int("personCount").default(1),
-  scenarioLabel: varchar("scenarioLabel", { length: 64 }),
+  scenarioLabel: varchar("scenarioLabel", { length: 100 }),
+  heroPhoto: varchar("heroPhoto", { length: 500 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

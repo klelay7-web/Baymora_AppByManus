@@ -29,6 +29,7 @@ import Confidentialite from "./pages/Confidentialite";
 import CGU from "./pages/CGU";
 import Contact from "./pages/Contact";
 import ThemePage from "./pages/ThemePage";
+import { ParcourProvider } from "./stores/parcourStore";
 import PartenaireEvenement from "./pages/PartenaireEvenement";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -117,11 +118,13 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <Toaster />
-          <OnboardingWelcome />
-          <AppLayout>
-            <Router />
-          </AppLayout>
+          <ParcourProvider>
+            <Toaster />
+            <OnboardingWelcome />
+            <AppLayout>
+              <Router />
+            </AppLayout>
+          </ParcourProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
