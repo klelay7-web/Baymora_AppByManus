@@ -10,6 +10,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useParcourStore } from "@/stores/parcourStore";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import ParcourStep from "./ParcourStep";
@@ -28,38 +29,84 @@ export default function ParcourSheet() {
     personCount,
     clearParcour,
   } = useParcourStore();
+  const { user } = useAuth();
 
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const dragStartY = useRef<number | null>(null);
+  const [browserGeo, setBrowserGeo] = useState<{ lat: number; lng: number } | null>(null);
 
   // Reset drag offset whenever the sheet open state changes
   useEffect(() => {
     if (!isSheetOpen) setDragOffset(0);
   }, [isSheetOpen]);
 
-  const checkedSteps = steps.filter((s) => s.checked);
+  // Try browser geolocation when the sheet opens and we have no homeCity.
+  // The prompt is silent if permission was already granted — otherwise the
+  // browser asks once. Failure is silently ignored.
+  useEffect(() => {
+    if (!isSheetOpen) return;
+    if (browserGeo) return;
+    if (user?.homeCity) return; // homeCity preferred, skip geoloc
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setBrowserGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => { /* permission denied or error — silently ignore */ },
+      { timeout: 8000, maximumAge: 5 * 60 * 1000 }
+    );
+  }, [isSheetOpen, browserGeo, user?.homeCity]);
 
-  // Build map iframe URL for all checked steps
-  const mapsKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_KEY as string | undefined;
+  // Only checked steps with real coordinates are drawn on the map
+  const checkedSteps = steps.filter((s) => s.checked);
   const mapStepsWithCoords = checkedSteps.filter((s) => s.lat != null && s.lng != null);
+
+  // Resolve the "Départ" origin
+  //   1. user.homeCity (a free-form city string Google Maps understands)
+  //   2. browserGeo "lat,lng"
+  //   3. null → no explicit departure marker
+  const mapsKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_KEY as string | undefined;
+  let departure: string | null = null;
+  if (user?.homeCity && user.homeCity.trim().length > 0) {
+    departure = user.homeCity.trim();
+  } else if (browserGeo) {
+    departure = `${browserGeo.lat},${browserGeo.lng}`;
+  }
+
+  // Build the iframe URL. Hide the map block entirely when we have nothing
+  // to draw — no key, no coords, or coords+no departure when only one step
+  // (place mode still works in that last case).
   let mapSrc: string | null = null;
   if (mapsKey && mapStepsWithCoords.length > 0) {
-    if (mapStepsWithCoords.length === 1) {
+    const stepCoords = mapStepsWithCoords.map((s) => `${s.lat},${s.lng}`);
+
+    if (departure) {
+      // Directions mode with Départ as origin. Google auto-numbers every
+      // point on the route (A = origin, B, C, D…).
+      // - destination = last checked step
+      // - waypoints   = all steps in between (chronological order preserved)
+      const destination = stepCoords[stepCoords.length - 1];
+      const waypoints = stepCoords.slice(0, -1).join("|");
+      mapSrc =
+        `https://www.google.com/maps/embed/v1/directions?key=${mapsKey}` +
+        `&origin=${encodeURIComponent(departure)}` +
+        `&destination=${destination}` +
+        (waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : "") +
+        `&mode=walking`;
+    } else if (mapStepsWithCoords.length === 1) {
+      // No departure, one step → place mode
       const s = mapStepsWithCoords[0];
       mapSrc = `https://www.google.com/maps/embed/v1/place?key=${mapsKey}&q=${s.lat},${s.lng}&zoom=14`;
     } else {
-      // Use directions mode for multiple stops
-      const origin = mapStepsWithCoords[0];
-      const destination = mapStepsWithCoords[mapStepsWithCoords.length - 1];
-      const waypoints = mapStepsWithCoords
-        .slice(1, -1)
-        .map((s) => `${s.lat},${s.lng}`)
-        .join("|");
+      // No departure, multiple steps → directions with first step as origin
+      const origin = stepCoords[0];
+      const destination = stepCoords[stepCoords.length - 1];
+      const waypoints = stepCoords.slice(1, -1).join("|");
       mapSrc =
         `https://www.google.com/maps/embed/v1/directions?key=${mapsKey}` +
-        `&origin=${origin.lat},${origin.lng}` +
-        `&destination=${destination.lat},${destination.lng}` +
+        `&origin=${origin}` +
+        `&destination=${destination}` +
         (waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : "") +
         `&mode=walking`;
     }
