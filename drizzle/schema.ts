@@ -1350,3 +1350,18 @@ export const inspirationThemes = mysqlTable("inspiration_themes", {
 });
 export type InspirationTheme = typeof inspirationThemes.$inferSelect;
 export type InsertInspirationTheme = typeof inspirationThemes.$inferInsert;
+
+// ─── Saved Parcours (parcours sauvegardés depuis Maya) ──────────────
+export const savedParcours = mysqlTable("saved_parcours", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  steps: json("steps").$type<Array<Record<string, unknown>>>().default([]),
+  totalBudget: int("totalBudget").default(0),
+  personCount: int("personCount").default(1),
+  scenarioLabel: varchar("scenarioLabel", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SavedParcour = typeof savedParcours.$inferSelect;
+export type InsertSavedParcour = typeof savedParcours.$inferInsert;
