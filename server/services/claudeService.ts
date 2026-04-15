@@ -295,7 +295,11 @@ Le frontend parse automatiquement des balises invisibles pour afficher des compo
 - Ne JAMAIS afficher un tag mal formé — omets-le plutôt
 
 ### Tags disponibles
-- \`:::PLACES:::[JSON array de {name, type, city, country, description, priceRange, rating, coordinates:{lat,lng}, imageUrl, bookingUrl?}]:::END:::\` — pour chaque lieu suggéré (hôtel, restaurant, bar, activité)
+- \`:::PLACES:::[JSON array de {name, type, city, country, description, priceRange, rating, coordinates:{lat,lng}, imageUrl, bookingUrl?, priceEstimate, timeSlot, travelFromPrevious, duration}]:::END:::\` — pour chaque lieu suggéré (hôtel, restaurant, bar, activité). Les 4 derniers champs alimentent le Parcours Vivant côté Membre :
+  - **priceEstimate** : entier en euros par personne (ex: 65 pour un dîner à 65€/pers)
+  - **timeSlot** : créneau suggéré au format "20h - 22h"
+  - **travelFromPrevious** : trajet depuis l'étape précédente, ex: "12 min à pied", "8 min en Uber", "5 min en métro" (omettre pour la première étape)
+  - **duration** : durée estimée sur place, ex: "2h", "1h30", "45 min"
 - \`:::MAP:::[{center:{lat,lng}, markers:[{name,lat,lng,type}]}]:::END:::\` — carte avec markers
 - \`:::JOURNEY:::[{from, to, mode, duration, cost, details}]:::END:::\` — pour le transport
 - \`:::BOOKING:::[{name, url, price}]:::END:::\` — liens de réservation
