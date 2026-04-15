@@ -1312,6 +1312,7 @@ export type InsertOutboundClick = typeof outboundClicks.$inferInsert;
 export const memberProfiles = mysqlTable("member_profiles", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
+  homeCity: varchar("homeCity", { length: 100 }),
   preferences: json("preferences").$type<Record<string, unknown>>().default({}),
   habits: json("habits").$type<Record<string, unknown>>().default({}),
   companions: json("companions").$type<Array<{ name: string; relation: string }>>().default([]),

@@ -83,14 +83,16 @@ export default function QuestionBlockGroup({
 
   const handleSubmit = () => {
     if (!allAnswered || disabled) return;
+    // BUG FIX : send only the answers, never the question text.
+    // Format : "Ce soir | En couple | Rooftop, Festif"
     const parts: string[] = [];
-    blocks.forEach((block, i) => {
+    blocks.forEach((_, i) => {
       const buttonParts = Array.from(answers[i] || []);
       const text = (textAnswers[i] || "").trim();
       const segments = [...buttonParts];
       if (text.length > 0) segments.push(text);
       if (segments.length > 0) {
-        parts.push(`${block.question} ${segments.join(", ")}`);
+        parts.push(segments.join(", "));
       }
     });
     if (parts.length > 0) onSubmitAll(parts.join(" | "));

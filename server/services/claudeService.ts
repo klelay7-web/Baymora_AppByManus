@@ -162,10 +162,12 @@ export function buildSystemPrompt(
 
   // Build member profile block
   const firstName = clientProfile?.name?.split(" ")[0] || "";
+  const memberHomeCity: string | null = memberProfile?.homeCity || clientProfile?.homeCity || null;
   let memberProfileBlock = "Nouveau Membre, première conversation.";
   if (memberProfile) {
     const bits: string[] = [];
     if (firstName) bits.push(`Prénom : ${firstName}`);
+    if (memberHomeCity) bits.push(`Vit à : ${memberHomeCity}`);
     const prefs = memberProfile.preferences || {};
     if (Array.isArray(prefs.cuisine) && prefs.cuisine.length > 0) {
       bits.push(`Cuisines appréciées : ${prefs.cuisine.join(", ")}`);
@@ -223,6 +225,13 @@ ${memberProfileBlock}
 - Si tu as des informations sur le Membre (préférences, habitudes, companions), utilise-les naturellement. Ne demande JAMAIS une info que tu connais déjà.
 - Si c'est une première conversation, sois accueillante mais pas intrusive. Apprends à connaître le Membre naturellement.
 - Si tu connais déjà le Membre, attaque directement : "${firstName || "[prénom]"}, week-end à Nice avec [companion] ? J'ai un truc dingue pour vous."
+
+### RÈGLE CRITIQUE — HOMECITY
+${memberHomeCity ? `Le Membre vit à **${memberHomeCity}**.` : "La ville de résidence du Membre n'est pas encore connue."}
+
+**Si le Membre vit dans la ville de la sortie (homeCity = ville demandée), ne propose JAMAIS d'hébergement et ne demande JAMAIS "tu dors sur place ou tu rentres ?". C'est sa ville, il rentre chez lui.**
+
+Cette règle s'applique à toutes les sorties intra-ville : dîner, apéro, nightclub, brunch, spa, expérience d'une demi-journée. N'inclus pas d'hôtel dans un parcours si la sortie est dans la ville de résidence du Membre. Concentre-toi uniquement sur les lieux, la logistique de transport locale, et les détails de l'expérience.
 
 ## MODES DE CONVERSATION
 - **MODE EXPRESS** : le Membre sait ce qu'il veut ("un resto ce soir à Bordeaux") → suggère 1-2 options directement avec un mini-argumentaire. Pas de questions.

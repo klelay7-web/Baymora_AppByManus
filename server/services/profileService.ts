@@ -157,6 +157,7 @@ export interface MemberCompanion {
 export interface MemberProfileDoc {
   id: number;
   userId: number;
+  homeCity: string | null;
   preferences: Record<string, unknown>;
   habits: Record<string, unknown>;
   companions: MemberCompanion[];
@@ -171,6 +172,7 @@ export interface MemberProfileDoc {
 }
 
 export interface MemberProfilePatch {
+  homeCity?: string;
   preferences?: Record<string, unknown>;
   habits?: Record<string, unknown>;
   companions?: MemberCompanion[];
@@ -205,6 +207,7 @@ async function ensureMemberProfilesSchema(): Promise<void> {
       await conn.query(`CREATE TABLE IF NOT EXISTS \`member_profiles\` (
         \`id\` int NOT NULL AUTO_INCREMENT,
         \`userId\` int NOT NULL,
+        \`homeCity\` varchar(100) NULL,
         \`preferences\` json DEFAULT (JSON_OBJECT()),
         \`habits\` json DEFAULT (JSON_OBJECT()),
         \`companions\` json DEFAULT (JSON_ARRAY()),
@@ -220,6 +223,17 @@ async function ensureMemberProfilesSchema(): Promise<void> {
         UNIQUE KEY \`member_profiles_userId_unique\` (\`userId\`),
         KEY \`idx_user\` (\`userId\`)
       )`);
+    } else {
+      // Ensure homeCity column exists (migration 0027 for existing tables)
+      const [cols] = (await conn.execute(
+        `SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'member_profiles' AND COLUMN_NAME = 'homeCity'`,
+        [dbName]
+      )) as any[];
+      if (!cols || cols[0].c === 0) {
+        console.log("[profileService] Adding homeCity column to member_profiles…");
+        await conn.query("ALTER TABLE `member_profiles` ADD COLUMN `homeCity` varchar(100) NULL AFTER `userId`");
+      }
     }
     memberProfilesSchemaEnsured = true;
   } finally {
@@ -254,6 +268,7 @@ function normalizeMemberProfile(row: any): MemberProfileDoc {
   return {
     id: row.id,
     userId: row.userId,
+    homeCity: row.homeCity ?? null,
     preferences: asObject(row.preferences),
     habits: asObject(row.habits),
     companions: asTypedArray<MemberCompanion>(row.companions),
@@ -368,6 +383,7 @@ export async function updateMemberProfile(
   await db
     .update(memberProfiles)
     .set({
+      homeCity: (patch.homeCity ?? current.homeCity ?? null) as any,
       preferences: mergedPreferences as any,
       habits: mergedHabits as any,
       companions: mergedCompanions as any,
@@ -396,6 +412,7 @@ interface ExtractedSignals {
   companions?: MemberCompanion[];
   villes?: string[];
   transport?: string;
+  homeCity?: string;
 }
 
 export async function enrichProfileFromConversation(
@@ -429,7 +446,8 @@ Retourne UNIQUEMENT un JSON strict (pas de markdown, pas de préambule) avec uni
   "budget": "une valeur parmi : economique, confort, premium, luxe, sans_limite",
   "companions": [{ "name": "prénom", "relation": "conjoint|enfant|ami|parent|collegue" }],
   "villes": ["villes où le Membre veut aller ou qu'il aime"],
-  "transport": "une valeur parmi : chauffeur, uber, taxi, train, avion, voiture, marche"
+  "transport": "une valeur parmi : chauffeur, uber, taxi, train, avion, voiture, marche",
+  "homeCity": "ville de résidence du Membre s'il l'a mentionnée explicitement ('je vis à Paris', 'j'habite Lyon', 'chez moi à Bordeaux')"
 }
 
 Réponds uniquement avec le JSON, sans commentaire. Si rien n'est détecté, réponds {}.`;
@@ -478,6 +496,9 @@ Réponds uniquement avec le JSON, sans commentaire. Si rien n'est détecté, ré
     }
     if (Array.isArray(signals.villes) && signals.villes.length > 0) {
       patch.favoriteCities = signals.villes.filter((v) => typeof v === "string");
+    }
+    if (typeof signals.homeCity === "string" && signals.homeCity.trim().length > 0) {
+      patch.homeCity = signals.homeCity.trim().slice(0, 100);
     }
 
     // Always bump conversationCount + timestamp

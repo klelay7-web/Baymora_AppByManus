@@ -226,8 +226,10 @@ export default function Maya() {
       setShowGuestUpgradeModal(true);
       return;
     }
-    if (!conversationId && user) return; // Attendre la création de la conv
 
+    // BUG FIX 2 : toujours afficher le message du Membre immédiatement,
+    // AVANT tout check ou mutation. Le Membre doit voir sa propre
+    // saisie dès le clic, même si la conversation n'est pas encore prête.
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -236,6 +238,10 @@ export default function Maya() {
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+
+    // Si la conversation backend n'est pas encore créée, on ne lance pas
+    // la mutation — le message reste affiché et le Membre peut retenter.
+    if (!conversationId && user) return;
 
     if (user) {
       sendMessageMutation.mutate({
@@ -528,26 +534,31 @@ Et bientôt, je connaîtrai les vôtres.
               {isTyping && (
                 <div className="flex justify-start animate-slide-up">
                   <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center mr-2 flex-shrink-0"
+                    className="w-8 h-8 rounded-full flex items-center justify-center mr-2 flex-shrink-0 animate-pulse"
                     style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)" }}
                   >
                     <Sparkles size={14} color="#070B14" />
                   </div>
                   <div
-                    className="px-4 py-3 flex gap-1 items-center"
+                    className="px-4 py-3 flex flex-col gap-1.5"
                     style={{
                       background: "rgba(200, 169, 110, 0.08)",
                       border: "1px solid rgba(200, 169, 110, 0.2)",
                       borderRadius: "1rem 1rem 1rem 0.25rem",
                     }}
                   >
-                    {[0, 1, 2].map((i) => (
-                      <div
-                        key={i}
-                        className="w-2 h-2 rounded-full animate-typing-dot"
-                        style={{ background: "#C8A96E", animationDelay: `${i * 0.2}s` }}
-                      />
-                    ))}
+                    <div className="flex gap-1 items-center">
+                      {[0, 1, 2].map((i) => (
+                        <div
+                          key={i}
+                          className="w-2 h-2 rounded-full animate-typing-dot"
+                          style={{ background: "#C8A96E", animationDelay: `${i * 0.2}s` }}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[11px]" style={{ color: "#C8A96E", opacity: 0.75 }}>
+                      Maya réfléchit…
+                    </p>
                   </div>
                 </div>
               )}

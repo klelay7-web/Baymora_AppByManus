@@ -613,6 +613,7 @@ export const appRouter = router({
     update: protectedProcedure
       .input(
         z.object({
+          homeCity: z.string().max(100).optional(),
           preferences: z.record(z.string(), z.any()).optional(),
           habits: z.record(z.string(), z.any()).optional(),
           companions: z.array(z.object({ name: z.string(), relation: z.string() })).optional(),
