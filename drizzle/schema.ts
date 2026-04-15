@@ -177,6 +177,7 @@ export const establishments = mysqlTable("establishments", {
   editorialContent: text("editorialContent"),
   secretTip: text("secretTip"),
   enrichedAt: timestamp("enrichedAt"),
+  enrichStatus: varchar("enrichStatus", { length: 20 }).default("pending"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

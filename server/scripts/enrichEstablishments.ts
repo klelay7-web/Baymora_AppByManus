@@ -50,19 +50,20 @@ interface EditorialContent {
 }
 
 async function ensureSchema(conn: mysql.Connection, dbName: string) {
-  const cols = ["editorialContent", "secretTip", "enrichedAt"];
-  for (const col of cols) {
+  const cols: Array<{ name: string; ddl: string }> = [
+    { name: "editorialContent", ddl: "ALTER TABLE `establishments` ADD COLUMN `editorialContent` text" },
+    { name: "secretTip", ddl: "ALTER TABLE `establishments` ADD COLUMN `secretTip` text" },
+    { name: "enrichedAt", ddl: "ALTER TABLE `establishments` ADD COLUMN `enrichedAt` timestamp NULL" },
+    { name: "enrichStatus", ddl: "ALTER TABLE `establishments` ADD COLUMN `enrichStatus` varchar(20) DEFAULT 'pending'" },
+  ];
+  for (const { name, ddl } of cols) {
     const [rows] = (await conn.execute(
       `SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS
        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'establishments' AND COLUMN_NAME = ?`,
-      [dbName, col]
+      [dbName, name]
     )) as any[];
     if (!rows || rows[0].c === 0) {
-      const ddl =
-        col === "enrichedAt"
-          ? "ALTER TABLE `establishments` ADD COLUMN `enrichedAt` timestamp NULL"
-          : `ALTER TABLE \`establishments\` ADD COLUMN \`${col}\` text`;
-      console.log(`[enrich] Adding missing column: ${col}`);
+      console.log(`[enrich] Adding missing column: ${name}`);
       await conn.query(ddl);
     }
   }
@@ -228,6 +229,7 @@ async function main() {
   console.log(`[enrich] Processing ${rows.length} establishment(s)…\n`);
 
   let ok = 0;
+  let skipped = 0;
   let errors = 0;
 
   for (const est of rows as Establishment[]) {
@@ -236,8 +238,13 @@ async function main() {
       // 1. Google Places
       const google = await searchGooglePlace(est.name, est.city, googleKey);
       if (!google) {
-        console.warn(`[enrich]   ⚠️  No Google Places match, skipping`);
-        errors++;
+        // BUG FIX : mark as skipped so the row is not re-processed forever
+        console.warn(`[enrich]   ⚠️  No Google Places match — marking as skipped`);
+        await conn.execute(
+          "UPDATE establishments SET enrichStatus = 'skipped', enrichedAt = NOW() WHERE id = ?",
+          [est.id]
+        );
+        skipped++;
         continue;
       }
       console.log(
@@ -261,7 +268,8 @@ async function main() {
            editorialContent = ?,
            signature = ?,
            secretTip = ?,
-           enrichedAt = NOW()
+           enrichedAt = NOW(),
+           enrichStatus = 'enriched'
          WHERE id = ?`,
         [
           JSON.stringify(google.photoUris),
@@ -280,13 +288,22 @@ async function main() {
       ok++;
       console.log(`[enrich]   ✓ enriched\n`);
     } catch (err: any) {
+      // Mark as error — still stamp enrichedAt so it's not retried in tight loops.
+      // Manual reset (UPDATE establishments SET enrichStatus='pending', enrichedAt=NULL WHERE id=?)
+      // can be used to re-queue an errored row.
+      try {
+        await conn.execute(
+          "UPDATE establishments SET enrichStatus = 'error', enrichedAt = NOW() WHERE id = ?",
+          [est.id]
+        );
+      } catch { /* ignore secondary failure */ }
       errors++;
       console.error(`[enrich]   ✗ ${err.message}\n`);
     }
   }
 
   await conn.end();
-  console.log(`[enrich] Done: ${ok} ok, ${errors} errors (batch size ${BATCH_SIZE})`);
+  console.log(`[enrich] Done: ${ok} ok, ${skipped} skipped, ${errors} errors (batch size ${BATCH_SIZE})`);
   process.exit(errors > 0 && ok === 0 ? 1 : 0);
 }
 
