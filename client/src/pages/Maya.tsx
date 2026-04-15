@@ -70,6 +70,7 @@ export default function Maya() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [typingMessage, setTypingMessage] = useState("Maya réfléchit…");
   const [isRecording, setIsRecording] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(() => {
     const stored = sessionStorage.getItem(SESSION_KEY);
@@ -218,6 +219,29 @@ export default function Maya() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
+
+  // Dynamic typing message — rotates while Maya is thinking
+  useEffect(() => {
+    if (!isTyping) {
+      setTypingMessage("Maya réfléchit…");
+      return;
+    }
+    const startedAt = Date.now();
+    setTypingMessage("Maya réfléchit…");
+    const interval = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < 3000) {
+        setTypingMessage("Maya réfléchit…");
+      } else if (elapsed < 6000) {
+        setTypingMessage("Maya explore les meilleures adresses…");
+      } else if (elapsed < 10000) {
+        setTypingMessage("Recherche approfondie en cours…");
+      } else {
+        setTypingMessage("Maya prépare quelque chose de spécial…");
+      }
+    }, 500);
+    return () => window.clearInterval(interval);
+  }, [isTyping]);
 
   const handleSend = (text?: string) => {
     const msg = text || input.trim();
@@ -556,8 +580,11 @@ Et bientôt, je connaîtrai les vôtres.
                         />
                       ))}
                     </div>
-                    <p className="text-[11px]" style={{ color: "#C8A96E", opacity: 0.75 }}>
-                      Maya réfléchit…
+                    <p
+                      className="text-[11px] transition-opacity duration-300"
+                      style={{ color: "#C8A96E", opacity: 0.75 }}
+                    >
+                      {typingMessage}
                     </p>
                   </div>
                 </div>
