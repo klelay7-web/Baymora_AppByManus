@@ -9,6 +9,7 @@ import { Heart, MapPin, Star, ExternalLink, Calendar, ChevronRight, Check } from
 interface Place {
   name: string;
   id?: string;
+  slug?: string;
   type?: string;
   city?: string;
   country?: string;
@@ -16,8 +17,14 @@ interface Place {
   priceRange?: string;
   rating?: number;
   imageUrl?: string;
+  photos?: string[] | string;
   bookingUrl?: string;
   coordinates?: { lat: number; lng: number };
+  // Parcours Vivant fields (from Maya v3 :::PLACES::: spec)
+  priceEstimate?: number;
+  timeSlot?: string;
+  travelFromPrevious?: string;
+  duration?: string;
 }
 
 interface BookingData {
@@ -120,7 +127,15 @@ const UNSPLASH_FALLBACK: Record<string, string> = {
 };
 
 const getPlaceImage = (place: Place) => {
+  // Priority: explicit imageUrl → photos[0] (JSON array or string) → Unsplash fallback
   if (place.imageUrl) return place.imageUrl;
+  try {
+    if (Array.isArray(place.photos) && place.photos.length > 0) return place.photos[0];
+    if (typeof place.photos === "string" && place.photos.trim().length > 0) {
+      const parsed = JSON.parse(place.photos);
+      if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "string") return parsed[0];
+    }
+  } catch { /* ignore */ }
   const type = (place.type || "hotel").toLowerCase();
   for (const [k, v] of Object.entries(UNSPLASH_FALLBACK)) {
     if (type.includes(k)) return v;
@@ -143,7 +158,16 @@ function parseMessage(rawInput: string): ParsedSegment[] {
   // Strip <question_block> XML blocks — they're rendered separately by the
   // QuestionBlockGroup component using data from the tRPC response, not from
   // the raw text.
-  const raw = rawInput.replace(/<question_block[\s\S]*?<\/question_block>/g, "");
+  let raw = rawInput.replace(/<question_block[\s\S]*?<\/question_block>/g, "");
+
+  // Defensive strip : if raw JSON blobs leaked into the text (because Maya
+  // wrote [{"day":...}] or {"steps":[...]} outside any :::TAG::: wrapper),
+  // remove them so the Member never sees raw JSON. Safe even when the
+  // fragment is malformed — matches by opening signature.
+  raw = raw.replace(/\[\s*\{\s*"day"\s*:[\s\S]*?\}\s*\]/g, "");
+  raw = raw.replace(/\{\s*"steps"\s*:\s*\[[\s\S]*?\]\s*\}/g, "");
+  raw = raw.replace(/\[\s*\{\s*"name"\s*:[\s\S]*?\}\s*\]/g, "");
+
   const segments: ParsedSegment[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -323,11 +347,111 @@ function QRRenderer({ data, onSend }: { data: unknown; onSend: (text: string) =>
   );
 }
 
+// ─── Single-place hero card ────────────────────────────────────────────────
+// When Maya sends a :::PLACES::: block with exactly one place (the new
+// v3 "step-by-step" reveal cadence), render a full-width visual card.
+function SinglePlaceCard({ place }: { place: Place }) {
+  const href = place.slug ? `/lieu/${place.slug}` : place.id ? `/lieu/${place.id}` : null;
+  const image = getPlaceImage(place);
+
+  const inner = (
+    <div
+      className="mt-3 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.99] transition-transform"
+      style={{
+        background: "#0D1117",
+        border: "1px solid rgba(200,169,110,0.18)",
+      }}
+    >
+      {/* Photo 160px */}
+      <div className="relative w-full" style={{ height: 160 }}>
+        <img src={image} alt={place.name} className="w-full h-full object-cover" />
+        {place.type && (
+          <div
+            className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{
+              background: "rgba(7,11,20,0.75)",
+              color: "#F0EDE6",
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            {getPlaceEmoji(place.type)} {place.type}
+          </div>
+        )}
+        {place.rating != null && (
+          <div
+            className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{
+              background: "rgba(7,11,20,0.75)",
+              color: "#E8D5A8",
+              backdropFilter: "blur(6px)",
+            }}
+          >
+            <Star size={10} fill="#C8A96E" color="#C8A96E" />
+            {typeof place.rating === "number" ? place.rating.toFixed(1) : place.rating}
+          </div>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="p-3">
+        <p
+          className="text-base font-semibold leading-tight mb-1 truncate"
+          style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}
+        >
+          {place.name}
+        </p>
+
+        {place.description && (
+          <p className="text-[12px] leading-snug mb-2.5" style={{ color: "rgba(255,255,255,0.7)" }}>
+            {place.description}
+          </p>
+        )}
+
+        {/* Meta row : price + slot + duration */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]" style={{ color: "#C8A96E" }}>
+          {place.priceEstimate != null && place.priceEstimate > 0 && (
+            <span style={{ fontWeight: 600 }}>{place.priceEstimate}€/pers</span>
+          )}
+          {place.timeSlot && <span>{place.timeSlot}</span>}
+          {place.duration && (
+            <span style={{ color: "rgba(255,255,255,0.4)" }}>· {place.duration}</span>
+          )}
+        </div>
+
+        {/* Travel from previous */}
+        {place.travelFromPrevious && (
+          <p
+            className="text-[11px] mt-1.5 flex items-center gap-1"
+            style={{ color: "rgba(255,255,255,0.45)" }}
+          >
+            <MapPin size={10} />
+            {place.travelFromPrevious}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
+  if (href) {
+    return (
+      <a href={href} className="block" aria-label={`Voir ${place.name}`}>
+        {inner}
+      </a>
+    );
+  }
+  return inner;
+}
+
 function PlacesRenderer({ data, onSend }: { data: unknown; onSend: (text: string) => void }) {
   const places: Place[] = Array.isArray(data) ? data : [];
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
 
   if (!places.length) return null;
+
+  // Single place → full-width hero card (Maya v3 step-by-step cadence)
+  if (places.length === 1) {
+    return <SinglePlaceCard place={places[0]} />;
+  }
 
   return (
     <div className="mt-3 -mx-1">
