@@ -5,6 +5,9 @@ import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Sparkles, Send, Mic, MicOff, RotateCcw, MapPin } from "lucide-react";
 import MessageRenderer from "@/components/MessageRenderer";
 import QuestionBlockGroup from "@/components/QuestionBlock";
+import ParcourBar from "@/components/parcour/ParcourBar";
+import ParcourSheet from "@/components/parcour/ParcourSheet";
+import { useParcourStore } from "@/stores/parcourStore";
 
 const GEOLOC_KEY = "baymora_geoloc_asked";
 const GUEST_KEY = "baymora_guest_conversations";
@@ -67,6 +70,7 @@ interface Message {
 
 export default function Maya() {
   const { user } = useAuth();
+  const parcourStore = useParcourStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -170,11 +174,44 @@ export default function Maya() {
         questionBlocks: qb && qb.length > 0 ? qb : undefined,
       },
     ]);
+
+    // Hydrate the Parcours store from any places Maya proposed
+    const places = Array.isArray(data?.places) ? data.places : [];
+    if (places.length > 0) {
+      let added = 0;
+      for (const p of places) {
+        const slug: string | undefined = p?.slug || p?.name;
+        if (!slug) continue;
+        const step = {
+          id: `step-${Date.now()}-${added}-${Math.random().toString(36).slice(2, 7)}`,
+          establishmentSlug: String(slug),
+          name: String(p?.name || slug),
+          photo: String(p?.imageUrl || p?.photo || (Array.isArray(p?.photos) ? p.photos[0] : "") || ""),
+          category: String(p?.type || p?.category || "lieu"),
+          timeSlot: String(p?.timeSlot || ""),
+          priceEstimate: Number(p?.priceEstimate ?? p?.price ?? 0) || 0,
+          travelFromPrevious: String(p?.travelFromPrevious || ""),
+          checked: true,
+          lat: typeof p?.coordinates?.lat === "number" ? p.coordinates.lat : (typeof p?.lat === "number" ? p.lat : undefined),
+          lng: typeof p?.coordinates?.lng === "number" ? p.coordinates.lng : (typeof p?.lng === "number" ? p.lng : undefined),
+        };
+        parcourStore.addStep(step);
+        added++;
+      }
+      if (added > 0) parcourStore.setPhase("results");
+    }
   };
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
-    onMutate: () => setIsTyping(true),
-    onSettled: () => setIsTyping(false),
+    onMutate: () => {
+      setIsTyping(true);
+      parcourStore.setMayaSearching(true);
+      if (parcourStore.phase === "idle") parcourStore.setPhase("questions");
+    },
+    onSettled: () => {
+      setIsTyping(false);
+      parcourStore.setMayaSearching(false);
+    },
     onSuccess: (data) => onMayaResponse(data),
     onError: (err) => {
       const isUpgrade = err.message === "UPGRADE_REQUIRED";
@@ -193,8 +230,15 @@ export default function Maya() {
   });
 
   const sendMessageGuestMutation = trpc.chat.sendMessageGuest.useMutation({
-    onMutate: () => setIsTyping(true),
-    onSettled: () => setIsTyping(false),
+    onMutate: () => {
+      setIsTyping(true);
+      parcourStore.setMayaSearching(true);
+      if (parcourStore.phase === "idle") parcourStore.setPhase("questions");
+    },
+    onSettled: () => {
+      setIsTyping(false);
+      parcourStore.setMayaSearching(false);
+    },
     onSuccess: (data) => {
       onMayaResponse(data);
       const next = incrementGuestCount();
@@ -651,6 +695,10 @@ Et bientôt, je connaîtrai les vôtres.
           )}
         </div>
       </div>
+
+      {/* Parcours Vivant : barre flottante + bottom sheet */}
+      <ParcourBar />
+      <ParcourSheet />
     </div>
   );
 }
