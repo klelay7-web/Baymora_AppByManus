@@ -1399,7 +1399,9 @@ export const appRouter = router({
           inserted++;
         } catch { skipped++; }
       }
-      return { inserted, skipped, bordeauxEstablishments: estRows.length, availableCities };
+      const categoryCounts: Record<string, number> = {};
+      for (const [k, v] of Object.entries(byCategory)) categoryCounts[k] = v.length;
+      return { inserted, skipped, bordeauxEstablishments: estRows.length, availableCities, categoryCounts };
     }),
     createParcoursMaison: adminProcedure
       .input(z.object({ title: z.string(), subtitle: z.string().optional(), city: z.string(), duration: z.string().optional(), budgetEstimate: z.string().optional(), tags: z.array(z.string()).optional(), steps: z.array(z.record(z.string(), z.any())).default([]) }))
@@ -1605,7 +1607,7 @@ export const appRouter = router({
       ];
     }),
     getManusStatus: adminProcedure.query(() => {
-      return { connected: !!process.env.ANTHROPIC_API_KEY, model: "claude-sonnet-4-20250514" };
+      return { connected: !!process.env.MANUS_API_KEY, model: "manus-1.6", claudeConnected: !!process.env.ANTHROPIC_API_KEY };
     }),
     getEnvInfo: adminProcedure.query(() => {
       return {
@@ -1613,6 +1615,7 @@ export const appRouter = router({
         dbHost: process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).hostname : "not set",
         hasStripe: !!process.env.STRIPE_SECRET_KEY,
         hasAnthropic: !!process.env.ANTHROPIC_API_KEY,
+        hasManus: !!process.env.MANUS_API_KEY,
         hasGoogleMaps: !!process.env.VITE_GOOGLE_MAPS_KEY,
       };
     }),
@@ -3068,7 +3071,7 @@ export const appRouter = router({
             } catch { /* skip dupes */ }
           }
         }
-        return { totalCombinations: targets.reduce((s, t) => s + t.cities.length, 0), processed: result.processed, findingsTotal: result.findings.length, inserted, errors: result.errors };
+        return { totalCombinations: targets.reduce((s, t) => s + t.cities.length, 0), processed: result.processed, findingsTotal: result.findings.length, inserted, errors: result.errors, creditsUsed: result.creditsUsed };
       }),
 
     getSeoFindings: ownerProcedure

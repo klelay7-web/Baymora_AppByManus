@@ -1,18 +1,30 @@
 /**
  * manusScoutService.ts
- * SEO intelligence — uses Claude (via Anthropic SDK) to analyze competitor sites.
+ * SEO intelligence via the real Manus API (https://api.manus.ai/v1/tasks).
  *
- * Claude doesn't browse the web. Instead, we leverage Claude's knowledge of
- * competitor site structures (Timeout, Le Fooding, TripAdvisor, etc.) to
- * generate plausible SEO page structures and search intents.
+ * Manus is ASYNCHRONOUS:
+ *   POST /v1/tasks → { task_id, task_title, task_url }
+ *   GET  /v1/tasks/{id} → { status, output, credit_usage }
+ *   Statuses: pending → running → completed | failed
  *
- * Architecture: 1 API call per (site × city) combination for reliable output.
+ * Auth header: API_KEY (not Authorization/Bearer)
+ *
+ * Content generation (generateContentPage) still uses Claude Sonnet
+ * since it doesn't need web browsing — just editorial writing.
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { ENV } from "../_core/env";
 
+const MANUS_API_URL = "https://api.manus.ai/v1/tasks";
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+
 const anthropic = new Anthropic({ apiKey: ENV.anthropicApiKey });
-const MODEL = "claude-sonnet-4-20250514";
+
+if (!ENV.manusApiKey) {
+  console.warn("[Manus] MANUS_API_KEY not set — SEO audit will not work. Set it on Railway.");
+}
+
+// ─── Types ──────────────────────────────────────────────────────────────
 
 export interface SeoTarget {
   siteUrl: string;
@@ -31,6 +43,22 @@ export interface SeoFinding {
   establishmentsMentioned: string[];
 }
 
+interface ManusTask {
+  task_id: string;
+  task_title: string;
+  task_url: string;
+}
+
+interface ManusTaskResult {
+  id: string;
+  status: "pending" | "running" | "completed" | "failed";
+  output?: Array<{
+    role: string;
+    content: Array<{ type: string; text?: string }>;
+  }>;
+  credit_usage?: number;
+}
+
 interface ContentPageResult {
   slug: string;
   title: string;
@@ -46,30 +74,107 @@ interface ContentPageResult {
   season: string;
 }
 
+// ─── Helpers ────────────────────────────────────────────────────────────
+
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
 function extractJsonArray(text: string): any[] {
-  // Try raw parse first
-  try { const parsed = JSON.parse(text); if (Array.isArray(parsed)) return parsed; } catch {}
-  // Try extracting from ```json fences
+  try { const p = JSON.parse(text); if (Array.isArray(p)) return p; } catch {}
   const fenced = text.match(/```json?\s*([\s\S]*?)```/);
   if (fenced) { try { return JSON.parse(fenced[1]); } catch {} }
-  // Try extracting bare array
   const arrMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
   if (arrMatch) { try { return JSON.parse(arrMatch[0]); } catch {} }
   return [];
 }
 
+// ─── Manus API ──────────────────────────────────────────────────────────
+
+export async function createManusTask(prompt: string, profile?: string): Promise<ManusTask> {
+  if (!ENV.manusApiKey) throw new Error("MANUS_API_KEY not configured");
+
+  const resp = await fetch(MANUS_API_URL, {
+    method: "POST",
+    headers: {
+      "API_KEY": ENV.manusApiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prompt, agentProfile: profile || "manus-1.6" }),
+  });
+
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => "");
+    throw new Error(`Manus API POST failed: ${resp.status} ${resp.statusText} — ${body}`);
+  }
+
+  return resp.json() as Promise<ManusTask>;
+}
+
+export async function getManusTaskResult(taskId: string): Promise<ManusTaskResult> {
+  if (!ENV.manusApiKey) throw new Error("MANUS_API_KEY not configured");
+
+  const resp = await fetch(`${MANUS_API_URL}/${taskId}`, {
+    method: "GET",
+    headers: { "API_KEY": ENV.manusApiKey },
+  });
+
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => "");
+    throw new Error(`Manus API GET failed: ${resp.status} ${resp.statusText} — ${body}`);
+  }
+
+  return resp.json() as Promise<ManusTaskResult>;
+}
+
+export async function waitForManusTask(taskId: string, maxWaitMs: number = 300000): Promise<string> {
+  const startedAt = Date.now();
+  const pollInterval = 10000;
+
+  while (Date.now() - startedAt < maxWaitMs) {
+    const result = await getManusTaskResult(taskId);
+
+    if (result.status === "completed") {
+      const texts: string[] = [];
+      if (result.output) {
+        for (const msg of result.output) {
+          if (msg.content) {
+            for (const block of msg.content) {
+              if ((block.type === "output_text" || block.type === "text") && block.text) {
+                texts.push(block.text);
+              }
+            }
+          }
+        }
+      }
+      return texts.join("\n");
+    }
+
+    if (result.status === "failed") {
+      throw new Error(`Manus task ${taskId} failed`);
+    }
+
+    console.log(`[Manus] Task ${taskId}: ${result.status} — waiting...`);
+    await sleep(pollInterval);
+  }
+
+  throw new Error(`Manus task ${taskId} timeout after ${maxWaitMs / 1000}s`);
+}
+
+// ─── SEO Audit ──────────────────────────────────────────────────────────
+
 export async function launchSeoAudit(
   targets: SeoTarget[],
   limit?: number
-): Promise<{ findings: SeoFinding[]; processed: number; errors: string[] }> {
+): Promise<{ findings: SeoFinding[]; processed: number; errors: string[]; creditsUsed: number }> {
+  if (!ENV.manusApiKey) {
+    return { findings: [], processed: 0, errors: ["MANUS_API_KEY not configured"], creditsUsed: 0 };
+  }
+
   const allFindings: SeoFinding[] = [];
   const errors: string[] = [];
+  let totalCredits = 0;
 
-  // Build flat list of (site, city) combinations
   const combos: { siteName: string; siteUrl: string; city: string }[] = [];
   for (const t of targets) {
     for (const city of t.cities) {
@@ -84,34 +189,32 @@ export async function launchSeoAudit(
     console.log(`[SEO Audit] ${i + 1}/${toProcess.length} — ${siteName} × ${city}`);
 
     try {
-      const response = await anthropic.messages.create({
-        model: MODEL,
-        max_tokens: 3000,
-        system: "Tu es un expert SEO spécialisé en lifestyle et voyage. Tu réponds UNIQUEMENT en JSON array valide. Pas de markdown, pas de texte autour.",
-        messages: [{
-          role: "user",
-          content: `Pour le site ${siteName} (${siteUrl}), génère les 8 pages les plus probables qu'ils ont pour la ville de ${city}, basé sur la structure typique de ce site.
+      const prompt = `Va sur ${siteUrl} et trouve toutes les pages de type guide, classement, "meilleur", "top", "où sortir", "que faire" pour la ville de ${city}.
 
-Pour chaque page, donne en JSON :
-- pageUrl: l'URL probable (structure réaliste du site)
-- pageTitle: le titre probable de la page
+Pour chaque page trouvée, extrais :
+- url: URL complète de la page
+- title: titre de la page
 - city: "${city}"
 - category: une parmi (gastronomie, nightlife, culture, bien_etre, shopping, evenements, hotels, activites)
-- searchIntent: la requête Google que cette page cible (en français)
-- establishmentsMentioned: 3-5 noms d'établissements connus que cette page mentionne probablement
+- searchIntent: la requête Google probable que cette page cible
+- establishmentsMentioned: les 5 premiers noms d'établissements mentionnés dans la page
 
-Retourne UNIQUEMENT un JSON array.`,
-        }],
-      });
+Retourne UNIQUEMENT un JSON array valide. Pas de texte autour, pas de markdown.`;
 
-      const content = response.content[0].type === "text" ? response.content[0].text : "";
-      const parsed = extractJsonArray(content);
+      const task = await createManusTask(prompt, "manus-1.6");
+      console.log(`[SEO Audit]   Task created: ${task.task_id}`);
+
+      const output = await waitForManusTask(task.task_id);
+      const parsed = extractJsonArray(output);
+
+      const taskResult = await getManusTaskResult(task.task_id);
+      if (taskResult.credit_usage) totalCredits += taskResult.credit_usage;
 
       for (const f of parsed) {
         allFindings.push({
           source: siteName,
-          url: String(f.pageUrl || f.url || ""),
-          title: String(f.pageTitle || f.title || ""),
+          url: String(f.url || f.pageUrl || ""),
+          title: String(f.title || f.pageTitle || ""),
           h1: f.h1,
           city: String(f.city || city),
           category: String(f.category || ""),
@@ -126,13 +229,13 @@ Retourne UNIQUEMENT un JSON array.`,
       errors.push(`${siteName}×${city}: ${msg}`);
       console.error(`[SEO Audit]   → ERROR: ${msg}`);
     }
-
-    if (i < toProcess.length - 1) await sleep(2000);
   }
 
-  console.log(`[SEO Audit] Done: ${allFindings.length} findings, ${errors.length} errors`);
-  return { findings: allFindings, processed, errors };
+  console.log(`[SEO Audit] Done: ${allFindings.length} findings, ${errors.length} errors, ${totalCredits} credits`);
+  return { findings: allFindings, processed, errors, creditsUsed: totalCredits };
 }
+
+// ─── Content generation (Claude, not Manus — no web needed) ─────────────
 
 export async function generateContentPage(
   finding: SeoFinding,
@@ -149,7 +252,7 @@ export async function generateContentPage(
 
   try {
     const response = await anthropic.messages.create({
-      model: MODEL,
+      model: CLAUDE_MODEL,
       max_tokens: 4096,
       system: "Tu es le rédacteur en chef de Maison Baymora, Social Club Premium. Tu réponds UNIQUEMENT en JSON valide, sans fences markdown.",
       messages: [{

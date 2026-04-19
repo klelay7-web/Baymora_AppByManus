@@ -12,4 +12,5 @@ export const ENV = {
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
   appUrl: process.env.APP_URL ?? "https://www.baymora.com",
+  manusApiKey: process.env.MANUS_API_KEY ?? "",
 };

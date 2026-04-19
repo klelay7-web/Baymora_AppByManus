@@ -29,14 +29,25 @@ export default function AdminSysteme() {
       {/* AGENTS */}
       <div className="mb-10">
         <h2 className="text-base font-semibold mb-4" style={{ color: "#C8A96E" }}>Agents</h2>
-        <div className="p-4 rounded-lg" style={{ background: "#1a1a1a", border: "1px solid #333" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full" style={{ background: (manusStatus as any)?.connected ? "#4ade80" : "#ef4444" }} />
-            <span className="text-sm text-white">Manus / Claude API</span>
+        <div className="space-y-2">
+          <div className="p-4 rounded-lg" style={{ background: "#1a1a1a", border: "1px solid #333" }}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full" style={{ background: (manusStatus as any)?.connected ? "#4ade80" : "#ef4444" }} />
+              <span className="text-sm text-white">Manus API (SEO Scout)</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              {(manusStatus as any)?.connected ? "Connectée — api.manus.ai" : "MANUS_API_KEY non configurée"} — Profil : {(manusStatus as any)?.model || "manus-1.6"}
+            </p>
           </div>
-          <p className="text-xs text-gray-500">
-            {(manusStatus as any)?.connected ? "API connectée" : "API non configurée"} — Modèle : {(manusStatus as any)?.model || "claude-sonnet-4-20250514"}
-          </p>
+          <div className="p-4 rounded-lg" style={{ background: "#1a1a1a", border: "1px solid #333" }}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full" style={{ background: (manusStatus as any)?.claudeConnected ? "#4ade80" : "#ef4444" }} />
+              <span className="text-sm text-white">Claude API (Maya + Contenu)</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              {(manusStatus as any)?.claudeConnected ? "Connectée — Anthropic" : "ANTHROPIC_API_KEY non configurée"} — claude-sonnet-4-20250514
+            </p>
+          </div>
         </div>
       </div>
 
