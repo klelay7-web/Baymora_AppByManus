@@ -1,60 +1,88 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 export default function AdminRenseignement() {
-  const [auditLoading, setAuditLoading] = useState(false);
-  const [auditResult, setAuditResult] = useState<string | null>(null);
+  const [auditRunning, setAuditRunning] = useState(false);
+  const [auditMessage, setAuditMessage] = useState<string | null>(null);
   const [linksResult, setLinksResult] = useState<any[] | null>(null);
 
-  const { data: findings } = trpc.manus.getSeoFindings.useQuery(undefined, { retry: false });
+  const { data: findings, refetch: refetchFindings } = trpc.manus.getSeoFindings.useQuery(undefined, { retry: false });
+  const { data: auditStatus } = trpc.manus.getAuditStatus.useQuery(undefined, {
+    enabled: auditRunning,
+    refetchInterval: auditRunning ? 5000 : false,
+  });
+
   const launchAudit = trpc.manus.launchSeoAudit.useMutation({
-    onMutate: () => setAuditLoading(true),
-    onSettled: () => setAuditLoading(false),
-    onSuccess: (d: any) => { setAuditResult(`${d.processed} combinaisons traitées, ${d.findingsTotal} findings, ${d.inserted} insérés${d.errors?.length ? ` (${d.errors.length} erreurs)` : ""}`); toast.success("Audit terminé"); },
-    onError: (e) => { toast.error(e.message); setAuditResult(`Erreur: ${e.message}`); },
+    onSuccess: (d: any) => {
+      setAuditRunning(true);
+      setAuditMessage(d.message || "Audit lancé");
+      toast.success("Audit lancé en arrière-plan");
+    },
+    onError: (e) => { toast.error(e.message); setAuditMessage(`Erreur: ${e.message}`); },
   });
   const checkLinks = trpc.admin.checkOutboundLinks.useMutation({
-    onSuccess: (d) => { setLinksResult(d); toast.success(`${d.length} liens cassés trouvés`); },
+    onSuccess: (d) => { setLinksResult(d); toast.success(`${d.length} liens cassés`); },
     onError: (e) => toast.error(e.message),
   });
+
+  // Stop polling after 10 minutes
+  useEffect(() => {
+    if (!auditRunning) return;
+    const timeout = setTimeout(() => { setAuditRunning(false); refetchFindings(); }, 600000);
+    return () => clearTimeout(timeout);
+  }, [auditRunning, refetchFindings]);
 
   const TARGETS = [
     { url: "https://www.timeout.com/fr", name: "Timeout" },
     { url: "https://lefooding.com", name: "Le Fooding" },
-    { url: "https://www.cntraveler.com", name: "Condé Nast" },
     { url: "https://www.tripadvisor.fr", name: "TripAdvisor" },
-    { url: "https://www.infosbar.com", name: "Infosbar" },
-    { url: "https://www.lonelyplanet.fr", name: "Lonely Planet" },
-    { url: "https://www.sortiraparis.com", name: "Sortir à Paris" },
-    { url: "https://www.thefork.fr", name: "TheFork" },
   ];
-  const CITIES = ["Paris", "Bordeaux", "Lyon", "Nice", "Marseille", "Cannes", "Monaco", "Marrakech", "Barcelone", "Rome", "Londres", "New York", "Tokyo", "Bali"];
+  const TEST_CITIES = ["Paris", "Bordeaux", "Lyon"];
+  const ALL_CITIES = ["Paris", "Bordeaux", "Lyon", "Nice", "Marseille", "Cannes", "Monaco", "Marrakech", "Barcelone", "Rome", "Londres", "New York", "Tokyo", "Bali"];
 
   return (
     <div>
       {/* AUDIT SEO */}
       <div className="mb-10">
-        <h2 className="text-base font-semibold mb-4" style={{ color: "#C8A96E" }}>Audit SEO</h2>
+        <h2 className="text-base font-semibold mb-4" style={{ color: "#C8A96E" }}>Audit SEO (Manus API)</h2>
         <div className="flex flex-wrap gap-2 mb-4">
           <button
-            onClick={() => launchAudit.mutate({ sites: TARGETS.map((t) => ({ url: t.url, name: t.name })), cities: ["Paris", "Bordeaux", "Lyon"], limit: 3 })}
-            disabled={auditLoading}
+            onClick={() => launchAudit.mutate({ sites: TARGETS.map((t) => ({ url: t.url, name: t.name })), cities: TEST_CITIES, limit: 3 })}
+            disabled={launchAudit.isPending || auditRunning}
             className="text-xs px-4 py-2 rounded-lg font-semibold"
             style={{ background: "#C8A96E", color: "#1a1a1a" }}
           >
-            {auditLoading ? "Audit en cours..." : "Test rapide (3 combos)"}
+            {launchAudit.isPending ? "Lancement..." : "Test rapide (3 combos)"}
           </button>
           <button
-            onClick={() => launchAudit.mutate({ sites: TARGETS.map((t) => ({ url: t.url, name: t.name })), cities: CITIES })}
-            disabled={auditLoading}
+            onClick={() => launchAudit.mutate({ sites: TARGETS.map((t) => ({ url: t.url, name: t.name })), cities: TEST_CITIES })}
+            disabled={launchAudit.isPending || auditRunning}
             className="text-xs px-4 py-2 rounded-lg"
             style={{ border: "1px solid #C8A96E", color: "#C8A96E" }}
           >
-            {auditLoading ? "En cours..." : `Audit complet (${TARGETS.length} × ${CITIES.length} = ${TARGETS.length * CITIES.length} combos)`}
+            3 sites × 3 villes
           </button>
+          {auditRunning && (
+            <button
+              onClick={() => { setAuditRunning(false); refetchFindings(); }}
+              className="text-xs px-4 py-2 rounded-lg"
+              style={{ border: "1px solid #ef4444", color: "#ef4444" }}
+            >
+              Arrêter le polling
+            </button>
+          )}
         </div>
-        {auditResult && <p className="text-xs mb-4" style={{ color: "#4ade80" }}>{auditResult}</p>}
+
+        {auditRunning && (
+          <div className="flex items-center gap-2 mb-4 p-3 rounded-lg" style={{ background: "rgba(200,169,110,0.08)", border: "1px solid rgba(200,169,110,0.2)" }}>
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#C8A96E" }} />
+            <span className="text-xs" style={{ color: "#C8A96E" }}>
+              Audit en cours... {(auditStatus as any)?.findingsCount || 0} findings trouvés
+            </span>
+          </div>
+        )}
+        {auditMessage && !auditRunning && <p className="text-xs mb-4" style={{ color: "#4ade80" }}>{auditMessage}</p>}
 
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -63,7 +91,7 @@ export default function AdminRenseignement() {
             </tr></thead>
             <tbody>
               {(findings as any[] || []).slice(0, 50).map((f: any, i: number) => (
-                <tr key={i} className="hover:bg-white/5" style={{ borderBottom: "1px solid #222" }}>
+                <tr key={f.id || i} className="hover:bg-white/5" style={{ borderBottom: "1px solid #222" }}>
                   <td className="py-2 px-2 text-white">{f.source}</td>
                   <td className="py-2 px-2 text-gray-400">{f.city}</td>
                   <td className="py-2 px-2 text-gray-400">{f.category}</td>
@@ -76,7 +104,7 @@ export default function AdminRenseignement() {
                 </tr>
               ))}
               {(!findings || (findings as any[]).length === 0) && (
-                <tr><td colSpan={5} className="py-8 text-center text-gray-500">Aucun finding. Lancez un audit.</td></tr>
+                <tr><td colSpan={5} className="py-8 text-center text-gray-500">Aucun finding. Lancez un audit ou forcez les migrations dans l'onglet Système.</td></tr>
               )}
             </tbody>
           </table>
@@ -89,7 +117,7 @@ export default function AdminRenseignement() {
         <p className="text-xs" style={{ color: "#888" }}>Analyse des trous — bientôt disponible</p>
       </div>
 
-      {/* LIENS CASSÉS */}
+      {/* LIENS */}
       <div className="mb-10">
         <h2 className="text-base font-semibold mb-4" style={{ color: "#C8A96E" }}>Vérification liens</h2>
         <button

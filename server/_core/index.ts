@@ -184,6 +184,18 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+
+    // Run table migrations on startup (non-blocking)
+    import("../migrations").then(async ({ runAllMigrations }) => {
+      try {
+        const results = await runAllMigrations();
+        for (const r of results) {
+          if (r.status === "ok") console.log(`[MIGRATION] ${r.table} OK`);
+          else console.error(`[MIGRATION] ${r.table} FAILED:`, r.error);
+        }
+      } catch (e) { console.error("[MIGRATION] runner failed:", e); }
+    }).catch(() => {});
+
     // Démarrer le cron de maintenance des événements (re-seed dates glissantes)
     startEventMaintenanceCron();
     // Démarrer les notifications Ce soir (18h lun-ven) et Ce week-end (vendredi 17h)

@@ -1599,6 +1599,29 @@ export const appRouter = router({
     }),
 
     // ─── SYSTÈME ──────────────────────────────────────────────────────
+    runMigrations: adminProcedure.mutation(async () => {
+      const { runAllMigrations } = await import("./migrations");
+      return { results: await runAllMigrations() };
+    }),
+    testManusConnection: adminProcedure.mutation(async () => {
+      const startTime = Date.now();
+      try {
+        const resp = await fetch("https://api.manus.ai/v1/tasks", {
+          method: "POST",
+          headers: { "API_KEY": process.env.MANUS_API_KEY || "", "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: "Réponds uniquement OK", agentProfile: "manus-1.6-lite" }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        return {
+          success: resp.ok, statusCode: resp.status, taskId: (data as any).task_id || null,
+          durationMs: Date.now() - startTime, apiKeyPresent: !!process.env.MANUS_API_KEY,
+          apiKeyPrefix: process.env.MANUS_API_KEY ? process.env.MANUS_API_KEY.substring(0, 8) + "..." : "absent",
+          responseData: data,
+        };
+      } catch (err: any) {
+        return { success: false, error: err?.message, apiKeyPresent: !!process.env.MANUS_API_KEY, durationMs: Date.now() - startTime };
+      }
+    }),
     getCronStatus: adminProcedure.query(() => {
       return [
         { name: "enrichCron", description: "Enrichissement établissements", frequency: "2h", lastRun: null },
@@ -3045,7 +3068,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => creerMission(input.titre, input.agent, input.type, input.description, input.priorite)),
 
-    // SEO Scout — intelligence concurrentielle
+    // SEO Scout — intelligence concurrentielle (fire-and-forget to avoid HTTP timeout)
     launchSeoAudit: ownerProcedure
       .input(z.object({
         sites: z.array(z.object({ url: z.string(), name: z.string() })),
@@ -3053,26 +3076,46 @@ export const appRouter = router({
         limit: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { launchSeoAudit } = await import("./services/manusScoutService");
-        const targets = input.sites.map((s) => ({ siteUrl: s.url, siteName: s.name, cities: input.cities }));
-        const result = await launchSeoAudit(targets, input.limit);
-        const db = await (await import("./db")).getDb();
-        let inserted = 0;
-        if (db) {
-          for (const f of result.findings) {
-            try {
-              await db.insert(seoIntelligence).values({
-                source: f.source, sourceUrl: f.url, pageUrl: f.url,
-                pageTitle: f.title, city: f.city, category: f.category,
-                searchIntent: f.searchIntent,
-                establishmentsMentioned: f.establishmentsMentioned as any,
-              } as any);
-              inserted++;
-            } catch { /* skip dupes */ }
+        const totalCombinations = input.sites.length * input.cities.length;
+        const effectiveLimit = input.limit || totalCombinations;
+
+        // Fire-and-forget: launch in background, return immediately
+        setImmediate(async () => {
+          try {
+            const { launchSeoAudit } = await import("./services/manusScoutService");
+            const targets = input.sites.map((s) => ({ siteUrl: s.url, siteName: s.name, cities: input.cities }));
+            const result = await launchSeoAudit(targets, input.limit);
+            const db = await (await import("./db")).getDb();
+            if (db) {
+              for (const f of result.findings) {
+                try {
+                  await db.insert(seoIntelligence).values({
+                    source: f.source, sourceUrl: f.url, pageUrl: f.url,
+                    pageTitle: f.title, city: f.city, category: f.category,
+                    searchIntent: f.searchIntent,
+                    establishmentsMentioned: f.establishmentsMentioned as any,
+                  } as any);
+                } catch { /* skip dupes */ }
+              }
+            }
+            console.log(`[SEO Audit] Background complete: ${result.findings.length} findings, ${result.errors.length} errors`);
+          } catch (err) {
+            console.error("[SEO Audit] Background task failed:", err);
           }
-        }
-        return { totalCombinations: targets.reduce((s, t) => s + t.cities.length, 0), processed: result.processed, findingsTotal: result.findings.length, inserted, errors: result.errors, creditsUsed: result.creditsUsed };
+        });
+
+        return { status: "launched", message: `Audit lancé en arrière-plan (${Math.min(effectiveLimit, totalCombinations)} combinaisons)`, totalCombinations };
       }),
+
+    getAuditStatus: ownerProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return { findingsCount: 0 };
+      try {
+        const { sql } = await import("drizzle-orm");
+        const [row] = await db.select({ c: sql<number>`count(*)` }).from(seoIntelligence);
+        return { findingsCount: row?.c || 0 };
+      } catch { return { findingsCount: 0 }; }
+    }),
 
     getSeoFindings: ownerProcedure
       .input(z.object({ city: z.string().optional(), category: z.string().optional(), source: z.string().optional() }).optional())
