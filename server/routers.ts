@@ -679,14 +679,32 @@ export const appRouter = router({
           }
         } catch { /* non-blocking */ }
 
-        // Construire le system prompt dynamique avec profil client + géoloc réelle + profil dynamique Membre
+        // Fetch relevant establishments for the target city to inject as context
+        let estabContext: string | undefined;
+        const targetCity = input.userLocation?.city || ctx.user.homeCity;
+        if (targetCity) {
+          try {
+            const db = await (await import("./db")).getDb();
+            if (db) {
+              const { sql: sqlFn } = await import("drizzle-orm");
+              const estRows = await db.select({ name: establishmentsTable.name, slug: establishmentsTable.slug, category: establishmentsTable.category, rating: establishmentsTable.rating, description: establishmentsTable.description })
+                .from(establishmentsTable).where(sqlFn`LOWER(${establishmentsTable.city}) = LOWER(${targetCity})`).limit(30);
+              if (estRows.length > 0) {
+                estabContext = `ÉTABLISSEMENTS BAYMORA à ${targetCity} (${estRows.length} fiches) :\n` +
+                  estRows.map((e: any) => `- ${e.name} [${e.category}] ${e.rating ? `★${e.rating}` : ""} → /lieu/${e.slug}${e.description ? ` — ${(e.description as string).slice(0, 80)}` : ""}`).join("\n");
+              }
+            }
+          } catch { /* non-blocking */ }
+        }
+
+        // Construire le system prompt dynamique avec profil client + géoloc réelle + profil dynamique Membre + établissements locaux
         const memberProfileDoc = await getOrCreateMemberProfile(ctx.user.id).catch(() => null);
         let systemPrompt = buildSystemPrompt(
           clientProfile,
           new Date(),
           input.userLocation || undefined,
           memberProfileDoc,
-          undefined
+          estabContext
         );
 
         if (parcoursValidated) {
@@ -718,6 +736,20 @@ export const appRouter = router({
 
         // Stocker la réponse complète (avec tags) pour le frontend
         await addMessage(input.conversationId, "assistant", claudeResponse.content);
+
+        // Auto-create establishment records for each place Maya mentions (fire-and-forget)
+        if (parsed.places && (parsed.places as any[]).length > 0) {
+          const { findOrCreateEstablishment } = await import("./services/establishmentService");
+          for (const p of parsed.places as any[]) {
+            findOrCreateEstablishment({
+              name: p.name,
+              city: p.city || input.userLocation?.city || ctx.user.homeCity || "",
+              country: p.country || "France",
+              lat: p.coordinates?.lat,
+              lng: p.coordinates?.lng,
+            }).catch((err) => console.error("[AutoCreate]", p.name, err?.message));
+          }
+        }
 
         // Enrichissement fire-and-forget du member profile à partir de la conversation.
         // N'attend pas la fin, ne bloque jamais la réponse.
@@ -1675,6 +1707,7 @@ export const appRouter = router({
         hasAnthropic: !!process.env.ANTHROPIC_API_KEY,
         hasManus: !!process.env.MANUS_API_KEY,
         hasGoogleMaps: !!process.env.VITE_GOOGLE_MAPS_KEY,
+        hasGooglePlaces: !!process.env.GOOGLE_PLACES_API_KEY,
       };
     }),
   }),
