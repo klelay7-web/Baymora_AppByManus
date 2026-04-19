@@ -92,7 +92,7 @@ async function main() {
       duration: "3h",
       budgetEstimate: "30-50€/pers",
       tags: JSON.stringify(["culture", "decouverte", "bordeaux", "solo", "amis"]),
-      steps: JSON.stringify(all.map((e, i) => makeStep(e, `${14 + Math.floor(i * 0.6)}h`, 10, i > 0 ? "5 min à pied" : ""))),
+      steps: JSON.stringify(all.map((e: any, i: number) => makeStep(e, `${14 + Math.floor(i * 0.6)}h`, 10, i > 0 ? "5 min à pied" : ""))),
       isPublished: true,
     },
     {
