@@ -131,7 +131,7 @@ async function main() {
     \`coverPhoto\` varchar(500),
     \`duration\` varchar(50),
     \`budgetEstimate\` varchar(50),
-    \`tags\` json DEFAULT ('[]'),
+    \`tags\` json DEFAULT NULL,
     \`steps\` json NOT NULL,
     \`isPublished\` boolean DEFAULT TRUE,
     \`viewCount\` int DEFAULT 0,

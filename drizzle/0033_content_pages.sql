@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `content_pages` (
   `heroImage` varchar(500),
   `introText` text,
   `content` longtext,
-  `establishmentSlugs` json DEFAULT ('[]'),
+  `establishmentSlugs` json DEFAULT NULL,
   `season` enum('toute_annee','printemps','ete','automne','hiver') DEFAULT 'toute_annee',
   `isPublished` boolean DEFAULT TRUE,
   `viewCount` int DEFAULT 0,

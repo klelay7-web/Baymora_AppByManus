@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `seo_intelligence` (
   `country` varchar(100) DEFAULT 'France',
   `category` varchar(50),
   `searchIntent` varchar(300),
-  `establishmentsMentioned` json DEFAULT ('[]'),
+  `establishmentsMentioned` json DEFAULT NULL,
   `contentPageGenerated` boolean DEFAULT FALSE,
   `scrapedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
