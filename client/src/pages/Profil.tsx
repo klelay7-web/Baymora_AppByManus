@@ -7,8 +7,10 @@ import {
   User, Heart, Compass, Users, Crown, CreditCard, Gift,
   Bell, Globe, Shield, LogOut, ChevronRight, Sparkles, Zap,
   X, Plus, Check, Copy, Share2, MapPin, UtensilsCrossed,
-  Plane, Dumbbell, Calendar
+  Plane, Dumbbell, Calendar, Settings
 } from "lucide-react";
+
+const ADMIN_EMAILS = ["k.lelay7@gmail.com"];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ActiveSection = null | "preferences" | "filtersPrefs" | "collections" | "proches" | "parrainage" | "notifications" | "confidentialite";
@@ -814,6 +816,28 @@ export default function Profil() {
             {isOwner ? "⚡ Admin — Accès illimité" : tierLabel}
           </div>
         </div>
+
+        {/* Pilotage — admin only */}
+        {ADMIN_EMAILS.includes(user.email || "") && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-6 text-left"
+            style={{
+              background: "linear-gradient(135deg, #1a1a1a, #2a2a2a)",
+              borderLeft: "3px solid #C8A96E",
+              minHeight: 48,
+            }}
+          >
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(200,169,110,0.1)" }}>
+              <Settings size={16} color="#C8A96E" />
+            </div>
+            <div>
+              <div className="text-sm font-medium" style={{ color: "#F0EDE6" }}>Pilotage</div>
+              <div className="text-[10px]" style={{ color: "#888" }}>Administration Maison Baymora</div>
+            </div>
+            <ChevronRight size={14} color="#888" className="ml-auto flex-shrink-0" />
+          </button>
+        )}
 
         {/* Card crédits */}
         <div
