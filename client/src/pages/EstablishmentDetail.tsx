@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { EstablishmentCard } from "@/components/EstablishmentCard";
 import DashboardLayout from "@/components/DashboardLayout";
+import SEOHead from "@/components/SEOHead";
 
 const CATEGORY_LABELS: Record<string, string> = {
   restaurant: "Restaurant",
@@ -107,6 +108,12 @@ export default function EstablishmentDetail() {
 
   return (
     <DashboardLayout>
+      <SEOHead
+        title={`${establishment.name} — Maison Baymora`}
+        description={establishment.shortDescription || establishment.description?.slice(0, 155) || undefined}
+        image={heroImage || undefined}
+        jsonLd={{ "@context": "https://schema.org", "@type": "LocalBusiness", name: establishment.name, description: establishment.shortDescription || establishment.description, address: { "@type": "PostalAddress", addressLocality: establishment.city, addressCountry: establishment.country }, aggregateRating: rating ? { "@type": "AggregateRating", ratingValue: rating } : undefined }}
+      />
       <div
         className="pb-16"
         style={{

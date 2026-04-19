@@ -3,6 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, MapPin, Clock, Sparkles, Bookmark } from "lucide-react";
 import { useCollections } from "@/hooks/useCollections";
+import SEOHead from "@/components/SEOHead";
 
 export default function ParcoursMaisonDetail() {
   const [, params] = useRoute("/parcours-maison/:slug");
@@ -47,6 +48,12 @@ export default function ParcoursMaisonDetail() {
 
   return (
     <div className="min-h-screen pb-32" style={{ background: "#070B14", color: "#F0EDE6" }}>
+      <SEOHead
+        title={`${parcours.title} — Maison Baymora`}
+        description={parcours.subtitle || undefined}
+        image={parcours.coverPhoto || undefined}
+        jsonLd={{ "@context": "https://schema.org", "@type": "ItemList", name: parcours.title, description: parcours.subtitle, numberOfItems: steps.length, itemListElement: steps.map((s: any, i: number) => ({ "@type": "ListItem", position: i + 1, name: s.name || s.title })) }}
+      />
       {/* Hero */}
       <div className="relative w-full" style={{ height: "45vh", maxHeight: 420, minHeight: 260 }}>
         {parcours.coverPhoto ? (

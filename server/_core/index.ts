@@ -104,6 +104,47 @@ async function startServer() {
     }
   });
 
+  // SEO: robots.txt
+  app.get("/robots.txt", (_req, res) => {
+    res.type("text/plain").send(`User-agent: *\nAllow: /\nSitemap: https://www.baymora.com/sitemap.xml\nDisallow: /auth\nDisallow: /profil\nDisallow: /maya`);
+  });
+
+  // SEO: sitemap.xml
+  app.get("/sitemap.xml", async (_req, res) => {
+    try {
+      const db = await getDb();
+      const urls: string[] = [
+        "https://www.baymora.com/",
+        "https://www.baymora.com/premium",
+        "https://www.baymora.com/mentions-legales",
+        "https://www.baymora.com/confidentialite",
+        "https://www.baymora.com/cgu",
+        "https://www.baymora.com/contact",
+      ];
+      if (db) {
+        const { establishments, inspirationThemes: it, parcoursMaison: pm, contentPages: cp } = await import("../../drizzle/schema");
+        const estRows = await db.select({ slug: establishments.slug }).from(establishments).limit(1000);
+        for (const r of estRows) urls.push(`https://www.baymora.com/lieu/${r.slug}`);
+        try {
+          const thRows = await db.select({ slug: it.slug }).from(it).limit(200);
+          for (const r of thRows) urls.push(`https://www.baymora.com/inspiration/${r.slug}`);
+        } catch { /* table might not exist */ }
+        try {
+          const pmRows = await db.select({ slug: pm.slug }).from(pm).limit(200);
+          for (const r of pmRows) urls.push(`https://www.baymora.com/parcours-maison/${r.slug}`);
+        } catch { /* table might not exist */ }
+        try {
+          const cpRows = await db.select({ slug: cp.slug }).from(cp).limit(500);
+          for (const r of cpRows) urls.push(`https://www.baymora.com/guide/${r.slug}`);
+        } catch { /* table might not exist */ }
+      }
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${u}</loc></url>`).join("\n")}\n</urlset>`;
+      res.type("application/xml").send(xml);
+    } catch (err: any) {
+      res.status(500).send("<!-- sitemap error -->");
+    }
+  });
+
   // Admin-only manual enrichment trigger
   app.get("/api/admin/enrich", async (req, res) => {
     try {

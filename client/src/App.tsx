@@ -30,6 +30,7 @@ import CGU from "./pages/CGU";
 import Contact from "./pages/Contact";
 import ThemePage from "./pages/ThemePage";
 import ParcoursMaisonDetail from "./pages/ParcoursMaisonDetail";
+import ContentPage from "./pages/ContentPage";
 import { ParcourProvider } from "./stores/parcourStore";
 import PartenaireEvenement from "./pages/PartenaireEvenement";
 
@@ -99,6 +100,8 @@ function Router() {
       <Route path="/inspiration/:slug" component={ThemePage} />
       {/* Parcours Maison pré-faits — public */}
       <Route path="/parcours-maison/:slug" component={ParcoursMaisonDetail} />
+      {/* Guides SEO — public */}
+      <Route path="/guide/:slug" component={ContentPage} />
 
       {/* Maya Demo — accessible sans connexion */}
       <Route path="/maya-demo" component={MayaDemo} />

@@ -52,7 +52,7 @@ import type { EmailType } from "./services/emailService";
 import { callClaude, buildSystemPrompt, parseStructuredTags, type ClaudeMessage } from "./services/claudeService";
 import { orchestrate } from "./services/ai/orchestrator";
 import type { User } from "../drizzle/schema";
-import { outboundClicks, inspirationThemes, establishments as establishmentsTable, savedParcours, parcoursMaison, memberDefaults } from "../drizzle/schema";
+import { outboundClicks, inspirationThemes, establishments as establishmentsTable, savedParcours, parcoursMaison, memberDefaults, seoIntelligence, contentPages } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
 import { notifyOwner } from "./_core/notification";
@@ -2709,6 +2709,86 @@ export const appRouter = router({
         priorite: z.enum(["critique", "haute", "normale", "basse"]).default("normale"),
       }))
       .mutation(async ({ input }) => creerMission(input.titre, input.agent, input.type, input.description, input.priorite)),
+
+    // SEO Scout — intelligence concurrentielle
+    launchSeoAudit: ownerProcedure
+      .input(z.object({
+        sites: z.array(z.object({ url: z.string(), name: z.string() })),
+        cities: z.array(z.string()),
+      }))
+      .mutation(async ({ input }) => {
+        const { launchSeoAudit } = await import("./services/manusScoutService");
+        const targets = input.sites.map((s) => ({ siteUrl: s.url, siteName: s.name, cities: input.cities }));
+        const findings = await launchSeoAudit(targets);
+        const db = await (await import("./db")).getDb();
+        let inserted = 0;
+        if (db) {
+          for (const f of findings) {
+            try {
+              await db.insert(seoIntelligence).values({
+                source: f.source, sourceUrl: f.url, pageUrl: f.url,
+                pageTitle: f.title, city: f.city, category: f.category,
+                searchIntent: f.searchIntent,
+                establishmentsMentioned: f.establishmentsMentioned as any,
+              } as any);
+              inserted++;
+            } catch { /* skip dupes */ }
+          }
+        }
+        return { missionsLaunched: targets.length, findingsTotal: findings.length, inserted };
+      }),
+
+    getSeoFindings: ownerProcedure
+      .input(z.object({ city: z.string().optional(), category: z.string().optional(), source: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) return [];
+        const { eq, and, desc } = await import("drizzle-orm");
+        const conds: any[] = [];
+        if (input?.city) conds.push(eq(seoIntelligence.city, input.city));
+        if (input?.category) conds.push(eq(seoIntelligence.category, input.category));
+        if (input?.source) conds.push(eq(seoIntelligence.source, input.source));
+        const where = conds.length === 0 ? undefined : conds.length === 1 ? conds[0] : and(...conds);
+        return db.select().from(seoIntelligence).where(where).orderBy(desc(seoIntelligence.scrapedAt)).limit(200);
+      }),
+
+    generateContentFromFindings: ownerProcedure
+      .input(z.object({ findingIds: z.array(z.number()).min(1) }))
+      .mutation(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { eq, inArray, sql } = await import("drizzle-orm");
+        const { generateContentPage } = await import("./services/manusScoutService");
+        const findings = await db.select().from(seoIntelligence).where(inArray(seoIntelligence.id, input.findingIds));
+        let generated = 0;
+        for (const finding of findings) {
+          if (finding.contentPageGenerated) continue;
+          const city = finding.city || "";
+          const estRows = await db.select().from(establishmentsTable)
+            .where(sql`LOWER(${establishmentsTable.city}) = LOWER(${city})`)
+            .limit(20);
+          if (estRows.length < 3) continue;
+          const page = await generateContentPage(
+            { source: finding.source, url: finding.pageUrl || "", title: finding.pageTitle || "", city, category: finding.category || "", searchIntent: finding.searchIntent || "", establishmentsMentioned: (finding.establishmentsMentioned as string[] | null) || [] },
+            estRows
+          );
+          if (!page) continue;
+          try {
+            await db.insert(contentPages).values({
+              slug: page.slug, title: page.title, metaTitle: page.metaTitle,
+              metaDescription: page.metaDescription, city, category: page.category,
+              searchIntent: finding.searchIntent, introText: page.introText,
+              content: page.content, establishmentSlugs: page.establishmentSlugs as any,
+              season: page.season || "toute_annee", seoIntelligenceId: finding.id,
+              generatedBy: "claude",
+            } as any);
+            await db.update(seoIntelligence).set({ contentPageGenerated: true }).where(eq(seoIntelligence.id, finding.id));
+            generated++;
+          } catch { /* skip duplicate slugs */ }
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+        return { generated, total: findings.length };
+      }),
   }),
 
   // ─── MAYA — Agente Creative ────────────────────────────────────────────────
@@ -4156,6 +4236,59 @@ export const appRouter = router({
       const stats = await getAffiliateStats();
       return stats;
     }),
+  }),
+
+  // ─── Content Pages (pages de contenu SEO) ──────────────────────────────────
+  contentPages: router({
+    list: publicProcedure
+      .input(z.object({ city: z.string().optional(), category: z.string().optional(), type: z.enum(["guide", "inspiration", "parcours", "evenement", "secret"]).optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) return [];
+        const { eq, and, desc } = await import("drizzle-orm");
+        const conditions: any[] = [eq(contentPages.isPublished, true)];
+        if (input?.city) conditions.push(eq(contentPages.city, input.city));
+        if (input?.category) conditions.push(eq(contentPages.category, input.category));
+        if (input?.type) conditions.push(eq(contentPages.type, input.type));
+        return db.select().from(contentPages)
+          .where(conditions.length === 1 ? conditions[0] : and(...conditions))
+          .orderBy(desc(contentPages.viewCount))
+          .limit(50);
+      }),
+    getBySlug: publicProcedure
+      .input(z.object({ slug: z.string().min(1) }))
+      .query(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { eq, sql } = await import("drizzle-orm");
+        const rows = await db.select().from(contentPages).where(eq(contentPages.slug, input.slug)).limit(1);
+        if (rows.length === 0) throw new TRPCError({ code: "NOT_FOUND" });
+        await db.update(contentPages).set({ viewCount: sql`${contentPages.viewCount} + 1` }).where(eq(contentPages.id, rows[0].id));
+        return rows[0];
+      }),
+    listByCity: publicProcedure
+      .input(z.object({ city: z.string().min(1) }))
+      .query(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) return [];
+        const { eq, and, desc, sql } = await import("drizzle-orm");
+        return db.select().from(contentPages)
+          .where(and(eq(contentPages.isPublished, true), sql`LOWER(${contentPages.city}) = LOWER(${input.city})`))
+          .orderBy(desc(contentPages.viewCount))
+          .limit(30);
+      }),
+    search: publicProcedure
+      .input(z.object({ query: z.string().min(1) }))
+      .query(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) return [];
+        const { eq, or, like, desc } = await import("drizzle-orm");
+        const q = `%${input.query}%`;
+        return db.select().from(contentPages)
+          .where(or(like(contentPages.title, q), like(contentPages.searchIntent, q), like(contentPages.city, q)))
+          .orderBy(desc(contentPages.viewCount))
+          .limit(20);
+      }),
   }),
 
   // ─── Events (Pivot Sortir V7.2b) ──────────────────────────────────────────────

@@ -1404,3 +1404,48 @@ export const memberDefaults = mysqlTable("member_defaults", {
 });
 export type MemberDefault = typeof memberDefaults.$inferSelect;
 export type InsertMemberDefault = typeof memberDefaults.$inferInsert;
+
+// ─── SEO Intelligence (renseignement concurrentiel) ───────────────────
+export const seoIntelligence = mysqlTable("seo_intelligence", {
+  id: int("id").autoincrement().primaryKey(),
+  source: varchar("source", { length: 100 }).notNull(),
+  sourceUrl: varchar("sourceUrl", { length: 500 }),
+  pageUrl: varchar("pageUrl", { length: 500 }),
+  pageTitle: varchar("pageTitle", { length: 300 }),
+  city: varchar("city", { length: 100 }),
+  country: varchar("country", { length: 100 }).default("France"),
+  category: varchar("category", { length: 50 }),
+  searchIntent: varchar("searchIntent", { length: 300 }),
+  establishmentsMentioned: json("establishmentsMentioned").$type<string[]>().default([]),
+  contentPageGenerated: boolean("contentPageGenerated").default(false),
+  scrapedAt: timestamp("scrapedAt").defaultNow().notNull(),
+});
+export type SeoIntelligenceRow = typeof seoIntelligence.$inferSelect;
+
+// ─── Content Pages (pages de contenu SEO générées) ────────────────────
+export const contentPages = mysqlTable("content_pages", {
+  id: int("id").autoincrement().primaryKey(),
+  slug: varchar("slug", { length: 200 }).notNull().unique(),
+  title: varchar("title", { length: 300 }).notNull(),
+  metaTitle: varchar("metaTitle", { length: 200 }),
+  metaDescription: varchar("metaDescription", { length: 320 }),
+  type: mysqlEnum("type", ["guide", "inspiration", "parcours", "evenement", "secret"]).default("guide"),
+  city: varchar("city", { length: 100 }).notNull(),
+  country: varchar("country", { length: 100 }).default("France"),
+  category: varchar("category", { length: 50 }),
+  searchIntent: varchar("searchIntent", { length: 300 }),
+  heroImage: varchar("heroImage", { length: 500 }),
+  introText: text("introText"),
+  content: text("content"),
+  establishmentSlugs: json("establishmentSlugs").$type<string[]>().default([]),
+  season: mysqlEnum("season", ["toute_annee", "printemps", "ete", "automne", "hiver"]).default("toute_annee"),
+  isPublished: boolean("isPublished").default(true),
+  viewCount: int("viewCount").default(0),
+  saveCount: int("saveCount").default(0),
+  seoIntelligenceId: int("seoIntelligenceId"),
+  generatedBy: mysqlEnum("generatedBy", ["claude", "manual", "manus"]).default("claude"),
+  verifiedAt: timestamp("verifiedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ContentPage = typeof contentPages.$inferSelect;

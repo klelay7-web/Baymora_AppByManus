@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Plus, Lock, Users, Globe, Eye, EyeOff, Sparkles, MapPin, Calendar, DollarSign, Clock, Bookmark } from "lucide-react";
+import { Plus, Lock, Users, Globe, Eye, EyeOff, Sparkles, MapPin, Calendar, DollarSign, Clock, Bookmark, BookOpen } from "lucide-react";
 import { useCollections } from "@/hooks/useCollections";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
@@ -57,6 +57,39 @@ const STATUS_CONFIG = {
 };
 
 const TABS = ["Tous", "Brouillons", "Validés", "Partagés"];
+
+function GuidesSection() {
+  const { data: guides } = trpc.contentPages.list.useQuery({ type: "guide" });
+  if (!guides || guides.length === 0) return null;
+  return (
+    <div className="px-4 pb-6 max-w-5xl mx-auto">
+      <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif", color: "#C8A96E" }}>
+        <BookOpen size={18} /> Guides
+      </h2>
+      <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollSnapType: "x mandatory" }}>
+        {guides.slice(0, 8).map((g: any) => (
+          <Link key={g.id} href={`/guide/${g.slug}`}>
+            <div className="flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer group" style={{ width: 220, background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)", scrollSnapAlign: "start" }}>
+              <div className="w-full h-28 bg-white/5 relative overflow-hidden">
+                {g.heroImage ? (
+                  <img src={g.heroImage} alt={g.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0a1428, #14253f)" }}>
+                    <BookOpen size={20} color="rgba(200,169,110,0.3)" />
+                  </div>
+                )}
+              </div>
+              <div className="p-3">
+                <p className="text-sm font-semibold truncate" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>{g.title}</p>
+                <p className="text-xs mt-0.5 truncate" style={{ color: "#8B8D94" }}>{g.city}</p>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ParcoursMaisonSection() {
   const { data: parcoursList } = trpc.parcoursMaison.list.useQuery();
@@ -161,6 +194,7 @@ export default function Parcours() {
         {/* Parcours Maison — visible par tous */}
         <div className="pt-6">
           <ParcoursMaisonSection />
+          <GuidesSection />
         </div>
         {/* Header */}
         <div className="px-4 pt-2 pb-4 max-w-5xl mx-auto">
@@ -263,6 +297,7 @@ export default function Parcours() {
 
       {/* Parcours Maison — visible par tous */}
       <ParcoursMaisonSection />
+      <GuidesSection />
 
       {/* Mes parcours — titre section */}
       <div className="px-4 mb-2 max-w-5xl mx-auto">

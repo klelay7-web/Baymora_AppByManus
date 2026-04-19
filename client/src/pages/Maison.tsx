@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Sparkles, ChevronRight, Heart, Star, Gift, Calendar, Clock, Flame, Lock } from "lucide-react";
+import { Sparkles, ChevronRight, Heart, Star, Gift, Calendar, Clock, Flame, Lock, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { VideoBackground } from "@/components/VideoBackground";
@@ -204,6 +204,49 @@ function EventsSection() {
         </div>
       </div>
     </motion.section>
+  );
+}
+
+function GuidesSection({ city }: { city: string }) {
+  const { data: guides } = trpc.contentPages.listByCity.useQuery({ city }, { enabled: !!city });
+  if (!guides || guides.length === 0) return null;
+  return (
+    <section className="px-4 mt-12" style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
+          <BookOpen size={18} color="#C8A96E" /> Guides & Inspirations
+        </h2>
+        <Link href="/parcours">
+          <span className="text-xs flex items-center gap-1" style={{ color: "#C8A96E" }}>
+            Tout voir <ChevronRight size={12} />
+          </span>
+        </Link>
+      </div>
+      <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollSnapType: "x mandatory" }}>
+        {guides.slice(0, 6).map((g: any) => (
+          <Link key={g.id} href={`/guide/${g.slug}`}>
+            <div
+              className="flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer group"
+              style={{ width: 240, background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)", scrollSnapAlign: "start" }}
+            >
+              <div className="w-full h-32 bg-white/5 relative overflow-hidden">
+                {g.heroImage ? (
+                  <img src={g.heroImage} alt={g.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0a1428, #14253f)" }}>
+                    <BookOpen size={24} color="rgba(200,169,110,0.3)" />
+                  </div>
+                )}
+              </div>
+              <div className="p-3">
+                <p className="text-sm font-semibold truncate" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>{g.title}</p>
+                <p className="text-xs mt-0.5 truncate" style={{ color: "#8B8D94" }}>{g.city} · {g.category || "Guide"}</p>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -593,6 +636,9 @@ export default function Maison() {
       </motion.section>
 
       {/* Footer */}
+      {/* Guides & Inspirations */}
+      <GuidesSection city={user?.homeCity || "Bordeaux"} />
+
       <footer className="px-4" style={{ borderTop: "1px solid rgba(200, 169, 110, 0.1)", paddingTop: 48, paddingBottom: 48, marginTop: 64 }}>
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">

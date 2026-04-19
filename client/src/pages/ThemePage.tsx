@@ -15,6 +15,7 @@ import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Star, Sparkles, Play, MapPin, Bookmark } from "lucide-react";
 import ThemePortal, { type DoorType } from "@/components/ThemePortal";
 import { useCollections } from "@/hooks/useCollections";
+import SEOHead from "@/components/SEOHead";
 
 type Establishment = {
   id: number;
@@ -185,6 +186,14 @@ export default function ThemePage() {
           heroImageUrl: theme.heroImageUrl,
           title: theme.title,
         }}
+      />
+
+      <SEOHead
+        title={`${theme.title} — Maison Baymora`}
+        description={theme.accroche?.slice(0, 155) || theme.subtitle || undefined}
+        image={hero || undefined}
+        type="article"
+        jsonLd={{ "@context": "https://schema.org", "@type": "Article", headline: theme.title, description: theme.accroche || theme.subtitle, image: hero, author: { "@type": "Organization", name: "Maison Baymora" } }}
       />
 
       <div className="min-h-screen pb-28" style={{ background: "#070B14", color: "#F0EDE6" }}>
