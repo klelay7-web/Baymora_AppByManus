@@ -11,8 +11,8 @@ export default function AdminRenseignement() {
   const launchAudit = trpc.manus.launchSeoAudit.useMutation({
     onMutate: () => setAuditLoading(true),
     onSettled: () => setAuditLoading(false),
-    onSuccess: (d) => { setAuditResult(`${d.findingsTotal} findings, ${d.inserted} insérés`); toast.success("Audit terminé"); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: (d: any) => { setAuditResult(`${d.processed} combinaisons traitées, ${d.findingsTotal} findings, ${d.inserted} insérés${d.errors?.length ? ` (${d.errors.length} erreurs)` : ""}`); toast.success("Audit terminé"); },
+    onError: (e) => { toast.error(e.message); setAuditResult(`Erreur: ${e.message}`); },
   });
   const checkLinks = trpc.admin.checkOutboundLinks.useMutation({
     onSuccess: (d) => { setLinksResult(d); toast.success(`${d.length} liens cassés trouvés`); },
@@ -36,14 +36,22 @@ export default function AdminRenseignement() {
       {/* AUDIT SEO */}
       <div className="mb-10">
         <h2 className="text-base font-semibold mb-4" style={{ color: "#C8A96E" }}>Audit SEO</h2>
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
           <button
-            onClick={() => launchAudit.mutate({ sites: TARGETS.map((t) => ({ url: t.url, name: t.name })), cities: CITIES })}
+            onClick={() => launchAudit.mutate({ sites: TARGETS.map((t) => ({ url: t.url, name: t.name })), cities: ["Paris", "Bordeaux", "Lyon"], limit: 3 })}
             disabled={auditLoading}
             className="text-xs px-4 py-2 rounded-lg font-semibold"
             style={{ background: "#C8A96E", color: "#1a1a1a" }}
           >
-            {auditLoading ? "Audit en cours... (long)" : `Lancer audit (${TARGETS.length} sites × ${CITIES.length} villes)`}
+            {auditLoading ? "Audit en cours..." : "Test rapide (3 combos)"}
+          </button>
+          <button
+            onClick={() => launchAudit.mutate({ sites: TARGETS.map((t) => ({ url: t.url, name: t.name })), cities: CITIES })}
+            disabled={auditLoading}
+            className="text-xs px-4 py-2 rounded-lg"
+            style={{ border: "1px solid #C8A96E", color: "#C8A96E" }}
+          >
+            {auditLoading ? "En cours..." : `Audit complet (${TARGETS.length} × ${CITIES.length} = ${TARGETS.length * CITIES.length} combos)`}
           </button>
         </div>
         {auditResult && <p className="text-xs mb-4" style={{ color: "#4ade80" }}>{auditResult}</p>}

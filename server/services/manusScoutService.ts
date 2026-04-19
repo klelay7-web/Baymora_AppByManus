@@ -2,21 +2,17 @@
  * manusScoutService.ts
  * SEO intelligence — uses Claude (via Anthropic SDK) to analyze competitor sites.
  *
- * Integration pattern: The "Manus" agent in this codebase is NOT an external Manus API.
- * It's an internal Claude agent (see server/services/ai/manusAgent.ts) that uses
- * the Anthropic SDK directly. Missions are in-memory objects created via creerMission().
+ * Claude doesn't browse the web. Instead, we leverage Claude's knowledge of
+ * competitor site structures (Timeout, Le Fooding, TripAdvisor, etc.) to
+ * generate plausible SEO page structures and search intents.
  *
- * For SEO scouting, we use Claude Sonnet directly to analyze competitor URL structures
- * and generate structured findings — no web scraping, just LLM-based competitive analysis.
+ * Architecture: 1 API call per (site × city) combination for reliable output.
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { ENV } from "../_core/env";
 
 const anthropic = new Anthropic({ apiKey: ENV.anthropicApiKey });
-
-const CLAUDE_SONNET_MODEL = "claude-sonnet-4-20250514";
-
-// ─── INTERFACES ──────────────────────────────────────────────────────────────
+const MODEL = "claude-sonnet-4-20250514";
 
 export interface SeoTarget {
   siteUrl: string;
@@ -35,7 +31,7 @@ export interface SeoFinding {
   establishmentsMentioned: string[];
 }
 
-interface ContentPage {
+interface ContentPageResult {
   slug: string;
   title: string;
   metaTitle: string;
@@ -50,169 +46,151 @@ interface ContentPage {
   season: string;
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((r) => setTimeout(r, ms));
 }
 
-function extractJsonArray(text: string): SeoFinding[] {
-  // Try to find a JSON array in the response
-  const arrayMatch = text.match(/\[[\s\S]*\]/);
-  if (arrayMatch) {
-    return JSON.parse(arrayMatch[0]) as SeoFinding[];
-  }
-  throw new Error("No JSON array found in Claude response");
+function extractJsonArray(text: string): any[] {
+  // Try raw parse first
+  try { const parsed = JSON.parse(text); if (Array.isArray(parsed)) return parsed; } catch {}
+  // Try extracting from ```json fences
+  const fenced = text.match(/```json?\s*([\s\S]*?)```/);
+  if (fenced) { try { return JSON.parse(fenced[1]); } catch {} }
+  // Try extracting bare array
+  const arrMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+  if (arrMatch) { try { return JSON.parse(arrMatch[0]); } catch {} }
+  return [];
 }
-
-// ─── SEO AUDIT ───────────────────────────────────────────────────────────────
 
 export async function launchSeoAudit(
-  targets: SeoTarget[]
-): Promise<SeoFinding[]> {
+  targets: SeoTarget[],
+  limit?: number
+): Promise<{ findings: SeoFinding[]; processed: number; errors: string[] }> {
   const allFindings: SeoFinding[] = [];
+  const errors: string[] = [];
 
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i];
-    console.log(
-      `[SEO Audit] Analyzing ${target.siteName} (${i + 1}/${targets.length})...`
-    );
+  // Build flat list of (site, city) combinations
+  const combos: { siteName: string; siteUrl: string; city: string }[] = [];
+  for (const t of targets) {
+    for (const city of t.cities) {
+      combos.push({ siteName: t.siteName, siteUrl: t.siteUrl, city });
+    }
+  }
+  const toProcess = limit ? combos.slice(0, limit) : combos;
+  let processed = 0;
+
+  for (let i = 0; i < toProcess.length; i++) {
+    const { siteName, siteUrl, city } = toProcess[i];
+    console.log(`[SEO Audit] ${i + 1}/${toProcess.length} — ${siteName} × ${city}`);
 
     try {
       const response = await anthropic.messages.create({
-        model: CLAUDE_SONNET_MODEL,
-        max_tokens: 4096,
-        system:
-          "You are an SEO analyst specializing in French luxury lifestyle, gastronomy, nightlife, and travel platforms. You respond with valid JSON only, no markdown fences, no explanations.",
-        messages: [
-          {
-            role: "user",
-            content: `You are an SEO analyst. For the site ${target.siteName} (${target.siteUrl}), generate a list of content pages they likely have or should have for each city in ${JSON.stringify(target.cities)}. For each page, provide: url (plausible URL structure), title, h1, city, category (gastronomie/nightlife/culture/bien-etre/shopping/evenements/hotels/activites), searchIntent (the Google query this page targets), establishmentsMentioned (5 well-known establishments for that city+category). Return JSON array only.`,
-          },
-        ],
+        model: MODEL,
+        max_tokens: 3000,
+        system: "Tu es un expert SEO spécialisé en lifestyle et voyage. Tu réponds UNIQUEMENT en JSON array valide. Pas de markdown, pas de texte autour.",
+        messages: [{
+          role: "user",
+          content: `Pour le site ${siteName} (${siteUrl}), génère les 8 pages les plus probables qu'ils ont pour la ville de ${city}, basé sur la structure typique de ce site.
+
+Pour chaque page, donne en JSON :
+- pageUrl: l'URL probable (structure réaliste du site)
+- pageTitle: le titre probable de la page
+- city: "${city}"
+- category: une parmi (gastronomie, nightlife, culture, bien_etre, shopping, evenements, hotels, activites)
+- searchIntent: la requête Google que cette page cible (en français)
+- establishmentsMentioned: 3-5 noms d'établissements connus que cette page mentionne probablement
+
+Retourne UNIQUEMENT un JSON array.`,
+        }],
       });
 
-      const content =
-        response.content[0].type === "text" ? response.content[0].text : "";
+      const content = response.content[0].type === "text" ? response.content[0].text : "";
+      const parsed = extractJsonArray(content);
 
-      const findings = extractJsonArray(content);
-
-      // Tag each finding with the source
-      const taggedFindings: SeoFinding[] = findings.map((f) => ({
-        source: target.siteName,
-        url: f.url ?? "",
-        title: f.title ?? "",
-        h1: f.h1,
-        city: f.city ?? "",
-        category: f.category ?? "",
-        searchIntent: f.searchIntent ?? "",
-        establishmentsMentioned: f.establishmentsMentioned ?? [],
-      }));
-
-      allFindings.push(...taggedFindings);
-      console.log(
-        `[SEO Audit] Found ${taggedFindings.length} pages for ${target.siteName}`
-      );
+      for (const f of parsed) {
+        allFindings.push({
+          source: siteName,
+          url: String(f.pageUrl || f.url || ""),
+          title: String(f.pageTitle || f.title || ""),
+          h1: f.h1,
+          city: String(f.city || city),
+          category: String(f.category || ""),
+          searchIntent: String(f.searchIntent || ""),
+          establishmentsMentioned: Array.isArray(f.establishmentsMentioned) ? f.establishmentsMentioned : [],
+        });
+      }
+      processed++;
+      console.log(`[SEO Audit]   → ${parsed.length} findings`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[SEO Audit] Error analyzing ${target.siteName}: ${message}`
-      );
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`${siteName}×${city}: ${msg}`);
+      console.error(`[SEO Audit]   → ERROR: ${msg}`);
     }
 
-    // Rate limit: wait 2 seconds between API calls
-    if (i < targets.length - 1) {
-      await sleep(2000);
-    }
+    if (i < toProcess.length - 1) await sleep(2000);
   }
 
-  console.log(`[SEO Audit] Total findings: ${allFindings.length}`);
-  return allFindings;
+  console.log(`[SEO Audit] Done: ${allFindings.length} findings, ${errors.length} errors`);
+  return { findings: allFindings, processed, errors };
 }
-
-// ─── CONTENT PAGE GENERATION ─────────────────────────────────────────────────
 
 export async function generateContentPage(
   finding: SeoFinding,
   establishments: { slug: string; name: string; description?: string; category?: string; city?: string }[]
-): Promise<ContentPage | null> {
-  // Only generate if we have enough establishments
+): Promise<ContentPageResult | null> {
   if (establishments.length < 3) {
-    console.log(
-      `[Content] Skipping "${finding.title}" — only ${establishments.length} establishments (need >= 3)`
-    );
+    console.log(`[Content] Skipping "${finding.title}" — only ${establishments.length} establishments (need >= 3)`);
     return null;
   }
 
-  const establishmentContext = establishments
-    .map(
-      (e) =>
-        `- ${e.name} (${e.category ?? "unknown"}, ${e.city ?? finding.city}): ${e.description ?? "Etablissement de qualite"}`
-    )
+  const estContext = establishments.slice(0, 8)
+    .map((e) => `- ${e.name} (${e.category || "lieu"}, ${e.city || finding.city}): ${(e.description || "").slice(0, 100)}`)
     .join("\n");
-
-  const prompt = `Tu es le redacteur en chef de Maison Baymora, plateforme premium de lifestyle et conciergerie de luxe en France.
-
-Genere une page de contenu SEO complete pour :
-- Ville : ${finding.city}
-- Categorie : ${finding.category}
-- Intention de recherche cible : "${finding.searchIntent}"
-- Titre concurrent : "${finding.title}"
-
-## Etablissements a mettre en avant :
-${establishmentContext}
-
-## Consignes :
-- Ton : luxueux mais accessible, chaleureux, authentique — esprit Maison Baymora
-- Le contenu doit surpasser le concurrent en qualite et profondeur
-- Integrer naturellement les etablissements mentionnes
-- Optimiser pour le SEO et les LLM (ChatGPT, Perplexity, Claude)
-- Le slug doit etre en francais, sans accents, kebab-case
-- Le contenu principal doit faire 800-1200 mots en markdown
-- L'intro doit faire 2-3 phrases accrocheuses
-
-Reponds UNIQUEMENT en JSON valide (pas de fences markdown) :
-{
-  "slug": "meilleurs-restaurants-gastronomiques-paris",
-  "title": "Titre SEO optimise",
-  "metaTitle": "Max 60 chars",
-  "metaDescription": "Max 155 chars",
-  "type": "guide|inspiration|parcours|evenement|secret",
-  "city": "${finding.city}",
-  "category": "${finding.category}",
-  "searchIntent": "${finding.searchIntent}",
-  "introText": "2-3 phrases d'intro accrocheuses",
-  "content": "Contenu markdown complet 800-1200 mots",
-  "establishmentSlugs": ${JSON.stringify(establishments.map((e) => e.slug))},
-  "season": "toute_annee|printemps|ete|automne|hiver"
-}`;
 
   try {
     const response = await anthropic.messages.create({
-      model: CLAUDE_SONNET_MODEL,
+      model: MODEL,
       max_tokens: 4096,
-      system:
-        "Tu es un redacteur SEO expert specialise dans le tourisme et le lifestyle de luxe en France. Tu reponds uniquement en JSON valide, sans fences markdown ni explications.",
-      messages: [{ role: "user", content: prompt }],
+      system: "Tu es le rédacteur en chef de Maison Baymora, Social Club Premium. Tu réponds UNIQUEMENT en JSON valide, sans fences markdown.",
+      messages: [{
+        role: "user",
+        content: `Rédige un guide SEO pour surpasser la page concurrente.
+
+Page concurrente : "${finding.title}" sur ${finding.source}
+Requête cible : "${finding.searchIntent}"
+Ville : ${finding.city}
+Établissements concurrent : ${JSON.stringify(finding.establishmentsMentioned)}
+Nos établissements :
+${estContext}
+
+STRATÉGIE : intègre 2-3 noms connus (crédibilité) + 2-3 pépites de notre base (différenciation).
+
+Réponds en JSON :
+{
+  "slug": "string kebab-case sans accents",
+  "title": "max 60 car incluant la ville",
+  "metaTitle": "max 60 car incluant requête + Maison Baymora",
+  "metaDescription": "max 155 car incitative",
+  "type": "guide",
+  "city": "${finding.city}",
+  "category": "${finding.category}",
+  "searchIntent": "${finding.searchIntent}",
+  "introText": "2-3 phrases magazine premium tutoiement",
+  "content": "markdown 800-1200 mots, 3-5 sections h2",
+  "establishmentSlugs": ${JSON.stringify(establishments.slice(0, 6).map((e) => e.slug))},
+  "season": "toute_annee"
+}`,
+      }],
     });
 
-    const content =
-      response.content[0].type === "text" ? response.content[0].text : "";
-
+    const content = response.content[0].type === "text" ? response.content[0].text : "";
     const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("No JSON object found in Claude response");
-    }
-
-    const parsed = JSON.parse(jsonMatch[0]) as ContentPage;
-
-    console.log(`[Content] Generated page: "${parsed.title}" (${parsed.slug})`);
+    if (!jsonMatch) return null;
+    const parsed = JSON.parse(jsonMatch[0]) as ContentPageResult;
+    console.log(`[Content] Generated: "${parsed.title}" (${parsed.slug})`);
     return parsed;
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(
-      `[Content] Error generating page for "${finding.title}": ${message}`
-    );
+    console.error(`[Content] Error: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }

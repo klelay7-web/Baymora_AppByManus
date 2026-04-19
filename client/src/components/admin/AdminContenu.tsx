@@ -40,9 +40,19 @@ export default function AdminContenu() {
   const { data: inspirations } = trpc.inspiration.list.useQuery();
 
   const createEstMut = trpc.admin.createEstablishment.useMutation({ onSuccess: () => { toast.success("Établissement créé"); setShowAddEst(false); refetchEst(); } });
-  const enrichOneMut = trpc.admin.enrichEstablishment.useMutation({ onSuccess: () => { toast.success("Enrichi"); refetchEst(); }, onError: (e) => toast.error(e.message) });
+  const enrichOneMut = trpc.admin.enrichEstablishment.useMutation({
+    onSuccess: (d: any) => { toast.success(d.error ? `${d.name}: ${d.error}` : `${d.name}: ${d.previousStatus} → ${d.newStatus}`); refetchEst(); },
+    onError: (e) => toast.error(e.message),
+  });
   const enrichAllMut = trpc.admin.enrichAll.useMutation({ onSuccess: (d) => toast.success(`${d.enriched}/${d.total} enrichis`), onError: (e) => toast.error(e.message) });
-  const seedMut = trpc.admin.seedParcoursMaison.useMutation({ onSuccess: (d) => { toast.success(`${d.inserted} parcours insérés`); refetchPM(); }, onError: (e) => toast.error(e.message) });
+  const seedMut = trpc.admin.seedParcoursMaison.useMutation({
+    onSuccess: (d: any) => {
+      if (d.error) toast.error(d.error);
+      else toast.success(`${d.inserted} insérés, ${d.skipped} skippés. ${d.bordeauxEstablishments} établissements Bordeaux trouvés.${d.availableCities?.length ? ` Villes: ${d.availableCities.slice(0, 5).join(", ")}` : ""}`);
+      refetchPM();
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const togglePMPub = trpc.admin.toggleParcoursMaisonPublished.useMutation({ onSuccess: () => refetchPM() });
   const genContentMut = trpc.admin.generateContentPage.useMutation({ onSuccess: (d) => { toast.success(`Guide créé : ${d.slug}`); setShowGenContent(false); refetchCP(); }, onError: (e) => toast.error(e.message) });
   const toggleCPPub = trpc.admin.toggleContentPagePublished.useMutation({ onSuccess: () => refetchCP() });

@@ -1310,10 +1310,16 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const est = await getEstablishmentById(input.id);
         if (!est) throw new TRPCError({ code: "NOT_FOUND" });
-        const { enrichEstablishment: doEnrich } = await import("./services/ai/scrapingAgent");
-        const fiche = await doEnrich({ id: est.id, name: est.name, city: est.city, category: est.category, address: (est as any).address });
-        await updateEstablishment(est.id, { description: fiche.description, shortDescription: fiche.subtitle, rating: String(fiche.rating), enrichStatus: "completed", enrichedAt: new Date() } as any);
-        return { success: true, slug: fiche.slug };
+        const previousStatus = (est as any).enrichStatus || "pending";
+        try {
+          const { enrichEstablishment: doEnrich } = await import("./services/ai/scrapingAgent");
+          const fiche = await doEnrich({ id: est.id, name: est.name, city: est.city, category: est.category, address: (est as any).address });
+          await updateEstablishment(est.id, { description: fiche.description, shortDescription: fiche.subtitle, rating: String(fiche.rating), enrichStatus: "completed", enrichedAt: new Date() } as any);
+          return { id: est.id, name: est.name, previousStatus, newStatus: "completed" };
+        } catch (err: any) {
+          await updateEstablishment(est.id, { enrichStatus: "error" } as any);
+          return { id: est.id, name: est.name, previousStatus, newStatus: "error", error: err?.message || "Enrichissement échoué" };
+        }
       }),
     enrichAll: adminProcedure.mutation(async () => {
       const db = await (await import("./db")).getDb();
@@ -1348,21 +1354,52 @@ export const appRouter = router({
       const db = await (await import("./db")).getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       const { sql: sqlFn } = await import("drizzle-orm");
+
+      // Find Bordeaux establishments with flexible matching
       const estRows = await db.select({ slug: establishmentsTable.slug, name: establishmentsTable.name, category: establishmentsTable.category })
-        .from(establishmentsTable).where(sqlFn`LOWER(${establishmentsTable.city}) = 'bordeaux'`).limit(20);
-      const makeStep = (e: any, ts: string, price: number, travel?: string) => ({ slug: e.slug, name: e.name, category: e.category, timeSlot: ts, priceEstimate: price, travelFromPrevious: travel || "", description: "" });
-      const parcours = [
-        { slug: "caves-secretes-bordeaux", title: "Les caves secrètes de Bordeaux", subtitle: "Parcours oenologique dans les meilleurs bars à vin", city: "Bordeaux", duration: "3h", budgetEstimate: "60-90€/pers", tags: ["vin","nightlife","bordeaux"], steps: estRows.slice(0, 4).map((e: any, i: number) => makeStep(e, `${18+i}h`, 20, i > 0 ? "8 min à pied" : "")) },
-        { slug: "soiree-parfaite-chartrons", title: "Soirée parfaite Chartrons", subtitle: "Apéro rooftop, dîner bistro, bar cocktail", city: "Bordeaux", duration: "4h", budgetEstimate: "80-130€/pers", tags: ["gastronomie","sortir","bordeaux"], steps: estRows.slice(4, 7).map((e: any, i: number) => makeStep(e, `${19+i}h`, 40, i > 0 ? "10 min à pied" : "")) },
-        { slug: "bordeaux-en-3-heures", title: "Bordeaux en 3 heures", subtitle: "Parcours express visiteur pressé", city: "Bordeaux", duration: "3h", budgetEstimate: "30-50€/pers", tags: ["culture","decouverte","bordeaux"], steps: estRows.slice(0, 5).map((e: any, i: number) => makeStep(e, `${14+i}h`, 10, i > 0 ? "5 min" : "")) },
-        { slug: "brunch-balades-dimanche-bordeaux", title: "Brunch & balades dimanche", subtitle: "Brunch, quais de la Garonne, terrasse", city: "Bordeaux", duration: "4h", budgetEstimate: "40-70€/pers", tags: ["gastronomie","nature","bordeaux"], steps: estRows.slice(7, 11).map((e: any, i: number) => makeStep(e, `${10+i}h`, 18, i > 0 ? "12 min" : "")) },
-        { slug: "bordeaux-by-night", title: "Bordeaux by Night", subtitle: "Apéro, dîner, speakeasy, club", city: "Bordeaux", duration: "5h", budgetEstimate: "100-180€/pers", tags: ["nightlife","gastronomie","bordeaux"], steps: estRows.slice(11, 15).map((e: any, i: number) => makeStep(e, `${20+i}h`, 35, i > 0 ? "6 min en VTC" : "")) },
-      ];
-      let inserted = 0;
-      for (const p of parcours) {
-        try { await db.insert(parcoursMaison).values({ ...p, tags: p.tags as any, steps: p.steps as any } as any); inserted++; } catch { /* dup */ }
+        .from(establishmentsTable).where(sqlFn`LOWER(${establishmentsTable.city}) LIKE '%bordeaux%'`).limit(50);
+
+      // Get available cities for diagnostics
+      const cityRows = await db.selectDistinct({ city: establishmentsTable.city }).from(establishmentsTable).limit(20);
+      const availableCities = cityRows.map((r: any) => r.city).filter(Boolean);
+
+      if (estRows.length === 0) {
+        return { inserted: 0, skipped: 0, bordeauxEstablishments: 0, availableCities, error: `Aucun établissement trouvé avec 'bordeaux' dans la ville. Villes en base : ${availableCities.join(", ")}` };
       }
-      return { inserted, total: parcours.length };
+
+      // Group by category
+      const byCategory: Record<string, any[]> = {};
+      for (const e of estRows) {
+        const cat = (e.category || "other").toLowerCase();
+        if (!byCategory[cat]) byCategory[cat] = [];
+        byCategory[cat].push(e);
+      }
+      const pick = (cats: string[], max: number): any[] => {
+        const pool: any[] = [];
+        for (const c of cats) pool.push(...(byCategory[c] || []));
+        if (pool.length > 0) return pool.slice(0, max);
+        return estRows.slice(0, max);
+      };
+
+      const makeStep = (e: any, ts: string, price: number, travel?: string) => ({ slug: e.slug, name: e.name, category: e.category, timeSlot: ts, priceEstimate: price, travelFromPrevious: travel || "", description: "" });
+
+      const parcours = [
+        { slug: "caves-secretes-bordeaux", title: "Les caves secrètes de Bordeaux", subtitle: "Parcours oenologique dans les meilleurs bars à vin", city: "Bordeaux", duration: "3h", budgetEstimate: "60-90€/pers", tags: ["vin", "nightlife", "bordeaux"], steps: pick(["bar", "wine_bar", "cocktail_bar"], 4).map((e: any, i: number) => makeStep(e, `${18 + i}h - ${19 + i}h`, 20, i > 0 ? "8 min à pied" : "")) },
+        { slug: "soiree-parfaite-chartrons", title: "Soirée parfaite Chartrons", subtitle: "Apéro rooftop, dîner bistro, bar cocktail", city: "Bordeaux", duration: "4h", budgetEstimate: "80-130€/pers", tags: ["gastronomie", "sortir", "bordeaux"], steps: pick(["restaurant", "bistro", "gastronomie", "bar"], 3).map((e: any, i: number) => makeStep(e, `${19 + i}h - ${20 + i}h`, 40, i > 0 ? "10 min à pied" : "")) },
+        { slug: "bordeaux-en-3-heures", title: "Bordeaux en 3 heures", subtitle: "Parcours express visiteur pressé", city: "Bordeaux", duration: "3h", budgetEstimate: "30-50€/pers", tags: ["culture", "decouverte", "bordeaux"], steps: estRows.slice(0, 5).map((e: any, i: number) => makeStep(e, `${14 + Math.floor(i * 0.6)}h`, 10, i > 0 ? "5 min à pied" : "")) },
+        { slug: "brunch-balades-dimanche-bordeaux", title: "Brunch & balades dimanche", subtitle: "Brunch, quais de la Garonne, terrasse", city: "Bordeaux", duration: "4h", budgetEstimate: "40-70€/pers", tags: ["gastronomie", "nature", "bordeaux"], steps: pick(["restaurant", "cafe", "brunch", "bistro"], 4).map((e: any, i: number) => makeStep(e, `${10 + i}h - ${11 + i}h`, 18, i > 0 ? "12 min à pied" : "")) },
+        { slug: "bordeaux-by-night", title: "Bordeaux by Night", subtitle: "Apéro, dîner, speakeasy, club", city: "Bordeaux", duration: "5h", budgetEstimate: "100-180€/pers", tags: ["nightlife", "gastronomie", "bordeaux"], steps: pick(["bar", "nightclub", "club", "cocktail_bar", "restaurant"], 4).map((e: any, i: number) => makeStep(e, `${20 + i}h - ${21 + i}h`, 35, i > 0 ? "6 min en VTC" : "")) },
+      ];
+
+      let inserted = 0, skipped = 0;
+      for (const p of parcours) {
+        if (p.steps.length === 0) { skipped++; continue; }
+        try {
+          await db.insert(parcoursMaison).values({ ...p, tags: p.tags as any, steps: p.steps as any } as any);
+          inserted++;
+        } catch { skipped++; }
+      }
+      return { inserted, skipped, bordeauxEstablishments: estRows.length, availableCities };
     }),
     createParcoursMaison: adminProcedure
       .input(z.object({ title: z.string(), subtitle: z.string().optional(), city: z.string(), duration: z.string().optional(), budgetEstimate: z.string().optional(), tags: z.array(z.string()).optional(), steps: z.array(z.record(z.string(), z.any())).default([]) }))
@@ -3010,15 +3047,16 @@ export const appRouter = router({
       .input(z.object({
         sites: z.array(z.object({ url: z.string(), name: z.string() })),
         cities: z.array(z.string()),
+        limit: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
         const { launchSeoAudit } = await import("./services/manusScoutService");
         const targets = input.sites.map((s) => ({ siteUrl: s.url, siteName: s.name, cities: input.cities }));
-        const findings = await launchSeoAudit(targets);
+        const result = await launchSeoAudit(targets, input.limit);
         const db = await (await import("./db")).getDb();
         let inserted = 0;
         if (db) {
-          for (const f of findings) {
+          for (const f of result.findings) {
             try {
               await db.insert(seoIntelligence).values({
                 source: f.source, sourceUrl: f.url, pageUrl: f.url,
@@ -3030,7 +3068,7 @@ export const appRouter = router({
             } catch { /* skip dupes */ }
           }
         }
-        return { missionsLaunched: targets.length, findingsTotal: findings.length, inserted };
+        return { totalCombinations: targets.reduce((s, t) => s + t.cities.length, 0), processed: result.processed, findingsTotal: result.findings.length, inserted, errors: result.errors };
       }),
 
     getSeoFindings: ownerProcedure
