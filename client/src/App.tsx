@@ -31,6 +31,7 @@ import Contact from "./pages/Contact";
 import ThemePage from "./pages/ThemePage";
 import ParcoursMaisonDetail from "./pages/ParcoursMaisonDetail";
 import ContentPage from "./pages/ContentPage";
+import Admin from "./pages/Admin";
 import { ParcourProvider } from "./stores/parcourStore";
 import PartenaireEvenement from "./pages/PartenaireEvenement";
 
@@ -102,6 +103,10 @@ function Router() {
       <Route path="/parcours-maison/:slug" component={ParcoursMaisonDetail} />
       {/* Guides SEO — public */}
       <Route path="/guide/:slug" component={ContentPage} />
+      {/* Admin — email-gated, no nav link */}
+      <Route path="/admin">
+        {() => <ProtectedRoute component={Admin} />}
+      </Route>
 
       {/* Maya Demo — accessible sans connexion */}
       <Route path="/maya-demo" component={MayaDemo} />

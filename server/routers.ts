@@ -80,6 +80,7 @@ import { genererEmail, repondreCommentaire, gererMessagePrive, genererEmailProsp
 import { rechercherPrestataires, genererStrategieAffiliation, analyserPartenaire, PROGRAMMES_AFFILIATION } from "./services/ai/affiliationAgent";
 import { createMission, getActiveMission, getMissionHistory, addMissionProgress, closeMission, buildMissionContext } from "./services/missionService";
 import { getRadarForPosition, unlockRadarForUser, searchCityRadar } from "./services/radarService";
+import { isAdmin } from "./config/admins";
 
 // ─── Rate Limiter en mémoire (par userId, par minute) ───────────────────────
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -101,7 +102,7 @@ function checkRateLimit(userId: number, key: string, maxPerMinute: number): void
 }
 
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé aux administrateurs" });
+  if (!isAdmin(ctx.user.email)) throw new TRPCError({ code: "FORBIDDEN", message: "Accès réservé" });
   return next({ ctx });
 });
 
@@ -1274,17 +1275,311 @@ export const appRouter = router({
       }),
   }),
 
-  // ─── Admin Dashboard ──────────────────────────────────────────────
+  // ─── Admin Dashboard (email-gated via isAdmin) ──────────────────────
   admin: router({
-    getStats: adminProcedure.query(() => getAdminStats()),
+    getStats: adminProcedure.query(async () => {
+      const stats = await getAdminStats();
+      const db = await (await import("./db")).getDb();
+      if (!db) return { ...stats, contentPages: 0, parcoursMaison: 0, outboundClicks: 0, activeWeek: 0 };
+      const { sql } = await import("drizzle-orm");
+      let cpCount = 0, pmCount = 0, ocCount = 0, activeWeek = 0;
+      try { const [r] = await db.select({ c: sql<number>`count(*)` }).from(contentPages); cpCount = r?.c || 0; } catch {}
+      try { const [r] = await db.select({ c: sql<number>`count(*)` }).from(parcoursMaison); pmCount = r?.c || 0; } catch {}
+      try { const [r] = await db.select({ c: sql<number>`count(*)` }).from(outboundClicks); ocCount = r?.c || 0; } catch {}
+      try {
+        const { users: usersTable } = await import("../drizzle/schema");
+        const [r] = await db.select({ c: sql<number>`count(*)` }).from(usersTable).where(sql`${usersTable.lastSignedIn} >= DATE_SUB(NOW(), INTERVAL 7 DAY)`);
+        activeWeek = r?.c || 0;
+      } catch {}
+      return { ...stats, contentPages: cpCount, parcoursMaison: pmCount, outboundClicks: ocCount, activeWeek };
+    }),
     getRevenueStats: adminProcedure.query(() => getRevenueStats()),
     notifyOwner: adminProcedure
       .input(z.object({ title: z.string(), content: z.string() }))
+      .mutation(async ({ input }) => { const success = await notifyOwner(input); return { success }; }),
+
+    // ─── CONTENU : Établissements ─────────────────────────────────────
+    createEstablishment: adminProcedure
+      .input(z.object({ name: z.string(), city: z.string(), country: z.string().default("France"), category: z.string(), address: z.string().optional(), website: z.string().optional(), latitude: z.number().optional(), longitude: z.number().optional() }))
       .mutation(async ({ input }) => {
-        const success = await notifyOwner(input);
-        return { success };
+        const id = await createEstablishment({ ...input, description: "", status: "draft" } as any);
+        return { id };
       }),
-   }),
+    enrichEstablishment: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const est = await getEstablishmentById(input.id);
+        if (!est) throw new TRPCError({ code: "NOT_FOUND" });
+        const { enrichEstablishment: doEnrich } = await import("./services/ai/scrapingAgent");
+        const fiche = await doEnrich({ id: est.id, name: est.name, city: est.city, category: est.category, address: (est as any).address });
+        await updateEstablishment(est.id, { description: fiche.description, shortDescription: fiche.subtitle, rating: String(fiche.rating), enrichStatus: "completed", enrichedAt: new Date() } as any);
+        return { success: true, slug: fiche.slug };
+      }),
+    enrichAll: adminProcedure.mutation(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return { total: 0, enriched: 0, errors: 0 };
+      const { eq, or, isNull } = await import("drizzle-orm");
+      const rows = await db.select({ id: establishmentsTable.id, name: establishmentsTable.name, city: establishmentsTable.city, category: establishmentsTable.category })
+        .from(establishmentsTable).where(or(isNull(establishmentsTable.enrichStatus), eq(establishmentsTable.enrichStatus, "pending"))).limit(10);
+      let enriched = 0, errors = 0;
+      const { enrichEstablishment: doEnrich } = await import("./services/ai/scrapingAgent");
+      for (const r of rows) {
+        try {
+          const fiche = await doEnrich({ id: r.id, name: r.name, city: r.city, category: r.category });
+          await updateEstablishment(r.id, { description: fiche.description, shortDescription: fiche.subtitle, rating: String(fiche.rating), enrichStatus: "completed", enrichedAt: new Date() } as any);
+          enriched++;
+        } catch { errors++; }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      return { total: rows.length, enriched, errors };
+    }),
+    listEstablishments: adminProcedure
+      .input(z.object({ city: z.string().optional(), category: z.string().optional(), limit: z.number().default(50) }).optional())
+      .query(async ({ input }) => {
+        const all = await getAllEstablishments();
+        let filtered = all as any[];
+        if (input?.city) filtered = filtered.filter((e: any) => e.city?.toLowerCase() === input.city!.toLowerCase());
+        if (input?.category) filtered = filtered.filter((e: any) => e.category === input.category);
+        return filtered.slice(0, input?.limit || 50);
+      }),
+
+    // ─── CONTENU : Parcours Maison ────────────────────────────────────
+    seedParcoursMaison: adminProcedure.mutation(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const { sql: sqlFn } = await import("drizzle-orm");
+      const estRows = await db.select({ slug: establishmentsTable.slug, name: establishmentsTable.name, category: establishmentsTable.category })
+        .from(establishmentsTable).where(sqlFn`LOWER(${establishmentsTable.city}) = 'bordeaux'`).limit(20);
+      const makeStep = (e: any, ts: string, price: number, travel?: string) => ({ slug: e.slug, name: e.name, category: e.category, timeSlot: ts, priceEstimate: price, travelFromPrevious: travel || "", description: "" });
+      const parcours = [
+        { slug: "caves-secretes-bordeaux", title: "Les caves secrètes de Bordeaux", subtitle: "Parcours oenologique dans les meilleurs bars à vin", city: "Bordeaux", duration: "3h", budgetEstimate: "60-90€/pers", tags: ["vin","nightlife","bordeaux"], steps: estRows.slice(0, 4).map((e: any, i: number) => makeStep(e, `${18+i}h`, 20, i > 0 ? "8 min à pied" : "")) },
+        { slug: "soiree-parfaite-chartrons", title: "Soirée parfaite Chartrons", subtitle: "Apéro rooftop, dîner bistro, bar cocktail", city: "Bordeaux", duration: "4h", budgetEstimate: "80-130€/pers", tags: ["gastronomie","sortir","bordeaux"], steps: estRows.slice(4, 7).map((e: any, i: number) => makeStep(e, `${19+i}h`, 40, i > 0 ? "10 min à pied" : "")) },
+        { slug: "bordeaux-en-3-heures", title: "Bordeaux en 3 heures", subtitle: "Parcours express visiteur pressé", city: "Bordeaux", duration: "3h", budgetEstimate: "30-50€/pers", tags: ["culture","decouverte","bordeaux"], steps: estRows.slice(0, 5).map((e: any, i: number) => makeStep(e, `${14+i}h`, 10, i > 0 ? "5 min" : "")) },
+        { slug: "brunch-balades-dimanche-bordeaux", title: "Brunch & balades dimanche", subtitle: "Brunch, quais de la Garonne, terrasse", city: "Bordeaux", duration: "4h", budgetEstimate: "40-70€/pers", tags: ["gastronomie","nature","bordeaux"], steps: estRows.slice(7, 11).map((e: any, i: number) => makeStep(e, `${10+i}h`, 18, i > 0 ? "12 min" : "")) },
+        { slug: "bordeaux-by-night", title: "Bordeaux by Night", subtitle: "Apéro, dîner, speakeasy, club", city: "Bordeaux", duration: "5h", budgetEstimate: "100-180€/pers", tags: ["nightlife","gastronomie","bordeaux"], steps: estRows.slice(11, 15).map((e: any, i: number) => makeStep(e, `${20+i}h`, 35, i > 0 ? "6 min en VTC" : "")) },
+      ];
+      let inserted = 0;
+      for (const p of parcours) {
+        try { await db.insert(parcoursMaison).values({ ...p, tags: p.tags as any, steps: p.steps as any } as any); inserted++; } catch { /* dup */ }
+      }
+      return { inserted, total: parcours.length };
+    }),
+    createParcoursMaison: adminProcedure
+      .input(z.object({ title: z.string(), subtitle: z.string().optional(), city: z.string(), duration: z.string().optional(), budgetEstimate: z.string().optional(), tags: z.array(z.string()).optional(), steps: z.array(z.record(z.string(), z.any())).default([]) }))
+      .mutation(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const slug = input.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+        await db.insert(parcoursMaison).values({ slug, ...input, tags: input.tags as any, steps: input.steps as any } as any);
+        return { slug };
+      }),
+    toggleParcoursMaisonPublished: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { eq, sql } = await import("drizzle-orm");
+        await db.update(parcoursMaison).set({ isPublished: sql`NOT ${parcoursMaison.isPublished}` } as any).where(eq(parcoursMaison.id, input.id));
+        return { success: true };
+      }),
+
+    // ─── CONTENU : Content Pages ──────────────────────────────────────
+    generateContentPage: adminProcedure
+      .input(z.object({ city: z.string(), searchIntent: z.string() }))
+      .mutation(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { sql } = await import("drizzle-orm");
+        const estRows = await db.select().from(establishmentsTable).where(sql`LOWER(${establishmentsTable.city}) = LOWER(${input.city})`).limit(20);
+        if (estRows.length < 3) throw new TRPCError({ code: "BAD_REQUEST", message: `Seulement ${estRows.length} établissements à ${input.city} (besoin de 3+)` });
+        const { generateContentPage: gen } = await import("./services/manusScoutService");
+        const page = await gen({ source: "manual", url: "", title: input.searchIntent, city: input.city, category: "", searchIntent: input.searchIntent, establishmentsMentioned: [] }, estRows as any);
+        if (!page) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Génération échouée" });
+        await db.insert(contentPages).values({ slug: page.slug, title: page.title, metaTitle: page.metaTitle, metaDescription: page.metaDescription, city: input.city, category: page.category, searchIntent: input.searchIntent, introText: page.introText, content: page.content, establishmentSlugs: page.establishmentSlugs as any, season: (page.season || "toute_annee") as any, generatedBy: "claude" } as any);
+        return { slug: page.slug };
+      }),
+    updateContentPage: adminProcedure
+      .input(z.object({ id: z.number(), title: z.string().optional(), metaTitle: z.string().optional(), metaDescription: z.string().optional(), introText: z.string().optional(), content: z.string().optional(), isPublished: z.boolean().optional() }))
+      .mutation(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { eq } = await import("drizzle-orm");
+        const { id, ...patch } = input;
+        await db.update(contentPages).set(patch as any).where(eq(contentPages.id, id));
+        return { success: true };
+      }),
+    toggleContentPagePublished: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        const { eq, sql } = await import("drizzle-orm");
+        await db.update(contentPages).set({ isPublished: sql`NOT ${contentPages.isPublished}` } as any).where(eq(contentPages.id, input.id));
+        return { success: true };
+      }),
+    listContentPages: adminProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { desc } = await import("drizzle-orm");
+      return db.select().from(contentPages).orderBy(desc(contentPages.createdAt)).limit(100);
+    }),
+
+    // ─── RENSEIGNEMENT ────────────────────────────────────────────────
+    checkOutboundLinks: adminProcedure.mutation(async () => {
+      const all = await getAllEstablishments();
+      const broken: { name: string; url: string; status: number | string }[] = [];
+      for (const e of (all as any[]).slice(0, 50)) {
+        const url = e.website || e.bookingUrl;
+        if (!url) continue;
+        try {
+          const controller = new AbortController();
+          const to = setTimeout(() => controller.abort(), 5000);
+          const resp = await fetch(url, { method: "HEAD", signal: controller.signal, redirect: "follow" });
+          clearTimeout(to);
+          if (!resp.ok) broken.push({ name: e.name, url, status: resp.status });
+        } catch (err: any) { broken.push({ name: e.name, url, status: err?.message || "timeout" }); }
+      }
+      return broken;
+    }),
+
+    // ─── QUALITÉ ──────────────────────────────────────────────────────
+    getConversationStats: adminProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { conversations, messages, users: usersTable } = await import("../drizzle/schema");
+      const { desc, eq, sql, count } = await import("drizzle-orm");
+      const rows = await db.select({
+        id: conversations.id, userId: conversations.userId, title: conversations.title,
+        createdAt: conversations.createdAt, status: conversations.status,
+        msgCount: sql<number>`(SELECT COUNT(*) FROM messages WHERE messages.conversationId = ${conversations.id})`,
+      }).from(conversations).orderBy(desc(conversations.createdAt)).limit(20);
+      return rows;
+    }),
+    getIncompleteEstablishments: adminProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { or, isNull, eq, sql } = await import("drizzle-orm");
+      return db.select({ id: establishmentsTable.id, name: establishmentsTable.name, city: establishmentsTable.city, category: establishmentsTable.category, enrichStatus: establishmentsTable.enrichStatus })
+        .from(establishmentsTable)
+        .where(or(isNull(establishmentsTable.description), eq(establishmentsTable.description, ""), isNull(establishmentsTable.rating)))
+        .limit(50);
+    }),
+    getSystemPromptPreview: adminProcedure.query(() => {
+      const { buildSystemPrompt } = require("./services/claudeService");
+      return buildSystemPrompt(undefined, new Date(), undefined, undefined, undefined);
+    }),
+
+    // ─── MEMBRES ──────────────────────────────────────────────────────
+    listMembers: adminProcedure
+      .input(z.object({ tier: z.string().optional(), city: z.string().optional(), search: z.string().optional(), limit: z.number().default(50), offset: z.number().default(0) }).optional())
+      .query(async ({ input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) return [];
+        const { users: usersTable } = await import("../drizzle/schema");
+        const { desc, eq, like, and, or, sql } = await import("drizzle-orm");
+        const conds: any[] = [];
+        if (input?.tier) conds.push(eq(usersTable.subscriptionTier, input.tier as any));
+        if (input?.city) conds.push(sql`LOWER(${usersTable.homeCity}) = LOWER(${input.city})`);
+        if (input?.search) {
+          const q = `%${input.search}%`;
+          conds.push(or(like(usersTable.email, q), like(usersTable.name, q)));
+        }
+        const where = conds.length === 0 ? undefined : conds.length === 1 ? conds[0] : and(...conds);
+        return db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email, role: usersTable.role, subscriptionTier: usersTable.subscriptionTier, homeCity: usersTable.homeCity, credits: usersTable.credits, createdAt: usersTable.createdAt, lastSignedIn: usersTable.lastSignedIn })
+          .from(usersTable).where(where).orderBy(desc(usersTable.createdAt)).limit(input?.limit || 50).offset(input?.offset || 0);
+      }),
+    getMemberDetail: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        const user = await getUserById(input.userId);
+        if (!user) throw new TRPCError({ code: "NOT_FOUND" });
+        const db = await (await import("./db")).getDb();
+        let convCount = 0, parcoursCount = 0;
+        if (db) {
+          const { conversations } = await import("../drizzle/schema");
+          const { eq, sql, count } = await import("drizzle-orm");
+          const [cc] = await db.select({ c: sql<number>`count(*)` }).from(conversations).where(eq(conversations.userId, input.userId));
+          convCount = cc?.c || 0;
+          try { const [pc] = await db.select({ c: sql<number>`count(*)` }).from(savedParcours).where(eq(savedParcours.userId, input.userId)); parcoursCount = pc?.c || 0; } catch {}
+        }
+        return { ...user, convCount, parcoursCount };
+      }),
+    updateMemberTier: adminProcedure
+      .input(z.object({ userId: z.number(), newTier: z.enum(["free", "explorer", "premium", "elite"]) }))
+      .mutation(async ({ input }) => { await updateUser(input.userId, { subscriptionTier: input.newTier } as any); return { success: true }; }),
+    grantCredits: adminProcedure
+      .input(z.object({ userId: z.number(), amount: z.number().min(1) }))
+      .mutation(async ({ input }) => { const bal = await updateUserCredits(input.userId, input.amount, "bonus", "Crédits offerts par admin"); return { newBalance: bal }; }),
+    toggleMemberBlock: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ input }) => {
+        const user = await getUserById(input.userId);
+        if (!user) throw new TRPCError({ code: "NOT_FOUND" });
+        const blocked = (user as any).role === "user" ? "team" : "user";
+        await updateUser(input.userId, { role: blocked } as any);
+        return { newRole: blocked };
+      }),
+    getRecentPayments: adminProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { desc } = await import("drizzle-orm");
+      const { creditTransactions, users: usersTable } = await import("../drizzle/schema");
+      return db.select({ id: creditTransactions.id, userId: creditTransactions.userId, amount: creditTransactions.amount, type: creditTransactions.type, description: creditTransactions.description, createdAt: creditTransactions.createdAt })
+        .from(creditTransactions).orderBy(desc(creditTransactions.createdAt)).limit(20);
+    }),
+    getMembersByTier: adminProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return {};
+      const { users: usersTable } = await import("../drizzle/schema");
+      const { sql } = await import("drizzle-orm");
+      const rows = await db.select({ tier: usersTable.subscriptionTier, count: sql<number>`count(*)` }).from(usersTable).groupBy(usersTable.subscriptionTier);
+      const result: Record<string, number> = {};
+      for (const r of rows) result[r.tier] = r.count;
+      return result;
+    }),
+
+    // ─── CROISSANCE ───────────────────────────────────────────────────
+    getTopEstablishments: adminProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { sql, desc } = await import("drizzle-orm");
+      return db.select({ id: establishmentsTable.id, name: establishmentsTable.name, city: establishmentsTable.city, clicks: sql<number>`COALESCE((SELECT COUNT(*) FROM outbound_clicks WHERE outbound_clicks.establishmentId = ${establishmentsTable.id}), 0)` })
+        .from(establishmentsTable).orderBy(desc(sql`clicks`)).limit(10);
+    }),
+    getTopContentPages: adminProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { desc } = await import("drizzle-orm");
+      return db.select({ id: contentPages.id, slug: contentPages.slug, title: contentPages.title, city: contentPages.city, viewCount: contentPages.viewCount }).from(contentPages).orderBy(desc(contentPages.viewCount)).limit(10);
+    }),
+    getSeoCoverage: adminProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { sql } = await import("drizzle-orm");
+      return db.select({ city: contentPages.city, count: sql<number>`count(*)` }).from(contentPages).groupBy(contentPages.city);
+    }),
+
+    // ─── SYSTÈME ──────────────────────────────────────────────────────
+    getCronStatus: adminProcedure.query(() => {
+      return [
+        { name: "enrichCron", description: "Enrichissement établissements", frequency: "2h", lastRun: null },
+        { name: "eventMaintenance", description: "Maintenance événements", frequency: "Daily", lastRun: null },
+        { name: "eventNotification", description: "Notifications événements", frequency: "Daily 18h", lastRun: null },
+      ];
+    }),
+    getManusStatus: adminProcedure.query(() => {
+      return { connected: !!process.env.ANTHROPIC_API_KEY, model: "claude-sonnet-4-20250514" };
+    }),
+    getEnvInfo: adminProcedure.query(() => {
+      return {
+        nodeEnv: process.env.NODE_ENV || "unknown",
+        dbHost: process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).hostname : "not set",
+        hasStripe: !!process.env.STRIPE_SECRET_KEY,
+        hasAnthropic: !!process.env.ANTHROPIC_API_KEY,
+        hasGoogleMaps: !!process.env.VITE_GOOGLE_MAPS_KEY,
+      };
+    }),
+  }),
 
   // ─── Favorites & Collections ────────────────────────────────────────
   favorites: router({
