@@ -508,15 +508,36 @@ export const appRouter = router({
           homeCountry: ctx.user.homeCountry || undefined,
         };
 
+        // BUG 3 — check if parcours was already validated in this conversation
+        let parcoursValidated = false;
+        try {
+          const db = await (await import("./db")).getDb();
+          if (db) {
+            const { conversations } = await import("../drizzle/schema");
+            const { eq } = await import("drizzle-orm");
+            const convRows = await db.select({ context: conversations.context }).from(conversations).where(eq(conversations.id, input.conversationId)).limit(1);
+            if (convRows[0]?.context) {
+              try {
+                const ctx2 = JSON.parse(convRows[0].context as string);
+                parcoursValidated = !!ctx2?.parcoursValidated;
+              } catch { /* not JSON — ignore */ }
+            }
+          }
+        } catch { /* non-blocking */ }
+
         // Construire le system prompt dynamique avec profil client + géoloc réelle + profil dynamique Membre
         const memberProfileDoc = await getOrCreateMemberProfile(ctx.user.id).catch(() => null);
-        const systemPrompt = buildSystemPrompt(
+        let systemPrompt = buildSystemPrompt(
           clientProfile,
           new Date(),
           input.userLocation || undefined,
           memberProfileDoc,
           undefined
         );
+
+        if (parcoursValidated) {
+          systemPrompt += `\n\n## RAPPEL CRITIQUE — PARCOURS DÉJÀ VALIDÉ\nLe parcours de cette conversation a DÉJÀ été validé. Ne propose PLUS de nouveau parcours. Ne repose PLUS de questions de découverte. Réponds UNIQUEMENT à la question ponctuelle du Membre, en une phrase courte. Si le Membre ne pose pas de question, ne dis rien.`;
+        }
 
         // Formater l'historique pour Claude (exclure le dernier message user déjà ajouté)
         const claudeMessages: ClaudeMessage[] = history
@@ -553,6 +574,19 @@ export const appRouter = router({
         enrichProfileFromConversation(ctx.user.id, enrichmentMessages).catch((err) =>
           console.error("[chat.sendMessage] profile enrichment failed:", err)
         );
+
+        // BUG 3 — detect if user message is a parcours validation
+        const VALIDATION_RE = /^(parfait|ok|c'est bon|c est bon|validé|valide|on y va|go|oui|merci|super|top|nickel|impec|let's go|allons-y|c'est noté|c est note|genial|génial|trop bien|j'adore|exactement|c'est parfait|c est parfait)\s*[!.?]*$/i;
+        if (!parcoursValidated && VALIDATION_RE.test(input.content.trim())) {
+          try {
+            const db2 = await (await import("./db")).getDb();
+            if (db2) {
+              const { conversations } = await import("../drizzle/schema");
+              const { eq } = await import("drizzle-orm");
+              await db2.update(conversations).set({ context: JSON.stringify({ parcoursValidated: true }) }).where(eq(conversations.id, input.conversationId));
+            }
+          } catch { /* non-blocking */ }
+        }
 
         // C4 — Compteur parcours mensuel : incrémenter si Maya génère un parcours (:::PLAN:::)
         if (parsed.plan && !isPrivileged) {

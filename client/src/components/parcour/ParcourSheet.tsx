@@ -13,10 +13,15 @@ import { useParcourStore } from "@/stores/parcourStore";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { MapPin } from "lucide-react";
 import ParcourStep from "./ParcourStep";
 import ParcourEmpty from "./ParcourEmpty";
 
 const DRAG_THRESHOLD = 100;
+
+function hasValidCoords(s: { lat?: number; lng?: number }): boolean {
+  return s.lat != null && s.lng != null && (s.lat !== 0 || s.lng !== 0);
+}
 
 export default function ParcourSheet() {
   const {
@@ -35,11 +40,15 @@ export default function ParcourSheet() {
   const [dragOffset, setDragOffset] = useState(0);
   const dragStartY = useRef<number | null>(null);
   const [browserGeo, setBrowserGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapLoadFailed, setMapLoadFailed] = useState(false);
 
   // Reset drag offset whenever the sheet open state changes
   useEffect(() => {
     if (!isSheetOpen) setDragOffset(0);
   }, [isSheetOpen]);
+
+  // Reset map error when steps change
+  useEffect(() => { setMapLoadFailed(false); }, [steps]);
 
   // Try browser geolocation when the sheet opens and we have no homeCity.
   // The prompt is silent if permission was already granted — otherwise the
@@ -60,7 +69,7 @@ export default function ParcourSheet() {
 
   // Only checked steps with real coordinates are drawn on the map
   const checkedSteps = steps.filter((s) => s.checked);
-  const mapStepsWithCoords = checkedSteps.filter((s) => s.lat != null && s.lng != null);
+  const mapStepsWithCoords = checkedSteps.filter(hasValidCoords);
 
   // Resolve the "Départ" origin
   //   1. user.homeCity (a free-form city string Google Maps understands)
@@ -231,7 +240,7 @@ export default function ParcourSheet() {
           </h2>
 
           {/* Map */}
-          {mapSrc && (
+          {mapSrc && !mapLoadFailed ? (
             <div
               className="overflow-hidden mb-4"
               style={{
@@ -247,9 +256,25 @@ export default function ParcourSheet() {
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 allowFullScreen
+                onError={() => setMapLoadFailed(true)}
               />
             </div>
-          )}
+          ) : checkedSteps.length > 0 && !mapSrc ? (
+            <div
+              className="flex items-center justify-center gap-2 mb-4"
+              style={{
+                height: 56,
+                borderRadius: 12,
+                border: "1px solid rgba(200,169,110,0.1)",
+                background: "rgba(200,169,110,0.04)",
+              }}
+            >
+              <MapPin size={14} color="rgba(255,255,255,0.3)" />
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                Carte disponible quand les lieux sont confirmés
+              </span>
+            </div>
+          ) : null}
 
           {/* Steps timeline OR empty state */}
           {steps.length === 0 ? (
@@ -276,9 +301,17 @@ export default function ParcourSheet() {
               className="text-sm mb-3"
               style={{ color: "rgba(255,255,255,0.85)", textAlign: "center" }}
             >
-              ~<span style={{ color: "#C8A96E", fontWeight: 600 }}>{totalBudget}€</span>{" "}
-              pour {personCount} pers (soit{" "}
-              <span style={{ color: "#C8A96E", fontWeight: 600 }}>~{perPersonBudget}€/pers</span>)
+              {personCount > 1 ? (
+                <>
+                  ~<span style={{ color: "#C8A96E", fontWeight: 600 }}>{totalBudget}€</span>{" "}
+                  pour {personCount} pers (soit{" "}
+                  <span style={{ color: "#C8A96E", fontWeight: 600 }}>~{perPersonBudget}€/pers</span>)
+                </>
+              ) : (
+                <>
+                  ~<span style={{ color: "#C8A96E", fontWeight: 600 }}>{totalBudget}€</span>
+                </>
+              )}
             </p>
             <button
               type="button"

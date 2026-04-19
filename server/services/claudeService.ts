@@ -152,10 +152,26 @@ export function buildSystemPrompt(
   establishmentContext?: string
 ): string {
   const now = currentDate || new Date();
+  const parisOpts = { timeZone: "Europe/Paris" } as const;
   const dateStr = now.toLocaleDateString("fr-FR", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric"
+    ...parisOpts, weekday: "long", year: "numeric", month: "long", day: "numeric"
   });
-  const timeStr = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const timeStr = now.toLocaleTimeString("fr-FR", { ...parisOpts, hour: "2-digit", minute: "2-digit" });
+
+  // Compute next Saturdays for date quick-replies
+  const JOURS_SEMAINE = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+  const MOIS_ANNEE = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+  const jourSemaine = JOURS_SEMAINE[now.getDay()];
+  const formatDateFr = (d: Date) => {
+    const jAbbr = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."][d.getDay()];
+    return `${jAbbr} ${d.getDate()} ${MOIS_ANNEE[d.getMonth()]}`;
+  };
+  const nextSat1 = new Date(now);
+  nextSat1.setDate(now.getDate() + ((6 - now.getDay() + 7) % 7 || 7));
+  const nextSat2 = new Date(nextSat1);
+  nextSat2.setDate(nextSat1.getDate() + 7);
+  const prochainSamedi = formatDateFr(nextSat1);
+  const samediApres = formatDateFr(nextSat2);
 
   const upcomingEvents = getUpcomingEvents(now);
   const geoContext = buildGeoContext(currentLocation, clientProfile);
@@ -344,6 +360,7 @@ ${estabBlock}
 ## DATE & CONTEXTE
 Date : ${dateStr}
 Heure : ${timeStr}
+Aujourd'hui c'est ${jourSemaine} ${dateStr}. Le prochain samedi est le ${prochainSamedi}. Le samedi suivant est le ${samediApres}.
 ${upcomingEvents ? `Événements proches : ${upcomingEvents}` : ""}
 
 ${geoContext}

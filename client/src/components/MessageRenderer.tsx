@@ -149,7 +149,7 @@ const TAG_RE = /:::(\w+):::([\ s\S]*?):::END:::/g;
 // Regex fallback tolérant : tag sans :::END::: (message tronqué ou long)
 const TAG_RE_FALLBACK = /:::(\w+):::([\ s\S]+?)(?=:::\w+:::|$)/g;
 interface ParsedSegment {
-  type: "text" | "QR" | "PLACES" | "MAP" | "BOOKING" | "SCENARIOS" | "GCAL" | "JOURNEY";
+  type: "text" | "QR" | "PLACES" | "MAP" | "BOOKING" | "SCENARIOS" | "GCAL" | "JOURNEY" | "PLAN";
   content: string;
   data?: unknown;
 }
@@ -162,11 +162,21 @@ function parseMessage(rawInput: string): ParsedSegment[] {
 
   // Defensive strip : if raw JSON blobs leaked into the text (because Maya
   // wrote [{"day":...}] or {"steps":[...]} outside any :::TAG::: wrapper),
-  // remove them so the Member never sees raw JSON. Safe even when the
-  // fragment is malformed — matches by opening signature.
-  raw = raw.replace(/\[\s*\{\s*"day"\s*:[\s\S]*?\}\s*\]/g, "");
+  // remove them so the Member never sees raw JSON.
+  // First try to extract PLAN data from raw JSON before stripping
+  const rawPlanMatches: unknown[] = [];
+  const planJsonRe = /\[\s*\{\s*"day"\s*:\s*\d[\s\S]*?\}\s*\]/g;
+  let pMatch: RegExpExecArray | null;
+  const rawCopy = raw;
+  planJsonRe.lastIndex = 0;
+  while ((pMatch = planJsonRe.exec(rawCopy)) !== null) {
+    try { rawPlanMatches.push(JSON.parse(pMatch[0])); } catch { /* skip */ }
+  }
+  raw = raw.replace(/\[\s*\{\s*"day"\s*:\s*\d[\s\S]*?\}\s*\]/g, "");
   raw = raw.replace(/\{\s*"steps"\s*:\s*\[[\s\S]*?\]\s*\}/g, "");
   raw = raw.replace(/\[\s*\{\s*"name"\s*:[\s\S]*?\}\s*\]/g, "");
+  raw = raw.replace(/\[\s*\{\s*"time"\s*:[\s\S]*?\}\s*\]/g, "");
+  raw = raw.replace(/\[\s*\{\s*"title"\s*:[\s\S]*?\}\s*\]/g, "");
 
   const segments: ParsedSegment[] = [];
   let lastIndex = 0;
@@ -220,6 +230,15 @@ function parseMessage(rawInput: string): ParsedSegment[] {
     } else {
       const text = remaining.trim();
       if (text) segments.push({ type: "text", content: text });
+    }
+  }
+
+  // Inject any raw PLAN JSON that was extracted before stripping (if no
+  // proper :::PLAN::: tag was parsed above)
+  const hasPlanSegment = segments.some((s) => s.type === "PLAN");
+  if (!hasPlanSegment && rawPlanMatches.length > 0) {
+    for (const planData of rawPlanMatches) {
+      segments.push({ type: "PLAN", content: "", data: planData });
     }
   }
 
@@ -881,6 +900,89 @@ function JourneyRenderer({ data }: { data: unknown }) {
   );
 }
 
+// ─── Plan renderer (:::PLAN::: or raw JSON plan) ──────────────────────────────
+
+interface PlanStep {
+  time?: string;
+  title?: string;
+  name?: string;
+  description?: string;
+  location?: string;
+}
+
+interface PlanDay {
+  day?: number;
+  steps?: PlanStep[];
+}
+
+function PlanRenderer({ data }: { data: unknown }) {
+  const days: PlanDay[] = Array.isArray(data) ? data : [];
+  if (!days.length) return null;
+
+  return (
+    <div
+      className="mt-3 rounded-2xl overflow-hidden"
+      style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.18)" }}
+    >
+      <div
+        className="px-4 py-3 flex items-center gap-2"
+        style={{ borderBottom: "1px solid rgba(200,169,110,0.1)" }}
+      >
+        <span style={{ color: "#C8A96E" }}>📋</span>
+        <span className="text-xs font-semibold" style={{ color: "#C8A96E" }}>Parcours</span>
+      </div>
+      <div className="p-4 space-y-4">
+        {days.map((day, di) => (
+          <div key={di}>
+            {days.length > 1 && (
+              <div className="text-xs font-semibold mb-2" style={{ color: "#F0EDE6" }}>
+                Jour {day.day || di + 1}
+              </div>
+            )}
+            <div className="space-y-2">
+              {(day.steps || []).map((step, si) => (
+                <div key={si} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                      style={{ background: "rgba(200,169,110,0.15)", color: "#C8A96E", border: "1px solid rgba(200,169,110,0.25)" }}
+                    >
+                      {si + 1}
+                    </div>
+                    {si < (day.steps?.length || 0) - 1 && (
+                      <div className="w-0.5 flex-1 my-0.5" style={{ background: "rgba(200,169,110,0.12)", minHeight: 12 }} />
+                    )}
+                  </div>
+                  <div className="pb-2 flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-sm font-semibold truncate" style={{ color: "#F0EDE6" }}>
+                        {step.title || step.name || `Étape ${si + 1}`}
+                      </span>
+                      {step.time && (
+                        <span className="text-[10px] flex-shrink-0" style={{ color: "#C8A96E" }}>{step.time}</span>
+                      )}
+                    </div>
+                    {step.description && (
+                      <p className="text-[11px] mt-0.5 leading-snug" style={{ color: "rgba(255,255,255,0.55)" }}>
+                        {step.description}
+                      </p>
+                    )}
+                    {step.location && (
+                      <p className="text-[10px] mt-0.5 flex items-center gap-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+                        <MapPin size={9} /> {step.location}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Markdown renderer ────────────────────────────────────────────────────────
 
 function MarkdownText({ content }: { content: string }) {
@@ -953,6 +1055,8 @@ export default function MessageRenderer({ content, onSend }: MessageRendererProp
             return <GCalRenderer key={i} data={seg.data} />;
           case "JOURNEY":
             return <JourneyRenderer key={i} data={seg.data} />;
+          case "PLAN":
+            return <PlanRenderer key={i} data={seg.data} />;
           default:
             return <MarkdownText key={i} content={seg.content} />;
         }
