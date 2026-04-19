@@ -2,6 +2,7 @@ import { useLocation, Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Home, MapPin, Sparkles, Map, User, Crown } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useCollections } from "@/hooks/useCollections";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 
@@ -34,6 +35,7 @@ const TOP_PILLS = [
 function BottomNav() {
   const [location] = useLocation();
   const [mayaOpened, setMayaOpened] = useState(false);
+  const { count: collectionCount } = useCollections();
 
   useEffect(() => {
     const opened = localStorage.getItem("baymora_maya_opened");
@@ -89,11 +91,21 @@ function BottomNav() {
           return (
             <Link key={item.path} href={item.path}>
               <div className="flex flex-col items-center gap-1 px-2 py-1">
-                <Icon
-                  size={22}
-                  color={isActive ? "#C8A96E" : "#8B8D94"}
-                  strokeWidth={isActive ? 2.5 : 1.8}
-                />
+                <div className="relative">
+                  <Icon
+                    size={22}
+                    color={isActive ? "#C8A96E" : "#8B8D94"}
+                    strokeWidth={isActive ? 2.5 : 1.8}
+                  />
+                  {item.path === "/parcours" && collectionCount > 0 && (
+                    <div
+                      className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold px-1"
+                      style={{ background: "#C8A96E", color: "#070B14", border: "2px solid #070B14" }}
+                    >
+                      {collectionCount > 99 ? "99+" : collectionCount}
+                    </div>
+                  )}
+                </div>
                 <span
                   className="text-[10px] font-medium"
                   style={{ color: isActive ? "#C8A96E" : "#8B8D94" }}

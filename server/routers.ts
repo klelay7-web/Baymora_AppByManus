@@ -52,7 +52,7 @@ import type { EmailType } from "./services/emailService";
 import { callClaude, buildSystemPrompt, parseStructuredTags, type ClaudeMessage } from "./services/claudeService";
 import { orchestrate } from "./services/ai/orchestrator";
 import type { User } from "../drizzle/schema";
-import { outboundClicks, inspirationThemes, establishments as establishmentsTable, savedParcours } from "../drizzle/schema";
+import { outboundClicks, inspirationThemes, establishments as establishmentsTable, savedParcours, parcoursMaison, memberDefaults } from "../drizzle/schema";
 import { generateSeoCard, generateSocialContent } from "./services/seoGenerator";
 import { dispatchTask } from "./services/agentBus";
 import { notifyOwner } from "./_core/notification";
@@ -234,9 +234,162 @@ async function ensureSavedParcoursSchema(): Promise<void> {
   }
 }
 
+// ─── Auto-migration helper for member_defaults ─────────────────────────
+let memberDefaultsSchemaEnsured = false;
+async function ensureMemberDefaultsSchema(): Promise<void> {
+  if (memberDefaultsSchemaEnsured) return;
+  const url = process.env.DATABASE_URL;
+  if (!url) return;
+  try {
+    const mysql = await import("mysql2/promise");
+    const { getMysqlConnOpts } = await import("./db");
+    const conn = await mysql.default.createConnection(getMysqlConnOpts());
+    try {
+      const dbNameMatch = url.match(/\/([^/?]+)(?:\?|$)/);
+      const dbName = dbNameMatch ? dbNameMatch[1] : "baymora";
+      const [rows] = (await conn.execute(
+        `SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'member_defaults'`,
+        [dbName]
+      )) as any[];
+      if (!rows || rows[0].c === 0) {
+        console.log("[filters] Creating member_defaults table…");
+        await conn.query(`CREATE TABLE IF NOT EXISTS \`member_defaults\` (
+          \`id\` int NOT NULL AUTO_INCREMENT, \`userId\` int NOT NULL,
+          \`transportDoorDefault\` enum('chauffeur_prive','vtc','taxi','transport_public','voiture_perso','marche','velo') DEFAULT 'vtc',
+          \`transportLongDefault\` enum('train','avion','voiture_perso','chauffeur_longue_distance','bus','jet_prive') DEFAULT 'train',
+          \`contextSocialDefault\` enum('solo','couple','famille','amis','pro') DEFAULT 'couple',
+          \`enviesDefault\` json DEFAULT ('[]'),
+          \`energieDefault\` enum('farniente','equilibre','actif','tres_actif') DEFAULT 'equilibre',
+          \`budgetMode\` enum('illimite','haut_maitrise','equilibre','serre') DEFAULT 'equilibre',
+          \`budgetRepartition\` json DEFAULT ('{"hebergement":30,"gastronomie":30,"activites":20,"transport":15,"shopping":5}'),
+          \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (\`id\`), UNIQUE KEY \`idx_user\` (\`userId\`)
+        )`);
+      }
+      memberDefaultsSchemaEnsured = true;
+    } finally { await conn.end(); }
+  } catch (err) { console.error("[filters] ensureMemberDefaultsSchema failed:", err); }
+}
+
+// ─── Auto-migration helper for parcours_maison ─────────────────────────
+let parcoursMaisonSchemaEnsured = false;
+async function ensureParcoursMaisonSchema(): Promise<void> {
+  if (parcoursMaisonSchemaEnsured) return;
+  const url = process.env.DATABASE_URL;
+  if (!url) return;
+  try {
+    const mysql = await import("mysql2/promise");
+    const { getMysqlConnOpts } = await import("./db");
+    const conn = await mysql.default.createConnection(getMysqlConnOpts());
+    try {
+      const dbNameMatch = url.match(/\/([^/?]+)(?:\?|$)/);
+      const dbName = dbNameMatch ? dbNameMatch[1] : "baymora";
+      const [rows] = (await conn.execute(
+        `SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'parcours_maison'`,
+        [dbName]
+      )) as any[];
+      if (!rows || rows[0].c === 0) {
+        console.log("[parcoursMaison] Creating parcours_maison table…");
+        await conn.query(`CREATE TABLE IF NOT EXISTS \`parcours_maison\` (
+          \`id\` int NOT NULL AUTO_INCREMENT,
+          \`slug\` varchar(100) NOT NULL,
+          \`title\` varchar(200) NOT NULL,
+          \`subtitle\` varchar(300),
+          \`city\` varchar(100) NOT NULL,
+          \`coverPhoto\` varchar(500),
+          \`duration\` varchar(50),
+          \`budgetEstimate\` varchar(50),
+          \`tags\` json DEFAULT ('[]'),
+          \`steps\` json NOT NULL,
+          \`isPublished\` boolean DEFAULT TRUE,
+          \`viewCount\` int DEFAULT 0,
+          \`saveCount\` int DEFAULT 0,
+          \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (\`id\`),
+          UNIQUE KEY \`idx_slug\` (\`slug\`),
+          KEY \`idx_city\` (\`city\`)
+        )`);
+      }
+      parcoursMaisonSchemaEnsured = true;
+    } finally { await conn.end(); }
+  } catch (err) { console.error("[parcoursMaison] ensureParcoursMaisonSchema failed:", err); }
+}
+
 export const appRouter = router({
   system: systemRouter,
   radar: radarRouter,
+
+  // ─── Member Filters (defaults) ────────────────────────────────────────────
+  filters: router({
+    getDefaults: protectedProcedure.query(async ({ ctx }) => {
+      await ensureMemberDefaultsSchema();
+      const db = await (await import("./db")).getDb();
+      if (!db) return { transportDoorDefault: "vtc", transportLongDefault: "train", contextSocialDefault: "couple", enviesDefault: [], energieDefault: "equilibre", budgetMode: "equilibre", budgetRepartition: { hebergement: 30, gastronomie: 30, activites: 20, transport: 15, shopping: 5 } };
+      const { eq } = await import("drizzle-orm");
+      const rows = await db.select().from(memberDefaults).where(eq(memberDefaults.userId, ctx.user.id)).limit(1);
+      if (rows.length === 0) return { transportDoorDefault: "vtc", transportLongDefault: "train", contextSocialDefault: "couple", enviesDefault: [], energieDefault: "equilibre", budgetMode: "equilibre", budgetRepartition: { hebergement: 30, gastronomie: 30, activites: 20, transport: 15, shopping: 5 } };
+      return rows[0];
+    }),
+    updateDefaults: protectedProcedure
+      .input(z.object({
+        transportDoorDefault: z.enum(["chauffeur_prive", "vtc", "taxi", "transport_public", "voiture_perso", "marche", "velo"]).optional(),
+        transportLongDefault: z.enum(["train", "avion", "voiture_perso", "chauffeur_longue_distance", "bus", "jet_prive"]).optional(),
+        contextSocialDefault: z.enum(["solo", "couple", "famille", "amis", "pro"]).optional(),
+        enviesDefault: z.array(z.string()).optional(),
+        energieDefault: z.enum(["farniente", "equilibre", "actif", "tres_actif"]).optional(),
+        budgetMode: z.enum(["illimite", "haut_maitrise", "equilibre", "serre"]).optional(),
+        budgetRepartition: z.record(z.string(), z.number()).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await ensureMemberDefaultsSchema();
+        const db = await (await import("./db")).getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB indisponible" });
+        const { eq } = await import("drizzle-orm");
+        const existing = await db.select().from(memberDefaults).where(eq(memberDefaults.userId, ctx.user.id)).limit(1);
+        if (existing.length === 0) await db.insert(memberDefaults).values({ userId: ctx.user.id, ...input } as any);
+        else await db.update(memberDefaults).set(input as any).where(eq(memberDefaults.userId, ctx.user.id));
+        return { success: true };
+      }),
+  }),
+
+  // ─── Parcours Maison (pré-faits éditoriaux) ───────────────────────────────
+  parcoursMaison: router({
+    list: publicProcedure.query(async () => {
+      await ensureParcoursMaisonSchema();
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { eq, desc } = await import("drizzle-orm");
+      return db.select().from(parcoursMaison)
+        .where(eq(parcoursMaison.isPublished, true))
+        .orderBy(desc(parcoursMaison.saveCount));
+    }),
+    getBySlug: publicProcedure
+      .input(z.object({ slug: z.string().min(1) }))
+      .query(async ({ input }) => {
+        await ensureParcoursMaisonSchema();
+        const db = await (await import("./db")).getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB indisponible" });
+        const { eq, sql } = await import("drizzle-orm");
+        const rows = await db.select().from(parcoursMaison).where(eq(parcoursMaison.slug, input.slug)).limit(1);
+        if (rows.length === 0) throw new TRPCError({ code: "NOT_FOUND", message: "Parcours introuvable" });
+        await db.update(parcoursMaison).set({ viewCount: sql`${parcoursMaison.viewCount} + 1` }).where(eq(parcoursMaison.id, rows[0].id));
+        return rows[0];
+      }),
+    listByCity: publicProcedure
+      .input(z.object({ city: z.string().min(1) }))
+      .query(async ({ input }) => {
+        await ensureParcoursMaisonSchema();
+        const db = await (await import("./db")).getDb();
+        if (!db) return [];
+        const { eq, sql, desc } = await import("drizzle-orm");
+        const { and } = await import("drizzle-orm");
+        return db.select().from(parcoursMaison)
+          .where(and(eq(parcoursMaison.isPublished, true), sql`LOWER(${parcoursMaison.city}) = LOWER(${input.city})`))
+          .orderBy(desc(parcoursMaison.saveCount));
+      }),
+  }),
+
   tracking: router({
     outboundClick: publicProcedure
       .input(

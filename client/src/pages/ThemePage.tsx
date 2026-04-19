@@ -10,9 +10,11 @@
  */
 import { useState } from "react";
 import { Link, useRoute } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Star, Sparkles, Play, MapPin } from "lucide-react";
+import { ArrowLeft, Star, Sparkles, Play, MapPin, Bookmark } from "lucide-react";
 import ThemePortal, { type DoorType } from "@/components/ThemePortal";
+import { useCollections } from "@/hooks/useCollections";
 
 type Establishment = {
   id: number;
@@ -126,13 +128,15 @@ function Section({
 export default function ThemePage() {
   const [, params] = useRoute("/inspiration/:slug");
   const slug = params?.slug || "";
+  const { user } = useAuth();
+  const { isSaved, saveItem, removeItem } = useCollections();
   const { data, isLoading, error } = trpc.inspiration.getTheme.useQuery(
     { slug },
     { enabled: !!slug }
   );
-  // When the user clicks "Revoir le film", we force-remount the ThemePortal
   const [replayKey, setReplayKey] = useState(0);
   const [forcePortal, setForcePortal] = useState(false);
+  const themeSaved = isSaved(slug, "inspiration");
 
   if (isLoading) {
     return (
@@ -210,6 +214,27 @@ export default function ThemePage() {
               <ArrowLeft size={18} color="#F0EDE6" />
             </button>
           </Link>
+
+          {/* Bookmark button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (themeSaved) {
+                removeItem(slug, "inspiration");
+              } else {
+                saveItem({ type: "inspiration", slug, name: theme.title, photo: hero || undefined, savedAt: new Date().toISOString(), tags: ["inspiration", theme.city.toLowerCase()] });
+              }
+            }}
+            className="absolute top-5 flex items-center justify-center"
+            style={{
+              right: theme.videoUrl ? 140 : 20,
+              zIndex: 10, width: 40, height: 40, borderRadius: 20,
+              background: "rgba(7,11,20,0.6)", backdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.15)",
+            }}
+          >
+            <Bookmark size={16} color={themeSaved ? "#C8A96E" : "#F0EDE6"} fill={themeSaved ? "#C8A96E" : "none"} />
+          </button>
 
           {/* Revoir le film — discret */}
           {theme.videoUrl && (
@@ -329,7 +354,7 @@ export default function ThemePage() {
               "linear-gradient(to top, rgba(7,11,20,0.98) 0%, rgba(7,11,20,0.85) 60%, rgba(7,11,20,0) 100%)",
           }}
         >
-          <Link href={`/maya?theme=${theme.slug}`}>
+          <Link href={user ? `/maya?inspiration=${theme.slug}` : `/auth?redirect=/maya&inspiration=${theme.slug}`}>
             <button
               className="w-full rounded-full flex items-center justify-center gap-2 font-semibold transition-opacity hover:opacity-90"
               style={{
@@ -345,7 +370,7 @@ export default function ThemePage() {
               }}
             >
               <Sparkles className="w-4 h-4" />
-              Personnaliser avec Maya
+              {user ? "Maya peut t'organiser cette expérience" : "Crée ton compte pour que Maya t'organise ça"}
             </button>
           </Link>
         </div>

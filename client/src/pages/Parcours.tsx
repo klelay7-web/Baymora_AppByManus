@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Plus, Lock, Users, Globe, Eye, EyeOff, Sparkles, MapPin, Calendar, DollarSign } from "lucide-react";
+import { Plus, Lock, Users, Globe, Eye, EyeOff, Sparkles, MapPin, Calendar, DollarSign, Clock, Bookmark } from "lucide-react";
+import { useCollections } from "@/hooks/useCollections";
 
 const CDN = "https://d2xsxph8kpxj0f.cloudfront.net/310519663511927491/9v8AF2UUHUqZmkCSAruMmm";
 
@@ -57,6 +58,75 @@ const STATUS_CONFIG = {
 
 const TABS = ["Tous", "Brouillons", "Validés", "Partagés"];
 
+function ParcoursMaisonSection() {
+  const { data: parcoursList } = trpc.parcoursMaison.list.useQuery();
+  const { user } = useAuth();
+  const { isSaved, saveItem, removeItem } = useCollections();
+
+  if (!parcoursList || parcoursList.length === 0) return null;
+
+  return (
+    <div className="px-4 pb-6 max-w-5xl mx-auto">
+      <h2
+        className="text-lg font-bold mb-4"
+        style={{ fontFamily: "'Playfair Display', serif", color: "#C8A96E" }}
+      >
+        Parcours Maison — prêts à vivre
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {parcoursList.map((p: any) => {
+          const saved = isSaved(p.slug, "parcours_maison");
+          const steps = Array.isArray(p.steps) ? p.steps : [];
+          return (
+            <Link key={p.id} href={`/parcours-maison/${p.slug}`}>
+              <div
+                className="rounded-2xl overflow-hidden cursor-pointer group"
+                style={{ background: "#0D1117", border: "1px solid rgba(200,169,110,0.12)" }}
+              >
+                <div className="relative h-36">
+                  {p.coverPhoto ? (
+                    <img src={p.coverPhoto} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0a1428, #14253f)" }}>
+                      <MapPin size={32} color="rgba(200,169,110,0.3)" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,20,0.8) 0%, transparent 50%)" }} />
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault(); e.stopPropagation();
+                      if (saved) removeItem(p.slug, "parcours_maison");
+                      else saveItem({ type: "parcours_maison", slug: p.slug, name: p.title, photo: p.coverPhoto, savedAt: new Date().toISOString(), tags: Array.isArray(p.tags) ? p.tags : [] });
+                    }}
+                    className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ background: "rgba(7,11,20,0.6)", backdropFilter: "blur(6px)" }}
+                  >
+                    <Bookmark size={14} color={saved ? "#C8A96E" : "#F0EDE6"} fill={saved ? "#C8A96E" : "none"} />
+                  </button>
+                  <div className="absolute bottom-3 left-3 px-2 py-1 rounded-full text-[10px] font-semibold" style={{ background: "rgba(200,169,110,0.85)", color: "#070B14" }}>
+                    {p.city}
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="font-semibold text-sm mb-1 leading-tight" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>
+                    {p.title}
+                  </h3>
+                  {p.subtitle && <p className="text-xs mb-2 line-clamp-2" style={{ color: "#8B8D94" }}>{p.subtitle}</p>}
+                  <div className="flex items-center gap-3 text-xs" style={{ color: "#8B8D94" }}>
+                    {p.duration && <span className="flex items-center gap-1"><Clock size={11} /> {p.duration}</span>}
+                    {p.budgetEstimate && <span style={{ color: "#C8A96E", fontWeight: 600 }}>{p.budgetEstimate}</span>}
+                    <span>{steps.length} étapes</span>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Parcours() {
   const { user } = useAuth();
   const [activéTab, setActivéTab] = useState("Tous");
@@ -65,7 +135,6 @@ export default function Parcours() {
   const isOwner = OWNER_EMAILS.includes(user?.email || "") || user?.role === "admin";
   const isFree = !user || (user.subscriptionTier === "free" && !isOwner);
 
-  // Données réelles depuis la DB
   const { data: realPlans, isLoading: plansLoading } = trpc.trips.getMyPlans.useQuery(undefined, { enabled: !!user && !isFree });
 
   // Mapper les plans DB vers la structure MOCK pour réutiliser le même affichage
@@ -89,8 +158,12 @@ export default function Parcours() {
   if (isFree) {
     return (
       <div style={{ background: "#070B14", minHeight: "100vh", color: "#F0EDE6" }}>
+        {/* Parcours Maison — visible par tous */}
+        <div className="pt-6">
+          <ParcoursMaisonSection />
+        </div>
         {/* Header */}
-        <div className="px-4 pt-6 pb-4 max-w-5xl mx-auto">
+        <div className="px-4 pt-2 pb-4 max-w-5xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold mb-1" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Mes parcours</h1>
@@ -186,6 +259,16 @@ export default function Parcours() {
             </button>
           </Link>
         </div>
+      </div>
+
+      {/* Parcours Maison — visible par tous */}
+      <ParcoursMaisonSection />
+
+      {/* Mes parcours — titre section */}
+      <div className="px-4 mb-2 max-w-5xl mx-auto">
+        <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#C8A96E" }}>
+          Mes parcours
+        </h2>
       </div>
 
       {/* Tabs */}

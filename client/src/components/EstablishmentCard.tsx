@@ -4,12 +4,12 @@
  * Variantes : "compact" (liste), "featured" (hero), "inline" (dans chat Maya)
  */
 
-import { useState } from "react";
 import { Link } from "wouter";
-import { Star, MapPin, ExternalLink, Heart, ChevronRight } from "lucide-react";
+import { Star, MapPin, ExternalLink, Bookmark, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useCollections } from "@/hooks/useCollections";
 
 export interface EstablishmentCardData {
   id: number;
@@ -86,7 +86,8 @@ export function EstablishmentCard({
   saved = false,
   className,
 }: EstablishmentCardProps) {
-  const [isSaved, setIsSaved] = useState(saved);
+  const { isSaved: isCollectionSaved, saveItem, removeItem } = useCollections();
+  const isSaved = isCollectionSaved(e.slug, "establishment");
   const imageUrl = resolveCardImage(e);
   const rating = e.rating ? parseFloat(e.rating) : null;
   const priceLabel = e.priceLevel ? PRICE_LABELS[e.priceLevel] || "€€€" : "€€€";
@@ -95,7 +96,11 @@ export function EstablishmentCard({
   function handleSave(ev: React.MouseEvent) {
     ev.preventDefault();
     ev.stopPropagation();
-    setIsSaved(!isSaved);
+    if (isSaved) {
+      removeItem(e.slug, "establishment");
+    } else {
+      saveItem({ type: "establishment", slug: e.slug, name: e.name, photo: imageUrl || undefined, savedAt: new Date().toISOString(), tags: [e.category] });
+    }
     onSave?.(e.id);
   }
 
@@ -159,7 +164,7 @@ export function EstablishmentCard({
             onClick={handleSave}
             className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-black/60 transition-colors z-10"
           >
-            <Heart className={cn("w-4 h-4", isSaved ? "fill-red-400 text-red-400" : "text-white")} />
+            <Bookmark className={cn("w-4 h-4", isSaved ? "fill-[#C8A96E] text-[#C8A96E]" : "text-white")} />
           </button>
 
           {/* Privilege badge */}
@@ -234,7 +239,7 @@ export function EstablishmentCard({
                 onClick={handleSave}
                 className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
               >
-                <Heart className={cn("w-3.5 h-3.5", isSaved ? "fill-red-400 text-red-400" : "text-white/40")} />
+                <Bookmark className={cn("w-3.5 h-3.5", isSaved ? "fill-[#C8A96E] text-[#C8A96E]" : "text-white/40")} />
               </button>
             </div>
           </div>

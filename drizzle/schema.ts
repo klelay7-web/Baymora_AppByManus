@@ -1367,3 +1367,40 @@ export const savedParcours = mysqlTable("saved_parcours", {
 });
 export type SavedParcour = typeof savedParcours.$inferSelect;
 export type InsertSavedParcour = typeof savedParcours.$inferInsert;
+
+// ─── Parcours Maison (parcours pré-faits éditoriaux) ──────────────────
+export const parcoursMaison = mysqlTable("parcours_maison", {
+  id: int("id").autoincrement().primaryKey(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  title: varchar("title", { length: 200 }).notNull(),
+  subtitle: varchar("subtitle", { length: 300 }),
+  city: varchar("city", { length: 100 }).notNull(),
+  coverPhoto: varchar("coverPhoto", { length: 500 }),
+  duration: varchar("duration", { length: 50 }),
+  budgetEstimate: varchar("budgetEstimate", { length: 50 }),
+  tags: json("tags").$type<string[]>().default([]),
+  steps: json("steps").$type<Array<Record<string, unknown>>>().default([]),
+  isPublished: boolean("isPublished").default(true),
+  viewCount: int("viewCount").default(0),
+  saveCount: int("saveCount").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ParcourMaison = typeof parcoursMaison.$inferSelect;
+export type InsertParcourMaison = typeof parcoursMaison.$inferInsert;
+
+// ─── Member Defaults (filtres par défaut du Membre) ───────────────────
+export const memberDefaults = mysqlTable("member_defaults", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  transportDoorDefault: mysqlEnum("transportDoorDefault", ["chauffeur_prive", "vtc", "taxi", "transport_public", "voiture_perso", "marche", "velo"]).default("vtc"),
+  transportLongDefault: mysqlEnum("transportLongDefault", ["train", "avion", "voiture_perso", "chauffeur_longue_distance", "bus", "jet_prive"]).default("train"),
+  contextSocialDefault: mysqlEnum("contextSocialDefault", ["solo", "couple", "famille", "amis", "pro"]).default("couple"),
+  enviesDefault: json("enviesDefault").$type<string[]>().default([]),
+  energieDefault: mysqlEnum("energieDefault", ["farniente", "equilibre", "actif", "tres_actif"]).default("equilibre"),
+  budgetMode: mysqlEnum("budgetMode", ["illimite", "haut_maitrise", "equilibre", "serre"]).default("equilibre"),
+  budgetRepartition: json("budgetRepartition").$type<Record<string, number>>().default({ hebergement: 30, gastronomie: 30, activites: 20, transport: 15, shopping: 5 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MemberDefault = typeof memberDefaults.$inferSelect;
+export type InsertMemberDefault = typeof memberDefaults.$inferInsert;

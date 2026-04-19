@@ -8,9 +8,10 @@ import { useState } from "react";
 import { useRoute, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import {
-  Star, MapPin, Phone, Globe, Clock, Heart, Share2, ArrowLeft,
+  Star, MapPin, Phone, Globe, Clock, Bookmark, Share2, ArrowLeft,
   ChevronLeft, ChevronRight, ExternalLink, Sparkles
 } from "lucide-react";
+import { useCollections } from "@/hooks/useCollections";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,7 +46,7 @@ export default function EstablishmentDetail() {
   const [, params] = useRoute("/lieu/:slug");
   const slug = params?.slug || "";
   const [currentPhoto, setCurrentPhoto] = useState(0);
-  const [saved, setSaved] = useState(false);
+  const { isSaved: isCollSaved, saveItem, removeItem } = useCollections();
   const [mapExpanded, setMapExpanded] = useState(false);
 
   const trackOutbound = trpc.tracking.outboundClick.useMutation();
@@ -182,10 +183,13 @@ export default function EstablishmentDetail() {
           {/* Actions */}
           <div className="absolute top-4 right-4 flex gap-2">
             <button
-              onClick={() => setSaved(!saved)}
+              onClick={() => {
+                if (isCollSaved(slug, "establishment")) removeItem(slug, "establishment");
+                else saveItem({ type: "establishment", slug, name: establishment.name, photo: heroImage || undefined, savedAt: new Date().toISOString(), tags: [establishment.category] });
+              }}
               className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center hover:bg-black/70 transition-colors"
             >
-              <Heart className={cn("w-4 h-4", saved ? "fill-red-400 text-red-400" : "text-white")} />
+              <Bookmark className={cn("w-4 h-4", isCollSaved(slug, "establishment") ? "fill-[#C8A96E] text-[#C8A96E]" : "text-white")} />
             </button>
             <button
               onClick={() => navigator.share?.({ title: establishment.name, url: window.location.href })}

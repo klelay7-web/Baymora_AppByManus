@@ -11,7 +11,156 @@ import {
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type ActiveSection = null | "preferences" | "collections" | "proches" | "parrainage" | "notifications" | "confidentialite";
+type ActiveSection = null | "preferences" | "filtersPrefs" | "collections" | "proches" | "parrainage" | "notifications" | "confidentialite";
+
+// ─── Section : Préférences Maya (filtres defaults) ───────────────────────────
+const TRANSPORT_DOOR_OPTS = [
+  { id: "chauffeur_prive", label: "Chauffeur privé" }, { id: "vtc", label: "VTC" },
+  { id: "taxi", label: "Taxi" }, { id: "transport_public", label: "Transport public" },
+  { id: "voiture_perso", label: "Voiture perso" }, { id: "marche", label: "Marche" }, { id: "velo", label: "Vélo" },
+];
+const TRANSPORT_LONG_OPTS = [
+  { id: "train", label: "Train" }, { id: "avion", label: "Avion" },
+  { id: "voiture_perso", label: "Voiture perso" }, { id: "chauffeur_longue_distance", label: "Chauffeur longue distance" },
+  { id: "bus", label: "Bus" }, { id: "jet_prive", label: "Jet privé" },
+];
+const CONTEXT_OPTS = [
+  { id: "solo", label: "Solo" }, { id: "couple", label: "Couple" },
+  { id: "famille", label: "Famille" }, { id: "amis", label: "Amis" }, { id: "pro", label: "Pro" },
+];
+const ENVIES_LIST = [
+  "rando", "plage", "surf", "spa", "gastronomie", "culture", "shopping",
+  "nightlife", "bien-être", "farniente", "aventure", "vignobles", "sport", "nature", "concerts", "festivals",
+];
+const ENERGIE_OPTS = [
+  { id: "farniente", label: "Farniente" }, { id: "equilibre", label: "Équilibré" },
+  { id: "actif", label: "Actif" }, { id: "tres_actif", label: "Très actif" },
+];
+const BUDGET_OPTS = [
+  { id: "illimite", label: "Illimité" }, { id: "haut_maitrise", label: "Haut maîtrisé" },
+  { id: "equilibre", label: "Équilibré" }, { id: "serre", label: "Serré" },
+];
+
+function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-full text-xs transition-all"
+      style={{
+        minHeight: 40, padding: "8px 16px",
+        background: active ? "#C8A96E" : "rgba(255,255,255,0.06)",
+        color: active ? "#070B14" : "rgba(255,255,255,0.6)",
+        fontWeight: active ? 600 : 400,
+        border: `1px solid ${active ? "#C8A96E" : "rgba(255,255,255,0.1)"}`,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function SectionFilterPrefs({ onClose }: { onClose: () => void }) {
+  const { data: defaults, isLoading } = trpc.filters.getDefaults.useQuery();
+  const updateMutation = trpc.filters.updateDefaults.useMutation({
+    onSuccess: () => toast.success("Préférences Maya mises à jour ✓"),
+    onError: () => toast.error("Erreur lors de la sauvegarde"),
+  });
+
+  const [transportDoor, setTransportDoor] = useState<string>("");
+  const [transportLong, setTransportLong] = useState<string>("");
+  const [contextSocial, setContextSocial] = useState<string>("");
+  const [envies, setEnvies] = useState<string[]>([]);
+  const [energie, setEnergie] = useState<string>("");
+  const [budgetMode, setBudgetMode] = useState<string>("");
+  const [synced, setSynced] = useState(false);
+
+  if (defaults && !synced) {
+    setTransportDoor((defaults as any).transportDoorDefault || "vtc");
+    setTransportLong((defaults as any).transportLongDefault || "train");
+    setContextSocial((defaults as any).contextSocialDefault || "couple");
+    setEnvies(Array.isArray((defaults as any).enviesDefault) ? (defaults as any).enviesDefault : []);
+    setEnergie((defaults as any).energieDefault || "equilibre");
+    setBudgetMode((defaults as any).budgetMode || "equilibre");
+    setSynced(true);
+  }
+
+  const toggleEnvie = (e: string) => {
+    if (envies.includes(e)) setEnvies(envies.filter(x => x !== e));
+    else if (envies.length < 8) setEnvies([...envies, e]);
+  };
+
+  const handleSave = () => {
+    updateMutation.mutate({
+      transportDoorDefault: transportDoor as any,
+      transportLongDefault: transportLong as any,
+      contextSocialDefault: contextSocial as any,
+      enviesDefault: envies,
+      energieDefault: energie as any,
+      budgetMode: budgetMode as any,
+    });
+  };
+
+  if (isLoading) return <div className="flex items-center justify-center py-12"><div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#C8A96E", borderTopColor: "transparent" }} /></div>;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="font-playfair text-xl" style={{ color: "#C8A96E" }}>Préférences Maya</h2>
+        <button onClick={onClose}><X size={20} color="#8B8D94" /></button>
+      </div>
+
+      <p className="text-xs mb-5" style={{ color: "#8B8D94" }}>Ces préférences permettent à Maya de répondre plus vite, sans reposer les mêmes questions.</p>
+
+      <div className="space-y-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#C8A96E" }}>Transport porte-à-porte</p>
+          <div className="flex flex-wrap gap-2">
+            {TRANSPORT_DOOR_OPTS.map(o => <FilterChip key={o.id} label={o.label} active={transportDoor === o.id} onClick={() => setTransportDoor(o.id)} />)}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#C8A96E" }}>Transport longue distance</p>
+          <div className="flex flex-wrap gap-2">
+            {TRANSPORT_LONG_OPTS.map(o => <FilterChip key={o.id} label={o.label} active={transportLong === o.id} onClick={() => setTransportLong(o.id)} />)}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#C8A96E" }}>Contexte social</p>
+          <div className="flex flex-wrap gap-2">
+            {CONTEXT_OPTS.map(o => <FilterChip key={o.id} label={o.label} active={contextSocial === o.id} onClick={() => setContextSocial(o.id)} />)}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#C8A96E" }}>Mes envies (max 8)</p>
+          <div className="flex flex-wrap gap-2">
+            {ENVIES_LIST.map(e => <FilterChip key={e} label={e} active={envies.includes(e)} onClick={() => toggleEnvie(e)} />)}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#C8A96E" }}>Mon énergie</p>
+          <div className="flex flex-wrap gap-2">
+            {ENERGIE_OPTS.map(o => <FilterChip key={o.id} label={o.label} active={energie === o.id} onClick={() => setEnergie(o.id)} />)}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#C8A96E" }}>Mon budget</p>
+          <div className="flex flex-wrap gap-2">
+            {BUDGET_OPTS.map(o => <FilterChip key={o.id} label={o.label} active={budgetMode === o.id} onClick={() => setBudgetMode(o.id)} />)}
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={updateMutation.isPending}
+        className="w-full mt-6 py-3 rounded-xl text-sm font-semibold"
+        style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14" }}
+      >
+        {updateMutation.isPending ? "Sauvegarde..." : "Sauvegarder"}
+      </button>
+    </div>
+  );
+}
 
 // ─── Section : Préférences ────────────────────────────────────────────────────
 function SectionPreferences({ onClose }: { onClose: () => void }) {
@@ -609,6 +758,7 @@ export default function Profil() {
       title: "Mon compte",
       items: [
         { icon: User, label: "Compléter mon profil", desc: "Goûts, allergies, préférences", action: () => setActiveSection("preferences") },
+        { icon: Sparkles, label: "Préférences Maya", desc: "Transport, envies, budget par défaut", action: () => setActiveSection("filtersPrefs") },
         { icon: Compass, label: "Mes parcours", desc: "Voyages créés avec Maya", action: () => navigate("/parcours") },
         { icon: Heart, label: "Mes collections", desc: "Favoris et lieux sauvegardés", action: () => setActiveSection("collections") },
         { icon: Users, label: "Mes proches", desc: "Cercle familial et amis", action: () => setActiveSection("proches") },
@@ -798,6 +948,7 @@ export default function Profil() {
             onClick={(e) => e.stopPropagation()}
           >
             {activeSection === "preferences" && <SectionPreferences onClose={() => setActiveSection(null)} />}
+            {activeSection === "filtersPrefs" && <SectionFilterPrefs onClose={() => setActiveSection(null)} />}
             {activeSection === "collections" && <SectionCollections onClose={() => setActiveSection(null)} />}
             {activeSection === "proches" && <SectionProches onClose={() => setActiveSection(null)} />}
             {activeSection === "parrainage" && <SectionParrainage onClose={() => setActiveSection(null)} />}
