@@ -1348,6 +1348,41 @@ export const appRouter = router({
         if (input?.category) filtered = filtered.filter((e: any) => e.category === input.category);
         return filtered.slice(0, input?.limit || 50);
       }),
+    getDistinctCities: adminProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const rows = await db.selectDistinct({ city: establishmentsTable.city }).from(establishmentsTable);
+      return rows.map((r: any) => r.city).filter(Boolean).sort() as string[];
+    }),
+    generateBulkContentPages: adminProcedure.mutation(async () => {
+      setImmediate(async () => {
+        try {
+          const db = await (await import("./db")).getDb();
+          if (!db) return;
+          const { sql } = await import("drizzle-orm");
+          const { generateContentPage: gen } = await import("./services/manusScoutService");
+          const cityRows = await db.selectDistinct({ city: establishmentsTable.city }).from(establishmentsTable);
+          const allCities = cityRows.map((r: any) => r.city).filter(Boolean) as string[];
+          const intents = ["Meilleurs restaurants", "Où sortir", "Que faire ce week-end à"];
+          for (const city of allCities) {
+            const estRows = await db.select().from(establishmentsTable).where(sql`LOWER(${establishmentsTable.city}) = LOWER(${city})`).limit(20);
+            if (estRows.length < 3) continue;
+            for (const prefix of intents) {
+              const intent = `${prefix} ${city}`;
+              try {
+                const page = await gen({ source: "bulk", url: "", title: intent, city, category: "", searchIntent: intent, establishmentsMentioned: [] }, estRows as any);
+                if (!page) continue;
+                await db.insert(contentPages).values({ slug: page.slug, title: page.title, metaTitle: page.metaTitle, metaDescription: page.metaDescription, city, category: page.category, searchIntent: intent, introText: page.introText, content: page.content, establishmentSlugs: page.establishmentSlugs as any, season: (page.season || "toute_annee") as any, generatedBy: "claude" } as any);
+                console.log(`[Bulk] Generated: ${page.slug}`);
+              } catch { /* skip dupes or errors */ }
+              await new Promise((r) => setTimeout(r, 2000));
+            }
+          }
+          console.log("[Bulk] Complete");
+        } catch (err) { console.error("[Bulk] Failed:", err); }
+      });
+      return { status: "launched", message: "Génération bulk lancée en arrière-plan" };
+    }),
 
     // ─── CONTENU : Parcours Maison ────────────────────────────────────
     seedParcoursMaison: adminProcedure.mutation(async () => {

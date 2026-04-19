@@ -26,6 +26,17 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
   );
 }
 
+const INTENT_TEMPLATES = [
+  "Meilleurs restaurants",
+  "Où sortir",
+  "Bars cachés",
+  "Que faire en couple à",
+  "Que faire ce week-end à",
+  "Rooftops",
+  "Meilleurs brunchs",
+  "Nightlife",
+];
+
 export default function AdminContenu() {
   const [showAddEst, setShowAddEst] = useState(false);
   const [showGenContent, setShowGenContent] = useState(false);
@@ -35,6 +46,7 @@ export default function AdminContenu() {
   const [contentForm, setContentForm] = useState({ city: "", searchIntent: "" });
 
   const { data: establishments, refetch: refetchEst } = trpc.admin.listEstablishments.useQuery({ city: cityFilter || undefined, category: catFilter || undefined });
+  const { data: distinctCities } = trpc.admin.getDistinctCities.useQuery(undefined, { retry: false });
   const { data: parcoursList, refetch: refetchPM } = trpc.parcoursMaison.list.useQuery();
   const { data: contentPagesList, refetch: refetchCP } = trpc.admin.listContentPages.useQuery();
   const { data: inspirations } = trpc.inspiration.list.useQuery();
@@ -48,7 +60,7 @@ export default function AdminContenu() {
   const seedMut = trpc.admin.seedParcoursMaison.useMutation({
     onSuccess: (d: any) => {
       if (d.error) toast.error(d.error);
-      else toast.success(`${d.inserted} insérés, ${d.skipped} skippés. ${d.bordeauxEstablishments} établissements Bordeaux trouvés.${d.availableCities?.length ? ` Villes: ${d.availableCities.slice(0, 5).join(", ")}` : ""}`);
+      else toast.success(`${d.inserted} insérés, ${d.skipped} skippés. ${d.bordeauxEstablishments} établissements trouvés.`);
       refetchPM();
     },
     onError: (e) => toast.error(e.message),
@@ -56,9 +68,18 @@ export default function AdminContenu() {
   const togglePMPub = trpc.admin.toggleParcoursMaisonPublished.useMutation({ onSuccess: () => refetchPM() });
   const genContentMut = trpc.admin.generateContentPage.useMutation({ onSuccess: (d) => { toast.success(`Guide créé : ${d.slug}`); setShowGenContent(false); refetchCP(); }, onError: (e) => toast.error(e.message) });
   const toggleCPPub = trpc.admin.toggleContentPagePublished.useMutation({ onSuccess: () => refetchCP() });
+  const bulkGenMut = trpc.admin.generateBulkContentPages.useMutation({
+    onSuccess: (d: any) => toast.success(d.message || "Génération lancée"),
+    onError: (e) => toast.error(e.message),
+  });
 
-  const cities = Array.from(new Set((establishments as any[] || []).map((e: any) => e.city).filter(Boolean))).sort();
-  const categories = Array.from(new Set((establishments as any[] || []).map((e: any) => e.category).filter(Boolean))).sort();
+  const allCities = (distinctCities as string[] || []);
+  const filterCities = Array.from(new Set((establishments as any[] || []).map((e: any) => e.city).filter(Boolean))).sort() as string[];
+  const categories = Array.from(new Set((establishments as any[] || []).map((e: any) => e.category).filter(Boolean))).sort() as string[];
+
+  const intentSuggestions = contentForm.city
+    ? INTENT_TEMPLATES.map((t) => t.endsWith("à") || t.endsWith("à") ? `${t} ${contentForm.city}` : `${t} ${contentForm.city}`)
+    : [];
 
   return (
     <div>
@@ -67,11 +88,11 @@ export default function AdminContenu() {
         <div className="flex flex-wrap gap-2 mb-4">
           <select value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} className="text-xs px-3 py-2 rounded-lg" style={{ background: "#111", border: "1px solid #333", color: "#fff" }}>
             <option value="">Toutes les villes</option>
-            {cities.map((c: any) => <option key={c} value={c}>{c}</option>)}
+            {filterCities.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className="text-xs px-3 py-2 rounded-lg" style={{ background: "#111", border: "1px solid #333", color: "#fff" }}>
             <option value="">Toutes catégories</option>
-            {categories.map((c: any) => <option key={c} value={c}>{c}</option>)}
+            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           <button onClick={() => setShowAddEst(true)} className="text-xs px-4 py-2 rounded-lg font-semibold" style={{ background: "#C8A96E", color: "#1a1a1a" }}>Ajouter</button>
           <button onClick={() => enrichAllMut.mutate()} disabled={enrichAllMut.isPending} className="text-xs px-4 py-2 rounded-lg" style={{ border: "1px solid #C8A96E", color: "#C8A96E" }}>
@@ -132,8 +153,11 @@ export default function AdminContenu() {
 
       {/* CONTENT PAGES */}
       <Section title="Content Pages (Guides SEO)">
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => setShowGenContent(true)} className="text-xs px-4 py-2 rounded-lg font-semibold" style={{ background: "#C8A96E", color: "#1a1a1a" }}>Créer manuellement</button>
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button onClick={() => setShowGenContent(true)} className="text-xs px-4 py-2 rounded-lg font-semibold" style={{ background: "#C8A96E", color: "#1a1a1a" }}>Créer un guide</button>
+          <button onClick={() => bulkGenMut.mutate()} disabled={bulkGenMut.isPending} className="text-xs px-4 py-2 rounded-lg" style={{ border: "1px solid #C8A96E", color: "#C8A96E" }}>
+            {bulkGenMut.isPending ? "Lancement..." : "Générer pour toutes les villes"}
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -177,7 +201,7 @@ export default function AdminContenu() {
         </div>
       </Section>
 
-      {/* MODALS */}
+      {/* MODAL — Ajouter établissement */}
       <Modal open={showAddEst} onClose={() => setShowAddEst(false)} title="Ajouter un établissement">
         {["name", "city", "country"].map((f) => (
           <div key={f} className="mb-3">
@@ -196,16 +220,60 @@ export default function AdminContenu() {
         </button>
       </Modal>
 
-      <Modal open={showGenContent} onClose={() => setShowGenContent(false)} title="Générer un guide">
+      {/* MODAL — Générer un guide */}
+      <Modal open={showGenContent} onClose={() => setShowGenContent(false)} title="Générer un guide SEO">
         <div className="mb-3">
           <label className="text-xs text-gray-400 block mb-1">Ville</label>
-          <input value={contentForm.city} onChange={(e) => setContentForm({ ...contentForm, city: e.target.value })} className="w-full text-sm px-3 py-2 rounded-lg" style={{ background: "#111", border: "1px solid #333", color: "#fff" }} placeholder="Bordeaux" />
+          <select
+            value={contentForm.city}
+            onChange={(e) => setContentForm({ ...contentForm, city: e.target.value, searchIntent: "" })}
+            className="w-full text-sm px-3 py-2 rounded-lg"
+            style={{ background: "#111", border: "1px solid #333", color: "#fff", minHeight: 44 }}
+          >
+            <option value="">Sélectionner une ville</option>
+            {allCities.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
+
         <div className="mb-3">
           <label className="text-xs text-gray-400 block mb-1">Requête cible</label>
-          <input value={contentForm.searchIntent} onChange={(e) => setContentForm({ ...contentForm, searchIntent: e.target.value })} className="w-full text-sm px-3 py-2 rounded-lg" style={{ background: "#111", border: "1px solid #333", color: "#fff" }} placeholder="meilleurs restaurants gastronomiques bordeaux" />
+          <input
+            value={contentForm.searchIntent}
+            onChange={(e) => setContentForm({ ...contentForm, searchIntent: e.target.value })}
+            className="w-full text-sm px-3 py-2 rounded-lg"
+            style={{ background: "#111", border: "1px solid #333", color: "#fff" }}
+            placeholder={contentForm.city ? `Ex: meilleurs restaurants ${contentForm.city}` : "Sélectionnez d'abord une ville"}
+          />
         </div>
-        <button onClick={() => genContentMut.mutate(contentForm)} disabled={genContentMut.isPending} className="w-full py-2 rounded-lg text-sm font-semibold mt-2" style={{ background: "#C8A96E", color: "#1a1a1a" }}>
+
+        {contentForm.city && (
+          <div className="mb-4">
+            <p className="text-[10px] text-gray-500 mb-2">Suggestions :</p>
+            <div className="flex flex-wrap gap-1.5">
+              {intentSuggestions.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setContentForm({ ...contentForm, searchIntent: s })}
+                  className="text-[10px] px-2.5 py-1.5 rounded-full transition-colors"
+                  style={{
+                    background: contentForm.searchIntent === s ? "#C8A96E" : "rgba(200,169,110,0.08)",
+                    color: contentForm.searchIntent === s ? "#1a1a1a" : "#C8A96E",
+                    border: `1px solid ${contentForm.searchIntent === s ? "#C8A96E" : "rgba(200,169,110,0.2)"}`,
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={() => contentForm.city && contentForm.searchIntent && genContentMut.mutate(contentForm)}
+          disabled={genContentMut.isPending || !contentForm.city || !contentForm.searchIntent}
+          className="w-full py-2 rounded-lg text-sm font-semibold mt-2"
+          style={{ background: contentForm.city && contentForm.searchIntent ? "#C8A96E" : "#333", color: "#1a1a1a", opacity: contentForm.city && contentForm.searchIntent ? 1 : 0.5 }}
+        >
           {genContentMut.isPending ? "Génération Claude en cours..." : "Générer"}
         </button>
       </Modal>
