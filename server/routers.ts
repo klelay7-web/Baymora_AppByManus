@@ -1702,6 +1702,19 @@ export const appRouter = router({
       return db.select({ city: contentPages.city, count: sql<number>`count(*)` }).from(contentPages).groupBy(contentPages.city);
     }),
 
+    getFlowStats: adminProcedure.query(async () => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return { discoveredToday: 0, discoveredWeek: 0, pendingEnrich: 0, enrichedWeek: 0, guidesWeek: 0 };
+      const { sql } = await import("drizzle-orm");
+      let discoveredToday = 0, discoveredWeek = 0, pendingEnrich = 0, enrichedWeek = 0, guidesWeek = 0;
+      try { const [r] = await db.select({ c: sql<number>`count(*)` }).from(establishmentsTable).where(sql`${establishmentsTable.source} = 'google_places' AND ${establishmentsTable.createdAt} >= CURDATE()`); discoveredToday = r?.c || 0; } catch {}
+      try { const [r] = await db.select({ c: sql<number>`count(*)` }).from(establishmentsTable).where(sql`${establishmentsTable.source} = 'google_places' AND ${establishmentsTable.createdAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY)`); discoveredWeek = r?.c || 0; } catch {}
+      try { const [r] = await db.select({ c: sql<number>`count(*)` }).from(establishmentsTable).where(sql`${establishmentsTable.enrichStatus} IN ('discovered', 'pending') OR (${establishmentsTable.enrichStatus} IS NULL AND ${establishmentsTable.enrichedAt} IS NULL)`); pendingEnrich = r?.c || 0; } catch {}
+      try { const [r] = await db.select({ c: sql<number>`count(*)` }).from(establishmentsTable).where(sql`${establishmentsTable.enrichStatus} = 'completed' AND ${establishmentsTable.enrichedAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY)`); enrichedWeek = r?.c || 0; } catch {}
+      try { const [r] = await db.select({ c: sql<number>`count(*)` }).from(contentPages).where(sql`${contentPages.generatedBy} = 'claude' AND ${contentPages.createdAt} >= DATE_SUB(NOW(), INTERVAL 7 DAY)`); guidesWeek = r?.c || 0; } catch {}
+      return { discoveredToday, discoveredWeek, pendingEnrich, enrichedWeek, guidesWeek };
+    }),
+
     // ─── SYSTÈME ──────────────────────────────────────────────────────
     runMigrations: adminProcedure.mutation(async () => {
       const { runAllMigrations } = await import("./migrations");

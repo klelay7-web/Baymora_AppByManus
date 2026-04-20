@@ -15,12 +15,26 @@ export default function AdminCroissance() {
   const { data: topCP } = trpc.admin.getTopContentPages.useQuery(undefined, { retry: false });
   const { data: tierCounts } = trpc.admin.getMembersByTier.useQuery(undefined, { retry: false });
   const { data: seoCoverage } = trpc.admin.getSeoCoverage.useQuery(undefined, { retry: false });
+  const { data: flowStats } = trpc.admin.getFlowStats.useQuery(undefined, { retry: false });
 
   const s = stats as any || {};
+  const f = flowStats as any || {};
   const TIER_LABELS: Record<string, string> = { free: "Invité", explorer: "Membre", premium: "Duo", elite: "Cercle" };
 
   return (
     <div>
+      {/* FLUX DE DONNÉES */}
+      <div className="mb-10">
+        <h2 className="text-base font-semibold mb-4" style={{ color: "#C8A96E" }}>Flux de données</h2>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <MetricCard label="Découvertes aujourd'hui" value={f.discoveredToday || 0} color="#3b82f6" />
+          <MetricCard label="Découvertes semaine" value={f.discoveredWeek || 0} color="#3b82f6" />
+          <MetricCard label="En attente enrichissement" value={f.pendingEnrich || 0} color="#ef4444" />
+          <MetricCard label="Enrichies semaine" value={f.enrichedWeek || 0} color="#4ade80" />
+          <MetricCard label="Guides auto semaine" value={f.guidesWeek || 0} color="#C8A96E" />
+        </div>
+      </div>
+
       {/* METRICS CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-10">
         <MetricCard label="Membres total" value={s.totalUsers || 0} />

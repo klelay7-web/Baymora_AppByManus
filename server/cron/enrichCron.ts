@@ -9,7 +9,7 @@
 import mysql from "mysql2/promise";
 import Anthropic from "@anthropic-ai/sdk";
 
-const BATCH_SIZE = 5;
+const BATCH_SIZE = 20;
 const CLAUDE_MODEL = "claude-sonnet-4-5";
 
 interface Establishment {
@@ -216,10 +216,10 @@ export async function runEnrichBatch(): Promise<EnrichBatchResult> {
     const anthropic = new Anthropic({ apiKey: anthropicKey });
 
     const [rows] = (await conn.execute(
-      `SELECT id, slug, name, city, country, category, subcategory, address, description
+      `SELECT id, slug, name, city, country, category, subcategory, address, description, enrichStatus
        FROM establishments
-       WHERE status = 'published' AND enrichedAt IS NULL
-       ORDER BY id ASC
+       WHERE (enrichStatus IN ('discovered', 'pending') OR (enrichStatus IS NULL AND enrichedAt IS NULL))
+       ORDER BY CASE WHEN enrichStatus = 'discovered' THEN 0 ELSE 1 END, createdAt DESC
        LIMIT ${BATCH_SIZE}`
     )) as any[];
 
@@ -267,7 +267,7 @@ export async function runEnrichBatch(): Promise<EnrichBatchResult> {
              signature = ?,
              secretTip = ?,
              enrichedAt = NOW(),
-             enrichStatus = 'enriched'
+             enrichStatus = 'completed'
            WHERE id = ?`,
           [
             JSON.stringify(google.photoUris),
@@ -303,10 +303,83 @@ export async function runEnrichBatch(): Promise<EnrichBatchResult> {
     console.log(
       `[cron-enrich] Done: ${result.ok} ok, ${result.skipped} skipped, ${result.errors} errors`
     );
+
+    // Auto-generate content pages for cities that crossed the 5-establishment threshold
+    if (result.ok > 0) {
+      try {
+        await autoGenerateContentForNewCities(conn);
+      } catch (err) {
+        console.error("[cron-enrich] Auto content generation failed:", err);
+      }
+    }
+
     return result;
   } finally {
     await conn.end();
   }
+}
+
+async function autoGenerateContentForNewCities(conn: mysql.Connection) {
+  // Find cities with 5+ enriched/completed establishments but no content pages
+  const [cities] = (await conn.execute(
+    `SELECT e.city, COUNT(*) as cnt
+     FROM establishments e
+     WHERE e.enrichStatus IN ('enriched', 'completed')
+     GROUP BY e.city
+     HAVING cnt >= 5`
+  )) as any[];
+
+  let generated = 0;
+  for (const row of (cities || []).slice(0, 3)) {
+    const city = row.city;
+    // Check if content pages already exist for this city
+    const [existing] = (await conn.execute(
+      `SELECT COUNT(*) as c FROM content_pages WHERE LOWER(city) = LOWER(?)`,
+      [city]
+    )) as any[];
+    if (existing?.[0]?.c > 0) continue;
+
+    console.log(`[cron-content] Generating guides for ${city} (${row.cnt} establishments)`);
+
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) break;
+
+    const anthropic = new Anthropic({ apiKey: anthropicKey });
+    const intents = [`Meilleurs restaurants ${city}`, `Où sortir ${city}`, `Que faire ce week-end à ${city}`];
+
+    const [estRows] = (await conn.execute(
+      `SELECT slug, name, CAST(description AS CHAR) as description, category, city FROM establishments WHERE LOWER(city) = LOWER(?) AND enrichStatus IN ('enriched', 'completed') LIMIT 15`,
+      [city]
+    )) as any[];
+
+    for (const intent of intents) {
+      try {
+        const estContext = (estRows as any[]).slice(0, 8).map((e: any) => `- ${e.name} (${e.category}, ${e.city}): ${(e.description || "").slice(0, 100)}`).join("\n");
+        const resp = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4096,
+          system: "Tu es le rédacteur en chef de Maison Baymora. Réponds UNIQUEMENT en JSON valide.",
+          messages: [{ role: "user", content: `Rédige un guide SEO. Ville: ${city}. Requête: "${intent}". Établissements:\n${estContext}\n\nJSON: { "slug": "kebab-case", "title": "max 60 car", "metaTitle": "max 60 car", "metaDescription": "max 155 car", "introText": "2-3 phrases", "content": "markdown 800 mots", "category": "string", "season": "toute_annee", "establishmentSlugs": [${(estRows as any[]).slice(0, 6).map((e: any) => `"${e.slug}"`).join(",")}] }` }],
+        });
+        const text = resp.content[0].type === "text" ? resp.content[0].text : "";
+        const match = text.match(/\{[\s\S]*\}/);
+        if (!match) continue;
+        const page = JSON.parse(match[0]);
+        await conn.execute(
+          `INSERT INTO content_pages (slug, title, metaTitle, metaDescription, city, category, searchIntent, introText, content, establishmentSlugs, season, generatedBy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'claude')`,
+          [page.slug, page.title, page.metaTitle, page.metaDescription, city, page.category || "", intent, page.introText, page.content, JSON.stringify(page.establishmentSlugs || []), page.season || "toute_annee"]
+        );
+        console.log(`[cron-content]   ✓ ${page.slug}`);
+        generated++;
+      } catch (err: any) {
+        if (err?.code === "ER_DUP_ENTRY") continue;
+        console.error(`[cron-content]   ✗ ${intent}: ${err?.message}`);
+      }
+      // Rate limit
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+  if (generated > 0) console.log(`[cron-content] Generated ${generated} content pages`);
 }
 
 /**

@@ -110,7 +110,7 @@ export default function AdminContenu() {
                   <td className="py-2 px-2 text-white">{e.name} {!e.description && <span className="text-red-400 text-[10px] ml-1">!</span>}</td>
                   <td className="py-2 px-2 text-gray-400">{e.city}</td>
                   <td className="py-2 px-2 text-gray-400">{e.category}</td>
-                  <td className="py-2 px-2"><span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: e.enrichStatus === "completed" ? "rgba(74,222,128,0.15)" : "rgba(239,68,68,0.15)", color: e.enrichStatus === "completed" ? "#4ade80" : "#ef4444" }}>{e.enrichStatus || "pending"}</span></td>
+                  <td className="py-2 px-2"><span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: e.enrichStatus === "completed" ? "rgba(74,222,128,0.15)" : e.enrichStatus === "discovered" ? "rgba(59,130,246,0.15)" : "rgba(239,68,68,0.15)", color: e.enrichStatus === "completed" ? "#4ade80" : e.enrichStatus === "discovered" ? "#3b82f6" : "#ef4444" }}>{e.enrichStatus || "pending"}</span></td>
                   <td className="py-2 px-2 text-gray-400">{e.rating || "—"}</td>
                   <td className="py-2 px-2"><button onClick={() => enrichOneMut.mutate({ id: e.id })} disabled={enrichOneMut.isPending} className="text-[10px] px-2 py-1 rounded" style={{ border: "1px solid #C8A96E", color: "#C8A96E" }}>Enrichir</button></td>
                 </tr>
