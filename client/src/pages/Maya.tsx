@@ -88,10 +88,7 @@ export default function Maya() {
   const [typingMessage, setTypingMessage] = useState("Maya réfléchit…");
   const [isRecording, setIsRecording] = useState(false);
   const [showHub, setShowHub] = useState(true);
-  const [conversationId, setConversationId] = useState<number | null>(() => {
-    const stored = sessionStorage.getItem(SESSION_KEY);
-    return stored ? parseInt(stored, 10) : null;
-  });
+  const [conversationId, setConversationId] = useState<number | null>(null);
   const [showGpsPopup, setShowGpsPopup] = useState(false);
   const [answeredBlocks, setAnsweredBlocks] = useState<Set<string>>(new Set());
   const [guestCount, setGuestCount] = useState<number>(() => getGuestCount());
@@ -131,11 +128,6 @@ export default function Maya() {
       setShowHub(false);
     },
   });
-
-  // If we have a stored conversationId, go straight to chat
-  useEffect(() => {
-    if (conversationId) setShowHub(false);
-  }, []);
 
   const handleNewConversation = () => {
     setMessages([]);
@@ -344,9 +336,21 @@ export default function Maya() {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
 
-    // Si la conversation backend n'est pas encore créée, on ne lance pas
-    // la mutation — le message reste affiché et le Membre peut retenter.
-    if (!conversationId && user) return;
+    // If no conversation exists yet, create one and send the message after
+    if (!conversationId && user) {
+      setShowHub(false);
+      createConvMutation.mutate({ title: msg.slice(0, 60) }, {
+        onSuccess: (data) => {
+          const newId = data.id;
+          sendMessageMutation.mutate({
+            content: msg,
+            conversationId: newId,
+            userLocation: userLocation ? { lat: userLocation.lat, lng: userLocation.lng, city: userLocation.city || "", country: "France" } : undefined,
+          });
+        },
+      });
+      return;
+    }
 
     if (user) {
       sendMessageMutation.mutate({
@@ -387,7 +391,7 @@ export default function Maya() {
     }
   };
 
-  const isOnboarding = messages.length === 0 && !showHub;
+  const isOnboarding = messages.length === 0 && !user;
 
   return (
     <div
@@ -793,6 +797,35 @@ Et bientôt, je connaîtrai les vôtres.
       <ParcourBar />
       <ParcourSheet />
       </>}
+
+      {/* Input bar — always visible (hub + chat) */}
+      {showHub && user && (
+        <div
+          className="flex-shrink-0 px-4 py-3"
+          style={{ background: "rgba(7, 11, 20, 0.95)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(200, 169, 110, 0.1)", paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
+        >
+          <div className="flex items-end gap-2 rounded-2xl px-3 py-2" style={{ background: "#0D1117", border: "1px solid rgba(200, 169, 110, 0.2)" }}>
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={handleTextareaChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Écrivez à Maya..."
+              rows={1}
+              className="flex-1 bg-transparent resize-none outline-none text-sm py-2"
+              style={{ color: "#F0EDE6", minHeight: "40px", maxHeight: "120px" }}
+            />
+            <button
+              className="p-2 flex-shrink-0 self-end mb-0.5 rounded-xl transition-all"
+              style={{ background: input.trim() ? "linear-gradient(135deg, #C8A96E, #E8D5A8)" : "rgba(200, 169, 110, 0.1)", opacity: input.trim() ? 1 : 0.5 }}
+              onClick={() => handleSend()}
+              disabled={!input.trim()}
+            >
+              <Send size={18} color={input.trim() ? "#070B14" : "#C8A96E"} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
