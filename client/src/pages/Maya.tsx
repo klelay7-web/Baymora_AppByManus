@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Sparkles, Send, Mic, MicOff, RotateCcw, MapPin } from "lucide-react";
+import { ArrowLeft, Sparkles, Send, Mic, MicOff, RotateCcw, MapPin, Plus, Archive, Clock } from "lucide-react";
 import MessageRenderer from "@/components/MessageRenderer";
 import QuestionBlockGroup from "@/components/QuestionBlock";
 import ParcourBar from "@/components/parcour/ParcourBar";
@@ -68,6 +68,17 @@ interface Message {
   questionBlocks?: QuestionBlockData[];
 }
 
+function timeAgo(date: any): string {
+  if (!date) return "";
+  const d = new Date(date);
+  const now = Date.now();
+  const diff = now - d.getTime();
+  if (diff < 3600000) return `Il y a ${Math.max(1, Math.floor(diff / 60000))} min`;
+  if (diff < 86400000) return `Il y a ${Math.floor(diff / 3600000)}h`;
+  if (diff < 172800000) return "Hier";
+  return `Il y a ${Math.floor(diff / 86400000)} jours`;
+}
+
 export default function Maya() {
   const { user } = useAuth();
   const parcourStore = useParcourStore();
@@ -76,6 +87,7 @@ export default function Maya() {
   const [isTyping, setIsTyping] = useState(false);
   const [typingMessage, setTypingMessage] = useState("Maya réfléchit…");
   const [isRecording, setIsRecording] = useState(false);
+  const [showHub, setShowHub] = useState(true);
   const [conversationId, setConversationId] = useState<number | null>(() => {
     const stored = sessionStorage.getItem(SESSION_KEY);
     return stored ? parseInt(stored, 10) : null;
@@ -109,19 +121,44 @@ export default function Maya() {
       ? Math.max(0, FREE_LIMIT - freeUsed)
       : Math.max(0, GUEST_FREE_LIMIT - guestCount);
 
-  // ─── Créer une conversation au mount si pas de session ─────────────────────
+  // ─── Recent conversations for hub ──────────────────────────────────────
+  const { data: recentConversations, refetch: refetchRecent } = trpc.chat.listRecent.useQuery(undefined, { enabled: !!user });
+
   const createConvMutation = trpc.chat.createConversation.useMutation({
     onSuccess: (data) => {
       setConversationId(data.id);
       sessionStorage.setItem(SESSION_KEY, String(data.id));
+      setShowHub(false);
     },
   });
 
+  // If we have a stored conversationId, go straight to chat
   useEffect(() => {
-    if (user && !conversationId) {
-      createConvMutation.mutate({ title: "Conversation Maya" });
+    if (conversationId) setShowHub(false);
+  }, []);
+
+  const handleNewConversation = () => {
+    setMessages([]);
+    sessionStorage.removeItem(SESSION_KEY);
+    setConversationId(null);
+    if (user) {
+      createConvMutation.mutate({ title: "Nouvelle conversation" });
+    } else {
+      setShowHub(false);
     }
-  }, [user]);
+  };
+
+  const handleResumeConversation = (convId: number) => {
+    setConversationId(convId);
+    sessionStorage.setItem(SESSION_KEY, String(convId));
+    setMessages([]);
+    setShowHub(false);
+  };
+
+  const handleBackToHub = () => {
+    setShowHub(true);
+    refetchRecent();
+  };
 
   // ─── Popup GPS au premier contact ─────────────────────────────────────────
   useEffect(() => {
@@ -350,16 +387,7 @@ export default function Maya() {
     }
   };
 
-  const handleNewConversation = () => {
-    setMessages([]);
-    sessionStorage.removeItem(SESSION_KEY);
-    setConversationId(null);
-    if (user) {
-      createConvMutation.mutate({ title: "Nouvelle conversation" });
-    }
-  };
-
-  const isOnboarding = messages.length === 0;
+  const isOnboarding = messages.length === 0 && !showHub;
 
   return (
     <div
@@ -461,6 +489,73 @@ export default function Maya() {
         </div>
       )}
 
+      {/* HUB — shown when no active conversation (logged in users) */}
+      {showHub && user && (
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          <div className="max-w-lg mx-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)" }}>
+                <Sparkles size={20} color="#070B14" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "#F0EDE6" }}>Maya</h1>
+                <p className="text-xs" style={{ color: "#8B8D94" }}>Ton concierge Maison Baymora</p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleNewConversation}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold mb-6"
+              style={{ background: "linear-gradient(135deg, #C8A96E, #E8D5A8)", color: "#070B14", minHeight: 48 }}
+            >
+              <Plus size={18} /> Nouvelle recherche
+            </button>
+
+            {(recentConversations as any[] || []).filter((c: any) => !c.isValidated && c.status !== "archived").length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#8B8D94" }}>En cours</h2>
+                <div className="space-y-2">
+                  {(recentConversations as any[]).filter((c: any) => !c.isValidated && c.status !== "archived").map((c: any) => (
+                    <button
+                      key={c.id}
+                      onClick={() => { setConversationId(c.id); sessionStorage.setItem(SESSION_KEY, String(c.id)); setMessages([]); setShowHub(false); }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl text-left"
+                      style={{ background: "#1a1a1a", border: "1px solid #333", minHeight: 48 }}
+                    >
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.status === "active" ? "#4ade80" : "#eab308" }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white truncate">{c.title || "Conversation"}</p>
+                        <p className="text-[10px]" style={{ color: "#8B8D94" }}>{timeAgo(c.lastActivityAt || c.createdAt)} · {c.msgCount || 0} messages</p>
+                      </div>
+                      <Clock size={14} color="#8B8D94" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(recentConversations as any[] || []).filter((c: any) => c.isValidated).length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#8B8D94" }}>Parcours validés</h2>
+                <div className="space-y-2">
+                  {(recentConversations as any[]).filter((c: any) => c.isValidated).map((c: any) => (
+                    <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "#1a1a1a", border: "1px solid #333" }}>
+                      <span className="text-sm">✅</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white truncate">{c.title || "Parcours"}</p>
+                        <p className="text-[10px]" style={{ color: "#8B8D94" }}>{timeAgo(c.lastActivityAt || c.createdAt)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Chat view — shown when conversation is active or guest */}
+      {(!showHub || !user) && <>
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"
@@ -470,11 +565,9 @@ export default function Maya() {
           borderBottom: "1px solid rgba(200, 169, 110, 0.1)",
         }}
       >
-        <Link href="/maison">
-          <button className="p-2 -ml-2">
-            <ArrowLeft size={20} color="#8B8D94" />
-          </button>
-        </Link>
+        <button className="p-2 -ml-2" onClick={user ? handleBackToHub : undefined}>
+          {user ? <ArrowLeft size={20} color="#8B8D94" /> : <Link href="/maison"><ArrowLeft size={20} color="#8B8D94" /></Link>}
+        </button>
         <div className="flex items-center gap-2">
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -699,6 +792,7 @@ Et bientôt, je connaîtrai les vôtres.
       {/* Parcours Vivant : barre flottante + bottom sheet */}
       <ParcourBar />
       <ParcourSheet />
+      </>}
     </div>
   );
 }

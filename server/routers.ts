@@ -588,6 +588,33 @@ export const appRouter = router({
   chat: router({
     getConversations: protectedProcedure.query(({ ctx }) => getUserConversations(ctx.user.id)),
 
+    listRecent: protectedProcedure.query(async ({ ctx }) => {
+      const db = await (await import("./db")).getDb();
+      if (!db) return [];
+      const { conversations: convTable, messages: msgTable } = await import("../drizzle/schema");
+      const { eq, desc, sql, and, not, inArray } = await import("drizzle-orm");
+      const rows = await db.select({
+        id: convTable.id, title: convTable.title, status: convTable.status,
+        lastActivityAt: convTable.lastActivityAt, createdAt: convTable.createdAt, context: convTable.context,
+        msgCount: sql<number>`(SELECT COUNT(*) FROM messages WHERE messages.conversationId = ${convTable.id})`,
+      }).from(convTable)
+        .where(and(eq(convTable.userId, ctx.user.id), not(eq(convTable.status, "archived"))))
+        .orderBy(desc(sql`COALESCE(${convTable.lastActivityAt}, ${convTable.createdAt})`))
+        .limit(10);
+      return rows.map((r: any) => ({ ...r, isValidated: (() => { try { return !!JSON.parse(r.context || "{}").parcoursValidated; } catch { return false; } })() }));
+    }),
+
+    archiveConversation: protectedProcedure
+      .input(z.object({ conversationId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await (await import("./db")).getDb();
+        if (!db) return { success: false };
+        const { conversations: convTable } = await import("../drizzle/schema");
+        const { eq, and } = await import("drizzle-orm");
+        await db.update(convTable).set({ status: "archived" } as any).where(and(eq(convTable.id, input.conversationId), eq(convTable.userId, ctx.user.id)));
+        return { success: true };
+      }),
+
     createConversation: protectedProcedure
       .input(z.object({ title: z.string().optional(), tripType: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
@@ -641,6 +668,24 @@ export const appRouter = router({
 
         // Ajouter le message utilisateur
         await addMessage(input.conversationId, "user", input.content, undefined, input.isVoice);
+
+        // Auto-titre + lastActivityAt (fire-and-forget)
+        try {
+          const db0 = await (await import("./db")).getDb();
+          if (db0) {
+            const { conversations: convTable } = await import("../drizzle/schema");
+            const { eq, sql: sqlTag } = await import("drizzle-orm");
+            const priorMsgs = await getConversationMessages(input.conversationId, 2);
+            const isFirstMsg = priorMsgs.filter((m: any) => m.role === "user").length <= 1;
+            if (isFirstMsg && input.content.length > 3) {
+              const words = input.content.replace(/[^\w\sàâäéèêëïîôùûüÿçœæ'-]/gi, "").split(/\s+/).filter(Boolean).slice(0, 8);
+              const autoTitle = words.map((w, i) => i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w).join(" ").slice(0, 60);
+              await db0.update(convTable).set({ title: autoTitle, lastActivityAt: new Date() } as any).where(eq(convTable.id, input.conversationId));
+            } else {
+              await db0.update(convTable).set({ lastActivityAt: new Date() } as any).where(eq(convTable.id, input.conversationId));
+            }
+          }
+        } catch { /* non-blocking */ }
 
         // Auto-remplissage IA silencieux du profil (fire & forget)
         extractProfileFromMessage(ctx.user.id, input.content).catch(() => {});
@@ -739,12 +784,14 @@ export const appRouter = router({
 
         // Construire le system prompt dynamique avec profil client + géoloc réelle + profil dynamique Membre + établissements locaux
         const memberProfileDoc = await getOrCreateMemberProfile(ctx.user.id).catch(() => null);
+        const convStatus = messageIndex <= 1 ? "new" as const : "resumed" as const;
         let systemPrompt = buildSystemPrompt(
           clientProfile,
           new Date(),
           input.userLocation || undefined,
           memberProfileDoc,
-          estabContext
+          estabContext,
+          convStatus
         );
 
         if (parcoursValidated) {

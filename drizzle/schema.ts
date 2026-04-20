@@ -87,6 +87,7 @@ export const conversations = mysqlTable("conversations", {
   tripType: mysqlEnum("tripType", ["leisure", "business", "romantic", "family", "staycation", "adventure", "wellness"]),
   status: mysqlEnum("status", ["active", "archived", "closed"]).default("active").notNull(),
   context: text("context"),
+  lastActivityAt: timestamp("lastActivityAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

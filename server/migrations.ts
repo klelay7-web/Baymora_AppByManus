@@ -92,12 +92,21 @@ export async function ensureMemberSignaturesSchema(): Promise<void> {
   } finally { await conn.end(); }
 }
 
+export async function ensureConversationLastActivity(): Promise<void> {
+  const conn = await getConnection();
+  try {
+    await conn.query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS lastActivityAt TIMESTAMP NULL`);
+  } catch { /* column may already exist */ }
+  finally { await conn.end(); }
+}
+
 export async function runAllMigrations(): Promise<{ table: string; status: string; error?: string }[]> {
   const results: { table: string; status: string; error?: string }[] = [];
   const migrations = [
     { name: "seo_intelligence", fn: ensureSeoIntelligenceSchema },
     { name: "content_pages", fn: ensureContentPagesSchema },
     { name: "member_signatures", fn: ensureMemberSignaturesSchema },
+    { name: "conversations_lastActivity", fn: ensureConversationLastActivity },
   ];
 
   for (const m of migrations) {
