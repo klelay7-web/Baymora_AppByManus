@@ -679,20 +679,60 @@ export const appRouter = router({
           }
         } catch { /* non-blocking */ }
 
-        // Fetch relevant establishments for the target city to inject as context
+        // Detect target city from message, location, or profile
+        let detectedCity = input.userLocation?.city || ctx.user.homeCity || "";
+        {
+          const msg = input.content.toLowerCase();
+          // Check against cities in DB + common French/intl cities
+          const KNOWN_CITIES = ["paris", "bordeaux", "lyon", "nice", "marseille", "cannes", "monaco", "toulouse", "nantes", "lille", "strasbourg", "montpellier", "rennes", "reims", "deauville", "biarritz", "saint-tropez", "aix-en-provence", "avignon", "annecy", "chamonix", "megeve", "courchevel", "marrakech", "barcelone", "rome", "milan", "londres", "new york", "tokyo", "bali", "dubai", "lisbonne", "amsterdam", "berlin"];
+          for (const c of KNOWN_CITIES) {
+            if (msg.includes(c)) { detectedCity = c.charAt(0).toUpperCase() + c.slice(1); break; }
+          }
+          // Also check DB cities dynamically
+          try {
+            const db = await (await import("./db")).getDb();
+            if (db) {
+              const dbCities = await db.selectDistinct({ city: establishmentsTable.city }).from(establishmentsTable).limit(100);
+              for (const r of dbCities) {
+                if (r.city && msg.includes(r.city.toLowerCase())) { detectedCity = r.city; break; }
+              }
+            }
+          } catch { /* non-blocking */ }
+        }
+
+        // Fetch establishments from DB + supplement with Google Places if needed
         let estabContext: string | undefined;
-        const targetCity = input.userLocation?.city || ctx.user.homeCity;
-        if (targetCity) {
+        if (detectedCity) {
           try {
             const db = await (await import("./db")).getDb();
             if (db) {
               const { sql: sqlFn } = await import("drizzle-orm");
               const estRows = await db.select({ name: establishmentsTable.name, slug: establishmentsTable.slug, category: establishmentsTable.category, rating: establishmentsTable.rating, description: establishmentsTable.description })
-                .from(establishmentsTable).where(sqlFn`LOWER(${establishmentsTable.city}) = LOWER(${targetCity})`).limit(30);
+                .from(establishmentsTable).where(sqlFn`LOWER(${establishmentsTable.city}) = LOWER(${detectedCity})`).limit(30);
+
+              const lines: string[] = [];
               if (estRows.length > 0) {
-                estabContext = `ÉTABLISSEMENTS BAYMORA à ${targetCity} (${estRows.length} fiches) :\n` +
-                  estRows.map((e: any) => `- ${e.name} [${e.category}] ${e.rating ? `★${e.rating}` : ""} → /lieu/${e.slug}${e.description ? ` — ${(e.description as string).slice(0, 80)}` : ""}`).join("\n");
+                lines.push(`ÉTABLISSEMENTS BAYMORA à ${detectedCity} (${estRows.length} fiches vérifiées) :`);
+                for (const e of estRows) {
+                  lines.push(`- ${(e as any).name} [${(e as any).category}] ${(e as any).rating ? `★${(e as any).rating}` : ""} → /lieu/${(e as any).slug}${(e as any).description ? ` — ${((e as any).description as string).slice(0, 80)}` : ""}`);
+                }
               }
+
+              // Supplement with Google Places if DB has fewer than 5 establishments
+              if (estRows.length < 5) {
+                try {
+                  const { searchPlaces } = await import("./services/googlePlacesService");
+                  const gpResults = await searchPlaces("restaurants bars sortir", detectedCity);
+                  if (gpResults.length > 0) {
+                    lines.push(`\nADRESSES GOOGLE PLACES à ${detectedCity} (non encore vérifiées — tu peux les suggérer mais précise que ce sont des découvertes) :`);
+                    for (const gp of gpResults.slice(0, 8)) {
+                      lines.push(`- ${gp.name} [${gp.category}] ★${gp.rating} (${gp.ratingCount} avis) ${gp.priceRange} — ${gp.address}`);
+                    }
+                  }
+                } catch { /* Google Places unavailable — continue without */ }
+              }
+
+              if (lines.length > 0) estabContext = lines.join("\n");
             }
           } catch { /* non-blocking */ }
         }
