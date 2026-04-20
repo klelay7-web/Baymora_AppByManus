@@ -739,15 +739,12 @@ export const appRouter = router({
 
         // Auto-create establishment records for each place Maya mentions (fire-and-forget)
         if (parsed.places && (parsed.places as any[]).length > 0) {
-          const { findOrCreateEstablishment } = await import("./services/establishmentService");
+          const { autoCreateFromMayaPlace } = await import("./services/autoCreateEstablishment");
+          const userCity = input.userLocation?.city || ctx.user.homeCity || "";
           for (const p of parsed.places as any[]) {
-            findOrCreateEstablishment({
-              name: p.name,
-              city: p.city || input.userLocation?.city || ctx.user.homeCity || "",
-              country: p.country || "France",
-              lat: p.coordinates?.lat,
-              lng: p.coordinates?.lng,
-            }).catch((err) => console.error("[AutoCreate]", p.name, err?.message));
+            autoCreateFromMayaPlace(p, userCity, "maya_live").catch((err) =>
+              console.error("[AutoCreate]", p.name, err?.message)
+            );
           }
         }
 
